@@ -11,8 +11,6 @@ QtObject {
     property string query
     property var results         // list of SearchResult
     property int selectedIndex
-    property var recentApps      // optional small row when query is empty
-    property var openWindows     // optional narrow cards when query is empty
     property string defaultProviderId  // settings ai.defaultProvider
     property string activeProviderId  // AI provider used in AI mode
     property var chatMessages: []  // AI mode: { fromUser, text, streaming, error }, cleared on close

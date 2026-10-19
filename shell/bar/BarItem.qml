@@ -6,7 +6,6 @@ import qs.components
 // One clickable item in the bar. Children go into the row after the optional text.
 Item {
     id: item
-    // TODO(phase 7, dropdowns): click opens the dropdown anchored below this item (needs DropdownHost); for now it only emits clicked().
 
     property string iconName
     property string text

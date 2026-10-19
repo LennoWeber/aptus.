@@ -37,7 +37,4 @@ QtObject {
         if (running && workspaceId > 0) Compositor.focusWorkspace(workspaceId)
     }
 
-    function focusWindow(): void {
-        throw new Error("not implemented")
-    }
 }

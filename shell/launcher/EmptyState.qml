@@ -7,14 +7,7 @@ import qs.components
 Item {
     id: empty
 
-    property var recentApps
-    property var openWindows
-    property bool showRecent
-    property bool showWindows
     property string hint
-    signal appClicked(string appId)
-    signal windowClicked(string address)
-    // TODO(phase 7, section 3): recent apps row and narrow window cards (showRecent / showWindows).
 
     implicitHeight: 24
 

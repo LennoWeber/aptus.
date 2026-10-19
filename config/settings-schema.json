@@ -28,7 +28,6 @@
     { "id": "bar.height", "category": "bar", "title": "Bar height", "kind": "number", "path": "bar.height", "min": 24, "max": 40, "unit": "px", "advanced": true, "keywords": ["size"] },
 
     { "id": "launcher.defaultMode", "category": "launcher", "title": "Opens in mode", "description": "Mode used when the launcher is opened without a specific shortcut.", "kind": "choice", "path": "launcher.defaultMode", "options": ["apps", "web", "settings", "ai", "clipboard"], "advanced": true, "keywords": ["default"] },
-    { "id": "launcher.showRecentApps", "category": "launcher", "title": "Show recent apps", "kind": "toggle", "path": "launcher.showRecentApps", "advanced": false, "keywords": ["recent"] },
     { "id": "launcher.showOpenWindows", "category": "launcher", "title": "Show open windows", "kind": "toggle", "path": "launcher.showOpenWindows", "advanced": false, "keywords": ["windows"] },
     { "id": "launcher.maxResults", "category": "launcher", "title": "Number of results", "kind": "number", "path": "launcher.maxResults", "min": 4, "max": 12, "advanced": true, "keywords": ["results"] },
     { "id": "browser.searchEngine", "category": "launcher", "title": "Search engine", "description": "Used by the web mode.", "kind": "choice", "path": "browser.searchEngine", "optionsFrom": "browser.searchEngines", "advanced": false, "keywords": ["google", "search", "web"] },

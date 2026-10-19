@@ -28,7 +28,8 @@ Singleton {
 
     function focusWindow(address: string): void {
         if (!address) throw new Error("invariant: Compositor.focusWindow: empty window address")
-        throw new Error("not implemented")
+        const target = "address:" + (address.indexOf("0x") === 0 ? address : "0x" + address)
+        dispatch(Hyprland.usingLua ? "hl.dsp.focus({ window = '" + target + "' })" : "focuswindow " + target)
     }
 
     // Hyprland dispatcher (Hyprland.dispatch).

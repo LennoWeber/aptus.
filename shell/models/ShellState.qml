@@ -8,8 +8,6 @@ QtObject {
     property int activeTile      // Enums.TileId, the tile shown in detail view
     property bool barHidden      // bar auto-hidden in tablet mode, returns on swipe from top edge
     property bool blurActive     // background blur shown (control center, launcher)
-    property bool debugTiming    // overlay with measured reaction times
-    property real lastHotkeyToFrameMs  // measured: hotkey to first visible change
 
     // Open the dropdown under a bar item (Enums.DropdownId).
     function openDropdown(dropdownId: int): void {
@@ -36,7 +34,6 @@ QtObject {
         if (activeDropdown !== Enums.DropdownId.None && stage !== Enums.Stage.Dropdown) throw new Error("invariant: ShellState.openControlCenter: a dropdown is active outside the dropdown stage")
         if (activeTile !== Enums.TileId.None && stage !== Enums.Stage.Detail) throw new Error("invariant: ShellState.openControlCenter: a tile is active outside the detail stage")
         // The window is pre-loaded and only toggles visibility (feedback budget).
-        // TODO(phase 7, polish): call reportHotkeyLatency when the first frame is visible.
         closeDropdown()
         activeTile = Enums.TileId.None
         stage = Enums.Stage.ControlCenter
@@ -95,9 +92,4 @@ QtObject {
         blurActive = false
     }
 
-    // Store a measured hotkey-to-frame time for the debug overlay.
-    function reportHotkeyLatency(ms: real): void {
-        if (!(ms >= 0)) throw new Error("invariant: ShellState.reportHotkeyLatency: negative or invalid latency")
-        throw new Error("not implemented")
-    }
 }

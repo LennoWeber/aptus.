@@ -19,7 +19,6 @@ import qs.wallpaper
 // Entry point of the aptus shell.
 ShellRoot {
     id: root
-    // TODO(phase 7, later sections): create once, pre-loaded: WallpaperPicker, SettingsWindow, ConfirmDialog, LockSurface, EdgeStrips.
 
     AppSettings { id: settingsObj }
     // The compositor draws the blur; the setting sets its size and passes (applied now and on every change).

@@ -3,5 +3,5 @@
 hl.window_rule({ match = { title = "^aptus settings$" }, float = true, size = { 980, 680 }, center = true })
 
 -- TODO(phase 7, later): optional: layer rule no_anim for namespaces 'aptus-*' (the shell animates itself).
--- TODO(phase 7, later): idle inhibit for fullscreen windows is handled by Idle.fullscreenInhibit, not by a rule here.
+-- Note: idle inhibit for fullscreen windows is handled by Idle.fullscreenInhibit, not by a rule here.
 return {}

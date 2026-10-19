@@ -1,5 +1,4 @@
 module qs.components
-IconButton 1.0 IconButton.qml
 Label 1.0 Label.qml
 ListRow 1.0 ListRow.qml
 SliderControl 1.0 SliderControl.qml

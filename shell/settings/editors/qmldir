@@ -1,5 +1,0 @@
-module qs.settings.editors
-HotkeyEditor 1.0 HotkeyEditor.qml
-LocationEditor 1.0 LocationEditor.qml
-ProviderEditor 1.0 ProviderEditor.qml
-TileOrderEditor 1.0 TileOrderEditor.qml

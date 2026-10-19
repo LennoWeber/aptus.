@@ -71,7 +71,6 @@ link_config() {
 }
 
 # Generate hypr/binds.generated.lua from config/hotkeys.json (owner aptus only) and offer to load it from hyprland.lua.
-# TODO(phase 7): ask before touching ~/.config/hypr/hyprland.lua, back it up first, add only the lines of hypr/hyprland.lua.snippet.
 install_hyprland_binds() {
     if [ ! -f "$HYPR_LUA" ]; then
         say "$HYPR_LUA not found, skipping the Hyprland integration."
@@ -107,7 +106,6 @@ install_launcher() {
 }
 
 # Teach the user's shell-switch about aptus (ask first, back up the script).
-# TODO(phase 7): add aptus to SHELLS, label(), bin_for(); other_shell() only knows two shells, so activate() must stop ALL other shells, not one fallback.
 patch_shell_switch() {
     local target
     target="$(command -v shell-switch || true)"

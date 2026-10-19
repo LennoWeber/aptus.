@@ -7,7 +7,6 @@ import qs.components
 // Clock and date in the bar.
 Item {
     id: clock
-    // TODO(phase 7, dropdowns): click opens the clock dropdown with the calendar (needs DropdownHost and CalendarState).
 
     property string format: "24h"  // 24h | 12h
     property bool showSeconds

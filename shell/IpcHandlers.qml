@@ -57,7 +57,6 @@ Scope {
         // panel-toggle / panel-open: launcher, control-center, notification-center, wallpaper, session (power menu), design (unused).
         function panelToggle(name: string): void {
             if (["launcher", "control-center", "notification-center", "wallpaper", "session", "design"].indexOf(name) < 0) throw new Error("invariant: IpcHandlers.panelToggle: unknown panel name")
-            // TODO(phase 7, sections 5 and 6): 'wallpaper' -> picker; 'session' -> power menu.
             if (name === "launcher") root.launcherState.toggle(Enums.LauncherMode.Apps)
             else if (name === "control-center") {
                 if (root.shellState.stage === Enums.Stage.ControlCenter || root.shellState.stage === Enums.Stage.Detail) root.shellState.closeAll()
@@ -74,7 +73,6 @@ Scope {
 
         function panelOpen(name: string, arg: string): void {
             if (["launcher", "control-center", "notification-center", "wallpaper", "session", "design"].indexOf(name) < 0) throw new Error("invariant: IpcHandlers.panelOpen: unknown panel name")
-            // TODO(phase 7, sections 4 to 6): the other panels; arg is a launcher query such as '/emo' (ignored for now).
             if (name === "launcher") root.launcherState.show(Enums.LauncherMode.Apps)
             else if (name === "control-center") {
                 // The argument can name a tile: `panel-open control-center calendar`.

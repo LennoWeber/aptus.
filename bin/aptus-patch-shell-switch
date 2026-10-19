@@ -8,6 +8,7 @@ before the first change. Running it twice changes nothing.
 """
 import difflib
 import os
+import re
 import shutil
 import sys
 
@@ -73,6 +74,10 @@ def main() -> int:
         return 1
     path = os.path.realpath(path)
     old = open(path, encoding="utf-8").read()
+    # A newer shell-switch (more shells in the list) that already names aptus is left alone.
+    if re.search(r"^SHELLS=\(.*\baptus\b.*\)", old, re.M):
+        print("already patched, nothing to do")
+        return 0
     new = patch(old)
     if new == old:
         print("already patched, nothing to do")

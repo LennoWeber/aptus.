@@ -69,6 +69,11 @@ PanelWindow {
         property: "maxResults"
         value: win.appSettings ? (win.appSettings.get("launcher.maxResults") || 8) : 8
     }
+    Binding {
+        target: Search
+        property: "showOpenWindows"
+        value: win.appSettings ? win.appSettings.get("launcher.showOpenWindows") !== false : true
+    }
 
     Connections {
         target: win.launcherState

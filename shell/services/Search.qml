@@ -1,6 +1,7 @@
 pragma Singleton
 import QtQuick
 import Quickshell
+import Quickshell.Hyprland
 import qs.models
 
 // Search backends of the launcher modes.
@@ -12,6 +13,7 @@ Singleton {
     property var settingsState       // SettingsAppState, set by shell.qml; Settings mode searches its entries
     property var browser             // BrowserState, set by shell.qml; Web results search through it
     property int maxResults: 8       // launcher.maxResults
+    property bool showOpenWindows: true  // launcher.showOpenWindows
 
     // Results are real SearchResult objects (they carry their action). The previous batch is destroyed on the next search.
     property var batch: []
@@ -42,14 +44,12 @@ Singleton {
         if (mode === Enums.LauncherMode.Settings) return searchSettings(q)
         if (q === "") return []
         // A local search over a few hundred entries is well below a frame; the heavy backends (web suggestions, clipboard) come later.
-        // TODO(phase 7, sections 4/5): web suggestions.
-        // TODO(phase 7, section 3): windows, system actions ('wifi off', 'timer 10m') and the AI CLI sessions in Apps mode.
         switch (mode) {
         case Enums.LauncherMode.Apps: {
             const out = []
             const calc = evaluateExpression(q)
             if (calc) out.push(calc)
-            return out.concat(searchApps(q))
+            return out.concat(searchWindows(q), searchApps(q))
         }
         case Enums.LauncherMode.Web:
             return [makeResult({
@@ -83,9 +83,22 @@ Singleton {
         return rank(scored, query).slice(0, maxResults)
     }
 
+    // Open windows (Hyprland), matched on title and class; Enter focuses the window.
     function searchWindows(query: string): var {
-        // TODO(phase 7, section 3): open windows from Compositor, focus on activate.
-        throw new Error("not implemented")
+        if (!showOpenWindows) return []
+        const out = []
+        for (const t of Hyprland.toplevels.values) {
+            const cls = t.lastIpcObject && t.lastIpcObject.class ? t.lastIpcObject.class : ""
+            const s = Math.max(fuzzyScore(t.title || "", query), fuzzyScore(cls, query) * 0.8)
+            if (s <= 0) continue
+            out.push(makeResult({
+                id: "window:" + t.address, mode: Enums.LauncherMode.Apps, kind: Enums.ResultKind.Window,
+                title: t.title || cls, subtitle: "Open window" + (cls ? " · " + cls : ""), iconName: cls.toLowerCase(),
+                score: s + 5,
+                run: () => Compositor.focusWindow(t.address)
+            }))
+        }
+        return out
     }
 
     // Entries of the settings app; Enter opens the window on that entry. An empty query lists the categories.
@@ -119,9 +132,6 @@ Singleton {
         }))
     }
 
-    function webSuggestions(query: string): var {
-        throw new Error("not implemented")
-    }
 
     // Calculator results such as '12*8'. Returns one result, or null if the text is not an expression.
     function evaluateExpression(query: string): var {
@@ -191,10 +201,6 @@ Singleton {
         return failed || pos !== expr.length ? null : v
     }
 
-    // 'wifi off', 'timer 10m' and similar.
-    function parseSystemAction(query: string): var {
-        throw new Error("not implemented")
-    }
 
     // 0 = no match, up to 100 = exact. Prefix beats word start beats substring beats initials beats scattered letters.
     function fuzzyScore(text: string, query: string): real {
