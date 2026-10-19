@@ -46,7 +46,25 @@
     "providerSwitchKeys": { "previous": "Alt+Left", "next": "Alt+Right" }
   },
   "controlCenter": {
-    "tiles": ["calendar", "network", "bluetooth", "caffeine", "media"]
+    "tiles": [
+      { "key": "audio", "visible": true },
+      { "key": "display", "visible": true },
+      { "key": "network", "visible": true },
+      { "key": "bluetooth", "visible": true },
+      { "key": "power", "visible": true },
+      { "key": "caffeine", "visible": true },
+      { "key": "focus", "visible": true },
+      { "key": "vpn", "visible": true },
+      { "key": "hotspot", "visible": true },
+      { "key": "capture", "visible": true },
+      { "key": "timer", "visible": true },
+      { "key": "weather", "visible": true },
+      { "key": "notifications", "visible": true },
+      { "key": "media", "visible": true },
+      { "key": "calendar", "visible": true },
+      { "key": "aiusage", "visible": true },
+      { "key": "system", "visible": true }
+    ]
   },
   "weather": {
     "locationName": "Berlin",

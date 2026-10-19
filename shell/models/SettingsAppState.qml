@@ -71,7 +71,7 @@ Scope {
     }
     function valueOf(entry: var): var { return entry.id in draftValues ? draftValues[entry.id] : appliedOf(entry) }
     function isDefault(entry: var): bool { return JSON.stringify(valueOf(entry)) === JSON.stringify(defaultOf(entry)) }
-    function editable(entry: var): bool { return ["toggle", "choice", "slider", "number", "text", "list", "location"].indexOf(entry.kind) >= 0 }
+    function editable(entry: var): bool { return ["toggle", "choice", "slider", "number", "text", "list", "location", "tileList"].indexOf(entry.kind) >= 0 }
 
     // Entries of the current page or search, hiding advanced ones unless asked for.
     function visibleEntries(): var {

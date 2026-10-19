@@ -184,6 +184,7 @@ ShellRoot {
 
     ControlCenter {
         id: ccObj
+        tileOrder: settingsObj.get("controlCenter.tiles")
         tabletMode: deviceObj.tabletMode
         rotationLocked: deviceObj.rotationLocked
         onRotationLockRequested: ipcObj.toggleRotationLock()

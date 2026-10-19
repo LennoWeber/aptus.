@@ -617,6 +617,12 @@ Rückmeldung: Kontrollzentrum gut; Sound-Kachel zeigte „Muted“ über dem Reg
 ### Baustein 2: „More“-Links (20. Okt.)
 - Audio, Battery, Clock, NightLight haben unten die Zeile „More“ (wie Bluetooth/Network) und öffnen die Kachel Audio, PowerProfile, Calendar, Display. `DropdownHost` leitet das Signal weiter. Lint 0 neue Warnungen, Shell lädt ohne Fehler; Optik und Klick am Gerät offen (kein IPC zum Öffnen eines Dropdowns).
 
+### Baustein 3: Kachel-Editor (20. Okt.)
+- `TileCatalog` (controlcenter, Singleton): alle 17 Kacheln mit fester Größe, `normalize` (unbekannte/doppelte raus, neue ans Ende), `layout` packt die sichtbaren Kacheln in Listenreihenfolge je auf den ersten freien Platz (6 Spalten, Zeilen dynamisch, mindestens 3). Standardreihenfolge ergibt dasselbe Raster wie vorher.
+- Settings → Control Center → Tiles: `TileListEditor` mit Schalter sichtbar und Up/Down, läuft durch Entwurf/Speichern/15-s-Bestätigung. Wert `controlCenter.tiles` = Liste `{ key, visible }` (alter, nie gelesener Wert ersetzt).
+- Ausgeblendete Kachel lässt sich per Kontext-Zone/More trotzdem öffnen (Detail wächst aus der Brettmitte).
+- Geprüft: Lint 17 (unverändert), Control Center Screenshot = altes Raster, Editor Screenshot, Packen per Python-Spiegel mit versteckten Kacheln. Nicht geprüft: Speichern, Umordnen und Ausblenden live am Gerät.
+
 ## Nächster Schritt
 
 Alltagsgebrauch auf dem Laptop; was auffällt, kommt als Feinschliff. Mögliche nächste Bausteine in dieser Reihenfolge: Kontext-Zone der Leiste, „More“-Links der Dropdowns, Kachel-Editor. Wartet auf Lennos Rückmeldung oder „weiter“.

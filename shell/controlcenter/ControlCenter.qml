@@ -36,26 +36,10 @@ PanelWindow {
     property bool tabletMode
     property bool rotationLocked
 
-    // Layout of the tiles on a 6 x 5 grid: { tileId, title, column, row, columnSpan, rowSpan }.
-    property var tiles: [
-        { tileId: Enums.TileId.Audio, title: "Sound", column: 0, row: 0, columnSpan: 2, rowSpan: 1 },
-        { tileId: Enums.TileId.Display, title: "Display", column: 2, row: 0, columnSpan: 2, rowSpan: 1 },
-        { tileId: Enums.TileId.Network, title: "Network", column: 4, row: 0, columnSpan: 1, rowSpan: 1 },
-        { tileId: Enums.TileId.Bluetooth, title: "Bluetooth", column: 5, row: 0, columnSpan: 1, rowSpan: 1 },
-        { tileId: Enums.TileId.PowerProfile, title: "Power", column: 0, row: 1, columnSpan: 1, rowSpan: 1 },
-        { tileId: Enums.TileId.Caffeine, title: "Caffeine", column: 1, row: 1, columnSpan: 1, rowSpan: 1 },
-        { tileId: Enums.TileId.Focus, title: "Focus", column: 2, row: 1, columnSpan: 1, rowSpan: 1 },
-        { tileId: Enums.TileId.Vpn, title: "VPN", column: 3, row: 1, columnSpan: 1, rowSpan: 1 },
-        { tileId: Enums.TileId.Hotspot, title: "Hotspot", column: 4, row: 1, columnSpan: 1, rowSpan: 1 },
-        { tileId: Enums.TileId.Capture, title: "Capture", column: 5, row: 1, columnSpan: 1, rowSpan: 1 },
-        { tileId: Enums.TileId.Timer, title: "Timer", column: 0, row: 2, columnSpan: 2, rowSpan: 1 },
-        { tileId: Enums.TileId.Weather, title: "Weather", column: 2, row: 2, columnSpan: 2, rowSpan: 1 },
-        { tileId: Enums.TileId.Notifications, title: "Notifications", column: 4, row: 2, columnSpan: 2, rowSpan: 1 },
-        { tileId: Enums.TileId.Media, title: "Media", column: 0, row: 3, columnSpan: 2, rowSpan: 2 },
-        { tileId: Enums.TileId.Calendar, title: "Calendar", column: 2, row: 3, columnSpan: 2, rowSpan: 2 },
-        { tileId: Enums.TileId.AiUsage, title: "AI usage", column: 4, row: 3, columnSpan: 2, rowSpan: 1 },
-        { tileId: Enums.TileId.SystemMonitor, title: "System", column: 4, row: 4, columnSpan: 2, rowSpan: 1 }
-    ]
+    // The saved order from the settings (see TileCatalog); the grid is packed from it.
+    property var tileOrder
+    readonly property var packed: TileCatalog.layout(tileOrder)
+    readonly property var tiles: packed.tiles   // { tileId, title, column, row, columnSpan, rowSpan }
     property int activeTile: shellState ? shellState.activeTile : Enums.TileId.None  // Enums.TileId
     readonly property bool isOpen: shellState ? (shellState.stage === Enums.Stage.ControlCenter || shellState.stage === Enums.Stage.Detail) : false
     property real blurAmount: isOpen ? 1 : 0  // 0..1
@@ -63,8 +47,8 @@ PanelWindow {
 
     readonly property int gap: 12
     readonly property int cellHeight: 124
-    readonly property int columns: 6
-    readonly property int rows: 5
+    readonly property int columns: TileCatalog.columns
+    readonly property int rows: packed.rows
     readonly property real boardWidth: Math.min(width - 40, 1080)
     readonly property real cellWidth: (boardWidth - (columns - 1) * gap) / columns
     readonly property real boardHeight: rows * cellHeight + (rows - 1) * gap
@@ -94,8 +78,9 @@ PanelWindow {
     // Open a tile directly (the notification hotkey): the detail grows out of the tile's own place.
     function openTileById(tileId: int): void {
         const t = tiles.find(x => x.tileId === tileId)
-        if (!t) throw new Error("invariant: ControlCenter.openTileById: unknown tile")
-        openTile(tileId, Qt.rect(t.column * (cellWidth + gap), t.row * (cellHeight + gap),
+        // A tile hidden in the settings still opens, growing from the middle of the board.
+        if (!t) openTile(tileId, Qt.rect(boardWidth / 2 - cellWidth / 2, boardHeight / 2 - cellHeight / 2, cellWidth, cellHeight))
+        else openTile(tileId, Qt.rect(t.column * (cellWidth + gap), t.row * (cellHeight + gap),
             t.columnSpan * cellWidth + (t.columnSpan - 1) * gap, t.rowSpan * cellHeight + (t.rowSpan - 1) * gap))
     }
 
@@ -105,8 +90,7 @@ PanelWindow {
     }
 
     function titleOf(tileId: int): string {
-        const t = tiles.find(x => x.tileId === tileId)
-        return t ? t.title : ""
+        return TileCatalog.titleOf(tileId)
     }
 
     function componentFor(tileId: int): var {
