@@ -5,11 +5,15 @@ for a 2-in-1 laptop: everything works with keyboard, mouse and touch. Technical 
 
 Status: usable, still changing. Plan and decisions: [PHASES.md](PHASES.md).
 
+![Control center](docs/screenshots/control-center.png)
+
+![Launcher with a system action](docs/screenshots/launcher.png)
+
 ## What is in it
 
 - **Bar** with workspaces, window title, status icons, clock; dropdowns for sound, network, Bluetooth, battery, night light, calendar.
 - **Control center** (blurred overlay with tiles): sound, display, network, Bluetooth, power profile, caffeine, focus, VPN, hotspot, capture, timer, weather, media, calendar, system monitor.
-- **Launcher** with five modes: apps and calculator, web search, settings, AI (docked chat panel for command-line AI tools), clipboard history.
+- **Launcher** with five modes: apps, calculator and system actions (`wifi off`, `timer 10m`, `lock screen`), web search (optional suggestions), settings, AI (docked chat panel for command-line AI tools), clipboard history.
 - **Settings app** with draft, save, a 15 second confirmation and an external watchdog that restores the old file if the shell dies.
 - **Lock screen** (PAM), **greeter** for greetd, idle policy: lock after 5 minutes, screen off after 10. **Never suspend or hibernate.**
 - **Touch and tablet mode:** edge swipes, bar hides in tablet mode, screen follows the orientation sensor, built-in on-screen keyboard.
