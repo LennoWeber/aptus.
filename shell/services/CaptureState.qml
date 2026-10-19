@@ -117,10 +117,13 @@ Scope {
         stderr: StdioCollector {
             onStreamFinished: if (text.trim() !== "") { root.lastError = text.trim(); console.warn("aptus: capture: " + text.trim()) }
         }
+        // The exit status enum of Process is not known to qmllint.
+        // qmllint disable signal-handler-parameters
         onExited: code => {
             if (code !== 0 && root.lastError === "") root.lastError = "The capture tool stopped with code " + code
             if (code !== 0) Quickshell.execDetached(["notify-send", "-a", "shell.", "Screenshot failed", root.lastError])
         }
+        // qmllint enable signal-handler-parameters
     }
 
     Process {
