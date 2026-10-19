@@ -6,3 +6,6 @@ SearchField 1.0 SearchField.qml
 SettingRow 1.0 SettingRow.qml
 SettingsWindow 1.0 SettingsWindow.qml
 Sidebar 1.0 Sidebar.qml
+FieldBox 1.0 FieldBox.qml
+SearchEngineEditor 1.0 SearchEngineEditor.qml
+LocationEditor 1.0 LocationEditor.qml

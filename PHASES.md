@@ -585,6 +585,12 @@ Rückmeldung: Kontrollzentrum gut; Sound-Kachel zeigte „Muted“ über dem Reg
 - **Sperrbildschirm** zeigt das Bild mit hellem Schleier (45 %). **Greeter:** Bild nur über `wallpaper` in `/etc/aptus/greeter.json` (Pfad muss für den Benutzer `greetd` lesbar sein, z. B. unter `/usr/local/share/aptus`); ein „für Login übernehmen“ im Picker braucht sudo und kommt später.
 - Zum Testen liegen drei erzeugte Farbverläufe in `~/Pictures/Wallpapers` (löschbar).
 
+### Abschnitt 7c-2 (Settings-Editoren, README)
+- **Neue Editoren** in der Settings-App: Suchmaschinen-Liste (Name, URL-Vorlage, hinzufügen, entfernen, mindestens eine bleibt) und Wetter-Ort (Suche über die Open-Meteo-Geokodierung, Tippen übernimmt Name und Koordinaten). Beide sind „breite“ Zeilen mit Editor unter dem Titel (`SettingRow.wide`). `FieldBox` meldet den Fokus an die Bildschirmtastatur. IPC `settingsFocus <entryId>` öffnet die Settings an einem Eintrag.
+- **Weiter nur in der Datei** (Hinweis „Edit this in settings.json“): Provider-Liste (AI), Kachel-Reihenfolge, Tastenkürzel, Launcher-Modustasten. Grund: Provider und Kürzel haben eigene Speicherorte und eigene Prüfungen (Befehl testen, Konflikte), Kacheln brauchen ein bewegliches Raster.
+- README neu geschrieben (Funktionen, Voraussetzungen, Installation, Tasten, Sicherheit).
+- **Ungeklärt, entscheidet Lenno:** Lizenz; Umbenennung des Repos `aptus.` → `aptus` (GitHub-Einstellung); AI-Nutzung zeigt ehrlich „kein Anbieter verbunden“, weil die CLIs keine Nutzungszahlen liefern.
+
 ## Nächster Schritt
 
-7c-2: restliche Settings-Editoren (Listen, Provider, Kacheln, Hotkeys, Ort), AI-Nutzung mit echten Daten, Aufräumen (README, Lizenz, Umbenennung `aptus.` → `aptus`). Ausstehend vom Test: Greeter nach Neustart. Wartet auf dein „weiter“.
+Test von 7c-2 (Settings → Launcher → Search engines, Calendar & Weather → Weather location; Klicks nur am Gerät prüfbar). Danach 7d, falls gewünscht: Provider-Editor, Hotkey-Editor, Kachel-Editor, Dreh-Schalter, Unschärfe-Feinschliff. Wartet auf dein „weiter“.

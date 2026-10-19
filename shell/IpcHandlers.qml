@@ -91,6 +91,11 @@ Scope {
             root.launcherState.toggle(modes[modeName])
         }
 
+        // Open the settings app at one entry, e.g. `settingsFocus weather.locationName`.
+        function settingsFocus(entryId: string): void {
+            root.settingsState.focusEntry(entryId)
+        }
+
         function settingsToggle(): void {
             if (root.settingsState.open) root.settingsState.closeWindow()
             else root.settingsState.openWindow("")

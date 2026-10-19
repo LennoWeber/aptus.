@@ -21,7 +21,10 @@ Item {
     signal resetRequested()
     signal actionRequested()
 
-    implicitHeight: Math.max(64, textColumn.implicitHeight + 28)
+    // Lists and the location have a tall editor under the title; everything else sits to the right of it.
+    readonly property bool wide: !!entry && (entry.kind === "list" || entry.kind === "location")
+
+    implicitHeight: wide ? textColumn.implicitHeight + wideEditor.implicitHeight + 44 : Math.max(64, textColumn.implicitHeight + 28)
 
     function nudge(delta: real): void {
         const step = entry && entry.step ? entry.step : 1
@@ -41,7 +44,7 @@ Item {
 
     Column {
         id: textColumn
-        anchors { left: parent.left; leftMargin: 4; right: editor.left; rightMargin: 20; verticalCenter: parent.verticalCenter }
+        anchors { left: parent.left; leftMargin: 4; right: editor.left; rightMargin: 20; verticalCenter: row.wide ? undefined : parent.verticalCenter; top: row.wide ? parent.top : undefined; topMargin: 16 }
         spacing: 3
         Row {
             spacing: 8
@@ -65,9 +68,24 @@ Item {
         }
     }
 
+    Loader {
+        id: wideEditor
+        visible: row.wide
+        anchors { left: parent.left; leftMargin: 4; right: parent.right; top: textColumn.bottom; topMargin: 14 }
+        sourceComponent: row.entry && row.entry.kind === "list" ? engineEditor : row.entry && row.entry.kind === "location" ? locationEditor : null
+    }
+    Component {
+        id: engineEditor
+        SearchEngineEditor { engines: row.draftValue || []; onChanged: value => row.valueEdited(value) }
+    }
+    Component {
+        id: locationEditor
+        LocationEditor { weather: row.draftValue || ({}); onChanged: value => row.valueEdited(value) }
+    }
+
     Row {
         id: editor
-        anchors { right: parent.right; rightMargin: 4; verticalCenter: parent.verticalCenter }
+        anchors { right: parent.right; rightMargin: 4; verticalCenter: row.wide ? undefined : parent.verticalCenter; top: row.wide ? parent.top : undefined; topMargin: 16 }
         spacing: 10
 
         // Back to the default, only while it differs.
