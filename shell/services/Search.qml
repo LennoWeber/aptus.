@@ -12,6 +12,7 @@ Singleton {
     property var appEntries          // from Quickshell DesktopEntries
     property var settingsState       // SettingsAppState, set by shell.qml; Settings mode searches its entries
     property var browser             // BrowserState, set by shell.qml; Web results search through it
+    property var controls            // { network, bluetooth, nightLight, caffeine, focus, timer, lock }, set by shell.qml; system actions drive them
     property int maxResults: 8       // launcher.maxResults
     property bool showOpenWindows: true  // launcher.showOpenWindows
 
@@ -49,7 +50,7 @@ Singleton {
             const out = []
             const calc = evaluateExpression(q)
             if (calc) out.push(calc)
-            return out.concat(searchWindows(q), searchApps(q))
+            return out.concat(searchActions(q), searchWindows(q), searchApps(q))
         }
         case Enums.LauncherMode.Web:
             return [makeResult({
@@ -81,6 +82,64 @@ Singleton {
             }))
         }
         return rank(scored, query).slice(0, maxResults)
+    }
+
+    // System actions typed as a command: "wifi off", "bluetooth", "night light on", "lock", "timer 10m", "pomodoro".
+    // Switches take an optional trailing on/off; without it the result flips the current state.
+    function searchActions(query: string): var {
+        const c = controls
+        if (!c) return []
+        const out = []
+        const add = (id, title, subtitle, run) => out.push(makeResult({
+            id: "action:" + id, mode: Enums.LauncherMode.Apps, kind: Enums.ResultKind.Action,
+            title: title, subtitle: subtitle, keyHint: "Enter", score: 500, run: run
+        }))
+        const q = query.toLowerCase()
+
+        const timerText = q.match(/^timer\s+(.+)$/)
+        if (timerText) {
+            const sec = parseDuration(timerText[1])
+            if (sec !== null) add("timer", "Start timer: " + describeDuration(sec), "Timer", () => c.timer.startTimer(sec))
+        }
+        if (c.timer && c.timer.running && fuzzyScore("stop timer", q) >= 55)
+            add("timer-stop", "Stop timer", "Timer", () => c.timer.reset())
+        if (fuzzyScore("pomodoro", q) >= 55) add("pomodoro", "Start pomodoro", "Timer", () => c.timer.startPomodoro())
+        if (fuzzyScore("lock screen", q) >= 55) add("lock", "Lock screen", "Session", () => c.lock.lock())
+
+        const switches = [
+            { id: "wifi", name: "Wi-Fi", keys: ["wifi", "wi-fi"], target: c.network, get: t => t.wifiEnabled, set: (t, on) => t.setWifiEnabled(on) },
+            { id: "bluetooth", name: "Bluetooth", keys: ["bluetooth"], target: c.bluetooth, get: t => t.powered, set: (t, on) => t.setPowered(on) },
+            { id: "nightlight", name: "Night light", keys: ["night light", "nightlight"], target: c.nightLight, get: t => t.enabled, set: (t, on) => t.setEnabled(on) },
+            { id: "caffeine", name: "Caffeine", keys: ["caffeine"], target: c.caffeine, get: t => t.active, set: (t, on) => t.setActive(on) },
+            { id: "focus", name: "Focus", keys: ["focus", "do not disturb"], target: c.focus, get: t => t.active, set: (t, on) => t.setActive(on) }
+        ]
+        const verb = q.match(/^(.*?)\s+(on|off)$/)
+        const subject = verb ? verb[1] : q
+        for (const sw of switches) {
+            if (!sw.target || subject.length < 2 || !sw.keys.some(k => fuzzyScore(k, subject) >= 55)) continue
+            const now = sw.get(sw.target)
+            const target = verb ? verb[2] === "on" : !now
+            add(sw.id, "Turn " + sw.name + (target ? " on" : " off"), target === now ? "Already " + (now ? "on" : "off") : "Currently " + (now ? "on" : "off"),
+                () => sw.set(sw.target, target))
+        }
+        return out
+    }
+
+    // "10m", "1h30", "1h 30m", "90s", "25" (minutes) as seconds; null for anything else, zero or over a day.
+    function parseDuration(text: string): var {
+        // Units are explicit ("10m", "1h30m", "90s"); a bare number is minutes, also after hours ("1h30").
+        const t = text.trim()
+        const m = t.match(/^(?:(\d+)\s*h)?\s*(?:(\d+)\s*m(?:in)?)?\s*(?:(\d+)\s*s)?$/) || t.match(/^(?:(\d+)\s*h\s*)?(\d+)()$/)
+        if (!m || (m[1] === undefined && m[2] === undefined && m[3] === undefined)) return null
+        const sec = Number(m[1] || 0) * 3600 + Number(m[2] || 0) * 60 + Number(m[3] || 0)
+        return sec > 0 && sec <= 86400 ? sec : null
+    }
+
+    function describeDuration(sec: int): string {
+        const h = Math.floor(sec / 3600)
+        const mi = Math.floor((sec % 3600) / 60)
+        const s = sec % 60
+        return [h ? h + " h" : "", mi ? mi + " min" : "", s ? s + " s" : ""].filter(x => x).join(" ")
     }
 
     // Open windows (Hyprland), matched on title and class; Enter focuses the window.

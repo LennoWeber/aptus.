@@ -277,6 +277,7 @@ ShellRoot {
     Component.onCompleted: {
         Search.browser = browserObj
         Search.settingsState = settingsAppObj
+        Search.controls = { network: networkObj, bluetooth: bluetoothObj, nightLight: nightLightObj, caffeine: caffeineObj, focus: focusObj, timer: timerObj, lock: lockObj }
         applyBlur()
     }
 }

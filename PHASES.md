@@ -628,6 +628,11 @@ Rückmeldung: Kontrollzentrum gut; Sound-Kachel zeigte „Muted“ über dem Reg
 - `AiPanel` las die Werte schon aus den Settings (Handoff-Hinweis „fest“ war überholt).
 - Geprüft: Lint 17 (unverändert), Screenshot der Zeilen. Nicht geprüft: Aufnahme per Klick und Tastatur (kein Zugriff per ydotool), Wirkung im Launcher nach Speichern.
 
+### Baustein 6: System-Aktionen in der Suche (20. Okt.)
+- `Search.searchActions` (Apps-Modus, vor Fenstern und Programmen): `wifi`, `bluetooth`, `night light`, `caffeine`, `focus`/`do not disturb` mit optionalem `on`/`off` (ohne: Zustand umschalten, Zeile zeigt „Currently on“), `lock screen`, `timer 10m` (auch `1h30`, `90s`, `25` = Minuten), `stop timer` (nur bei laufendem Timer), `pomodoro`. Dienste kommen über `Search.controls` aus `shell.qml`.
+- Bewusst nicht: Restart, Shutdown, Log out per Tippen (unwiderruflich, ein Enter zu nah); dafür gibt es das Power-Menü.
+- Geprüft: Lint 17, Dauer-Parser in Node (13 Fälle, ein Fehler bei `90s` gefunden und behoben), live im Launcher: `wifi` zeigt „Turn Wi-Fi off“, `timer 90s` + Enter startet den Timer, die Kontext-Zone zeigt „1:29 Timer“ (bestätigt Baustein 1), `stop timer` beendet ihn. Nicht live geprüft: die anderen Schalter auszuführen (Wi-Fi/Bluetooth würden die Verbindung kappen).
+
 ## Nächster Schritt
 
 Alltagsgebrauch auf dem Laptop; was auffällt, kommt als Feinschliff. Mögliche nächste Bausteine in dieser Reihenfolge: Kontext-Zone der Leiste, „More“-Links der Dropdowns, Kachel-Editor. Wartet auf Lennos Rückmeldung oder „weiter“.
