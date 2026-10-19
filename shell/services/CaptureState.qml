@@ -71,7 +71,7 @@ Scope {
     readonly property string shotScript: [
         "f=\"$1\"; mkdir -p \"$(dirname \"$f\")\"",
         "case \"$2\" in",
-        "  region) g=$(slurp) || exit 0; grim -g \"$g\" \"$f\" ;;",
+        "  region) g=$(slurp </dev/null) || exit 0; grim -g \"$g\" \"$f\" ;;",
         "  window) g=$(hyprctl -j activewindow | python3 -c 'import json,sys;w=json.load(sys.stdin);print(\"%d,%d %dx%d\"%(w[\"at\"][0],w[\"at\"][1],w[\"size\"][0],w[\"size\"][1]))') || exit 1; grim -g \"$g\" \"$f\" ;;",
         "  *) grim \"$f\" ;;",
         "esac || exit 1",
@@ -83,7 +83,7 @@ Scope {
     readonly property string recordScript: [
         "f=\"$1\"; mkdir -p \"$(dirname \"$f\")\"",
         "a=\"\"; [ \"$3\" = audio ] && a=\"-a\"",
-        "if [ \"$2\" = region ]; then g=$(slurp) || exit 0; exec wf-recorder $a -g \"$g\" -f \"$f\"; fi",
+        "if [ \"$2\" = region ]; then g=$(slurp </dev/null) || exit 0; exec wf-recorder $a -g \"$g\" -f \"$f\"; fi",
         "o=$(hyprctl -j monitors | python3 -c 'import json,sys;m=json.load(sys.stdin);print((next((x for x in m if x.get(\"focused\")),m[0]))[\"name\"])')",
         "exec wf-recorder $a -o \"$o\" -f \"$f\""
     ].join("\n")
