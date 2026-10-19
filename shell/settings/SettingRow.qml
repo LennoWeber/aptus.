@@ -22,7 +22,7 @@ Item {
     signal actionRequested()
 
     // Lists and the location have a tall editor under the title; everything else sits to the right of it.
-    readonly property bool wide: !!entry && (entry.kind === "list" || entry.kind === "location")
+    readonly property bool wide: !!entry && (entry.kind === "list" || entry.kind === "location" || entry.kind === "providerList")
 
     implicitHeight: wide ? textColumn.implicitHeight + wideEditor.implicitHeight + 44 : Math.max(64, textColumn.implicitHeight + 28)
 
@@ -60,7 +60,7 @@ Item {
             wrapMode: Text.Wrap
         }
         Label {
-            visible: row.entry && !row.editable && row.entry.kind !== "action"
+            visible: row.entry && !row.editable && row.entry.kind !== "action" && !row.wide
             width: parent.width
             text: "Edit this in ~/.config/aptus/settings.json for now."
             role: Enums.TextRole.Bar
@@ -72,11 +72,15 @@ Item {
         id: wideEditor
         visible: row.wide
         anchors { left: parent.left; leftMargin: 4; right: parent.right; top: textColumn.bottom; topMargin: 14 }
-        sourceComponent: row.entry && row.entry.kind === "list" ? engineEditor : row.entry && row.entry.kind === "location" ? locationEditor : null
+        sourceComponent: row.entry && row.entry.kind === "list" ? engineEditor : row.entry && row.entry.kind === "location" ? locationEditor : row.entry && row.entry.kind === "providerList" ? providerEditor : null
     }
     Component {
         id: engineEditor
         SearchEngineEditor { engines: row.draftValue || []; onChanged: value => row.valueEdited(value) }
+    }
+    Component {
+        id: providerEditor
+        ProviderEditor {}
     }
     Component {
         id: locationEditor

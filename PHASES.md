@@ -596,6 +596,12 @@ Rückmeldung: Kontrollzentrum gut; Sound-Kachel zeigte „Muted“ über dem Reg
 - Kachel: kompakt 5-h-Fenster mit Balken und 7-Tage-Wert, im Detail beide Fenster mit Reset-Zeit, „diese Woche nach Produkt“ und „Updated vor x min“. Balken ab 70 % amber, ab 90 % rot. Über 30 min alt: „old“ in Amber und Hinweis, dass die Zahlen sich bewegen, wenn Claude Code läuft.
 - Ohne Datei: „No usage data“ mit Erklärung. Für `agy` und `vibe` gibt es keine Zahlen. Variante B (Endpunkt mit Token) bleibt eine mögliche spätere Option hinter einem Schalter, nur mit Lennos Okay.
 
+### Abschnitt 7d (Provider, Drehsperre, Unschärfe)
+- **Provider-Editor** (Settings → AI): Schalter je Provider (der letzte aktive bleibt an), „Remove“ nur für eigene, „Add a command-line tool“ (Name, Programm, Argumente mit genau einem `{prompt}`; Prüfung vor dem Speichern). Wirkt sofort und liegt in `~/.config/aptus/ai-providers.json` (`providers` und `overrides` für die eingebauten). Der Standard-Provider bietet nur aktive an. Ein Test-Knopf für den Befehl fehlt noch.
+- **Drehsperre:** Knopf neben dem Tablet-Knopf über dem Kontrollzentrum (nur im Tablet-Modus; gefüllt = gesperrt), IPC `rotationLockToggle`, OSD „Rotation locked / follows the device“.
+- **Unschärfe:** Der Regler „Background blur“ steuert jetzt die Hyprland-Unschärfe (`size = Wert/2`, 2 Durchgänge bis 10, sonst 3), beim Start und bei jeder Änderung. Vorher war der Regler wirkungslos.
+- Weiter nur in der Datei: Tastenkürzel, Launcher-Modustasten, Kachel-Reihenfolge.
+
 ## Nächster Schritt
 
-Test von 7c-2 (Settings → Launcher → Search engines, Calendar & Weather → Weather location; Klicks nur am Gerät prüfbar). Danach 7d, falls gewünscht: Provider-Editor, Hotkey-Editor, Kachel-Editor, Dreh-Schalter, Unschärfe-Feinschliff. Wartet auf dein „weiter“.
+Test von 7d. Danach offen: Hotkey-Editor, Kachel-Editor, Test-Knopf für Provider, Wallpaper für Login, Feinschliff nach deinem Gebrauch. Wartet auf dein „weiter“ oder neue Wünsche.

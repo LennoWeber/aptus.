@@ -9,3 +9,4 @@ Sidebar 1.0 Sidebar.qml
 FieldBox 1.0 FieldBox.qml
 SearchEngineEditor 1.0 SearchEngineEditor.qml
 LocationEditor 1.0 LocationEditor.qml
+ProviderEditor 1.0 ProviderEditor.qml

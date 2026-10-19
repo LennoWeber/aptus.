@@ -42,8 +42,22 @@ Singleton {
         return providers.find(p => p.id === providerId) || null
     }
 
-    // Built-in providers plus the user's own.
+    // The user's file: { providers: [own providers], overrides: { builtInId: enabled } }.
+    property var userData: ({ providers: [], overrides: {} })
+
+    // Read both files, then build the list.
     function load(): var {
+        try {
+            const own = JSON.parse(userFile.text())
+            userData = { providers: own.providers || [], overrides: own.overrides || {} }
+        } catch (e) {
+            userData = { providers: [], overrides: {} }
+        }
+        return rebuild()
+    }
+
+    // Built-in providers (with the user's on/off choices) plus the user's own.
+    function rebuild(): var {
         const out = []
         try {
             const shipped = JSON.parse(builtinFile.text())
@@ -52,12 +66,8 @@ Singleton {
         } catch (e) {
             console.warn("aptus: ai-providers.json not readable: " + e)
         }
-        try {
-            const own = JSON.parse(userFile.text())
-            for (const p of own.providers || []) out.push(Object.assign({ enabled: true }, p, { builtIn: false, userAdded: true }))
-        } catch (e) {
-            // no user file
-        }
+        for (const p of out) if (p.id in userData.overrides) p.enabled = userData.overrides[p.id]
+        for (const p of userData.providers) out.push(Object.assign({ enabled: true }, p, { builtIn: false, userAdded: true }))
         providers = out
         return out
     }
@@ -108,28 +118,42 @@ Singleton {
         // qmllint enable signal-handler-parameters
     }
 
+    // Add an own provider. Its command is one executable; its arguments contain {prompt} once.
     function add(provider: var): void {
         if (!provider || !provider.id) throw new Error("invariant: AiProviders.add: provider needs an id")
         if (provider.builtIn) throw new Error("invariant: AiProviders.add: built-in providers are not added by the user")
         if (!provider.quickArgs || provider.quickArgs.filter(a => a === "{prompt}").length !== 1) throw new Error("invariant: AiProviders.add: quickArgs must contain {prompt} exactly once")
         if ((providers || []).some(p => p.id === provider.id)) throw new Error("invariant: AiProviders.add: duplicate provider id")
-        throw new Error("not implemented")
+        const own = { id: provider.id, name: provider.name, command: provider.command, quickArgs: provider.quickArgs, streaming: true, enabled: true }
+        userData = { providers: userData.providers.concat([own]), overrides: userData.overrides }
+        saveUser()
     }
 
-    // Only user-added providers.
+    // Own providers only; the built-in ones can be switched off but stay.
     function remove(providerId: string): void {
         if (!providerId) throw new Error("invariant: AiProviders.remove: empty provider id")
         if ((providers || []).some(p => p.id === providerId && p.builtIn)) throw new Error("invariant: AiProviders.remove: built-in providers cannot be removed")
-        throw new Error("not implemented")
+        userData = { providers: userData.providers.filter(p => p.id !== providerId), overrides: userData.overrides }
+        saveUser()
     }
 
     function setEnabled(providerId: string, on: bool): void {
         if (!providerId) throw new Error("invariant: AiProviders.setEnabled: empty provider id")
         if (!on && (providers || []).filter(p => p.enabled && p.id !== providerId).length === 0) throw new Error("invariant: AiProviders.setEnabled: the last enabled provider cannot be disabled")
-        throw new Error("not implemented")
+        const builtIn = (providers || []).some(p => p.id === providerId && p.builtIn)
+        if (builtIn) {
+            const overrides = Object.assign({}, userData.overrides)
+            overrides[providerId] = on
+            userData = { providers: userData.providers, overrides: overrides }
+        } else {
+            userData = { providers: userData.providers.map(p => p.id === providerId ? Object.assign({}, p, { enabled: on }) : p), overrides: userData.overrides }
+        }
+        saveUser()
     }
 
+    // Write ~/.config/aptus/ai-providers.json and reload the list.
     function saveUser(): void {
-        throw new Error("not implemented")
+        userFile.setText(JSON.stringify(userData, null, 2) + "\n")
+        rebuild()
     }
 }

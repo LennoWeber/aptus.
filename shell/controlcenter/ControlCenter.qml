@@ -32,7 +32,9 @@ PanelWindow {
     property var aiUsageState
     signal powerRequested()
     signal tabletRequested()
+    signal rotationLockRequested()
     property bool tabletMode
+    property bool rotationLocked
 
     // Layout of the tiles on a 6 x 5 grid: { tileId, title, column, row, columnSpan, rowSpan }.
     property var tiles: [
@@ -271,6 +273,7 @@ PanelWindow {
             MouseArea { id: tap; anchors.fill: parent; hoverEnabled: true; onClicked: cornerButton.clicked() }
         }
 
+        CornerButton { visible: cc.tabletMode; glyph: "rotate"; active: cc.rotationLocked; onClicked: cc.rotationLockRequested() }
         CornerButton { glyph: "tablet"; active: cc.tabletMode; onClicked: cc.tabletRequested() }
         CornerButton { glyph: "power"; onClicked: cc.powerRequested() }
     }

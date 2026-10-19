@@ -16,7 +16,7 @@ Item {
 
     // Option list of a choice entry.
     function choicesOf(entry: var): var {
-        if (entry.optionsFrom === "providers") return AiProviders.providers.map(p => ({ id: p.id, label: p.name }))
+        if (entry.optionsFrom === "providers") return AiProviders.providers.filter(p => p.enabled).map(p => ({ id: p.id, label: p.name }))
         if (entry.optionsFrom) return (appSettings.get(entry.optionsFrom) || []).map(o => ({ id: o.id, label: o.name }))
         return (entry.options || []).map(o => ({ id: o, label: o }))
     }

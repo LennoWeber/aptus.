@@ -24,6 +24,14 @@ Scope {
     property var deviceMode     // DeviceModeState
     property var wallpaperPicker  // WallpaperPicker
 
+    function toggleRotationLock(): void {
+        deviceMode.setRotationLocked(!deviceMode.rotationLocked)
+        flashRotation()
+    }
+    function flashRotation(): void {
+        osd.flash(Enums.OsdKind.Rotation, 0, false, deviceMode.rotationLocked ? "Rotation locked" : "Rotation follows the device")
+    }
+
     // The launcher and the control center never show together.
     function openControlCenter(): void {
         launcherState.hide()
@@ -99,6 +107,11 @@ Scope {
         function settingsToggle(): void {
             if (root.settingsState.open) root.settingsState.closeWindow()
             else root.settingsState.openWindow("")
+        }
+
+        // Keep the screen as it is, or let it follow the sensor again.
+        function rotationLockToggle(): void {
+            root.toggleRotationLock()
         }
 
         // Tablet mode by hand (the laptop's tablet switch is not reported by every firmware).

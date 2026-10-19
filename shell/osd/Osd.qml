@@ -4,6 +4,7 @@ import Quickshell.Wayland
 import Quickshell.Hyprland
 import qs.models
 import qs.theme
+import qs.services
 import qs.components
 
 // On-screen indicator for volume, brightness and similar keys: a small opaque pill that appears in the same
@@ -37,13 +38,13 @@ PanelWindow {
         return list.length > 0 ? list[0] : null
     }
 
-    readonly property string glyphKind: kind === Enums.OsdKind.Brightness ? "sun" : kind === Enums.OsdKind.Microphone ? "mic" : kind === Enums.OsdKind.Caffeine ? "cup" : "volume"
+    readonly property string glyphKind: kind === Enums.OsdKind.Brightness ? "sun" : kind === Enums.OsdKind.Microphone ? "mic" : kind === Enums.OsdKind.Caffeine ? "cup" : kind === Enums.OsdKind.Rotation ? "rotate" : "volume"
 
     screen: pickScreen(Hyprland.focusedMonitor)
     visible: shown || fade > 0.01
     anchors { bottom: true }
     // qmllint disable unqualified unresolved-type
-    margins { bottom: 84 }
+    margins { bottom: Osk.shown ? 340 : 84 }
     // qmllint enable unqualified unresolved-type
     implicitWidth: 280
     implicitHeight: 56

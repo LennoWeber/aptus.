@@ -22,6 +22,14 @@ ShellRoot {
     // TODO(phase 7, later sections): create once, pre-loaded: WallpaperPicker, SettingsWindow, ConfirmDialog, LockSurface, EdgeStrips.
 
     AppSettings { id: settingsObj }
+    // The compositor draws the blur; the setting sets its size and passes (applied now and on every change).
+    readonly property int blurSetting: settingsObj.get("appearance.blurRadius") ?? 18
+    onBlurSettingChanged: applyBlur()
+    function applyBlur(): void {
+        Quickshell.execDetached(["hyprctl", "eval",
+            "hl.config({ decoration = { blur = { size = " + Math.max(1, Math.round(blurSetting / 2)) + ", passes = " + (blurSetting <= 10 ? 2 : 3) + " } } })"])
+    }
+
     DeviceModeState { id: deviceObj; autoRotate: settingsObj.get("touch.autoRotate") !== false }
 
     // In tablet mode the bar hides to leave room for reading; a swipe from the top edge shows it for a few seconds.
@@ -169,6 +177,8 @@ ShellRoot {
     ControlCenter {
         id: ccObj
         tabletMode: deviceObj.tabletMode
+        rotationLocked: deviceObj.rotationLocked
+        onRotationLockRequested: ipcObj.toggleRotationLock()
         onTabletRequested: deviceObj.toggleManualTablet()
         onPowerRequested: { shellStateObj.closeAll(); powerMenuObj.toggle() }
         shellState: shellStateObj
@@ -258,5 +268,6 @@ ShellRoot {
     Component.onCompleted: {
         Search.browser = browserObj
         Search.settingsState = settingsAppObj
+        applyBlur()
     }
 }
