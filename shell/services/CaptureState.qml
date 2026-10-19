@@ -84,7 +84,8 @@ Scope {
         "f=\"$1\"; mkdir -p \"$(dirname \"$f\")\"",
         "a=\"\"; [ \"$3\" = audio ] && a=\"-a\"",
         "if [ \"$2\" = region ]; then g=$(slurp) || exit 0; exec wf-recorder $a -g \"$g\" -f \"$f\"; fi",
-        "exec wf-recorder $a -f \"$f\""
+        "o=$(hyprctl -j monitors | python3 -c 'import json,sys;m=json.load(sys.stdin);print((next((x for x in m if x.get(\"focused\")),m[0]))[\"name\"])')",
+        "exec wf-recorder $a -o \"$o\" -f \"$f\""
     ].join("\n")
 
     Timer {

@@ -72,6 +72,12 @@ Scope {
             root.captureState.screenshot("window")
         }
 
+        // Starts a full-screen recording, or stops the running one.
+        function recordScreenToggle(): void {
+            if (root.captureState.recording) root.captureState.stopRecording()
+            else root.captureState.startRecording("screen")
+        }
+
         // Starts a region recording, or stops the running one.
         function recordToggle(): void {
             if (root.captureState.recording) root.captureState.stopRecording()
