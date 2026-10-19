@@ -40,6 +40,7 @@ PanelWindow {
         if (!launcherState || !launcherState.open) return
         launcherState.results = Search.runSearch(launcherState.mode, launcherState.query)
         launcherState.selectedIndex = 0
+        if (launcherState.mode === Enums.LauncherMode.Web) WebSuggest.request(launcherState.query.trim())
     }
 
     screen: pickScreen(Hyprland.focusedMonitor)
@@ -68,6 +69,26 @@ PanelWindow {
         target: Search
         property: "maxResults"
         value: win.appSettings ? (win.appSettings.get("launcher.maxResults") || 8) : 8
+    }
+    Binding {
+        target: WebSuggest
+        property: "enabled"
+        value: win.appSettings ? win.appSettings.get("launcher.webSuggestions") === true : false
+    }
+    Binding {
+        target: WebSuggest
+        property: "engineId"
+        value: win.appSettings ? win.appSettings.searchEngineId : "google"
+    }
+    // Suggestions arrive after the first results; the selection stays where it is.
+    Connections {
+        target: WebSuggest
+        function onSuggestionsChanged() {
+            if (!win.launcherState || !win.launcherState.open || win.launcherState.mode !== Enums.LauncherMode.Web) return
+            const keep = win.launcherState.selectedIndex
+            win.launcherState.results = Search.runSearch(win.launcherState.mode, win.launcherState.query)
+            win.launcherState.selectedIndex = Math.min(keep, win.launcherState.results.length - 1)
+        }
     }
     Binding {
         target: Search

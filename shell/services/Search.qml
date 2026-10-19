@@ -52,13 +52,25 @@ Singleton {
             if (calc) out.push(calc)
             return out.concat(searchActions(q), searchWindows(q), searchApps(q))
         }
-        case Enums.LauncherMode.Web:
-            return [makeResult({
+        case Enums.LauncherMode.Web: {
+            const out = [makeResult({
                 id: "web:" + q, mode: mode, kind: Enums.ResultKind.WebSuggestion,
                 title: q, subtitle: "Search the web", iconName: "web", keyHint: "Enter",
                 score: 100,
                 run: () => { if (root.browser) root.browser.search(q) }
             })]
+            // Suggestions only count for the text they were fetched for; an old answer is not shown.
+            if (WebSuggest.forQuery === q) for (const phrase of WebSuggest.suggestions) {
+                if (phrase.toLowerCase() === q.toLowerCase()) continue
+                out.push(makeResult({
+                    id: "web:" + phrase, mode: mode, kind: Enums.ResultKind.WebSuggestion,
+                    title: phrase, subtitle: "Suggestion", iconName: "web", keyHint: "Enter",
+                    score: 90 - out.length,
+                    run: () => { if (root.browser) root.browser.search(phrase) }
+                }))
+            }
+            return out
+        }
         default:
             return []
         }

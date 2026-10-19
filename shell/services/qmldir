@@ -28,3 +28,4 @@ SystemMonitorState 1.0 SystemMonitorState.qml
 CaptureState 1.0 CaptureState.qml
 DeviceModeState 1.0 DeviceModeState.qml
 singleton Osk 1.0 Osk.qml
+singleton WebSuggest 1.0 WebSuggest.qml

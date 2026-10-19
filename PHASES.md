@@ -633,6 +633,12 @@ Rückmeldung: Kontrollzentrum gut; Sound-Kachel zeigte „Muted“ über dem Reg
 - Bewusst nicht: Restart, Shutdown, Log out per Tippen (unwiderruflich, ein Enter zu nah); dafür gibt es das Power-Menü.
 - Geprüft: Lint 17, Dauer-Parser in Node (13 Fälle, ein Fehler bei `90s` gefunden und behoben), live im Launcher: `wifi` zeigt „Turn Wi-Fi off“, `timer 90s` + Enter startet den Timer, die Kontext-Zone zeigt „1:29 Timer“ (bestätigt Baustein 1), `stop timer` beendet ihn. Nicht live geprüft: die anderen Schalter auszuführen (Wi-Fi/Bluetooth würden die Verbindung kappen).
 
+### Baustein 5: Web-Vorschläge (20. Okt.)
+- `WebSuggest` (services, Singleton): holt Vorschläge per `curl` (Argumentliste, keine Shell) beim Dienst der gewählten Suchmaschine (Google, DuckDuckGo, Bing; eigene Maschinen bekommen keine), 150 ms entprellt, veraltete Antworten werden verworfen (`forQuery`). Aus Search-Sicht zeigt der Web-Modus „Search the web“ plus bis zu 8 Vorschläge (`WebSuggestion`).
+- Datenschutz: Schalter `launcher.webSuggestions`, **Standard aus**, Beschreibung nennt, dass jede getippte Zeile an die Suchmaschine geht.
+- Launcher ergänzt die Liste nachträglich (`onSuggestionsChanged`) und behält die Auswahl.
+- Geprüft: Lint 17, beide Antwortformate per curl (Google und DuckDuckGo `type=list` liefern `["q",[…]]`), live im Web-Modus mit Schalter an (Screenshot: Vorschläge unter der Suche). Bing-Endpunkt nicht abgefragt.
+
 ## Nächster Schritt
 
 Alltagsgebrauch auf dem Laptop; was auffällt, kommt als Feinschliff. Mögliche nächste Bausteine in dieser Reihenfolge: Kontext-Zone der Leiste, „More“-Links der Dropdowns, Kachel-Editor. Wartet auf Lennos Rückmeldung oder „weiter“.
