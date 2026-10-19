@@ -11,19 +11,18 @@ import qs.services
 // Launcher overlay: pill, results, docked AI panel.
 PanelWindow {
     id: win
-    // TODO(phase 7, section 5): AI mode: the pill docks at the screen edge without blur and the input covers only the panel (AiPanel).
-
     property var launcherState  // LauncherState
     property var shellState  // ShellState
     property var appSettings  // AppSettings
-    property real blurAmount: launcherState && launcherState.open ? 1 : 0  // 0..1, drives the fade
+    // In AI mode the pill gives way to the docked panel (AiPanel): no blur, the screen stays usable.
+    property real blurAmount: launcherState && launcherState.open && !launcherState.docked ? 1 : 0  // 0..1, drives the fade
     readonly property var placeholders: ["Search apps, calculate", "Search the web", "Search settings", "Ask a quick question", "Search clipboard"]
     readonly property var emptyHints: [
         "Type to find an app. Tab switches the mode.",
         "Enter opens the search in your browser.",
         "Settings search arrives with the settings app.",
-        "The AI panel arrives in a later section.",
-        "Clipboard history arrives in a later section."
+        "Ask a quick question in the side panel.",
+        "Enter copies an entry. Shift+Delete removes it."
     ]
 
     Behavior on blurAmount { NumberAnimation { duration: Tokens.durFast; easing.type: Easing.BezierSpline; easing.bezierCurve: [0.2, 0, 0, 1, 1, 1] } }
@@ -43,13 +42,13 @@ PanelWindow {
     }
 
     screen: pickScreen(Hyprland.focusedMonitor)
-    visible: (launcherState && launcherState.open) || blurAmount > 0.001
+    visible: (launcherState && launcherState.open && !launcherState.docked) || blurAmount > 0.001
     anchors { top: true; bottom: true; left: true; right: true }
     color: "transparent"
     exclusionMode: ExclusionMode.Ignore
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.namespace: "aptus-launcher"
-    WlrLayershell.keyboardFocus: launcherState && launcherState.open ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+    WlrLayershell.keyboardFocus: launcherState && launcherState.open && !launcherState.docked ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
     readonly property Item blurTarget: scrim
     // The Wayland blur type is not known to qmllint; it was verified at runtime (probe R2).
     // qmllint disable unresolved-type unqualified
@@ -57,6 +56,12 @@ PanelWindow {
     // qmllint enable unresolved-type unqualified
 
     onVisibleChanged: if (visible) Qt.callLater(() => pill.focusInput())
+
+    // Clipboard results follow the history while the mode is open.
+    Connections {
+        target: Clipboard
+        function onEntriesChanged() { if (win.launcherState && win.launcherState.mode === Enums.LauncherMode.Clipboard) win.refresh() }
+    }
 
     Binding {
         target: Search
@@ -135,6 +140,11 @@ PanelWindow {
                     if (event.key === Qt.Key_Escape) lst.hide()
                     else if (event.key === Qt.Key_Down || (ctrl && (event.key === Qt.Key_N || event.key === Qt.Key_J))) lst.moveSelection(1)
                     else if (event.key === Qt.Key_Up || (ctrl && (event.key === Qt.Key_P || event.key === Qt.Key_K))) lst.moveSelection(-1)
+                    else if (event.key === Qt.Key_Delete && (event.modifiers & Qt.ShiftModifier)) {
+                        const picked = lst.results && lst.results[lst.selectedIndex]
+                        if (!picked || picked.mode !== Enums.LauncherMode.Clipboard) return
+                        Clipboard.remove(picked.actionId)
+                    }
                     else if (event.key === Qt.Key_Tab) lst.cycleMode(1)
                     else if (event.key === Qt.Key_Backtab) lst.cycleMode(-1)
                     else return
@@ -180,7 +190,7 @@ PanelWindow {
             EmptyState {
                 width: parent.width
                 visible: !win.launcherState || !win.launcherState.results || win.launcherState.results.length === 0
-                hint: win.launcherState && win.launcherState.query.trim() !== "" ? "No results" : win.emptyHints[win.launcherState ? win.launcherState.mode : 0]
+                hint: win.launcherState && win.launcherState.mode === Enums.LauncherMode.Clipboard && !Clipboard.available ? "Clipboard history needs cliphist (not found)." : win.launcherState && win.launcherState.query.trim() !== "" ? "No results" : win.emptyHints[win.launcherState ? win.launcherState.mode : 0]
             }
         }
     }

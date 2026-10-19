@@ -36,6 +36,12 @@ Item {
             mode: Enums.LauncherMode.Web
             color: Tokens.inkSoft
         }
+        ModeGlyph {
+            visible: row.result && row.result.kind === Enums.ResultKind.ClipboardItem
+            anchors.centerIn: parent
+            mode: Enums.LauncherMode.Clipboard
+            color: Tokens.inkSoft
+        }
         Label {
             visible: row.result && row.result.kind === Enums.ResultKind.Calculation
             anchors.centerIn: parent

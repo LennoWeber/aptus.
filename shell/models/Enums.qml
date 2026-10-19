@@ -51,7 +51,7 @@ QtObject {
     enum ContextKind { WindowTitle, Media, Timer, Download, BatteryAlert, Notification }
 
     // Kind of an entry in launcher results.
-    enum ResultKind { App, Window, Action, Setting, WebSuggestion, Calculation, ChatMessage, CliSession }
+    enum ResultKind { App, Window, Action, Setting, WebSuggestion, Calculation, ChatMessage, CliSession, ClipboardItem }
 
     // Type roles for Label.
     enum TextRole { Body, Bar, Title, Display, Mono }

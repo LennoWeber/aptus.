@@ -5,7 +5,7 @@
       "id": "claude",
       "name": "Claude",
       "command": "claude",
-      "quickArgs": ["-p", "{prompt}"],
+      "quickArgs": ["-p", "{prompt}", "--tools", ""],
       "streaming": true,
       "launchInTerminal": true,
       "iconName": "claude",

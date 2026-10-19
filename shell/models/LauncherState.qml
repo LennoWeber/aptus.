@@ -1,4 +1,5 @@
 import QtQuick
+import qs.services
 
 // State of the launcher pill (open/closed, mode, query, results).
 QtObject {
@@ -12,12 +13,28 @@ QtObject {
     property int selectedIndex
     property var recentApps      // optional small row when query is empty
     property var openWindows     // optional narrow cards when query is empty
+    property string defaultProviderId  // settings ai.defaultProvider
     property string activeProviderId  // AI provider used in AI mode
-    property var chatMessages    // short question/answer exchange in AI mode, cleared on close
+    property var chatMessages: []  // AI mode: { fromUser, text, streaming, error }, cleared on close
     property bool busy           // async search or AI request running
-    property bool docked         // AI mode: pill sits at a screen edge, no blur, screen stays readable
-    property int dockEdge        // Enums.DockEdge
-    property real dockProgress   // 0 = centered, 1 = docked (drives the move animation)
+    readonly property bool docked: open && mode === Enums.LauncherMode.Ai  // AI mode: panel at a screen edge, no blur, screen stays readable
+
+    Component.onCompleted: {
+        AiProviders.chunk.connect(text => {
+            if (chatMessages.length === 0) return
+            const last = chatMessages[chatMessages.length - 1]
+            last.text += (last.text === "" ? "" : "\n") + text
+            chatMessages = chatMessages.slice()
+        })
+        AiProviders.finished.connect((ok, error) => {
+            busy = false
+            if (chatMessages.length === 0) return
+            const last = chatMessages[chatMessages.length - 1]
+            last.streaming = false
+            if (!ok) last.error = error
+            chatMessages = chatMessages.slice()
+        })
+    }
 
     // Open the launcher in a mode (Enums.LauncherMode).
     function show(newMode: int): void {
@@ -35,7 +52,10 @@ QtObject {
         results = []
         selectedIndex = 0
         busy = false
+        chatMessages = []
         open = true
+        if (newMode === Enums.LauncherMode.Ai) pickProvider()
+        if (newMode === Enums.LauncherMode.Clipboard) Clipboard.refresh()
     }
 
     function hide(): void {
@@ -45,7 +65,9 @@ QtObject {
         query = ""
         results = []
         selectedIndex = 0
+        AiProviders.cancel()
         busy = false
+        chatMessages = []
         if (shellState && shellState.activeOverlay === Enums.Overlay.Launcher) shellState.closeAll()
     }
 
@@ -61,11 +83,12 @@ QtObject {
         if (newMode < Enums.LauncherMode.Apps || newMode > Enums.LauncherMode.Clipboard) throw new Error("invariant: LauncherState.setMode: unknown launcher mode")
         if (!open) throw new Error("invariant: LauncherState.setMode: setMode on a closed launcher")
         if (newMode === mode) return
-        // TODO(phase 7, section 5): AI mode -> dock() and blur out; any other mode -> undock().
         previousMode = mode
         mode = newMode
         switching = true
         selectedIndex = 0
+        if (newMode === Enums.LauncherMode.Ai) pickProvider()
+        if (newMode === Enums.LauncherMode.Clipboard) Clipboard.refresh()
     }
 
     // Tab and Shift+Tab.
@@ -101,42 +124,48 @@ QtObject {
         picked.activate()
     }
 
+    // The provider AI mode starts with: the one in use, else the default from the settings, else the first enabled one.
+    function pickProvider(): void {
+        const list = AiProviders.enabledProviders()
+        if (list.some(p => p.id === activeProviderId)) return
+        const wanted = [defaultProviderId, AiProviders.defaultId].find(id => list.some(p => p.id === id))
+        activeProviderId = wanted || (list.length > 0 ? list[0].id : "")
+    }
+
     // AI mode provider.
     function setProvider(providerId: string): void {
         if (providerId === "") throw new Error("invariant: LauncherState.setProvider: empty provider id")
-        throw new Error("not implemented")
+        if (!AiProviders.enabledProviders().some(p => p.id === providerId)) throw new Error("invariant: LauncherState.setProvider: unknown or disabled provider")
+        activeProviderId = providerId
     }
 
     // Alt+Left / Alt+Right.
     function cycleProvider(step: int): void {
         if (step !== 1 && step !== -1) throw new Error("invariant: LauncherState.cycleProvider: step must be 1 or -1")
         if (mode !== Enums.LauncherMode.Ai) throw new Error("invariant: LauncherState.cycleProvider: provider switch outside AI mode")
-        throw new Error("not implemented")
+        const list = AiProviders.enabledProviders()
+        if (list.length === 0 || busy) return
+        const at = list.findIndex(p => p.id === activeProviderId)
+        setProvider(list[((at < 0 ? 0 : at) + step + list.length) % list.length].id)
     }
 
-    // Short question or follow-up in AI mode.
+    // Short question or follow-up in AI mode. The CLIs answer one-shot, so earlier turns travel along in the prompt.
     function askAi(question: string): void {
         if (mode !== Enums.LauncherMode.Ai) throw new Error("invariant: LauncherState.askAi: askAi outside AI mode")
         if (typeof question !== "string" || question.trim() === "") throw new Error("invariant: LauncherState.askAi: empty question")
         if (activeProviderId === "") throw new Error("invariant: LauncherState.askAi: no AI provider selected")
         if (busy) throw new Error("invariant: LauncherState.askAi: a request is still running")
-        // TODO(phase 7): run AiProvider.buildCommand off the UI thread and append streaming output to chatMessages.
-        throw new Error("not implemented")
+        const q = question.trim()
+        const earlier = chatMessages.filter(m => !m.error).map(m => (m.fromUser ? "User: " : "Assistant: ") + m.text).join("\n")
+        const prompt = "You answer short questions from a desktop launcher. Reply briefly in plain text, without tools.\n\n" + (earlier ? earlier + "\n" : "") + "User: " + q
+        chatMessages = chatMessages.concat([{ fromUser: true, text: q, streaming: false, error: "" }, { fromUser: false, text: "", streaming: true, error: "" }])
+        busy = true
+        AiProviders.ask(activeProviderId, prompt)
     }
 
     function clearChat(): void {
-        throw new Error("not implemented")
-    }
-
-    // Move the pill to the screen edge and fade the blur out.
-    function dock(): void {
-        if (!open) throw new Error("invariant: LauncherState.dock: dock on a closed launcher")
-        if (mode !== Enums.LauncherMode.Ai) throw new Error("invariant: LauncherState.dock: only AI mode docks")
-        // TODO(phase 7): panel at AppSettings.aiDockEdge with width aiDockWidthPx; input only on the panel so other windows stay usable.
-        throw new Error("not implemented")
-    }
-
-    function undock(): void {
-        throw new Error("not implemented")
+        AiProviders.cancel()
+        busy = false
+        chatMessages = []
     }
 }

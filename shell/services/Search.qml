@@ -38,9 +38,10 @@ Singleton {
         if (typeof query !== "string") throw new Error("invariant: Search.runSearch: query must be a string")
         discardBatch()
         const q = query.trim()
+        if (mode === Enums.LauncherMode.Clipboard) return searchClipboard(q)
         if (q === "") return []
         // A local search over a few hundred entries is well below a frame; the heavy backends (web suggestions, clipboard) come later.
-        // TODO(phase 7, sections 4/5): Settings (SettingEntry.matches), AI (none), Clipboard (Clipboard.entries) and web suggestions.
+        // TODO(phase 7, sections 4/5): Settings (SettingEntry.matches) and web suggestions.
         // TODO(phase 7, section 3): windows, system actions ('wifi off', 'timer 10m') and the AI CLI sessions in Apps mode.
         switch (mode) {
         case Enums.LauncherMode.Apps: {
@@ -91,8 +92,15 @@ Singleton {
         throw new Error("not implemented")
     }
 
+    // The history, newest first; text is filtered by the query. An empty query lists the latest entries.
     function searchClipboard(query: string): var {
-        throw new Error("not implemented")
+        const q = query.toLowerCase()
+        return Clipboard.entries.filter(e => q === "" || e.preview.toLowerCase().indexOf(q) >= 0).slice(0, maxResults).map((e, i) => makeResult({
+            id: "clip:" + e.id, mode: Enums.LauncherMode.Clipboard, kind: Enums.ResultKind.ClipboardItem,
+            title: e.preview, subtitle: e.kind === "image" ? "Image" : "", keyHint: "Enter copies",
+            actionId: e.id, score: 1000 - i,
+            run: () => Clipboard.copy(e.id)
+        }))
     }
 
     function webSuggestions(query: string): var {

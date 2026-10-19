@@ -1,6 +1,6 @@
 # PHASES.md – Projekt „aptus" (sichtbarer Name in der Shell: „shell.“)
 
-Aktuelle Phase: **7 – Implementierung, Abschnitt 3b (Kontrollzentrum) nachgebessert (7e, 7f), wartet auf Laptop-Test und „weiter“ zu Abschnitt 4**
+Aktuelle Phase: **7 – Implementierung, Abschnitt 5 (KI-Dock, Clipboard-Modus) fertig gebaut, wartet auf deinen Test und „weiter“ zu Abschnitt 6**
 
 ## Ziel
 
@@ -534,6 +534,13 @@ Rückmeldung: Kontrollzentrum gut; Sound-Kachel zeigte „Muted“ über dem Reg
 
 **Kalender (19. Okt.):** mehrere private iCal-Quellen zusammengeführt (`calendar.sources` in `~/.config/aptus/settings.json`, je `name`, `url`, optional `color`; Standardfarben aus einer Palette), farbige Punkte im Monat (max. 3 je Tag), farbige Terminzeilen (`EventRow`), mehrtägige Termine, `panel-open control-center <kachel>`. Monatszelle: Kreis (heute gefüllt, Auswahl Ring) nur um die Zahl, Punkte darunter, nichts überlappt.
 
+## Phase 7, Abschnitt 5: KI-Dock und Clipboard (19. Okt., direkt auf dem Laptop gebaut und getestet)
+
+- **Clipboard-Modus** (Mod + Shift + C, Strg + 5): `Clipboard` liest `cliphist list`, Enter kopiert den Eintrag zurück (`cliphist decode | wl-copy`), Shift + Entf löscht ihn, die Suche filtert den Text, leer zeigt die neuesten. Bilder erscheinen als Zeile „Image, …“ (noch ohne Vorschaubild). Ohne `cliphist` zeigt der Modus einen Hinweis. `cliphist` 0.7.0 lag nicht im PATH; als Binärdatei nach `~/.local/bin` gelegt (Installer muss das später tun, F18/L21). `pin` und `ClipboardEntry` entfielen (cliphist kennt kein Anheften).
+- **KI-Modus** (Mod + A, Strg + 4): eigenes Fenster `AiPanel` am rechten Rand (Breite `ai.dockWidth`, Seite `ai.dockEdge` rechts/links/unten), ohne Blur, der Rest des Bildschirms bleibt sichtbar. Das Launcher-Fenster blendet sich im KI-Modus aus. Kopf mit Anbieter, Alt + Pfeil wechselt, „Clear“, „Close“; Esc schließt, Tab und Strg + 1..5 wechseln den Modus (zurück in die Mitte mit Blur).
+- **Anfragen:** `AiProviders` lädt `config/ai-providers.json` und `~/.config/aptus/ai-providers.json`, startet die CLI einmalig (`quickArgs`, Arbeitsordner `/tmp`), Antwort kommt zeilenweise. Die CLIs haben kein Gedächtnis, deshalb gehen frühere Runden im Prompt mit. Verlauf ist beim Schließen weg. Geprüft: `claude -p` (mit `--tools ""`), `agy -p`, `vibe --prompt` antworten; im Panel getestet mit Claude („22 one word“ → „SSH“).
+- **Offen:** keine Werkzeug-Sperre für `agy` und `vibe` (nur der Prompt sagt „ohne Werkzeuge“); Anbieter hinzufügen/deaktivieren (Settings-App); Alt+Pfeil und Dock links/unten ungetestet; Eingabe per Hotkey-Fokus (`Exclusive`) bedeutet, dass Klicks in andere Fenster den Tastaturfokus nicht mitnehmen; Web-Modus unverändert (öffnet Zen, aus Abschnitt 2); Tile „AI usage“ hat noch keine echten Daten.
+
 ## Nächster Schritt
 
-Test von Abschnitt 3b auf dem Laptop, dann Abschnitt 4 (übrige Kacheln: Benachrichtigungen, Fokus, Timer, Wetter, Systemmonitor, Aufnahme, VPN, Hotspot, KI-Verbrauch; Benachrichtigungs-Popups und OSD). Wartet auf dein „weiter“.
+Test von Abschnitt 5 auf dem Laptop (Mod + A, Mod + Shift + C), dann Abschnitt 6: Settings-App (15 s Bestätigung, Watchdog), danach Sperrbildschirm, Greeter, Touch, Installer, Idle-Regeln. Wartet auf dein „weiter“.

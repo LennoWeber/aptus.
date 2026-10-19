@@ -86,6 +86,13 @@ ShellRoot {
         appSettings: settingsObj
     }
 
+    AiPanel {
+        launcherState: launcherObj
+        appSettings: settingsObj
+    }
+
+    Binding { target: launcherObj; property: "defaultProviderId"; value: settingsObj.aiDefaultProviderId }
+
     ControlCenter {
         id: ccObj
         shellState: shellStateObj
