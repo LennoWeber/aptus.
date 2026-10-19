@@ -13,6 +13,8 @@ Scope {
     property var events: []      // list of { id, title, start, end, allDay, calendarName }
     property var sources: []     // list of { name, url }: private iCal addresses (settings calendar.sources), read-only
     property string error
+    // Calendar colours: the iCal feeds carry none, so each source gets one (settings `color`) or one of these.
+    readonly property var palette: ["#4A78C8", "#8A5CC2", "#D9822B", "#2A9D8F", "#C94F7C", "#7A8B2E"]
     readonly property int horizonDays: 400   // repeating events are expanded this far ahead
 
     onSourcesChanged: refresh()
@@ -56,7 +58,7 @@ Scope {
                 if (req.readyState !== XMLHttpRequest.DONE) return
                 try {
                     if (req.status !== 200) throw new Error("status " + req.status)
-                    results[index] = root.parseIcs(req.responseText).map(e => Object.assign(e, { calendarName: src.name || "" }))
+                    results[index] = root.parseIcs(req.responseText).map(e => Object.assign(e, { calendarName: src.name || "", color: src.color || root.palette[index % root.palette.length] }))
                 } catch (e) {
                     failed += 1
                     results[index] = []
@@ -149,11 +151,23 @@ Scope {
         selectedDate = date
     }
 
+    // Events that touch the given day (multi-day and all-day events count on every day they cover; an all-day end is exclusive).
     function eventsOn(date: var): var {
+        const dayStart = new Date(date.getFullYear(), date.getMonth(), date.getDate())
+        const dayEnd = new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1)
         return events.filter(e => {
             const s = new Date(e.start)
-            return s.getFullYear() === date.getFullYear() && s.getMonth() === date.getMonth() && s.getDate() === date.getDate()
+            const en = new Date(e.end)
+            if (en <= s) return s >= dayStart && s < dayEnd
+            return s < dayEnd && en > dayStart
         })
+    }
+
+    // The colours of the calendars that have an event on this day (each colour once, at most 3), for the dots in the month view.
+    function dotsOn(date: var): var {
+        const seen = []
+        for (const e of eventsOn(date)) if (seen.indexOf(e.color) < 0) seen.push(e.color)
+        return seen.slice(0, 3)
     }
 
     // 6 weeks x 7 days for the month of `anchor`, Monday first.

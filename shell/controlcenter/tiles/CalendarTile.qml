@@ -1,3 +1,4 @@
+pragma ComponentBehavior: Bound
 import QtQuick
 import qs.models
 import qs.theme
@@ -13,6 +14,7 @@ Item {
     readonly property var english: Qt.locale("en_GB")
     readonly property var today: calendarState ? calendarState.today : new Date()
     readonly property var selected: calendarState ? calendarState.selectedDate : new Date()
+    readonly property var selectedEvents: calendarState ? calendarState.eventsOn(selected) : []
 
     Item {
         anchors.fill: parent
@@ -33,12 +35,26 @@ Item {
             text: tile.english.toString(tile.today, "MMMM yyyy")
             color: Tokens.inkSoft
         }
-        Label {
-            anchors { left: parent.left; bottom: parent.bottom }
+        // The next thing today, with the calendar's colour.
+        Row {
+            anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
+            spacing: 6
             readonly property var list: tile.calendarState ? tile.calendarState.eventsOn(tile.today) : []
-            text: list.length === 0 ? "No events today" : list[0].title
-            color: Tokens.inkFaint
-            role: Enums.TextRole.Bar
+            Rectangle {
+                visible: parent.list.length > 0
+                anchors.verticalCenter: parent.verticalCenter
+                width: 8
+                height: 8
+                radius: 4
+                color: parent.list.length > 0 ? parent.list[0].color : "transparent"
+            }
+            Label {
+                width: parent.width - (parent.list.length > 0 ? 14 : 0)
+                elide: Text.ElideRight
+                text: parent.list.length === 0 ? "No events today" : parent.list[0].title + (parent.list.length > 1 ? "  +" + (parent.list.length - 1) : "")
+                color: parent.list.length === 0 ? Tokens.inkFaint : Tokens.inkSoft
+                role: Enums.TextRole.Bar
+            }
         }
     }
 
@@ -77,16 +93,34 @@ Item {
             }
             Item { width: 1; height: 12 }
             Label {
-                width: parent.width
-                readonly property var list: tile.calendarState ? tile.calendarState.eventsOn(tile.selected) : []
-                text: list.length === 0 ? "No events" : list.map(e => (e.allDay ? "" : Qt.formatTime(new Date(e.start), "HH:mm") + "  ") + e.title + (e.calendarName ? "  (" + e.calendarName + ")" : "")).join("\n")
+                visible: tile.selectedEvents.length === 0
+                text: "No events"
                 color: Tokens.inkSoft
-                wrapMode: Text.Wrap
             }
-            Item { width: 1; height: Math.max(0, parent.height - 220) }
+            Flickable {
+                width: parent.width
+                height: Math.min(contentHeight, 230)
+                contentHeight: eventStack.height
+                clip: true
+                boundsBehavior: Flickable.StopAtBounds
+                Column {
+                    id: eventStack
+                    width: parent.width
+                    spacing: 6
+                    Repeater {
+                        model: tile.selectedEvents
+                        delegate: EventRow {
+                            required property var modelData
+                            width: eventStack.width
+                            event: modelData
+                        }
+                    }
+                }
+            }
+            Item { width: 1; height: Math.max(0, parent.height - 250 - Math.min(eventStack.height, 230)) }
             Label {
                 width: parent.width
-                text: tile.calendarState && tile.calendarState.connected ? "Source: " + tile.calendarState.sourceKind : "No calendar connected yet. A private iCal address will be added in the settings."
+                text: tile.calendarState && tile.calendarState.connected ? "Private iCal addresses, read only" : (tile.calendarState && tile.calendarState.error !== "" ? tile.calendarState.error : "No calendar connected yet. Add private iCal addresses in the settings (calendar.sources).")
                 role: Enums.TextRole.Bar
                 color: Tokens.inkFaint
                 wrapMode: Text.Wrap

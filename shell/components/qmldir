@@ -10,3 +10,4 @@ MonthView 1.0 MonthView.qml
 ActionButton 1.0 ActionButton.qml
 MeterBar 1.0 MeterBar.qml
 Sparkline 1.0 Sparkline.qml
+EventRow 1.0 EventRow.qml

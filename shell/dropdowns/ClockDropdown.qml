@@ -29,8 +29,17 @@ Item {
 
         Label {
             readonly property var list: dd.calendarState ? dd.calendarState.eventsOn(dd.calendarState.selectedDate) : []
-            text: list.length === 0 ? "No events" : list.map(e => (e.allDay ? "" : Qt.formatTime(new Date(e.start), "HH:mm") + "  ") + e.title).join("\n")
+            visible: list.length === 0
+            text: "No events"
             color: Tokens.inkFaint
+        }
+        Repeater {
+            model: dd.calendarState ? dd.calendarState.eventsOn(dd.calendarState.selectedDate).slice(0, 4) : []
+            delegate: EventRow {
+                required property var modelData
+                width: column.width
+                event: modelData
+            }
         }
     }
 }

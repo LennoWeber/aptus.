@@ -60,7 +60,15 @@ Scope {
             if (["launcher", "control-center", "notification-center", "wallpaper", "session", "design"].indexOf(name) < 0) throw new Error("invariant: IpcHandlers.panelOpen: unknown panel name")
             // TODO(phase 7, sections 4 to 6): the other panels; arg is a launcher query such as '/emo' (ignored for now).
             if (name === "launcher") root.launcherState.show(Enums.LauncherMode.Apps)
-            else if (name === "control-center") root.openControlCenter()
+            else if (name === "control-center") {
+                // The argument can name a tile: `panel-open control-center calendar`.
+                const tiles = { audio: Enums.TileId.Audio, display: Enums.TileId.Display, network: Enums.TileId.Network, bluetooth: Enums.TileId.Bluetooth,
+                    power: Enums.TileId.PowerProfile, focus: Enums.TileId.Focus, vpn: Enums.TileId.Vpn, hotspot: Enums.TileId.Hotspot, capture: Enums.TileId.Capture,
+                    timer: Enums.TileId.Timer, weather: Enums.TileId.Weather, notifications: Enums.TileId.Notifications, media: Enums.TileId.Media,
+                    calendar: Enums.TileId.Calendar, ai: Enums.TileId.AiUsage, system: Enums.TileId.SystemMonitor }
+                if (arg in tiles) root.openTile(tiles[arg])
+                else root.openControlCenter()
+            }
             else if (name === "notification-center") root.openNotifications()
             else console.warn("aptus: panel '" + name + "' is not available yet")
         }

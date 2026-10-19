@@ -96,12 +96,14 @@ Item {
                     required property var modelData
                     readonly property bool isToday: mv.sameDay(modelData.date, mv.calendarState ? mv.calendarState.today : null)
                     readonly property bool isSelected: mv.sameDay(modelData.date, mv.calendarState ? mv.calendarState.selectedDate : null)
+                    readonly property var dots: mv.calendarState ? mv.calendarState.dotsOn(modelData.date) : []
                     width: column.width / 7
                     height: mv.cellHeight
 
                     // Today = filled ink circle, selected = hairline ring.
                     Rectangle {
                         anchors.centerIn: parent
+                        anchors.verticalCenterOffset: -3
                         width: Math.min(mv.cellHeight - 4, 40)
                         height: width
                         radius: width / 2
@@ -109,8 +111,25 @@ Item {
                         border.width: cell.isSelected && !cell.isToday ? 1 : 0
                         border.color: Tokens.inkSoft
                     }
+                    // One dot per calendar that has an event on this day.
+                    Row {
+                        anchors { horizontalCenter: parent.horizontalCenter; bottom: parent.bottom; bottomMargin: Math.max(1, (mv.cellHeight - 40) / 2 + 1) }
+                        spacing: 3
+                        Repeater {
+                            model: cell.dots
+                            delegate: Rectangle {
+                                required property string modelData
+                                width: 5
+                                height: 5
+                                radius: 2.5
+                                color: modelData
+                                opacity: cell.modelData.inMonth ? 1 : 0.45
+                            }
+                        }
+                    }
                     Label {
                         anchors.centerIn: parent
+                        anchors.verticalCenterOffset: -3
                         text: cell.modelData.day
                         color: cell.isToday ? Tokens.bg : (cell.modelData.inMonth ? Tokens.ink : Tokens.inkFaint)
                         font.weight: cell.isToday ? Font.DemiBold : Font.Normal
