@@ -2,61 +2,84 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import Quickshell.Hyprland
 import Quickshell.Wayland
 
 // Idle policy: lock first, then screen off. NEVER sleep. Replaces the user's hypridle only while aptus runs
 // (the user's hypridle.conf stays as a safety net when another shell is active).
-// Signatures only. Bodies come in phase 7.
+// Caffeine (manual) and, if wanted, a fullscreen window hold back both the lock and the screen-off.
 Singleton {
-    // Caffeine (manual) or a fullscreen window keeps the screen awake.
-    property bool inhibit: caffeine || fullscreenInhibit
+    id: root
+
+    property var lockState                // LockState, set by shell.qml
+    property int lockAfterMin: 5          // 0 = never
+    property int screenOffAfterMin: 10    // 0 = never; only in use together with a lock that comes earlier
+    property string lidCloseAction: "lock"  // "lock" | "nothing"
+    property bool keepAwakeWhenFullscreen: true
+
     property bool caffeine
     property bool fullscreenInhibit
+    // The actual IdleInhibitor lives in the bar window (it needs a window): see Bar.qml.
+    property bool inhibit: caffeine || fullscreenInhibit
 
-    // Minutes from AppSettings (lockAfterMin / screenOffAfterMin).
+    property bool lidClosed
+
+    // Screen off only makes sense after a lock; both never without it.
+    readonly property bool screenOffValid: screenOffAfterMin > 0 && lockAfterMin > 0 && screenOffAfterMin > lockAfterMin
+
     IdleMonitor {
-        id: lockMonitor
-        enabled: false
+        enabled: root.lockAfterMin > 0
         respectInhibitors: true
-        // TODO(phase 7): timeout = AppSettings.lockAfterMin * 60; on idle call Session.lockScreen().
+        timeout: root.lockAfterMin * 60
+        onIsIdleChanged: if (isIdle && root.lockState) root.lockState.lock()
     }
 
     IdleMonitor {
-        id: screenOffMonitor
-        enabled: false
+        enabled: root.screenOffValid
         respectInhibitors: true
-        // TODO(phase 7): timeout = AppSettings.screenOffAfterMin * 60; on idle `hyprctl dispatch dpms off`, back on at activity.
+        timeout: root.screenOffAfterMin * 60
+        // Any input brings the screen back; the lock is already in place by then.
+        onIsIdleChanged: Quickshell.execDetached(["hyprctl", "dispatch", "hl.dsp.dpms({ action = '" + (isIdle ? "off" : "on") + "' })"])
     }
 
-    // Lid state, polled because Quickshell has no lid type. Used only for lock-on-lid-close.
+    // A fullscreen window (reading, video) keeps the screen awake.
+    Connections {
+        target: Hyprland
+        function onRawEvent(event) {
+            if (event.name === "fullscreen") root.fullscreenInhibit = root.keepAwakeWhenFullscreen && event.data === "1"
+        }
+    }
+
+    // Lid state, read from ACPI because Quickshell has no lid type. Only used to lock when the lid closes.
     Process {
         id: lidProbe
-        running: false
-        // TODO(phase 7): primary way is a Hyprland switch bind (check the Lua API: bind on the 'Lid Switch' device);
-        // TODO(phase 7): fallback is reading /proc/acpi/button/lid/*/state once per second (Process + Timer) while a lock-on-lid is wanted.
+        command: ["sh", "-c", "cat /proc/acpi/button/lid/*/state 2>/dev/null"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const closed = text.indexOf("closed") >= 0
+                if (closed && !root.lidClosed) root.onLidClosed()
+                root.lidClosed = closed
+            }
+        }
     }
-
-    function configure(lockAfterMin: int, screenOffAfterMin: int): void {
-        if (!Number.isInteger(lockAfterMin) || !Number.isInteger(screenOffAfterMin) || lockAfterMin < 0 || screenOffAfterMin < 0) throw new Error("invariant: Idle.configure: minutes must be integers >= 0 (0 = never)")
-        if (screenOffAfterMin > 0 && (lockAfterMin === 0 || screenOffAfterMin <= lockAfterMin)) throw new Error("invariant: Idle.configure: screen off must come strictly after the lock, and never without a lock")
-        // TODO(phase 7): set both monitor timeouts, enable them, never create a suspend or hibernate path.
-        throw new Error("not implemented")
+    Timer {
+        interval: 2000
+        repeat: true
+        running: root.lidCloseAction === "lock"
+        onTriggered: lidProbe.running = true
     }
 
     // Caffeine.
     function setCaffeine(on: bool): void {
-        // `inhibit` follows by binding; the actual IdleInhibitor lives in the bar window (it needs a window): see Bar.qml.
         caffeine = on
     }
 
     function setFullscreenInhibit(on: bool): void {
-        // Driven by the Hyprland fullscreen state when AppSettings.keepAwakeWhenFullscreen (wired in the idle section).
         fullscreenInhibit = on
     }
 
-    // Lock only.
+    // Lock only: logind already ignores the lid (50-hp-sleep.conf, checked by the installer).
     function onLidClosed(): void {
-        // TODO(phase 7): Session.lockScreen() only; logind already ignores the lid (50-hp-sleep.conf, checked by the installer).
-        throw new Error("not implemented")
+        if (lockState) lockState.lock()
     }
 }

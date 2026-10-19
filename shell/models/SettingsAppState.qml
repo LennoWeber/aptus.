@@ -64,8 +64,9 @@ Scope {
     }
 
     // Value in effect, default, and what the form shows.
-    function appliedOf(entry: var): var { return appSettings.get(entry.path) }
+    function appliedOf(entry: var): var { return entry.path ? appSettings.get(entry.path) : undefined }
     function defaultOf(entry: var): var {
+        if (!entry.path) return undefined
         return entry.path.split(".").reduce((node, key) => (node === undefined || node === null ? undefined : node[key]), appSettings.defaults)
     }
     function valueOf(entry: var): var { return entry.id in draftValues ? draftValues[entry.id] : appliedOf(entry) }

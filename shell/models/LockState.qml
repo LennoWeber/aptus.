@@ -1,42 +1,66 @@
 import QtQuick
 
-// State of the lockscreen (Quickshell session lock + PAM).
+// State of the lockscreen. The Wayland session lock and PAM live in LockScreen; this holds what the surfaces show.
 QtObject {
+    id: state
+
     property bool locked
-    property string userName
-    property string password         // typed text, never stored or logged
+    property string password         // typed text, only while a check runs, never stored or logged
     property bool authenticating
     property int failedAttempts
     property string message          // short feedback, e.g. "Wrong password"
-    property bool capsLockOn
     property bool keyboardVisible    // built-in on-screen keyboard (tablet mode / touch)
+    property string keyboardMode: "auto"  // touch.lockKeyboard: "auto" | "always" | "never"
     property bool showNotificationContent  // mirrors lock.showNotificationContent
 
+    // PAM is asked to check `password`.
+    signal authRequested()
+
+    // The lock always comes first; the screen only switches off afterwards.
     function lock(): void {
-        // TODO(phase 7): Wayland session lock; the lock always comes before the screen switches off.
-        throw new Error("not implemented")
+        if (locked) return
+        password = ""
+        message = ""
+        failedAttempts = 0
+        authenticating = false
+        keyboardVisible = keyboardMode === "always"
+        locked = true
     }
 
     function setPassword(text: string): void {
         if (typeof text !== "string") throw new Error("invariant: LockState.setPassword: password must be a string")
-        throw new Error("not implemented")
+        password = text
     }
 
     function clearPassword(): void {
-        throw new Error("not implemented")
+        password = ""
     }
 
-    // Authenticate through PAM.
+    // Authenticate through PAM (see LockScreen); the password is cleared right after use.
     function tryUnlock(): void {
         if (!locked) throw new Error("invariant: LockState.tryUnlock: unlock while not locked")
         if (password === "") throw new Error("invariant: LockState.tryUnlock: empty password")
         if (authenticating) throw new Error("invariant: LockState.tryUnlock: an authentication is already running")
-        // TODO(phase 7): PAM only; never store or log the password, clear it right after use.
-        throw new Error("not implemented")
+        authenticating = true
+        message = ""
+        authRequested()
     }
 
-    // Built-in on-screen keyboard.
+    // Called by LockScreen with the PAM result.
+    function authFinished(success: bool, text: string): void {
+        authenticating = false
+        password = ""
+        if (success) {
+            locked = false
+            message = ""
+            return
+        }
+        failedAttempts += 1
+        message = text
+    }
+
+    // Built-in on-screen keyboard; "never" keeps it away.
     function setKeyboardVisible(on: bool): void {
-        throw new Error("not implemented")
+        keyboardVisible = on && keyboardMode !== "never"
     }
 }

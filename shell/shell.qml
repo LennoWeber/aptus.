@@ -10,6 +10,7 @@ import qs.controlcenter
 import qs.notifications
 import qs.osd
 import qs.settings
+import qs.lock
 
 // Entry point of the aptus shell.
 ShellRoot {
@@ -141,6 +142,7 @@ ShellRoot {
         id: ipcObj
         launcherState: launcherObj
         settingsState: settingsAppObj
+        lockState: lockObj
         captureState: captureObj
         controlCenter: ccObj
         audioState: audioObj
@@ -148,6 +150,19 @@ ShellRoot {
         osd: osdObj
         shellState: shellStateObj
     }
+
+    LockState { id: lockObj; keyboardMode: settingsObj.lockKeyboardMode || "auto"; showNotificationContent: settingsObj.lockShowNotificationContent }
+
+    LockScreen {
+        lockState: lockObj
+        use24h: settingsObj.get("bar.clockFormat") !== "12h"
+    }
+
+    Binding { target: Idle; property: "lockState"; value: lockObj }
+    Binding { target: Idle; property: "lockAfterMin"; value: settingsObj.lockAfterMin }
+    Binding { target: Idle; property: "screenOffAfterMin"; value: settingsObj.screenOffAfterMin }
+    Binding { target: Idle; property: "lidCloseAction"; value: settingsObj.lidCloseAction }
+    Binding { target: Idle; property: "keepAwakeWhenFullscreen"; value: settingsObj.keepAwakeWhenFullscreen }
 
     SettingsAppState { id: settingsAppObj; appSettings: settingsObj }
 

@@ -13,6 +13,7 @@ Scope {
     property var launcherState  // LauncherState
     property var shellState     // ShellState
     property var settingsState  // SettingsAppState
+    property var lockState      // LockState
     property var captureState   // CaptureState
     property var controlCenter  // ControlCenter
     property var audioState     // AudioState
@@ -88,8 +89,7 @@ Scope {
         }
 
         function sessionLock(): void {
-            // TODO(phase 7): the user's `shell-switch msg session lock` falls back to hyprlock if this shell does not answer.
-            throw new Error("not implemented")
+            root.lockState.lock()
         }
 
         function screenshotRegion(): void {

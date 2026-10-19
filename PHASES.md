@@ -1,6 +1,6 @@
 # PHASES.md – Projekt „aptus" (sichtbarer Name in der Shell: „shell.“)
 
-Aktuelle Phase: **7 – Implementierung, Abschnitt 6 (Settings-App) fertig gebaut, wartet auf deinen Test und „weiter“ zu Abschnitt 7**
+Aktuelle Phase: **7 – Implementierung, Abschnitt 7a (Sperrbildschirm, Idle-Regeln) gebaut, wartet auf deinen Test und „weiter“ zu 7b (Greeter, Touch, Installer)**
 
 ## Ziel
 
@@ -552,6 +552,16 @@ Rückmeldung: Kontrollzentrum gut; Sound-Kachel zeigte „Muted“ über dem Reg
 - **Entfallen:** `SettingEntry`, `SettingsSnapshot` (einfache Objekte statt Modelle).
 - **Noch nicht:** Editoren für Listen, Anbieter, Kacheln, Kürzel, Ort (zeigen „Edit this in ~/.config/aptus/settings.json for now“), Wallpaper-Aktion, Kürzel-Konflikte; nicht jede Einstellung wirkt schon in der Oberfläche (die Leiste und das KI-Dock lesen live, andere erst bei späteren Abschnitten). Die Regel in `windowrules.lua` lädt hyprland.lua nur bei gewählter Shell „aptus“.
 
+## Phase 7, Abschnitt 7a: Sperrbildschirm und Idle-Regeln (19. Okt., auf dem Laptop gebaut und getestet)
+
+- **Sperrbildschirm** (`LockScreen`, `LockSurface`, `LockState`): Wayland-Session-Lock (`WlSessionLock`), Anmeldung über PAM (`PamContext`, Konfiguration `login`, aktueller Benutzer). Warmer Verlauf, große Uhr (132 px, Light), Passwortpille wie im Launcher, bei falschem Passwort Wackeln, roter Rand und „Wrong password“. Das Passwort liegt nur kurz in `LockState.password` und wird sofort nach dem Senden geleert. Benachrichtigungen zeigen nur die Anzahl (Text nur mit `lock.showNotificationContent`). Auslöser: `aptus msg session lock` (dein Mod + L), Leerlauf, Deckel zu.
+- **Eingebaute Tastatur** (`OnScreenKeyboard`, deutsches Layout mit Ziffern-/Zeichenebene): Knopf „Keyboard“, im Modus `auto` automatisch nach einer Berührung, `always` / `never` über `touch.lockKeyboard`. Uhr und Pille rücken nach oben.
+- **Idle** (`Idle`): Sperre nach `system.lockAfterMin` (5), Bildschirm aus nach `system.screenOffAfterMin` (10), nur zusammen mit einer früheren Sperre, 0 = nie; Aus über `hyprctl dispatch hl.dsp.dpms`, zurück bei Aktivität. Caffeine und Vollbildfenster (`system.keepAwakeWhenFullscreen`, Hyprland-Ereignis `fullscreen`) halten beides an. Deckel zu sperrt (ACPI-Status alle 2 s gelesen, nur wenn `system.lidClose` = lock). Nie Suspend/Hibernate.
+- **Session:** `logout` (`hl.dsp.exit()`), `restart`, `shutdown` (systemctl). Noch kein Power-Menü (`panel-toggle session`).
+- **Geprüft:** Sperren per IPC, falsches Passwort (PAM meldet „Failed to authenticate“, Oberfläche zeigt Fehler), Tastatur-Ansicht, Entsperren. **Nicht geprüft:** richtiges Passwort (von dir einmal bestätigt, siehe unten), Berührung, Leerlauf-Auslösung, Deckel, Bildschirm-Aus nach Sperre.
+- **Notausstieg:** Stirbt die Shell bei gesperrtem Bildschirm, bleibt er gesperrt. Mit Strg + Alt + F3 auf die Konsole, anmelden, `pkill hyprlock; qs -p ~/.config/quickshell/aptus` oder die Shell neu starten (ein Neustart der Shell setzt die Sperre zurück, sie startet nicht gesperrt).
+- **Offen für 7b:** Greeter (greetd), Touch (Randstreifen, Tablet-Modus, Drehen), Installer-Schritte (`ensure_cliphist`, Watchdog-Link, Greeter, Lid-Prüfung), Power-Menü, Hintergrundbild auf dem Sperrbildschirm (kommt mit dem Wallpaper-Picker).
+
 ## Nächster Schritt
 
-Test von Abschnitt 6 auf dem Laptop (Mod + S, Einstellung ändern, Save, Keep oder 15 s warten), dann Abschnitt 7: Sperrbildschirm, Greeter, Touch und Tastatur, Idle-Regeln, Installer. Wartet auf dein „weiter“.
+Test von Abschnitt 7a auf dem Laptop (Mod + L, richtiges und falsches Passwort, ggf. 5 min warten), dann 7b: Greeter, Touch und Tablet, Power-Menü, Installer. Wartet auf dein „weiter“.

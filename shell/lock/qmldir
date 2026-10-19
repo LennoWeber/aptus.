@@ -3,3 +3,4 @@ ClockBlock 1.0 ClockBlock.qml
 LockSurface 1.0 LockSurface.qml
 OnScreenKeyboard 1.0 OnScreenKeyboard.qml
 PasswordPill 1.0 PasswordPill.qml
+LockScreen 1.0 LockScreen.qml

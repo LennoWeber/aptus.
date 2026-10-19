@@ -1,22 +1,19 @@
 pragma Singleton
 import QtQuick
+import Quickshell
 
-// Signatures only. Bodies come in phase 7.
+// Power actions of the session. There is deliberately no suspend or hibernate here (the HP Envy x360 has trouble
+// with both under Linux). Locking is LockState.lock(), called from the IPC handler and the idle policy.
 QtObject {
-    function lockScreen(): void {
-        // TODO(phase 7): LockState.lock(). There is deliberately no suspend or hibernate function in this file.
-        throw new Error("not implemented")
-    }
-
     function logout(): void {
-        throw new Error("not implemented")
+        Quickshell.execDetached(["hyprctl", "dispatch", "hl.dsp.exit()"])
     }
 
     function restart(): void {
-        throw new Error("not implemented")
+        Quickshell.execDetached(["systemctl", "reboot"])
     }
 
     function shutdown(): void {
-        throw new Error("not implemented")
+        Quickshell.execDetached(["systemctl", "poweroff"])
     }
 }
