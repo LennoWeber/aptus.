@@ -5,7 +5,7 @@ import qs.theme
 Canvas {
     id: glyph
 
-    property string kind: "volume"   // wifi | bluetooth | volume | mic | moon | play | pause | next | prev | cup | back | sliders | focus | shield | hotspot | capture | sun | cloud | partly | rain | snow | storm | fog
+    property string kind: "volume"   // wifi | bluetooth | volume | mic | moon | play | pause | next | prev | cup | back | sliders | lock | logout | restart | power | focus | shield | hotspot | capture | sun | cloud | partly | rain | snow | storm | fog
     property real level: 1           // volume: 0..1, drives the number of waves
     property bool muted
     property color color: Tokens.ink
@@ -164,6 +164,29 @@ Canvas {
         } else if (kind === "back") {
             ctx.beginPath()
             ctx.moveTo(9.5, 3); ctx.lineTo(4.5, 8); ctx.lineTo(9.5, 13)
+            ctx.stroke()
+        } else if (kind === "lock") {
+            ctx.strokeRect(3.5, 7, 9, 6.5)
+            ctx.beginPath()
+            ctx.moveTo(5.5, 7); ctx.lineTo(5.5, 5); ctx.arc(8, 5, 2.5, Math.PI, 0, false); ctx.lineTo(10.5, 7)
+            ctx.stroke()
+        } else if (kind === "logout") {
+            ctx.beginPath()
+            ctx.moveTo(7, 2.5); ctx.lineTo(3, 2.5); ctx.lineTo(3, 13.5); ctx.lineTo(7, 13.5)
+            ctx.moveTo(6, 8); ctx.lineTo(13, 8)
+            ctx.moveTo(10.5, 5.5); ctx.lineTo(13, 8); ctx.lineTo(10.5, 10.5)
+            ctx.stroke()
+        } else if (kind === "restart") {
+            ctx.beginPath()
+            ctx.arc(8, 8, 5, -Math.PI * 0.35, Math.PI * 1.55, false)
+            ctx.stroke()
+            ctx.beginPath()
+            ctx.moveTo(10.5, 1.5); ctx.lineTo(12.6, 4.2); ctx.lineTo(9.4, 5)
+            ctx.stroke()
+        } else if (kind === "power") {
+            ctx.beginPath()
+            ctx.arc(8, 8.5, 5, -Math.PI * 0.32, Math.PI * 1.32, false)
+            ctx.moveTo(8, 2); ctx.lineTo(8, 8)
             ctx.stroke()
         } else if (kind === "moon") {
             // A crescent from two arcs, drawn on a 24 px grid and scaled down.

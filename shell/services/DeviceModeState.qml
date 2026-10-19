@@ -1,31 +1,78 @@
 import QtQuick
+import Quickshell
+import Quickshell.Io
 
-// Laptop / tablet state of the 2-in-1.
+// Laptop / tablet state of the 2-in-1: the tablet switch, the orientation sensor and the screen rotation that follows it.
 QtObject {
-    property bool tabletMode         // tablet switch reported by the device
-    property bool keyboardAttached
-    property bool lidClosed
-    property bool touchActive        // last input came from the touchscreen
-    property bool onScreenKeyboardVisible
-    property int orientation         // Enums.Orientation, from the orientation sensor
-    property bool autoRotate         // follow the sensor in tablet mode
-    property bool rotationLocked     // user locked the current orientation
+    id: root
 
-    function setAutoRotate(on: bool): void {
-        // TODO(phase 7): Compositor.setMonitorTransform in tablet mode only; lockscreen and greeter follow the orientation.
-        throw new Error("not implemented")
-    }
+    property bool tabletMode         // tablet switch reported by the device
+    property bool touchActive        // last input came from the touchscreen (set by the surfaces that see touch)
+    property int orientation         // Enums.Orientation, from the orientation sensor
+    property bool autoRotate: true   // follow the sensor in tablet mode
+    property bool rotationLocked     // user locked the current orientation
+    property string output: "eDP-1"
+
+    // Orientation of the screen as it is set now; laptop mode and a locked rotation never move it.
+    readonly property bool following: tabletMode && autoRotate && !rotationLocked
+    onFollowingChanged: if (!following && !rotationLocked) apply(tabletMode ? orientation : 0)
+    onOrientationChanged: if (following) apply(orientation)
 
     function setRotationLocked(on: bool): void {
-        throw new Error("not implemented")
+        rotationLocked = on
     }
 
-    function showKeyboard(): void {
-        // TODO(phase 7): built-in keyboard on lockscreen and greeter; a system keyboard only if one is installed.
-        throw new Error("not implemented")
+    // Enums.Orientation values 0..3 equal the Hyprland transforms (normal, 90, 180, 270).
+    property int applied
+    function apply(transform: int): void {
+        if (transform === applied) return
+        applied = transform
+        Quickshell.execDetached(["hyprctl", "eval",
+            "hl.monitor({ output = '" + root.output + "', mode = '1920x1080@60', position = '0x0', scale = '1', transform = " + transform + " })"])
     }
 
-    function hideKeyboard(): void {
-        throw new Error("not implemented")
+    // The tablet switch is read straight from the input device: the first one that reports SW_TABLET_MODE.
+    // A tiny loop prints the state when it changes; nothing runs on a machine without the switch.
+    property Process switchProbe: Process {
+        running: true
+        command: ["python3", "-c", `
+import fcntl, array, glob, os, sys, time
+def find():
+    for cap in glob.glob('/sys/class/input/event*/device/capabilities/sw'):
+        try:
+            if int(open(cap).read().split()[-1], 16) & 2:
+                return '/dev/input/' + cap.split('/')[4]
+        except Exception:
+            pass
+dev = find()
+if not dev: sys.exit(0)
+fd = os.open(dev, os.O_RDONLY)
+last = None
+while True:
+    buf = array.array('B', [0] * 4)
+    fcntl.ioctl(fd, (2 << 30) | (4 << 16) | (ord('E') << 8) | 0x1b, buf, True)
+    now = 1 if buf[0] & 2 else 0
+    if now != last:
+        print('tablet', now, flush=True)
+        last = now
+    time.sleep(1)
+`]
+        stdout: SplitParser {
+            onRead: line => root.tabletMode = line.trim() === "tablet 1"
+        }
+    }
+
+    // iio-sensor-proxy through monitor-sensor: "=== Accelerometer orientation changed: left-up".
+    property Process sensor: Process {
+        running: true
+        command: ["monitor-sensor", "--accel"]
+        stdout: SplitParser {
+            onRead: line => {
+                const m = line.match(/orientation changed: (\S+)/) || line.match(/\(orientation: (\S+)/)
+                if (!m) return
+                const map = { "normal": 0, "left-up": 1, "bottom-up": 2, "right-up": 3 }
+                if (m[1] in map) root.orientation = map[m[1]]
+            }
+        }
     }
 }

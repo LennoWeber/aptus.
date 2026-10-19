@@ -1,6 +1,6 @@
 # PHASES.md – Projekt „aptus" (sichtbarer Name in der Shell: „shell.“)
 
-Aktuelle Phase: **7 – Implementierung, Abschnitt 7a (Sperrbildschirm, Idle-Regeln) gebaut, wartet auf deinen Test und „weiter“ zu 7b (Greeter, Touch, Installer)**
+Aktuelle Phase: **7 – Implementierung, Abschnitt 7b-1 (Power-Menü, Tablet-Modus, Randwischen, Drehen) gebaut, wartet auf deinen Test und „weiter“ zu 7b-2 (Greeter, Installer)**
 
 ## Ziel
 
@@ -562,6 +562,14 @@ Rückmeldung: Kontrollzentrum gut; Sound-Kachel zeigte „Muted“ über dem Reg
 - **Notausstieg:** Stirbt die Shell bei gesperrtem Bildschirm, bleibt er gesperrt. Mit Strg + Alt + F3 auf die Konsole, anmelden, `pkill hyprlock; qs -p ~/.config/quickshell/aptus` oder die Shell neu starten (ein Neustart der Shell setzt die Sperre zurück, sie startet nicht gesperrt).
 - **Offen für 7b:** Greeter (greetd), Touch (Randstreifen, Tablet-Modus, Drehen), Installer-Schritte (`ensure_cliphist`, Watchdog-Link, Greeter, Lid-Prüfung), Power-Menü, Hintergrundbild auf dem Sperrbildschirm (kommt mit dem Wallpaper-Picker).
 
+### Abschnitt 7b-1 (Power-Menü, Touch, Tablet)
+- **Power-Menü** (`shell/session/PowerMenu.qml`): Lock, Log out, Restart, Shut down; Restart/Shut down brauchen einen zweiten Tipp (roter Rand, „Tap again“, 4 s). Aufruf: Mod+X (`panel-toggle session`), Knopf oben rechts über dem Kontrollzentrum, Esc oder Klick daneben schließt.
+- **Tablet-Modus** (`DeviceModeState`): liest den Tablet-Schalter (SW_TABLET_MODE) per kleinem Python-Loop direkt vom Eingabegerät (Nutzer ist in Gruppe `input`); Lagesensor über `monitor-sensor --accel`. Auf dem Laptop meldet der Schalter im Laptop-Betrieb 0.
+- **Drehen:** nur im Tablet-Modus mit `touch.autoRotate`, nicht bei gesperrter Drehung; `hyprctl eval hl.monitor{... transform}` (normal, left-up=1, bottom-up=2, right-up=3). Beim Verlassen des Tablet-Modus zurück auf 0. Zuordnung der Richtungen ungetestet (kein Kippen möglich).
+- **Randwischen** (`EdgeStrip`, 16 px, nur Touch, 60 px Weg): oben = Kontrollzentrum, links = Launcher (Settings `touch.edgeGestures`). Im Tablet-Modus mit versteckter Leiste zeigt der erste Wisch von oben die Leiste (5 s), erst der zweite öffnet die Aktion.
+- **Leiste im Tablet-Modus** (`touch.tabletBarAutoHide`): gleitet aus (260 ms), Platz wird frei.
+- Offen: Dreh-Schalter im Kontrollzentrum, Lagesensor-Hinweis (OSD), Touch auf Greeter.
+
 ## Nächster Schritt
 
-Test von Abschnitt 7a auf dem Laptop (Mod + L, richtiges und falsches Passwort, ggf. 5 min warten), dann 7b: Greeter, Touch und Tablet, Power-Menü, Installer. Wartet auf dein „weiter“.
+Test von Abschnitt 7b-1 (Mod+X, Knopf im Kontrollzentrum; Tablet-Modus und Wischen nur am Gerät prüfbar), dann 7b-2: Greeter (greetd), Installer-Schritte, Hintergrundbild auf dem Sperrbildschirm. Wartet auf dein „weiter“.

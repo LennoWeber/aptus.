@@ -2,7 +2,6 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Hyprland
-import qs.models
 
 // Signatures only. Bodies come in phase 7.
 Singleton {
@@ -45,12 +44,5 @@ Singleton {
         // Run through a shell so that the user can put arguments into a command setting; callers that build a command
         // from untrusted text (web search) must use Quickshell.execDetached with an argument list instead.
         Quickshell.execDetached(["sh", "-c", command])
-    }
-
-    // Enums.Orientation.
-    function setMonitorTransform(orientation: int): void {
-        if (orientation < Enums.Orientation.Landscape || orientation > Enums.Orientation.PortraitFlipped) throw new Error("invariant: Compositor.setMonitorTransform: unknown orientation")
-        // TODO(phase 7): Hyprland monitor transform for the given orientation.
-        throw new Error("not implemented")
     }
 }

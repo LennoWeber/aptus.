@@ -11,12 +11,25 @@ import qs.notifications
 import qs.osd
 import qs.settings
 import qs.lock
+import qs.touch
+import qs.session
 
 // Entry point of the aptus shell.
 ShellRoot {
+    id: root
     // TODO(phase 7, later sections): create once, pre-loaded: WallpaperPicker, SettingsWindow, ConfirmDialog, LockSurface, EdgeStrips.
 
     AppSettings { id: settingsObj }
+    DeviceModeState { id: deviceObj; autoRotate: settingsObj.get("touch.autoRotate") !== false }
+
+    // In tablet mode the bar hides to leave room for reading; a swipe from the top edge shows it for a few seconds.
+    property bool barRevealed
+    readonly property bool barAutoHidden: deviceObj.tabletMode && settingsObj.get("touch.tabletBarAutoHide") !== false
+    Timer { id: barHideTimer; interval: 5000; onTriggered: if (shellStateObj.stage === Enums.Stage.Closed) root.barRevealed = false }
+    Connections {
+        target: shellStateObj
+        function onStageChanged() { if (shellStateObj.stage === Enums.Stage.Closed && root.barRevealed) barHideTimer.restart() }
+    }
     ShellState { id: shellStateObj }
     LauncherState { id: launcherObj; shellState: shellStateObj }
     BrowserState {
@@ -52,6 +65,7 @@ ShellRoot {
         Bar {
             shellState: shellStateObj
             appSettings: settingsObj
+            slidOut: root.barAutoHidden && !root.barRevealed
             batteryState: batteryObj
             audioState: audioObj
             nightLightState: nightLightObj
@@ -67,6 +81,48 @@ ShellRoot {
             onControlCenterRequested: ipcObj.openControlCenter()
         }
     }
+
+    // Swipe from the top or left edge (touch only).
+    Variants {
+        model: settingsObj.get("touch.edgeGestures.enabled") !== false ? Quickshell.screens : []
+
+        Scope {
+            id: edges
+            required property var modelData
+
+            EdgeStrip {
+                screen: edges.modelData
+                edge: Enums.Edge.Top
+                widthPx: settingsObj.get("touch.edgeGestures.stripWidthPx") || 16
+                onSwiped: root.runEdgeAction(settingsObj.get("touch.edgeGestures.actions.top") || "controlcenter.open", true)
+            }
+            EdgeStrip {
+                screen: edges.modelData
+                edge: Enums.Edge.Left
+                widthPx: settingsObj.get("touch.edgeGestures.stripWidthPx") || 16
+                onSwiped: root.runEdgeAction(settingsObj.get("touch.edgeGestures.actions.left") || "launcher.open:apps", false)
+            }
+        }
+    }
+
+    // Settings strings such as "controlcenter.open", "launcher.open:web" or "session.open".
+    function runEdgeAction(actionId: string, topEdge: bool): void {
+        if (topEdge && barAutoHidden && !barRevealed) {
+            barRevealed = true
+            barHideTimer.restart()
+            return
+        }
+        if (actionId === "controlcenter.open") ipcObj.openControlCenter()
+        else if (actionId === "session.open") powerMenuObj.toggle()
+        else if (actionId.indexOf("launcher.open:") === 0) {
+            const modes = { apps: Enums.LauncherMode.Apps, web: Enums.LauncherMode.Web, settings: Enums.LauncherMode.Settings,
+                ai: Enums.LauncherMode.Ai, clipboard: Enums.LauncherMode.Clipboard }
+            const mode = modes[actionId.slice("launcher.open:".length)]
+            if (mode !== undefined) launcherObj.show(mode)
+        }
+    }
+
+    PowerMenu { id: powerMenuObj; lockState: lockObj }
 
     DropdownHost {
         id: dropdownHost
@@ -97,6 +153,7 @@ ShellRoot {
 
     ControlCenter {
         id: ccObj
+        onPowerRequested: { shellStateObj.closeAll(); powerMenuObj.toggle() }
         shellState: shellStateObj
         audioState: audioObj
         displayState: displayObj
@@ -143,6 +200,7 @@ ShellRoot {
         launcherState: launcherObj
         settingsState: settingsAppObj
         lockState: lockObj
+        powerMenu: powerMenuObj
         captureState: captureObj
         controlCenter: ccObj
         audioState: audioObj

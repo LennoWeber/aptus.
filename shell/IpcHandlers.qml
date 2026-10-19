@@ -19,6 +19,7 @@ Scope {
     property var audioState     // AudioState
     property var displayState   // DisplayState
     property var osd            // Osd
+    property var powerMenu      // PowerMenu
 
     // The launcher and the control center never show together.
     function openControlCenter(): void {
@@ -55,6 +56,7 @@ Scope {
                 if (root.shellState.stage === Enums.Stage.Detail && root.shellState.activeTile === Enums.TileId.Notifications) root.shellState.closeAll()
                 else root.openNotifications()
             }
+            else if (name === "session") root.powerMenu.toggle()
             else console.warn("aptus: panel '" + name + "' is not available yet")
         }
 
@@ -72,6 +74,7 @@ Scope {
                 else root.openControlCenter()
             }
             else if (name === "notification-center") root.openNotifications()
+            else if (name === "session") { if (!root.powerMenu.shown) root.powerMenu.toggle() }
             else console.warn("aptus: panel '" + name + "' is not available yet")
         }
 

@@ -5,6 +5,7 @@ import Quickshell.Wayland
 import Quickshell.Hyprland
 import qs.models
 import qs.theme
+import qs.components
 import qs.controlcenter.tiles
 
 // Fullscreen overlay with blurred background and tiles.
@@ -28,6 +29,7 @@ PanelWindow {
     property var systemMonitorState
     property var captureState
     property var aiUsageState
+    signal powerRequested()
 
     // Layout of the tiles on a 6 x 5 grid: { tileId, title, column, row, columnSpan, rowSpan }.
     property var tiles: [
@@ -237,6 +239,26 @@ PanelWindow {
             targetRect: Qt.rect((board.width - cc.detailWidth) / 2, (board.height - cc.detailHeight) / 2, cc.detailWidth, cc.detailHeight)
             onBackRequested: cc.back()
         }
+    }
+
+    // Power menu from the board's corner (also reachable by touch).
+    Item {
+        x: board.x + board.width - width
+        y: board.y - height - 8
+        width: 40
+        height: 40
+        opacity: cc.blurAmount * (1 - detail.progress)
+        Rectangle {
+            anchors.fill: parent
+            radius: 20
+            color: Tokens.surfaceAlt
+            border.width: 1
+            border.color: Tokens.line
+            opacity: powerTap.pressed ? 1 : powerTap.containsMouse ? 0.9 : 0.6
+            Behavior on opacity { NumberAnimation { duration: Tokens.durFast } }
+        }
+        StatusGlyph { anchors.centerIn: parent; kind: "power" }
+        MouseArea { id: powerTap; anchors.fill: parent; hoverEnabled: true; onClicked: cc.powerRequested() }
     }
 
     // One content component per tile; the same one is used compact in the grid and expanded in the detail view.

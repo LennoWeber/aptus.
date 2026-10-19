@@ -9,7 +9,6 @@ import qs.components
 // The compact top bar.
 PanelWindow {
     id: bar
-    // TODO(phase 7, tablet mode): slides out when ShellState.barHidden; a swipe from the top edge brings it back (touch section).
 
     required property var modelData
     property var shellState  // ShellState
@@ -25,7 +24,7 @@ PanelWindow {
     property var workspaces  // list of workspace objects from Compositor
     property var contextItems  // list of ContextItem
     property string windowTitle
-    property bool slidOut  // hidden in tablet mode
+    property bool slidOut  // hidden in tablet mode, a swipe from the top edge brings it back
 
     signal wordmarkClicked()
     signal controlCenterRequested()
@@ -36,16 +35,17 @@ PanelWindow {
     implicitHeight: Tokens.barHeight
     exclusiveZone: slidOut ? 0 : Tokens.barHeight
     color: Tokens.bg
+    // qmllint disable unqualified unresolved-type
+    margins { top: -Tokens.barHeight * bar.slide }
+    // qmllint enable unqualified unresolved-type
+    property real slide: slidOut ? 1 : 0
+    Behavior on slide { NumberAnimation { duration: Tokens.durSlow; easing.type: Easing.BezierSpline; easing.bezierCurve: [0.2, 0, 0, 1, 1, 1] } }
     WlrLayershell.namespace: "aptus-bar"
 
     // Fullscreen windows and caffeine keep the screen awake (policy in Idle).
     IdleInhibitor {
         enabled: Idle.inhibit
         window: bar
-    }
-
-    function setSlidOut(on: bool): void {
-        slidOut = on
     }
 
     // Hairline at the bottom edge, no shadow.
