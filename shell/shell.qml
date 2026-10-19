@@ -120,7 +120,12 @@ ShellRoot {
 
     Binding { target: nightLightObj; property: "latitude"; value: weatherObj.latitude }
     Binding { target: nightLightObj; property: "longitude"; value: weatherObj.longitude }
-    Binding { target: calendarObj; property: "icsUrl"; value: settingsObj.calendarIcsUrl || "" }
+    Binding {
+        target: calendarObj
+        property: "sources"
+        // The older single address still works as one source.
+        value: (settingsObj.get("calendar.sources") || []).concat(settingsObj.calendarIcsUrl ? [{ name: "Calendar", url: settingsObj.calendarIcsUrl }] : [])
+    }
     Binding { target: Notifications; property: "doNotDisturb"; value: focusObj.active }
     Binding { target: Notifications; property: "popupDurationSec"; value: settingsObj.get("notifications.popupDurationSec") || 5 }
 

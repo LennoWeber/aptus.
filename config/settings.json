@@ -55,7 +55,8 @@
   },
   "calendar": {
     "sourceKind": "ics",
-    "icsUrl": ""
+    "icsUrl": "",
+    "sources": []
   },
   "caffeine": {
     "autoOff": false

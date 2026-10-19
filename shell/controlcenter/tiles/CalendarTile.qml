@@ -79,7 +79,7 @@ Item {
             Label {
                 width: parent.width
                 readonly property var list: tile.calendarState ? tile.calendarState.eventsOn(tile.selected) : []
-                text: list.length === 0 ? "No events" : list.map(e => e.title).join("\n")
+                text: list.length === 0 ? "No events" : list.map(e => (e.allDay ? "" : Qt.formatTime(new Date(e.start), "HH:mm") + "  ") + e.title + (e.calendarName ? "  (" + e.calendarName + ")" : "")).join("\n")
                 color: Tokens.inkSoft
                 wrapMode: Text.Wrap
             }

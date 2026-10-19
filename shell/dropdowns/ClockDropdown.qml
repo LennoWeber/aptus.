@@ -29,7 +29,7 @@ Item {
 
         Label {
             readonly property var list: dd.calendarState ? dd.calendarState.eventsOn(dd.calendarState.selectedDate) : []
-            text: list.length === 0 ? "No events" : list.map(e => e.title).join("\n")
+            text: list.length === 0 ? "No events" : list.map(e => (e.allDay ? "" : Qt.formatTime(new Date(e.start), "HH:mm") + "  ") + e.title).join("\n")
             color: Tokens.inkFaint
         }
     }

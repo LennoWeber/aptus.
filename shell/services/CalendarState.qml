@@ -11,11 +11,11 @@ Scope {
     property var today: new Date()  // Date
     property var selectedDate: new Date()  // Date
     property var events: []      // list of { id, title, start, end, allDay, calendarName }
-    property string icsUrl       // private iCal address (settings calendar.icsUrl), read-only
+    property var sources: []     // list of { name, url }: private iCal addresses (settings calendar.sources), read-only
     property string error
     readonly property int horizonDays: 400   // repeating events are expanded this far ahead
 
-    onIcsUrlChanged: refresh()
+    onSourcesChanged: refresh()
 
     SystemClock {
         id: clock
@@ -23,39 +23,56 @@ Scope {
         onDateChanged: root.today = clock.date
     }
 
-    // Read-only private iCal address; Google sign-in comes later. Without an address there are no events.
+    // Read-only private iCal addresses, all merged into one list. Google sign-in comes later.
+    // Without an address there are no events.
+    property int generation: 0   // answers of an older refresh are ignored
+
     function refresh(): void {
-        if (icsUrl === "") {
+        const list = (sources || []).filter(s => s && s.url)
+        generation += 1
+        if (list.length === 0) {
             events = []
             connected = false
             error = ""
             return
         }
-        const req = new XMLHttpRequest()
-        req.onreadystatechange = () => {
-            if (req.readyState !== XMLHttpRequest.DONE) return
-            if (req.status !== 200) {
-                root.connected = false
-                root.error = "Calendar not reachable"
-                return
-            }
-            try {
-                root.events = root.parseIcs(req.responseText)
-                root.connected = true
-                root.error = ""
-            } catch (e) {
-                root.connected = false
-                root.error = "Calendar could not be read"
-            }
+        const mine = generation
+        const results = {}
+        let pending = list.length
+        let failed = 0
+        const finish = () => {
+            if (mine !== root.generation) return
+            const all = []
+            for (const k in results) for (const e of results[k]) all.push(e)
+            all.sort((a, b) => a.start - b.start)
+            root.events = all
+            console.log("aptus: calendar " + all.length + " events from " + (list.length - failed) + " of " + list.length + " sources")
+            root.connected = failed < list.length
+            root.error = failed > 0 ? (failed === list.length ? "Calendar not reachable" : failed + " calendar(s) not reachable") : ""
         }
-        req.open("GET", icsUrl)
-        req.send()
+        list.forEach((src, index) => {
+            const req = new XMLHttpRequest()
+            req.onreadystatechange = () => {
+                if (req.readyState !== XMLHttpRequest.DONE) return
+                try {
+                    if (req.status !== 200) throw new Error("status " + req.status)
+                    results[index] = root.parseIcs(req.responseText).map(e => Object.assign(e, { calendarName: src.name || "" }))
+                } catch (e) {
+                    failed += 1
+                    results[index] = []
+                }
+                pending -= 1
+                if (pending === 0) finish()
+            }
+            req.open("GET", src.url)
+            req.send()
+        })
     }
 
     Timer {
         interval: 15 * 60 * 1000
         repeat: true
-        running: root.icsUrl !== ""
+        running: root.sources && root.sources.length > 0
         onTriggered: root.refresh()
     }
 
