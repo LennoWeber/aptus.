@@ -36,7 +36,7 @@ Start with `aptus`. Send commands to the running shell with `aptus msg <command>
 
 | Key | Action |
 |---|---|
-| Mod+Space | launcher |
+| Mod+Space or Mod+D | launcher |
 | Mod+A / Mod+Shift+B / Mod+Shift+C | AI / web / clipboard mode |
 | Mod+L | lock |
 | Mod+X | power menu |
