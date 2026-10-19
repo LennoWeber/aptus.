@@ -206,6 +206,9 @@ install_greeter() {
     do_it sudo chmod -R a+rX "$GREETER_SHARE"
     [ -e /etc/aptus/greeter.json ] || do_it sudo cp "$ROOT/config/greeter.json" /etc/aptus/greeter.json
     do_it sudo install -m 755 "$ROOT/bin/aptus-greeter-session" /usr/local/bin/aptus-greeter-session
+    # The wallpaper picker's "Use for login screen" runs this helper as root through pkexec.
+    do_it sudo install -m 755 -o root -g root "$ROOT/bin/aptus-greeter-wallpaper" /usr/local/bin/aptus-greeter-wallpaper
+    do_it sudo install -m 644 "$ROOT/config/polkit/org.aptus.greeter-wallpaper.policy" /usr/share/polkit-1/actions/org.aptus.greeter-wallpaper.policy
     do_it sudo install -d -o greetd -g greetd -m 755 /var/cache/aptus-greeter
     [ -e "$GREETD_CONFIG.before-aptus" ] || do_it sudo cp "$GREETD_CONFIG" "$GREETD_CONFIG.before-aptus"
     if [ "$DRY_RUN" = 1 ]; then
@@ -225,7 +228,7 @@ uninstall_greeter() {
     fi
     ask "Restore the old greetd config?" || return 0
     do_it sudo cp "$GREETD_CONFIG.before-aptus" "$GREETD_CONFIG"
-    do_it sudo rm -rf "$GREETER_SHARE" /usr/local/bin/aptus-greeter-session
+    do_it sudo rm -rf "$GREETER_SHARE" /usr/local/bin/aptus-greeter-session /usr/local/bin/aptus-greeter-wallpaper /usr/share/polkit-1/actions/org.aptus.greeter-wallpaper.policy
     say "Old login screen restored; it is used at the next login screen."
 }
 

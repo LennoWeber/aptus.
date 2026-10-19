@@ -18,6 +18,7 @@ PanelWindow {
     Behavior on blurAmount { NumberAnimation { duration: Tokens.durSlow; easing.type: Easing.BezierSpline; easing.bezierCurve: [0.2, 0, 0, 1, 1, 1] } }
 
     function show(): void {
+        Wallpaper.loginStatus = ""
         Wallpaper.scan()
         isOpen = true
     }
@@ -77,8 +78,20 @@ PanelWindow {
             font.pixelSize: 17
             font.weight: Font.DemiBold
         }
-        Label {
+        ActionButton {
+            id: loginButton
+            visible: Wallpaper.loginSupported
             anchors { right: parent.right; rightMargin: 24; verticalCenter: title.verticalCenter }
+            implicitHeight: 34
+            active: Wallpaper.loginStatus !== "working"
+            text: Wallpaper.loginStatus === "working" ? "Working…"
+                : Wallpaper.loginStatus === "done" ? "Login screen updated"
+                : Wallpaper.loginStatus === "failed" ? "Failed, try again"
+                : Wallpaper.current === "" ? "Remove login picture" : "Use for login screen"
+            onClicked: Wallpaper.setLoginWallpaper(Wallpaper.current)
+        }
+        Label {
+            anchors { right: loginButton.visible ? loginButton.left : parent.right; rightMargin: loginButton.visible ? 16 : 24; verticalCenter: title.verticalCenter }
             text: Wallpaper.folder.replace(Quickshell.env("HOME"), "~")
             color: Tokens.inkFaint
         }

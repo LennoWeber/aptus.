@@ -645,6 +645,12 @@ Rückmeldung: Kontrollzentrum gut; Sound-Kachel zeigte „Muted“ über dem Reg
 - `ensure_cliphist` entfällt (steckt jetzt in der Paketliste).
 - Geprüft: `bash -n`, Trockenläufe `--dry-run`, `--dry-run --yes`, `--uninstall --dry-run --yes` auf dem Laptop (nur cliphist fehlt dort). Echte `dnf`-Läufe und echte Deinstallation nicht ausgeführt.
 
+### Baustein 7: Login-Hintergrund aus dem Picker (20. Okt.)
+- `bin/aptus-greeter-wallpaper` (Python, läuft als root über `pkexec`): liest das Bild mit den Rechten des Aufrufers (`setpriv`, `PKEXEC_UID`), nimmt nur jpg/png/webp bis 32 MB (Magic Bytes), schreibt atomar nach `/usr/local/share/aptus/wallpaper.<ext>` und setzt `wallpaper` in `/etc/aptus/greeter.json`; `--clear` entfernt es. Polkit-Aktion `config/polkit/org.aptus.greeter-wallpaper.policy`. `install.sh --greeter` installiert beides, `--uninstall-greeter` entfernt beides.
+- Picker: Knopf „Use for login screen“ (bei „None“: „Remove login picture“), nur sichtbar, wenn der Helfer installiert ist; Status Working / updated / Failed. Abbruch des Passwortdialogs (pkexec 126) zeigt keinen Fehler.
+- **Neu, weil keine Polkit-Oberfläche lief:** `PolkitPrompt` (session) registriert aptus als Polkit-Agent der Sitzung (Quickshell `PolkitAgent`): Dimmer, Meldung, Passwortfeld, Cancel/Authenticate, Esc bricht ab. Läuft schon ein anderer Agent, bleibt es unsichtbar.
+- Geprüft: Lint 17 (unverändert), `bash -n`, Skriptlogik in einer Kopie mit Attrappen (jpg ok, Textdatei und fehlende Datei abgelehnt, `--clear`), Shell startet ohne Fehler. **Nicht geprüft:** Passwortdialog (Test per `pkexec true` bewusst nicht ausgeführt), der Lauf als root mit `setpriv`, Greeter mit neuem Bild, `install.sh --greeter` mit den neuen Zeilen. Der Knopf erscheint erst nach erneutem `install.sh --greeter`.
+
 ## Nächster Schritt
 
 Alltagsgebrauch auf dem Laptop; was auffällt, kommt als Feinschliff. Mögliche nächste Bausteine in dieser Reihenfolge: Kontext-Zone der Leiste, „More“-Links der Dropdowns, Kachel-Editor. Wartet auf Lennos Rückmeldung oder „weiter“.

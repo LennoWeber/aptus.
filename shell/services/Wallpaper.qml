@@ -16,6 +16,21 @@ Singleton {
 
     function scan(): void {
         lister.running = true
+        helperCheck.running = true
+    }
+
+    // The login screen picture is set by a root helper installed with `install.sh --greeter`; without it there is no such action.
+    readonly property string loginHelper: "/usr/local/bin/aptus-greeter-wallpaper"
+    property bool loginSupported
+    property string loginStatus         // "", "working", "done", "failed"
+
+    // An empty path removes the login picture.
+    function setLoginWallpaper(path: string): void {
+        if (!loginSupported) throw new Error("invariant: Wallpaper.setLoginWallpaper: the login helper is not installed")
+        if (path !== "" && path[0] !== "/") throw new Error("invariant: Wallpaper.setLoginWallpaper: path must be absolute")
+        loginStatus = "working"
+        loginRun.command = ["pkexec", loginHelper, path === "" ? "--clear" : path]
+        loginRun.running = true
     }
 
     function setWallpaper(path: string): void {
@@ -30,6 +45,22 @@ Singleton {
         blockLoading: true
         printErrors: false
         Component.onCompleted: root.current = text().trim()
+    }
+
+    Process {
+        id: helperCheck
+        command: ["test", "-x", root.loginHelper]
+        // qmllint disable signal-handler-parameters
+        onExited: code => root.loginSupported = code === 0
+        // qmllint enable signal-handler-parameters
+    }
+
+    Process {
+        id: loginRun
+        // 126 means the password prompt was dismissed: no error to show.
+        // qmllint disable signal-handler-parameters
+        onExited: code => root.loginStatus = code === 0 ? "done" : code === 126 ? "" : "failed"
+        // qmllint enable signal-handler-parameters
     }
 
     Process {

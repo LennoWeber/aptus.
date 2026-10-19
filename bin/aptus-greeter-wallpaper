@@ -1,0 +1,94 @@
+#!/usr/bin/env python3
+"""Set the picture of the aptus login screen. Runs as root through pkexec (installed to /usr/local/bin by install.sh --greeter).
+
+    aptus-greeter-wallpaper PATH     copy the picture to /usr/local/share/aptus and point greeter.json at it
+    aptus-greeter-wallpaper --clear  remove the picture
+
+The caller is not trusted: PATH is read with the caller's own rights (never as root), must be a jpg, png or webp
+and at most 32 MB. Nothing else is written."""
+import json
+import os
+import pwd
+import subprocess
+import sys
+
+SHARE = "/usr/local/share/aptus"
+CONFIG = "/etc/aptus/greeter.json"
+MAX_BYTES = 32 * 1024 * 1024
+TARGET_PREFIX = "wallpaper"
+
+
+def fail(message):
+    print("aptus-greeter-wallpaper: " + message, file=sys.stderr)
+    sys.exit(1)
+
+
+def extension_of(data):
+    if data[:3] == b"\xff\xd8\xff":
+        return ".jpg"
+    if data[:8] == b"\x89PNG\r\n\x1a\n":
+        return ".png"
+    if data[:4] == b"RIFF" and data[8:12] == b"WEBP":
+        return ".webp"
+    return None
+
+
+def write_atomic(path, data, mode):
+    tmp = path + ".tmp"
+    with open(tmp, "wb") as f:
+        f.write(data)
+    os.chmod(tmp, mode)
+    os.replace(tmp, path)
+
+
+def remove_old():
+    for name in os.listdir(SHARE):
+        if name.startswith(TARGET_PREFIX + "."):
+            os.remove(os.path.join(SHARE, name))
+
+
+def set_config(wallpaper):
+    with open(CONFIG, encoding="utf-8") as f:
+        config = json.load(f)
+    config["wallpaper"] = wallpaper
+    write_atomic(CONFIG, (json.dumps(config, indent=2) + "\n").encode(), 0o644)
+
+
+def main():
+    if os.geteuid() != 0:
+        fail("must run as root (use pkexec)")
+    if len(sys.argv) != 2:
+        fail("usage: aptus-greeter-wallpaper PATH | --clear")
+    if not os.path.isdir(SHARE) or not os.path.isfile(CONFIG):
+        fail("the aptus greeter is not installed (install.sh --greeter)")
+
+    if sys.argv[1] == "--clear":
+        remove_old()
+        set_config("")
+        return
+
+    # Read as the user who asked, so this cannot be used to read files that user may not read.
+    uid = int(os.environ.get("PKEXEC_UID", "-1"))
+    if uid < 0:
+        fail("PKEXEC_UID is not set (run through pkexec)")
+    gid = pwd.getpwuid(uid).pw_gid
+    read = subprocess.run(
+        ["setpriv", "--reuid", str(uid), "--regid", str(gid), "--clear-groups",
+         "head", "-c", str(MAX_BYTES + 1), "--", sys.argv[1]],
+        capture_output=True)
+    if read.returncode != 0:
+        fail("cannot read " + sys.argv[1])
+    data = read.stdout
+    if len(data) > MAX_BYTES:
+        fail("picture is larger than 32 MB")
+    ext = extension_of(data)
+    if ext is None:
+        fail("not a jpg, png or webp picture")
+
+    remove_old()
+    target = os.path.join(SHARE, TARGET_PREFIX + ext)
+    write_atomic(target, data, 0o644)
+    set_config(target)
+
+
+main()

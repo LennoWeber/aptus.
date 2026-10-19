@@ -154,6 +154,7 @@ ShellRoot {
     OskWindow {}
 
     PowerMenu { id: powerMenuObj; lockState: lockObj }
+    PolkitPrompt {}
 
     DropdownHost {
         id: dropdownHost

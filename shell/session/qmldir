@@ -1,2 +1,3 @@
 module qs.session
 PowerMenu 1.0 PowerMenu.qml
+PolkitPrompt 1.0 PolkitPrompt.qml
