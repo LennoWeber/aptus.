@@ -6,7 +6,6 @@ import qs.components
 // Status icons on the right of the bar.
 Item {
     id: group
-    // TODO(phase 7, system sections): audio, network, Bluetooth, night light, caffeine and focus join the row with their dropdowns.
 
     property var audioState
     property var networkState
@@ -25,6 +24,52 @@ Item {
         id: row
         anchors.verticalCenter: parent.verticalCenter
 
+        // Caffeine and focus only show while they are on (the functional signal), green.
+        BarItem {
+            visible: group.caffeineState ? group.caffeineState.active : false
+            StatusGlyph {
+                anchors.verticalCenter: parent.verticalCenter
+                kind: "cup"
+                color: Tokens.ok
+            }
+        }
+
+        BarItem {
+            visible: group.focusState ? group.focusState.active : false
+            StatusGlyph {
+                anchors.verticalCenter: parent.verticalCenter
+                kind: "focus"
+                color: Tokens.ok
+            }
+        }
+
+        BarItem {
+            id: bluetoothItem
+            visible: group.bluetoothState ? group.bluetoothState.powered : false
+            dropdownId: Enums.DropdownId.Bluetooth
+            onClicked: group.itemClicked(dropdownId, bluetoothItem)
+
+            StatusGlyph {
+                anchors.verticalCenter: parent.verticalCenter
+                kind: "bluetooth"
+                color: group.bluetoothState && group.bluetoothState.connectedCount > 0 ? Tokens.ink : Tokens.inkFaint
+            }
+        }
+
+        BarItem {
+            id: networkItem
+            dropdownId: Enums.DropdownId.Network
+            onClicked: group.itemClicked(dropdownId, networkItem)
+
+            StatusGlyph {
+                anchors.verticalCenter: parent.verticalCenter
+                kind: "wifi"
+                level: group.networkState && group.networkState.connected ? group.networkState.signalStrength : 0
+                muted: group.networkState ? !group.networkState.wifiEnabled : false
+                color: !group.networkState || !group.networkState.wifiEnabled || (!group.networkState.connected && !group.networkState.ethernetConnected) ? Tokens.inkFaint : Tokens.ink
+            }
+        }
+
         BarItem {
             id: audioItem
             dropdownId: Enums.DropdownId.Audio
@@ -35,7 +80,7 @@ Item {
                 kind: "volume"
                 level: group.audioState ? group.audioState.volume : 0
                 muted: group.audioState ? group.audioState.muted : false
-                color: group.audioState && group.audioState.muted ? Tokens.inkFaint : Tokens.ink
+                color: group.audioState && group.audioState.muted ? Tokens.critical : Tokens.ink
             }
         }
 

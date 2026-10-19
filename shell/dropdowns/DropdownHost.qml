@@ -9,7 +9,6 @@ import qs.components
 // Window that hosts one dropdown under a bar item.
 PanelWindow {
     id: host
-    // TODO(phase 7, section 3b): Network and Bluetooth dropdowns.
 
     property var shellState  // ShellState
     property var audioState
@@ -18,6 +17,9 @@ PanelWindow {
     property var calendarState
     property var nightLightState
     property var displayState
+    property var networkState
+    property var bluetoothState
+    signal tileRequested(int tileId)  // a dropdown's More link: open the control center on this tile
     property var anchorItem
     property int dropdownId  // Enums.DropdownId, the dropdown on show (stays during the fade-out)
     readonly property bool isOpen: shellState ? shellState.activeDropdown !== Enums.DropdownId.None : false
@@ -91,6 +93,8 @@ PanelWindow {
             Keys.onEscapePressed: host.closeDropdown()
             sourceComponent: {
                 switch (host.dropdownId) {
+                case Enums.DropdownId.Network: return networkContent
+                case Enums.DropdownId.Bluetooth: return bluetoothContent
                 case Enums.DropdownId.Audio: return audioContent
                 case Enums.DropdownId.Battery: return batteryContent
                 case Enums.DropdownId.NightLight: return nightLightContent
@@ -101,6 +105,22 @@ PanelWindow {
         }
     }
 
+    Component {
+        id: networkContent
+        NetworkDropdown {
+            networkState: host.networkState
+            shown: host.isOpen
+            onMoreRequested: tileId => host.tileRequested(tileId)
+        }
+    }
+    Component {
+        id: bluetoothContent
+        BluetoothDropdown {
+            bluetoothState: host.bluetoothState
+            shown: host.isOpen
+            onMoreRequested: tileId => host.tileRequested(tileId)
+        }
+    }
     Component { id: audioContent; AudioDropdown { audioState: host.audioState } }
     Component { id: batteryContent; BatteryDropdown { batteryState: host.batteryState; powerProfileState: host.powerProfileState } }
     Component { id: nightLightContent; NightLightDropdown { nightLightState: host.nightLightState; displayState: host.displayState } }

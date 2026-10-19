@@ -3,7 +3,6 @@ import QtQuick
 import Quickshell
 import Quickshell.Wayland
 import Quickshell.Hyprland
-import qs.models
 import qs.theme
 import qs.services
 

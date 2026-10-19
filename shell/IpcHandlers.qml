@@ -24,6 +24,13 @@ Scope {
         shellState.openControlCenter()
     }
 
+    // Control center directly on one tile (the More links of the dropdowns).
+    function openTile(tileId: int): void {
+        launcherState.hide()
+        openControlCenter()
+        controlCenter.openTileById(tileId)
+    }
+
     function openNotifications(): void {
         launcherState.hide()
         openControlCenter()

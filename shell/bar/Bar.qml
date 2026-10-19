@@ -18,6 +18,10 @@ PanelWindow {
     property var audioState   // AudioState
     property var nightLightState  // NightLightState
     property var captureState  // CaptureState
+    property var networkState
+    property var bluetoothState
+    property var caffeineState
+    property var focusState
     property var workspaces  // list of workspace objects from Compositor
     property var contextItems  // list of ContextItem
     property string windowTitle
@@ -71,7 +75,9 @@ PanelWindow {
     }
 
     ContextZone {
-        anchors { left: left.right; right: right.left; leftMargin: 16; rightMargin: 16; verticalCenter: parent.verticalCenter }
+        // Always exactly in the middle of the bar; it only gets narrower (never shifts) when the sides need room.
+        anchors { horizontalCenter: parent.horizontalCenter; verticalCenter: parent.verticalCenter }
+        width: Math.max(0, bar.width - 2 * (Math.max(left.width, right.width) + 16))
         items: bar.contextItems
         fallbackText: bar.windowTitle
     }
@@ -110,6 +116,10 @@ PanelWindow {
         StatusGroup {
             audioState: bar.audioState
             nightLightState: bar.nightLightState
+            networkState: bar.networkState
+            bluetoothState: bar.bluetoothState
+            caffeineState: bar.caffeineState
+            focusState: bar.focusState
             onItemClicked: (id, anchor) => bar.dropdownRequested(id, anchor, bar.modelData)
             batteryState: bar.batteryState
             showBatteryPercent: bar.appSettings ? bar.appSettings.get("bar.showBatteryPercent") !== false : true

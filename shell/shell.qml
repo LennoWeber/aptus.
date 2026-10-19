@@ -54,6 +54,10 @@ ShellRoot {
             audioState: audioObj
             nightLightState: nightLightObj
             captureState: captureObj
+            networkState: networkObj
+            bluetoothState: bluetoothObj
+            caffeineState: caffeineObj
+            focusState: focusObj
             onDropdownRequested: (id, anchor, scr) => dropdownHost.openAt(id, anchor, scr)
             workspaces: Compositor.workspaceList
             windowTitle: Compositor.activeTitle
@@ -71,6 +75,9 @@ ShellRoot {
         calendarState: calendarObj
         nightLightState: nightLightObj
         displayState: displayObj
+        networkState: networkObj
+        bluetoothState: bluetoothObj
+        onTileRequested: tileId => ipcObj.openTile(tileId)
     }
 
     Launcher {
@@ -106,6 +113,14 @@ ShellRoot {
 
     Osd { id: osdObj }
 
+    Connections {
+        target: caffeineObj
+        function onActiveChanged() { osdObj.flash(Enums.OsdKind.Caffeine, 0, false, caffeineObj.active ? "Caffeine on" : "Caffeine off") }
+    }
+
+    Binding { target: nightLightObj; property: "latitude"; value: weatherObj.latitude }
+    Binding { target: nightLightObj; property: "longitude"; value: weatherObj.longitude }
+    Binding { target: calendarObj; property: "icsUrl"; value: settingsObj.calendarIcsUrl || "" }
     Binding { target: Notifications; property: "doNotDisturb"; value: focusObj.active }
     Binding { target: Notifications; property: "popupDurationSec"; value: settingsObj.get("notifications.popupDurationSec") || 5 }
 

@@ -5,7 +5,7 @@ import qs.theme
 Canvas {
     id: glyph
 
-    property string kind: "volume"   // volume | mic | moon | play | pause | next | prev | cup | back | sliders | focus | shield | hotspot | capture | sun | cloud | partly | rain | snow | storm | fog
+    property string kind: "volume"   // wifi | bluetooth | volume | mic | moon | play | pause | next | prev | cup | back | sliders | focus | shield | hotspot | capture | sun | cloud | partly | rain | snow | storm | fog
     property real level: 1           // volume: 0..1, drives the number of waves
     property bool muted
     property color color: Tokens.ink
@@ -147,6 +147,20 @@ Canvas {
                 ctx.moveTo(2, 5.5); ctx.lineTo(14, 5.5); ctx.moveTo(3.5, 8.5); ctx.lineTo(12.5, 8.5); ctx.moveTo(2, 11.5); ctx.lineTo(14, 11.5)
                 ctx.stroke()
             }
+        } else if (kind === "wifi") {
+            // Three arcs and a dot; arcs above the signal level are faint.
+            const arcs = [[3.4, 0.25], [6.6, 0.55], [9.8, 0.85]]
+            for (const a of arcs) {
+                ctx.globalAlpha = level >= a[1] ? 1 : 0.28
+                ctx.beginPath(); ctx.arc(8, 13, a[0], -2.36, -0.78); ctx.stroke()
+            }
+            ctx.globalAlpha = 1
+            ctx.beginPath(); ctx.arc(8, 13, 1.1, 0, 2 * Math.PI); ctx.fill()
+            if (muted) { ctx.beginPath(); ctx.moveTo(2.5, 2.5); ctx.lineTo(13.5, 13.5); ctx.stroke() }
+        } else if (kind === "bluetooth") {
+            ctx.beginPath()
+            ctx.moveTo(4, 5); ctx.lineTo(12, 11.5); ctx.lineTo(8, 14.8); ctx.lineTo(8, 1.2); ctx.lineTo(12, 4.5); ctx.lineTo(4, 11)
+            ctx.stroke()
         } else if (kind === "back") {
             ctx.beginPath()
             ctx.moveTo(9.5, 3); ctx.lineTo(4.5, 8); ctx.lineTo(9.5, 13)

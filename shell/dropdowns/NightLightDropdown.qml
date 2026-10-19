@@ -52,7 +52,7 @@ Item {
 
         ToggleSwitch {
             width: parent.width
-            label: "Evening to morning (20:00 to 07:00)"
+            label: dd.nightLightState ? dd.nightLightState.scheduleText : "Evening to morning"
             checked: dd.nightLightState ? dd.nightLightState.scheduled : false
             onToggled: on => dd.nightLightState.setScheduled(on)
         }

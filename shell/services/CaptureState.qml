@@ -117,7 +117,7 @@ Scope {
         stderr: StdioCollector {
             onStreamFinished: if (text.trim() !== "") { root.lastError = text.trim(); console.warn("aptus: capture: " + text.trim()) }
         }
-        onExited: (code, status) => {
+        onExited: code => {
             if (code !== 0 && root.lastError === "") root.lastError = "The capture tool stopped with code " + code
             if (code !== 0) Quickshell.execDetached(["notify-send", "-a", "shell.", "Screenshot failed", root.lastError])
         }
