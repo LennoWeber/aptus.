@@ -591,6 +591,11 @@ Rückmeldung: Kontrollzentrum gut; Sound-Kachel zeigte „Muted“ über dem Reg
 - README neu geschrieben (Funktionen, Voraussetzungen, Installation, Tasten, Sicherheit).
 - **Entschieden (Lenno):** Lizenz MIT (`LICENSE`); der Punkt im Namen bleibt, das Repo heißt weiter `aptus.`. **Offen:** AI-Nutzung (Gespräch, siehe unten).
 
+### AI-Nutzung (Variante A, Lenno)
+- `AiUsageState` liest `~/.claude/usage-cache.json` (Claude Code bzw. das Noctalia-Plugin „claudecode“ pflegt sie), beobachtet die Datei und zählt jede Minute die Uhr weiter. aptus fasst kein Login-Token an und ruft keinen Endpunkt auf.
+- Kachel: kompakt 5-h-Fenster mit Balken und 7-Tage-Wert, im Detail beide Fenster mit Reset-Zeit, „diese Woche nach Produkt“ und „Updated vor x min“. Balken ab 70 % amber, ab 90 % rot. Über 30 min alt: „old“ in Amber und Hinweis, dass die Zahlen sich bewegen, wenn Claude Code läuft.
+- Ohne Datei: „No usage data“ mit Erklärung. Für `agy` und `vibe` gibt es keine Zahlen. Variante B (Endpunkt mit Token) bleibt eine mögliche spätere Option hinter einem Schalter, nur mit Lennos Okay.
+
 ## Nächster Schritt
 
 Test von 7c-2 (Settings → Launcher → Search engines, Calendar & Weather → Weather location; Klicks nur am Gerät prüfbar). Danach 7d, falls gewünscht: Provider-Editor, Hotkey-Editor, Kachel-Editor, Dreh-Schalter, Unschärfe-Feinschliff. Wartet auf dein „weiter“.
