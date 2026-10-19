@@ -52,3 +52,7 @@ Start with `aptus`. Send commands to the running shell with `aptus msg <command>
 
 `shell/` QML shell, `greeter/` login screen, `config/` defaults, `theme/` design values, `bin/` helper scripts, `hypr/` Hyprland snippets.
 Lint: `./aptus-lint.sh` (qmllint, target 0 warnings).
+
+## License
+
+MIT, see [LICENSE](LICENSE).

@@ -589,7 +589,7 @@ Rückmeldung: Kontrollzentrum gut; Sound-Kachel zeigte „Muted“ über dem Reg
 - **Neue Editoren** in der Settings-App: Suchmaschinen-Liste (Name, URL-Vorlage, hinzufügen, entfernen, mindestens eine bleibt) und Wetter-Ort (Suche über die Open-Meteo-Geokodierung, Tippen übernimmt Name und Koordinaten). Beide sind „breite“ Zeilen mit Editor unter dem Titel (`SettingRow.wide`). `FieldBox` meldet den Fokus an die Bildschirmtastatur. IPC `settingsFocus <entryId>` öffnet die Settings an einem Eintrag.
 - **Weiter nur in der Datei** (Hinweis „Edit this in settings.json“): Provider-Liste (AI), Kachel-Reihenfolge, Tastenkürzel, Launcher-Modustasten. Grund: Provider und Kürzel haben eigene Speicherorte und eigene Prüfungen (Befehl testen, Konflikte), Kacheln brauchen ein bewegliches Raster.
 - README neu geschrieben (Funktionen, Voraussetzungen, Installation, Tasten, Sicherheit).
-- **Ungeklärt, entscheidet Lenno:** Lizenz; Umbenennung des Repos `aptus.` → `aptus` (GitHub-Einstellung); AI-Nutzung zeigt ehrlich „kein Anbieter verbunden“, weil die CLIs keine Nutzungszahlen liefern.
+- **Entschieden (Lenno):** Lizenz MIT (`LICENSE`); der Punkt im Namen bleibt, das Repo heißt weiter `aptus.`. **Offen:** AI-Nutzung (Gespräch, siehe unten).
 
 ## Nächster Schritt
 
