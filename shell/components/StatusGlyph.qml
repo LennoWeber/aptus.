@@ -54,6 +54,7 @@ Canvas {
             ctx.arc(8, 7.5, 4.5, Math.PI, 0, true)
             ctx.moveTo(8, 12)
             ctx.lineTo(8, 14.5)
+            if (muted) { ctx.moveTo(2.5, 2.5); ctx.lineTo(13.5, 13.5) }
             ctx.stroke()
         } else if (kind === "play") {
             ctx.beginPath()

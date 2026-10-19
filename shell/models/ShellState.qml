@@ -56,7 +56,8 @@ QtObject {
 
     // Control center directly in the notifications detail.
     function openNotifications(): void {
-        throw new Error("not implemented")
+        openControlCenter()
+        openTile(Enums.TileId.Notifications)
     }
 
     // Enums.Overlay.

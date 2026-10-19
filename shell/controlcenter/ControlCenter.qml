@@ -28,7 +28,6 @@ PanelWindow {
     property var systemMonitorState
     property var captureState
     property var aiUsageState
-    property int unreadNotifications
 
     // Layout of the tiles on a 6 x 5 grid: { tileId, title, column, row, columnSpan, rowSpan }.
     property var tiles: [
@@ -83,6 +82,14 @@ PanelWindow {
         detail.title = titleOf(tileId)
         detail.contentComponent = componentFor(tileId)
         shellState.openTile(tileId)
+    }
+
+    // Open a tile directly (the notification hotkey): the detail grows out of the tile's own place.
+    function openTileById(tileId: int): void {
+        const t = tiles.find(x => x.tileId === tileId)
+        if (!t) throw new Error("invariant: ControlCenter.openTileById: unknown tile")
+        openTile(tileId, Qt.rect(t.column * (cellWidth + gap), t.row * (cellHeight + gap),
+            t.columnSpan * cellWidth + (t.columnSpan - 1) * gap, t.rowSpan * cellHeight + (t.rowSpan - 1) * gap))
     }
 
     // Detail -> grid -> closed.
@@ -249,5 +256,5 @@ PanelWindow {
     Component { id: vpnContent; VpnTile { networkState: cc.networkState } }
     Component { id: hotspotContent; HotspotTile { networkState: cc.networkState } }
     Component { id: aiUsageContent; AiUsageTile { aiUsageState: cc.aiUsageState } }
-    Component { id: notificationsContent; NotificationsTile { unreadCount: cc.unreadNotifications } }
+    Component { id: notificationsContent; NotificationsTile {} }
 }

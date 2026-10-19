@@ -13,11 +13,21 @@ Scope {
     property var launcherState  // LauncherState
     property var shellState     // ShellState
     property var captureState   // CaptureState
+    property var controlCenter  // ControlCenter
+    property var audioState     // AudioState
+    property var displayState   // DisplayState
+    property var osd            // Osd
 
     // The launcher and the control center never show together.
     function openControlCenter(): void {
         launcherState.hide()
         shellState.openControlCenter()
+    }
+
+    function openNotifications(): void {
+        launcherState.hide()
+        openControlCenter()
+        controlCenter.openTileById(Enums.TileId.Notifications)
     }
 
     IpcHandler {
@@ -26,11 +36,15 @@ Scope {
         // panel-toggle / panel-open: launcher, control-center, notification-center, wallpaper, session (power menu), design (unused).
         function panelToggle(name: string): void {
             if (["launcher", "control-center", "notification-center", "wallpaper", "session", "design"].indexOf(name) < 0) throw new Error("invariant: IpcHandlers.panelToggle: unknown panel name")
-            // TODO(phase 7, sections 4 to 6): 'notification-center' -> ShellState.openNotifications; 'wallpaper' -> picker; 'session' -> power menu.
+            // TODO(phase 7, sections 5 and 6): 'wallpaper' -> picker; 'session' -> power menu.
             if (name === "launcher") root.launcherState.toggle(Enums.LauncherMode.Apps)
             else if (name === "control-center") {
                 if (root.shellState.stage === Enums.Stage.ControlCenter || root.shellState.stage === Enums.Stage.Detail) root.shellState.closeAll()
                 else root.openControlCenter()
+            }
+            else if (name === "notification-center") {
+                if (root.shellState.stage === Enums.Stage.Detail && root.shellState.activeTile === Enums.TileId.Notifications) root.shellState.closeAll()
+                else root.openNotifications()
             }
             else console.warn("aptus: panel '" + name + "' is not available yet")
         }
@@ -40,6 +54,7 @@ Scope {
             // TODO(phase 7, sections 4 to 6): the other panels; arg is a launcher query such as '/emo' (ignored for now).
             if (name === "launcher") root.launcherState.show(Enums.LauncherMode.Apps)
             else if (name === "control-center") root.openControlCenter()
+            else if (name === "notification-center") root.openNotifications()
             else console.warn("aptus: panel '" + name + "' is not available yet")
         }
 
@@ -86,22 +101,33 @@ Scope {
 
         // Hardware keys. The shell shows the OSD and does the change (instant feedback).
         function brightnessUp(): void {
-            Quickshell.execDetached(["brightnessctl", "set", "5%+"])
+            root.displayState.changeBrightness(0.05)
+            root.osd.flash(Enums.OsdKind.Brightness, root.displayState.brightness, false, "")
         }
         function brightnessDown(): void {
-            Quickshell.execDetached(["brightnessctl", "set", "5%-"])
+            root.displayState.changeBrightness(-0.05)
+            root.osd.flash(Enums.OsdKind.Brightness, root.displayState.brightness, false, "")
         }
         function volumeUp(): void {
-            Quickshell.execDetached(["wpctl", "set-volume", "-l", "1", "@DEFAULT_AUDIO_SINK@", "5%+"])   // OSD comes with the OSD section
+            if (root.audioState.muted) root.audioState.setMuted(false)
+            const v = Math.min(1, root.audioState.volume + 0.05)
+            root.audioState.setVolume(v)
+            root.osd.flash(Enums.OsdKind.Volume, v, false, "")
         }
         function volumeDown(): void {
-            Quickshell.execDetached(["wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@", "5%-"])
+            const v = Math.max(0, root.audioState.volume - 0.05)
+            root.audioState.setVolume(v)
+            root.osd.flash(Enums.OsdKind.Volume, v, root.audioState.muted, "")
         }
         function volumeMute(): void {
-            Quickshell.execDetached(["wpctl", "set-mute", "@DEFAULT_AUDIO_SINK@", "toggle"])
+            const nowMuted = !root.audioState.muted
+            root.audioState.setMuted(nowMuted)
+            root.osd.flash(Enums.OsdKind.Volume, root.audioState.volume, nowMuted, "")
         }
         function micMute(): void {
-            Quickshell.execDetached(["wpctl", "set-mute", "@DEFAULT_AUDIO_SOURCE@", "toggle"])
+            const nowMuted = !root.audioState.inputMuted
+            root.audioState.toggleInputMute()
+            root.osd.flash(Enums.OsdKind.Microphone, root.audioState.inputVolume, nowMuted, "")
         }
         function media(action: string): void {
             if (["prev", "next", "play-pause"].indexOf(action) < 0) throw new Error("invariant: IpcHandlers.media: unknown media action")

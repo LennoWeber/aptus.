@@ -52,7 +52,6 @@ Scope {
     // Function keys.
     function changeVolume(delta: real): void {
         if (!Number.isFinite(delta)) throw new Error("invariant: AudioState.changeVolume: delta must be a number")
-        // TODO(phase 7, OSD section): show the on-screen indicator immediately on function-key presses.
         setVolume(Math.max(0, Math.min(1, volume + delta)))
     }
 

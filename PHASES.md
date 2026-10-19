@@ -522,6 +522,14 @@ Rückmeldung: Kontrollzentrum gut; Sound-Kachel zeigte „Muted“ über dem Reg
 
 **Nachbesserung 4a, dritter Teil:** Aufnahme: roter pulsierender Punkt mit Zeit in der Leiste (Klick stoppt), Capture-Kachel zeigt „Stop 0:12“ und stoppt per Tipp, Stopp robuster (Signal an den Prozess, `pkill -INT`, nach 4 s `-TERM`), Fehlerausgabe von wf-recorder sichtbar. Weißer Screenshot: `grim` allein funktioniert (Lenno), also lag es am noch sichtbaren Kontrollzentrum.
 
+## Phase 7, Abschnitt 4b: Benachrichtigungen und OSD (19. Okt., jetzt direkt auf dem Laptop gebaut und getestet)
+
+**Capture-Fehler behoben:** `wf-recorder` fragte bei zwei Monitoren interaktiv nach dem Ausgang (jetzt `-o <fokussierter Monitor>`); `slurp` las stdin bis EOF und blockierte unter Quickshell (jetzt `</dev/null`). Beides auf dem Laptop reproduziert und per IPC geprüft. IPC neu: `record-screen-toggle`.
+
+**Umgesetzt:** `Notifications` (NotificationServer, Verlauf 100, Popups max. 4, Timeout aus Einstellungen oder vom Sender, kritisch bleibt stehen, Hover pausiert, Focus hält Popups zurück und zählt, kritisch kommt durch), `NotificationCard` (App-Icon oder Buchstabe, Zeit, Zusammenfassung, Text mit Markup, Aktionsknöpfe, X), `NotificationPopups` (oben rechts/links/mitte unter der Leiste, Monitor mit Fokus), Notifications-Kachel (Zähler, Verlauf, Clear all, liest beim Öffnen alles), `panel-toggle|panel-open notification-center` (Kontrollzentrum direkt im Detail), OSD (`Osd`: Lautstärke, Helligkeit, Mikro, Koffein/Rotation per Text; erscheint sofort, 140 ms Ausblenden, nimmt keine Eingabe), IPC-Tasten `volume-up|down|mute`, `mic-mute`, `brightness-up|down` laufen jetzt über die Shell mit OSD. Aufnahme-Meldungen („Screenshot saved“) laufen über unseren Server.
+
+**Noch offen:** Netzwerk-/Bluetooth-Dropdowns, Sperrbildschirm-Datenschutz für Benachrichtigungen (Lockscreen-Abschnitt), Koffein/Rotation-OSD verdrahten, echter Sonnenauf-/untergang, Kalenderquelle, Aktionen „Open“ nur wenn der Sender sie auswertet.
+
 ## Nächster Schritt
 
 Test von Abschnitt 3b auf dem Laptop, dann Abschnitt 4 (übrige Kacheln: Benachrichtigungen, Fokus, Timer, Wetter, Systemmonitor, Aufnahme, VPN, Hotspot, KI-Verbrauch; Benachrichtigungs-Popups und OSD). Wartet auf dein „weiter“.

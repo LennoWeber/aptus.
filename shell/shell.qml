@@ -7,10 +7,12 @@ import qs.bar
 import qs.launcher
 import qs.dropdowns
 import qs.controlcenter
+import qs.notifications
+import qs.osd
 
 // Entry point of the aptus shell.
 ShellRoot {
-    // TODO(phase 7, later sections): create once, pre-loaded: NotificationPopups, Osd, WallpaperPicker, SettingsWindow, ConfirmDialog, LockSurface, EdgeStrips.
+    // TODO(phase 7, later sections): create once, pre-loaded: WallpaperPicker, SettingsWindow, ConfirmDialog, LockSurface, EdgeStrips.
 
     AppSettings { id: settingsObj }
     ShellState { id: shellStateObj }
@@ -78,6 +80,7 @@ ShellRoot {
     }
 
     ControlCenter {
+        id: ccObj
         shellState: shellStateObj
         audioState: audioObj
         displayState: displayObj
@@ -97,10 +100,23 @@ ShellRoot {
         aiUsageState: aiUsageObj
     }
 
+    NotificationPopups {
+        position: settingsObj.get("notifications.position") || "top-right"
+    }
+
+    Osd { id: osdObj }
+
+    Binding { target: Notifications; property: "doNotDisturb"; value: focusObj.active }
+    Binding { target: Notifications; property: "popupDurationSec"; value: settingsObj.get("notifications.popupDurationSec") || 5 }
+
     IpcHandlers {
         id: ipcObj
         launcherState: launcherObj
         captureState: captureObj
+        controlCenter: ccObj
+        audioState: audioObj
+        displayState: displayObj
+        osd: osdObj
         shellState: shellStateObj
     }
 

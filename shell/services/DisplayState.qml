@@ -36,7 +36,6 @@ Scope {
     // Function keys.
     function changeBrightness(delta: real): void {
         if (!Number.isFinite(delta)) throw new Error("invariant: DisplayState.changeBrightness: delta must be a number")
-        // TODO(phase 7, OSD section): show the on-screen indicator immediately on function-key presses.
         setBrightness(Math.max(0.01, Math.min(1, brightness + delta)))
     }
 }
