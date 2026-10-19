@@ -4,11 +4,14 @@ import Quickshell.Io
 import qs.models
 
 // Claude usage shown in the control center. The numbers come from ~/.claude/usage-cache.json, which Claude Code
-// (or a usage plugin) keeps up to date; aptus only reads it and never touches a login token. The age of the data
-// is shown, so old numbers are never passed off as current.
+// (or a usage plugin) keeps up to date. With the opt-in setting ai.usageLive, bin/aptus-ai-usage also asks Anthropic
+// for fresh numbers every few minutes; it reads the login token in its own process, so no token ever enters the
+// shell. The age of the data is shown, so old numbers are never passed off as current.
 QtObject {
     id: root
 
+    property bool live                      // ai.usageLive: fetch fresh numbers (off by default)
+    property string liveError               // why the last fetch failed, empty when fine
     property string cachePath: Quickshell.env("HOME") + "/.claude/usage-cache.json"
 
     property bool connected                 // the file exists and has the 5 h and 7 d windows
@@ -48,6 +51,23 @@ QtObject {
     function refresh(): void {
         now = Date.now() / 1000
         cacheFile.reload()
+        if (live) root.fetch.running = true
+    }
+
+    onLiveChanged: {
+        liveError = ""
+        if (live) root.fetch.running = true
+    }
+
+    function liveErrorText(): string {
+        switch (liveError) {
+        case "": return ""
+        case "expired":
+        case "unauthorized": return "Live numbers paused: the Claude login has expired. Use Claude Code once to renew it."
+        case "no-login": return "Live numbers need a Claude login (~/.claude/.credentials.json)."
+        case "network": return "Live numbers: no connection."
+        default: return "Live numbers failed (" + liveError + ")."
+        }
     }
 
     function load(text: string): void {
@@ -55,6 +75,8 @@ QtObject {
             const cache = JSON.parse(text)
             const d = cache.data
             if (!d || !d.five_hour || !d.seven_day) { connected = false; return }
+            // A fresh fetch is not replaced by an older file.
+            if ((cache.cached_at || 0) < cachedAt) return
             fiveHour = d.five_hour.utilization / 100
             sevenDay = d.seven_day.utilization / 100
             fiveHourResetsAt = d.five_hour.resets_at ? new Date(d.five_hour.resets_at) : null
@@ -74,6 +96,30 @@ QtObject {
         onLoaded: root.load(text())
         onLoadFailed: root.connected = false
         onFileChanged: reload()
+    }
+
+    property Process fetch: Process {
+        command: ["aptus-ai-usage"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    const answer = JSON.parse(text)
+                    if (answer.error) { root.liveError = answer.error; return }
+                    root.liveError = ""
+                    root.load(text)
+                } catch (e) {
+                    root.liveError = "bad-answer"
+                }
+            }
+        }
+    }
+
+    // Five minutes between fetches while live numbers are on.
+    property Timer liveTimer: Timer {
+        interval: 300000
+        running: root.live
+        repeat: true
+        onTriggered: root.fetch.running = true
     }
 
     // The age text and reset countdowns move with the clock.

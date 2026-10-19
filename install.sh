@@ -147,6 +147,7 @@ install_launcher() {
     link_into "$ROOT/bin/aptus" "$BIN_DIR/aptus"
     link_into "$ROOT/bin/aptus-patch-shell-switch" "$BIN_DIR/aptus-patch-shell-switch"
     link_into "$ROOT/bin/aptus-settings-watchdog" "$BIN_DIR/aptus-settings-watchdog"
+    link_into "$ROOT/bin/aptus-ai-usage" "$BIN_DIR/aptus-ai-usage"
     # The window look is read from the state dir, so a settings change can rewrite it.
     if [ ! -e "$STATE_DIR/hyprland-look.lua" ]; then
         do_it cp "$ROOT/hypr/aptus-look.lua" "$STATE_DIR/hyprland-look.lua"
@@ -249,7 +250,7 @@ uninstall() {
     local d f
     for d in config theme hypr; do unlink_from "$CONFIG_DIR/$d" "$ROOT/$d"; done
     unlink_from "$QS_DIR/aptus" "$ROOT/shell"
-    for f in aptus aptus-patch-shell-switch aptus-settings-watchdog; do unlink_from "$BIN_DIR/$f" "$ROOT/bin/$f"; done
+    for f in aptus aptus-patch-shell-switch aptus-settings-watchdog aptus-ai-usage; do unlink_from "$BIN_DIR/$f" "$ROOT/bin/$f"; done
 
     local target
     target="$(command -v shell-switch || true)"

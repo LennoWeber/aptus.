@@ -66,7 +66,7 @@ ShellRoot {
     WeatherState { id: weatherObj; appSettings: settingsObj }
     SystemMonitorState { id: systemMonitorObj }
     CaptureState { id: captureObj }
-    AiUsageState { id: aiUsageObj }
+    AiUsageState { id: aiUsageObj; live: settingsObj.get("ai.usageLive") === true }
     ContextState {
         id: contextObj
         battery: batteryObj

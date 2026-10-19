@@ -132,6 +132,14 @@ Item {
                 color: tile.linked && tile.aiUsageState.stale ? Tokens.warn : Tokens.inkFaint
                 wrapMode: Text.Wrap
             }
+            Label {
+                visible: !!tile.aiUsageState && tile.aiUsageState.liveError !== ""
+                width: parent.width
+                text: tile.aiUsageState ? tile.aiUsageState.liveErrorText() : ""
+                role: Enums.TextRole.Bar
+                color: Tokens.warn
+                wrapMode: Text.Wrap
+            }
         }
     }
 }

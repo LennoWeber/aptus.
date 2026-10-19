@@ -1,0 +1,62 @@
+#!/usr/bin/env python3
+"""Fresh Claude usage numbers for the aptus AI usage tile (opt-in: setting ai.usageLive).
+
+Reads the access token from ~/.claude/.credentials.json, asks api.anthropic.com for the usage windows and prints one
+JSON object to stdout: {"cached_at": <epoch seconds>, "data": {...}} on success, {"error": "<reason>"} otherwise.
+
+The token is only read, never written: this script does not refresh it (a refresh rotates the refresh token and could
+log Claude Code out). An expired token reports {"error": "expired"}; using Claude Code once renews it. The token is
+handed to curl through stdin, so it never shows up in a process list, and it is never printed or logged."""
+import json
+import os
+import re
+import subprocess
+import sys
+import time
+
+CREDENTIALS = os.path.expanduser("~/.claude/.credentials.json")
+URL = "https://api.anthropic.com/api/oauth/usage"
+SKEW_SECONDS = 60
+
+
+def done(obj):
+    print(json.dumps(obj))
+    sys.exit(0)
+
+
+def main():
+    try:
+        with open(CREDENTIALS, encoding="utf-8") as f:
+            oauth = json.load(f)["claudeAiOauth"]
+        token = oauth["accessToken"]
+        expires_ms = int(oauth.get("expiresAt", 0))
+    except (OSError, ValueError, KeyError, TypeError):
+        done({"error": "no-login"})
+    if not re.fullmatch(r"[A-Za-z0-9._~+/=-]+", token or ""):
+        done({"error": "no-login"})
+    if expires_ms and time.time() * 1000 + SKEW_SECONDS * 1000 >= expires_ms:
+        done({"error": "expired"})
+
+    config = ('header = "Authorization: Bearer %s"\n'
+              'header = "anthropic-beta: oauth-2025-04-20"\n'
+              'header = "User-Agent: aptus"\n') % token
+    try:
+        run = subprocess.run(["curl", "-sS", "--max-time", "10", "-w", "\n%{http_code}", "-K", "-", URL],
+                             input=config, capture_output=True, text=True)
+    except OSError:
+        done({"error": "no-curl"})
+    if run.returncode != 0:
+        done({"error": "network"})
+    body, _, code = run.stdout.rpartition("\n")
+    if code == "401" or code == "403":
+        done({"error": "unauthorized"})
+    if code != "200":
+        done({"error": "http-" + code})
+    try:
+        data = json.loads(body)
+    except ValueError:
+        done({"error": "bad-answer"})
+    done({"cached_at": int(time.time()), "data": data})
+
+
+main()

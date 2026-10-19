@@ -44,6 +44,7 @@
     "shortAnswersOnly": true,
     "dockEdge": "right",
     "dockWidth": 420,
+    "usageLive": false,
     "providerSwitchKeys": { "previous": "Alt+Left", "next": "Alt+Right" }
   },
   "controlCenter": {

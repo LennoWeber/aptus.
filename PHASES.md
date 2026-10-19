@@ -651,6 +651,12 @@ Rückmeldung: Kontrollzentrum gut; Sound-Kachel zeigte „Muted“ über dem Reg
 - **Neu, weil keine Polkit-Oberfläche lief:** `PolkitPrompt` (session) registriert aptus als Polkit-Agent der Sitzung (Quickshell `PolkitAgent`): Dimmer, Meldung, Passwortfeld, Cancel/Authenticate, Esc bricht ab. Läuft schon ein anderer Agent, bleibt es unsichtbar.
 - Geprüft: Lint 17 (unverändert), `bash -n`, Skriptlogik in einer Kopie mit Attrappen (jpg ok, Textdatei und fehlende Datei abgelehnt, `--clear`), Shell startet ohne Fehler. **Nicht geprüft:** Passwortdialog (Test per `pkexec true` bewusst nicht ausgeführt), der Lauf als root mit `setpriv`, Greeter mit neuem Bild, `install.sh --greeter` mit den neuen Zeilen. Der Knopf erscheint erst nach erneutem `install.sh --greeter`.
 
+### Baustein 9: AI-Nutzung live, Variante B (20. Okt., mit Lennos ausdrücklichem Okay)
+- `bin/aptus-ai-usage` (Python): liest `claudeAiOauth.accessToken` aus `~/.claude/.credentials.json`, fragt `https://api.anthropic.com/api/oauth/usage` ab und gibt nur JSON (`{cached_at, data}` oder `{error}`) aus. Der Token bleibt im Helferprozess: er geht per stdin (`curl -K -`) an curl, taucht in keiner Prozessliste auf, wird nie ausgegeben, geloggt oder geschrieben und **nie erneuert** (eine Erneuerung rotiert das Refresh-Token und könnte Claude Code ausloggen). Abgelaufen: `{"error": "expired"}`, Claude Code einmal benutzen erneuert ihn. Honest User-Agent `aptus`.
+- `AiUsageState`: Schalter `ai.usageLive` (**Standard aus**, Settings → AI, Beschreibung nennt Token, Ziel, inoffiziellen Endpunkt), Abruf alle 5 Minuten, Ergebnis über dasselbe `load()` wie die Cache-Datei; eine ältere Datei überschreibt keine frischere Antwort. Fehler zeigt die Kachel in Amber („Live numbers paused: the Claude login has expired…“), die Zahlen aus der Datei bleiben.
+- Installer verlinkt `aptus-ai-usage` nach `~/.local/bin` (auf dem Laptop von Hand verlinkt).
+- Geprüft: Helfer direkt (50 % / 15 % gegen 26 % / 12 % im Cache), Lint 17, Kachel live mit Schalter an (Screenshot, kein „old“), Shell-Log ohne Token. Nicht geprüft: Verhalten bei abgelaufenem Token und ohne Netz am echten Gerät (Pfade nur im Code).
+
 ## Nächster Schritt
 
-Alltagsgebrauch auf dem Laptop; was auffällt, kommt als Feinschliff. Mögliche nächste Bausteine in dieser Reihenfolge: Kontext-Zone der Leiste, „More“-Links der Dropdowns, Kachel-Editor. Wartet auf Lennos Rückmeldung oder „weiter“.
+Alle Bausteine 1 bis 9 aus dem Handoff sind gebaut. Alltagsgebrauch auf dem Laptop, Rückmeldung zu den „Am Gerät offen“-Punkten der Bausteine, dann Feinschliff. README-Screenshot wäre ein guter Abschluss.
