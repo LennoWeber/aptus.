@@ -623,6 +623,11 @@ Rückmeldung: Kontrollzentrum gut; Sound-Kachel zeigte „Muted“ über dem Reg
 - Ausgeblendete Kachel lässt sich per Kontext-Zone/More trotzdem öffnen (Detail wächst aus der Brettmitte).
 - Geprüft: Lint 17 (unverändert), Control Center Screenshot = altes Raster, Editor Screenshot, Packen per Python-Spiegel mit versteckten Kacheln. Nicht geprüft: Speichern, Umordnen und Ausblenden live am Gerät.
 
+### Baustein 4: Modustasten-Editor (20. Okt.)
+- Settings → Shortcuts → Launcher mode keys (advanced): `ModeKeyEditor`, Zeile antippen, Kombination drücken. Esc bricht ab, Taste ohne Ctrl/Alt/Meta wird abgelehnt (sie würde ins Suchfeld tippen), Doppelbelegung in Amber („Also used by …“). `Keys.onShortcutOverride` hält Esc und Ctrl+F des Fensters während der Aufnahme fern. Läuft durch Entwurf/Speichern/Bestätigung.
+- `AiPanel` las die Werte schon aus den Settings (Handoff-Hinweis „fest“ war überholt).
+- Geprüft: Lint 17 (unverändert), Screenshot der Zeilen. Nicht geprüft: Aufnahme per Klick und Tastatur (kein Zugriff per ydotool), Wirkung im Launcher nach Speichern.
+
 ## Nächster Schritt
 
 Alltagsgebrauch auf dem Laptop; was auffällt, kommt als Feinschliff. Mögliche nächste Bausteine in dieser Reihenfolge: Kontext-Zone der Leiste, „More“-Links der Dropdowns, Kachel-Editor. Wartet auf Lennos Rückmeldung oder „weiter“.

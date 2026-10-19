@@ -12,3 +12,4 @@ LocationEditor 1.0 LocationEditor.qml
 ProviderEditor 1.0 ProviderEditor.qml
 HotkeyList 1.0 HotkeyList.qml
 TileListEditor 1.0 TileListEditor.qml
+ModeKeyEditor 1.0 ModeKeyEditor.qml
