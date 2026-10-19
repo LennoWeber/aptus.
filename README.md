@@ -24,10 +24,14 @@ Fedora, Hyprland 0.56+ (Lua config), Quickshell 0.3.2+, plus: `brightnessctl`, `
 
 ```sh
 ./install.sh --dry-run        # show what it would do
-./install.sh                  # links the config, adds the Hyprland block (asks first, makes a backup)
+./install.sh                  # installs missing packages (asks, sudo dnf), links the config, adds the Hyprland block (asks first, makes a backup)
+./install.sh --copr           # also offer the COPR lionheartp/Hyprland for packages Fedora does not have (asks first)
 ./install.sh --greeter        # optional: replace the login screen (asks, backs up /etc/greetd/config.toml)
+./install.sh --uninstall      # remove the links and the Hyprland block, put back the files they replaced (asks)
 ./install.sh --uninstall-greeter
 ```
+
+`--yes` answers the questions with yes except the COPR, which needs `--copr`. Packages are never removed by the uninstall.
 
 Start with `aptus`. Send commands to the running shell with `aptus msg <command>`, for example
 `aptus msg panel-toggle control-center`, `aptus msg session lock`, `aptus msg tablet-toggle`.

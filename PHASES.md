@@ -639,6 +639,12 @@ Rückmeldung: Kontrollzentrum gut; Sound-Kachel zeigte „Muted“ über dem Reg
 - Launcher ergänzt die Liste nachträglich (`onSuggestionsChanged`) und behält die Auswahl.
 - Geprüft: Lint 17, beide Antwortformate per curl (Google und DuckDuckGo `type=list` liefern `["q",[…]]`), live im Web-Modus mit Schalter an (Screenshot: Vorschläge unter der Suche). Bing-Endpunkt nicht abgefragt.
 
+### Baustein 8: Installer (20. Okt.)
+- `install_packages`: fehlende Pakete aus `REQUIRED_PACKAGES` (quickshell, hyprsunset, brightnessctl, playerctl, grim, slurp, wl-clipboard, cliphist, curl, power-profiles-daemon, NetworkManager, iio-sensor-proxy, wf-recorder, libnotify, python3) per `rpm -q` finden, Liste zeigen, fragen, `sudo dnf install -y`. Nicht in den Repos Verfügbares geht nur mit `--copr` (fragt, `sudo dnf copr enable lionheartp/Hyprland`; `--yes` schaltet das COPR nie von selbst frei). Quickshell-Version ≥ 0.3.2 wird geprüft (Warnung).
+- `--uninstall`: entfernt die Links auf diesen Ordner und spielt `.before-aptus` zurück, stellt shell-switch wieder her, entfernt den Hyprland-Block (Sicherung `.before-uninstall`); lässt Einstellungen, State-Ordner, Pakete und Greeter in Ruhe. Flags dürfen in beliebiger Reihenfolge stehen (Fehler behoben: `--uninstall-greeter --dry-run` brach vorher vor `--dry-run` ab).
+- `ensure_cliphist` entfällt (steckt jetzt in der Paketliste).
+- Geprüft: `bash -n`, Trockenläufe `--dry-run`, `--dry-run --yes`, `--uninstall --dry-run --yes` auf dem Laptop (nur cliphist fehlt dort). Echte `dnf`-Läufe und echte Deinstallation nicht ausgeführt.
+
 ## Nächster Schritt
 
 Alltagsgebrauch auf dem Laptop; was auffällt, kommt als Feinschliff. Mögliche nächste Bausteine in dieser Reihenfolge: Kontext-Zone der Leiste, „More“-Links der Dropdowns, Kachel-Editor. Wartet auf Lennos Rückmeldung oder „weiter“.

@@ -1,22 +1,17 @@
 #!/usr/bin/env bash
 # aptus installer for Fedora.
-# Signatures only. Bodies and the main entry point come in phase 7.
 # Nothing here may touch suspend or hibernate settings, and every system change asks first.
 
 ROOT="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
 DRY_RUN=0
 ASSUME_YES=0
 WITH_GREETER=0
+WITH_COPR=0
 BIN_DIR="$HOME/.local/bin"
 STATE_DIR="$HOME/.local/state/aptus"
 CONFIG_DIR="$HOME/.config/aptus"
 QS_DIR="$HOME/.config/quickshell"
 HYPR_LUA="$HOME/.config/hypr/hyprland.lua"
-
-not_implemented() {
-    echo "not implemented: ${FUNCNAME[1]}" >&2
-    return 1
-}
 
 say() { printf '%s\n' "$*"; }
 
@@ -53,12 +48,66 @@ check_fedora() {
     command -v hyprctl >/dev/null 2>&1 || say "Warning: hyprctl not found. aptus needs Hyprland."
 }
 
-# Enable the repositories (COPR) needed for Quickshell and friends.
-enable_repos() { not_implemented; }
+# Every package aptus uses at run time (the greeter adds cage, see install_greeter).
+REQUIRED_PACKAGES=(quickshell hyprsunset brightnessctl playerctl grim slurp wl-clipboard cliphist curl
+    power-profiles-daemon NetworkManager iio-sensor-proxy wf-recorder libnotify python3)
+COPR_REPO=lionheartp/Hyprland   # has quickshell, hyprsunset and cliphist for Fedora
+MIN_QUICKSHELL=0.3.2
 
-# Install packages with dnf.
-# TODO(phase 7): quickshell: the user's machine has 0.3.2 from COPR lionheartp/Hyprland (errornointernet/quickshell is also enabled); require >= 0.3.2, hyprsunset, hypridle, brightnessctl, playerctl, grim, hyprshot, iio-sensor-proxy, cliphist.
-install_packages() { not_implemented; }
+# The packages among the arguments that are not installed.
+missing_packages() {
+    local p
+    for p in "$@"; do rpm -q "$p" >/dev/null 2>&1 || printf '%s\n' "$p"; done
+}
+
+# Enable the COPR for the packages the Fedora repositories do not have. Only with --copr, and it asks first:
+# a COPR is a third-party source that can replace system packages.
+enable_repos() {
+    say "Not in the enabled repositories: $*"
+    if [ "$WITH_COPR" != 1 ]; then
+        say "They are in the COPR $COPR_REPO. Run again with --copr to enable it (asks first), or install them yourself."
+        return 1
+    fi
+    ask "Enable the COPR $COPR_REPO (third-party packages, runs sudo dnf copr enable)?" || return 1
+    do_it sudo dnf -y copr enable "$COPR_REPO"
+}
+
+check_quickshell_version() {
+    command -v qs >/dev/null 2>&1 || return 0
+    local have
+    have="$(qs --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)"
+    [ -n "$have" ] || return 0
+    if [ "$(printf '%s\n%s\n' "$MIN_QUICKSHELL" "$have" | sort -V | head -1)" != "$MIN_QUICKSHELL" ]; then
+        say "Warning: quickshell $have is older than $MIN_QUICKSHELL, aptus needs $MIN_QUICKSHELL or newer."
+    fi
+}
+
+# Install what is missing with dnf. Shows the list and asks; nothing else on the system changes.
+# There is no way back for packages (remove them with dnf if you want them gone).
+install_packages() {
+    if ! command -v dnf >/dev/null 2>&1; then
+        say "dnf not found. Install these yourself: ${REQUIRED_PACKAGES[*]}"
+        return 0
+    fi
+    local missing=() unavailable=() installable=() p
+    mapfile -t missing < <(missing_packages "${REQUIRED_PACKAGES[@]}")
+    if [ "${#missing[@]}" -eq 0 ]; then
+        check_quickshell_version
+        return 0
+    fi
+    say "Missing packages: ${missing[*]}"
+    for p in "${missing[@]}"; do
+        if dnf -q repoquery --available "$p" 2>/dev/null | grep -q .; then installable+=("$p"); else unavailable+=("$p"); fi
+    done
+    if [ "${#unavailable[@]}" -gt 0 ] && enable_repos "${unavailable[*]}"; then
+        installable+=("${unavailable[@]}")
+    fi
+    if [ "${#installable[@]}" -eq 0 ]; then return 0; fi
+    if ask "Install ${installable[*]} with sudo dnf?"; then
+        do_it sudo dnf install -y "${installable[@]}"
+    fi
+    check_quickshell_version
+}
 
 # Link config/ and theme/ into ~/.config/aptus and shell/ into ~/.config/quickshell/aptus (next to noctalia-shell and others).
 link_config() {
@@ -118,13 +167,6 @@ patch_shell_switch() {
     if ask "Patch shell-switch so it knows aptus? (backup: $target.before-aptus)"; then
         do_it "$ROOT/bin/aptus-patch-shell-switch" "$target"
     fi
-}
-
-# cliphist is needed for the clipboard history. Only checks; installing is the user's call.
-ensure_cliphist() {
-    if command -v cliphist >/dev/null 2>&1; then return 0; fi
-    say "cliphist is missing (clipboard history). Install it with:  sudo dnf install cliphist"
-    say "(it is in the COPR lionheartp/Hyprland, or get a release binary from github.com/sentriz/cliphist)"
 }
 
 # Check only: closing the lid must never suspend. Never writes to /etc/systemd.
@@ -187,27 +229,62 @@ uninstall_greeter() {
     say "Old login screen restored; it is used at the next login screen."
 }
 
+# Remove DST if it is the link into this checkout, and put back what it replaced.
+unlink_from() {
+    local dst="$1" src="$2"
+    if [ -L "$dst" ] && [ "$(readlink -f "$dst")" = "$(readlink -f "$src")" ]; then
+        do_it rm "$dst"
+        if [ -e "$dst.before-aptus" ] || [ -L "$dst.before-aptus" ]; then do_it mv "$dst.before-aptus" "$dst"; fi
+    fi
+}
+
+# Undo link_config, install_launcher, patch_shell_switch and install_hyprland_binds. Keeps your settings
+# (~/.config/aptus/settings.json) and the state dir; packages and the greeter (--uninstall-greeter) are not touched.
+uninstall() {
+    say "This removes the aptus links and puts back the files they replaced."
+    ask "Continue?" || return 0
+    local d f
+    for d in config theme hypr; do unlink_from "$CONFIG_DIR/$d" "$ROOT/$d"; done
+    unlink_from "$QS_DIR/aptus" "$ROOT/shell"
+    for f in aptus aptus-patch-shell-switch aptus-settings-watchdog; do unlink_from "$BIN_DIR/$f" "$ROOT/bin/$f"; done
+
+    local target
+    target="$(command -v shell-switch || true)"
+    if [ -n "$target" ] && [ -f "$target.before-aptus" ] && ask "Restore shell-switch from $target.before-aptus?"; then
+        do_it cp "$target.before-aptus" "$target"
+    fi
+    if [ -f "$HYPR_LUA" ] && grep -q -- '-- >>> aptus >>>' "$HYPR_LUA" && ask "Remove the aptus block from $HYPR_LUA? (backup: $HYPR_LUA.before-uninstall)"; then
+        do_it cp "$HYPR_LUA" "$HYPR_LUA.before-uninstall"
+        do_it sed -i '/-- >>> aptus >>>/,/-- <<< aptus <<</d' "$HYPR_LUA"
+    fi
+    say "Done. Left in place: ~/.config/aptus/settings.json, $STATE_DIR, installed packages."
+    say "The login screen is separate: ./install.sh --uninstall-greeter"
+}
+
 main() {
-    local arg
+    local arg ACTION=
     for arg in "$@"; do
         case "$arg" in
             --dry-run) DRY_RUN=1 ;;
             --yes) ASSUME_YES=1 ;;
             --greeter) WITH_GREETER=1 ;;
-            --uninstall-greeter) uninstall_greeter; exit 0 ;;
-            -h|--help) say "usage: install.sh [--dry-run] [--yes] [--greeter | --uninstall-greeter]"; exit 0 ;;
+            --copr) WITH_COPR=1 ;;
+            --uninstall) ACTION=uninstall ;;
+            --uninstall-greeter) ACTION=uninstall_greeter ;;
+            -h|--help) say "usage: install.sh [--dry-run] [--yes] [--copr] [--greeter] | --uninstall | --uninstall-greeter"; exit 0 ;;
             *) say "unknown option: $arg"; exit 2 ;;
         esac
     done
+    # Flags can come in any order, so the removal runs only after all of them are read.
+    if [ -n "$ACTION" ]; then "$ACTION"; exit 0; fi
     check_fedora
+    install_packages
     link_config
     install_launcher
     patch_shell_switch
     install_hyprland_binds
-    ensure_cliphist
     check_lid_policy
     [ "$WITH_GREETER" = 1 ] && install_greeter
-    # TODO(phase 7, last section): enable_repos and install_packages are still stubs.
     say "Done. Start with: aptus   (or: shell-switch to aptus)"
 }
 
