@@ -37,6 +37,12 @@ Item {
             color: Tokens.inkSoft
         }
         ModeGlyph {
+            visible: row.result && row.result.kind === Enums.ResultKind.Setting
+            anchors.centerIn: parent
+            mode: Enums.LauncherMode.Settings
+            color: Tokens.inkSoft
+        }
+        ModeGlyph {
             visible: row.result && row.result.kind === Enums.ResultKind.ClipboardItem
             anchors.centerIn: parent
             mode: Enums.LauncherMode.Clipboard

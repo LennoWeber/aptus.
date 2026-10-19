@@ -1,6 +1,6 @@
 # PHASES.md – Projekt „aptus" (sichtbarer Name in der Shell: „shell.“)
 
-Aktuelle Phase: **7 – Implementierung, Abschnitt 5 (KI-Dock, Clipboard-Modus) fertig gebaut, wartet auf deinen Test und „weiter“ zu Abschnitt 6**
+Aktuelle Phase: **7 – Implementierung, Abschnitt 6 (Settings-App) fertig gebaut, wartet auf deinen Test und „weiter“ zu Abschnitt 7**
 
 ## Ziel
 
@@ -543,6 +543,15 @@ Rückmeldung: Kontrollzentrum gut; Sound-Kachel zeigte „Muted“ über dem Reg
 
 **Nachträge 5 (19. Okt., Abend):** Mod + A, Mod + Shift + B und Mod + Shift + C fehlten in der Lua-Bind-Datei (`hypr/binds.generated.lua` war leer); jetzt echte Binds auf `shell-switch msg launcher-open <modus>`. KI-Panel gleitet aus dem Rand herein, Kopf/Verlauf und Eingabe setzen gestaffelt ein (70/130 ms Versatz), Schließen ist schneller (140 ms). Hover: Kacheln heben sich 2 px, Rand dunkelt, Schatten vertieft, graue Tönung; Leistenelemente bekommen eine deutlichere graue Pille (Tinte 9 % / gedrückt 14 %), die beim Einblenden leicht wächst. Hover per Screenshot nur mit erzwungenem Zustand geprüft (synthetische Mausbewegung löst im Layer keinen Hover aus).
 
+## Phase 7, Abschnitt 6: Settings-App (19. Okt., direkt auf dem Laptop gebaut und getestet)
+
+- **Fenster** (`SettingsWindow`, eigenes Fenster `aptus settings`, Mod + S über `settings-toggle`): Seitenleiste mit 10 Kategorien, Suche oben, Seite rechts, Änderungsleiste unten, „Show advanced“. Die Einträge kommen aus `config/settings-schema.json`. Editoren: Schalter, Auswahl (Pillen), Schieberegler, Zahl (− / +), Text (maskiert bei `secret`), Aktion. Geänderte Werte tragen „Changed“, „Reset“ setzt einen Wert auf den Standard. Hyprland-Regel in `hypr/windowrules.lua`: schwebend, 980 × 680, zentriert.
+- **Speichern mit Rückfrage:** Save → der Watchdog sichert `~/.config/aptus/settings.json` (erst danach werden die Werte angewendet, sonst Wettlauf), 15 s `ConfirmDialog` (eigenes Overlay, große Knöpfe Keep / Revert now). Ohne Antwort stellt die Shell die alten Werte wieder her, der Entwurf bleibt im Formular (Phase „Reverted“). `bin/aptus-settings-watchdog` läuft als eigener Prozess (`setsid`) und stellt die Datei auch bei abgestürzter oder hängender Shell nach Timeout + 3 s wieder her. Geprüft: Anwenden (Sekunden in der Leiste), automatisches Zurücksetzen, Watchdog nach `kill -9` der Shell (Datei danach identisch zum Vorher-Stand).
+- **Schreiben:** `AppSettings.writeUserConfig` schreibt nur Abweichungen von den Standardwerten, behält unbekannte Schlüssel der Benutzerdatei und den Dateimodus (600, wegen der privaten Kalenderadressen). Export schreibt nach `~/aptus-settings.json` ohne Kalenderadressen; Import liest in den Entwurf; „Reset all“ setzt alle Werte als Entwurf auf den Standard.
+- **Launcher-Modus Settings** (Strg + 3): leer zeigt die Kategorien, Text sucht Einträge (Titel, Beschreibung, Stichwörter); Enter öffnet die App beim Eintrag und hebt ihn kurz hervor.
+- **Entfallen:** `SettingEntry`, `SettingsSnapshot` (einfache Objekte statt Modelle).
+- **Noch nicht:** Editoren für Listen, Anbieter, Kacheln, Kürzel, Ort (zeigen „Edit this in ~/.config/aptus/settings.json for now“), Wallpaper-Aktion, Kürzel-Konflikte; nicht jede Einstellung wirkt schon in der Oberfläche (die Leiste und das KI-Dock lesen live, andere erst bei späteren Abschnitten). Die Regel in `windowrules.lua` lädt hyprland.lua nur bei gewählter Shell „aptus“.
+
 ## Nächster Schritt
 
-Test von Abschnitt 5 auf dem Laptop (Mod + A, Mod + Shift + C), dann Abschnitt 6: Settings-App (15 s Bestätigung, Watchdog), danach Sperrbildschirm, Greeter, Touch, Installer, Idle-Regeln. Wartet auf dein „weiter“.
+Test von Abschnitt 6 auf dem Laptop (Mod + S, Einstellung ändern, Save, Keep oder 15 s warten), dann Abschnitt 7: Sperrbildschirm, Greeter, Touch und Tastatur, Idle-Regeln, Installer. Wartet auf dein „weiter“.

@@ -1,35 +1,46 @@
 #!/usr/bin/env bash
-# Runs outside the shell. Restores a settings snapshot unless the change is confirmed in time.
-# Signatures only. Bodies and the command dispatcher come in phase 7.
+# Runs outside the shell. Restores the user's settings file unless a change is confirmed in time,
+# so a bad setting cannot lock you out even if the shell hangs or crashes.
 #
-# Planned usage:
-#   aptus-settings-watchdog start   <snapshot-id> <timeout-seconds>
-#   aptus-settings-watchdog confirm <snapshot-id>
-#   aptus-settings-watchdog restore <snapshot-id>
+#   aptus-settings-watchdog prepare <id> <timeout-seconds>   back up the settings file, start the timer
+#   aptus-settings-watchdog confirm <id>                     keep the new settings, stop the timer
+#   aptus-settings-watchdog restore <id>                     put the backup back now
+set -u
 
-not_implemented() {
-    echo "not implemented: ${FUNCNAME[1]}" >&2
-    return 1
-}
+state="${XDG_STATE_HOME:-$HOME/.local/state}/aptus/snapshots"
+settings="$HOME/.config/aptus/settings.json"
 
-# Wait for the timeout, then restore the snapshot unless a confirmation exists.
-# TODO(phase 7): must keep running if the shell dies (detached process or systemd transient timer).
-start() { # $1 snapshot id, $2 timeout in seconds
-    not_implemented
-}
-
-# Mark the snapshot as confirmed and stop the countdown.
-confirm() { # $1 snapshot id
-    not_implemented
-}
-
-# Copy settings, hotkeys and providers back from the snapshot and reload Hyprland.
-# TODO(phase 7): also reload Hyprland if the hotkeys file was part of the snapshot.
 restore() { # $1 snapshot id
-    not_implemented
+    local dir="$state/$1"
+    [ -d "$dir" ] || return 0
+    [ -e "$dir/finished" ] && return 0
+    if [ -f "$dir/settings.json" ]; then cp "$dir/settings.json" "$settings"; else rm -f "$settings"; fi
+    touch "$dir/finished"
 }
 
-# Print where snapshots are stored.
-snapshot_dir() {
-    not_implemented
+confirm() { # $1 snapshot id
+    local dir="$state/$1"
+    [ -d "$dir" ] || return 0
+    touch "$dir/finished"
 }
+
+# Waits a little longer than the shell's own countdown, so the shell normally acts first.
+wait_then_restore() { # $1 snapshot id, $2 timeout
+    sleep $(($2 + 3))
+    restore "$1"
+    rm -rf "${state:?}/$1"
+}
+
+prepare() { # $1 snapshot id, $2 timeout
+    mkdir -p "$state/$1"
+    if [ -f "$settings" ]; then cp "$settings" "$state/$1/settings.json"; fi
+    setsid nohup "$0" wait "$1" "$2" >/dev/null 2>&1 &
+}
+
+case "${1:-}" in
+    prepare) prepare "$2" "$3" ;;
+    confirm) confirm "$2" ;;
+    restore) restore "$2" ;;
+    wait) wait_then_restore "$2" "$3" ;;
+    *) echo "usage: aptus-settings-watchdog prepare|confirm|restore <id> [seconds]" >&2; exit 2 ;;
+esac

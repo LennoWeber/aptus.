@@ -9,7 +9,7 @@ Singleton {
     // Sources per mode (L13): Apps -> DesktopEntries + AiProviders CLI entries (+ windows, calculator, system actions);
     // Web -> BrowserState suggestions; Settings -> settings-schema.json; AI -> none (asks AiProviders); Clipboard -> Clipboard.entries.
     property var appEntries          // from Quickshell DesktopEntries
-    property var settingEntries      // list of SettingEntry from settings-schema.json
+    property var settingsState       // SettingsAppState, set by shell.qml; Settings mode searches its entries
     property var browser             // BrowserState, set by shell.qml; Web results search through it
     property int maxResults: 8       // launcher.maxResults
 
@@ -39,9 +39,10 @@ Singleton {
         discardBatch()
         const q = query.trim()
         if (mode === Enums.LauncherMode.Clipboard) return searchClipboard(q)
+        if (mode === Enums.LauncherMode.Settings) return searchSettings(q)
         if (q === "") return []
         // A local search over a few hundred entries is well below a frame; the heavy backends (web suggestions, clipboard) come later.
-        // TODO(phase 7, sections 4/5): Settings (SettingEntry.matches) and web suggestions.
+        // TODO(phase 7, sections 4/5): web suggestions.
         // TODO(phase 7, section 3): windows, system actions ('wifi off', 'timer 10m') and the AI CLI sessions in Apps mode.
         switch (mode) {
         case Enums.LauncherMode.Apps: {
@@ -87,9 +88,24 @@ Singleton {
         throw new Error("not implemented")
     }
 
+    // Entries of the settings app; Enter opens the window on that entry. An empty query lists the categories.
     function searchSettings(query: string): var {
-        // TODO(phase 7): use SettingEntry.matches over settings-schema.json; a result opens the entry via SettingsAppState.focusEntry.
-        throw new Error("not implemented")
+        const st = settingsState
+        if (!st) return []
+        if (query === "") {
+            return st.categories.map((c, i) => makeResult({
+                id: "settings-category:" + c.id, mode: Enums.LauncherMode.Settings, kind: Enums.ResultKind.Setting,
+                title: c.title, subtitle: "Category", keyHint: "Enter", score: 100 - i,
+                run: () => st.openWindow(c.id)
+            }))
+        }
+        const scored = st.entries.filter(e => st.matches(e, query)).map(e => makeResult({
+            id: "setting:" + e.id, mode: Enums.LauncherMode.Settings, kind: Enums.ResultKind.Setting,
+            title: e.title, subtitle: (st.categories.find(c => c.id === e.category) || { title: "" }).title, keyHint: "Enter",
+            score: 10 + fuzzyScore(e.title, query),
+            run: () => st.focusEntry(e.id)
+        }))
+        return rank(scored, query).slice(0, maxResults)
     }
 
     // The history, newest first; text is filtered by the query. An empty query lists the latest entries.

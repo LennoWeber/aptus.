@@ -9,6 +9,7 @@ import qs.dropdowns
 import qs.controlcenter
 import qs.notifications
 import qs.osd
+import qs.settings
 
 // Entry point of the aptus shell.
 ShellRoot {
@@ -139,6 +140,7 @@ ShellRoot {
     IpcHandlers {
         id: ipcObj
         launcherState: launcherObj
+        settingsState: settingsAppObj
         captureState: captureObj
         controlCenter: ccObj
         audioState: audioObj
@@ -147,5 +149,22 @@ ShellRoot {
         shellState: shellStateObj
     }
 
-    Component.onCompleted: Search.browser = browserObj
+    SettingsAppState { id: settingsAppObj; appSettings: settingsObj }
+
+    SettingsWindow {
+        appState: settingsAppObj
+        appSettings: settingsObj
+    }
+
+    ConfirmDialog {
+        isOpen: settingsAppObj.phase === Enums.ApplyPhase.AwaitingConfirm
+        secondsLeft: settingsAppObj.confirmSecondsLeft
+        onConfirmed: settingsAppObj.confirm()
+        onReverted: settingsAppObj.revertNow()
+    }
+
+    Component.onCompleted: {
+        Search.browser = browserObj
+        Search.settingsState = settingsAppObj
+    }
 }

@@ -24,6 +24,7 @@ Scope {
         path: root.userConfigPath
         blockLoading: true
         printErrors: false   // the user file does not exist until the first change
+        atomicWrites: false  // keeps the file mode (the file may hold private calendar addresses)
     }
 
     Component.onCompleted: load()
@@ -160,11 +161,54 @@ Scope {
         set(path, fallback)
     }
 
-    // Write overrides to ~/.config/aptus/.
+    // Replace the whole tree (used when a change is reverted).
+    function restoreValues(tree: var): void {
+        values = tree
+        refreshViews()
+        valueChanged("")
+    }
+
+    // The user's overrides as JSON text (what writeUserConfig writes).
+    function userConfigText(): string {
+        return userFile.text()
+    }
+
+    // Write overrides to ~/.config/aptus/: only values that differ from the defaults, on top of whatever the user
+    // file already holds for keys this version does not know.
     function writeUserConfig(): void {
         if (!values) throw new Error("invariant: AppSettings.writeUserConfig: settings not loaded")
         if (!userConfigPath) throw new Error("invariant: AppSettings.writeUserConfig: no user config path")
-        // TODO(phase 7): write only values that differ from the defaults.
-        throw new Error("not implemented")
+        const isObject = v => v !== null && typeof v === "object" && !Array.isArray(v)
+        const diff = (now, base) => {
+            const out = {}
+            for (const key in now) {
+                if (isObject(now[key]) && isObject(base[key])) {
+                    const inner = diff(now[key], base[key])
+                    if (Object.keys(inner).length > 0) out[key] = inner
+                } else if (JSON.stringify(now[key]) !== JSON.stringify(base[key])) {
+                    out[key] = now[key]
+                }
+            }
+            return out
+        }
+        let existing = ({})
+        try { existing = JSON.parse(userFile.text()) || ({}) } catch (e) { existing = ({}) }
+        const keep = (old, base) => {
+            const out = {}
+            for (const key in old) {
+                if (!(key in base)) out[key] = old[key]
+                else if (isObject(old[key]) && isObject(base[key])) {
+                    const inner = keep(old[key], base[key])
+                    if (Object.keys(inner).length > 0) out[key] = inner
+                }
+            }
+            return out
+        }
+        const merge = (a, b) => {
+            const out = Object.assign({}, a)
+            for (const key in b) out[key] = isObject(out[key]) && isObject(b[key]) ? merge(out[key], b[key]) : b[key]
+            return out
+        }
+        userFile.setText(JSON.stringify(merge(keep(existing, defaults), diff(values, defaults)), null, 2) + "\n")
     }
 }

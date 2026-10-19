@@ -97,6 +97,7 @@ install_launcher() {
     do_it mkdir -p "$BIN_DIR" "$STATE_DIR"
     link_into "$ROOT/bin/aptus" "$BIN_DIR/aptus"
     link_into "$ROOT/bin/aptus-patch-shell-switch" "$BIN_DIR/aptus-patch-shell-switch"
+    link_into "$ROOT/bin/aptus-settings-watchdog" "$BIN_DIR/aptus-settings-watchdog"
     # The window look is read from the state dir, so a settings change can rewrite it.
     if [ ! -e "$STATE_DIR/hyprland-look.lua" ]; then
         do_it cp "$ROOT/hypr/aptus-look.lua" "$STATE_DIR/hyprland-look.lua"
@@ -133,8 +134,6 @@ check_lid_policy() { not_implemented; }
 # TODO(phase 7): back up /etc/greetd/config.toml first, ask before replacing, keep the old greeter as a way back.
 install_greeter() { not_implemented; }
 
-# Install bin/aptus-settings-watchdog.
-install_watchdog() { not_implemented; }
 
 # Restore backups and remove everything the installer added.
 uninstall() { not_implemented; }
@@ -154,7 +153,7 @@ main() {
     install_launcher
     patch_shell_switch
     install_hyprland_binds
-    # TODO(phase 7, later sections): enable_repos, install_packages, ensure_cliphist, check_lid_policy, install_greeter, install_watchdog (they are still stubs and are not called yet).
+    # TODO(phase 7, later sections): enable_repos, install_packages, ensure_cliphist, check_lid_policy, install_greeter (they are still stubs and are not called yet).
     say "Done. Start with: aptus   (or: shell-switch to aptus)"
 }
 

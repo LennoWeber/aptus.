@@ -11,9 +11,7 @@ ChatMessage 1.0 ChatMessage.qml
 AiProvider 1.0 AiProvider.qml
 AppSettings 1.0 AppSettings.qml
 SettingsCategory 1.0 SettingsCategory.qml
-SettingEntry 1.0 SettingEntry.qml
 SettingsAppState 1.0 SettingsAppState.qml
-SettingsSnapshot 1.0 SettingsSnapshot.qml
 LockState 1.0 LockState.qml
 GreeterState 1.0 GreeterState.qml
 SessionInfo 1.0 SessionInfo.qml

@@ -20,7 +20,7 @@ PanelWindow {
     readonly property var emptyHints: [
         "Type to find an app. Tab switches the mode.",
         "Enter opens the search in your browser.",
-        "Settings search arrives with the settings app.",
+        "Type a setting. Enter opens it in the settings app.",
         "Ask a quick question in the side panel.",
         "Enter copies an entry. Shift+Delete removes it."
     ]

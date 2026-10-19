@@ -1,15 +1,49 @@
+pragma ComponentBehavior: Bound
 import QtQuick
+import qs.theme
+import qs.components
 
-// Category list.
-// Phase 2/3/4 skeleton. Body comes in phase 7.
+// Category list: the active one is marked by weight and a quiet tint, not by colour.
 Item {
-    // TODO(phase 7): ten categories, icon and name; the active one is marked by weight, not colour.
+    id: bar
 
-    property var categories  // list of SettingsCategory
+    property var categories  // { id, title }
     property string activeCategoryId
     signal categorySelected(string categoryId)
 
-    function select(categoryId: string): void {
-        throw new Error("not implemented")
+    Column {
+        anchors { left: parent.left; right: parent.right; top: parent.top; margins: 12; topMargin: 64 }
+        spacing: 2
+
+        Repeater {
+            model: bar.categories
+            delegate: Item {
+                id: row
+                required property var modelData
+                readonly property bool active: row.modelData.id === bar.activeCategoryId
+                width: parent.width
+                height: 38
+
+                Rectangle {
+                    anchors.fill: parent
+                    radius: 8
+                    color: Tokens.ink
+                    opacity: row.active ? 0.08 : area.pressed ? 0.12 : area.containsMouse ? 0.05 : 0
+                    Behavior on opacity { NumberAnimation { duration: Tokens.durFast } }
+                }
+                Label {
+                    anchors { left: parent.left; leftMargin: 14; verticalCenter: parent.verticalCenter }
+                    text: row.modelData.title
+                    font.weight: row.active ? Font.DemiBold : Font.Normal
+                    color: row.active ? Tokens.ink : Tokens.inkSoft
+                }
+                MouseArea {
+                    id: area
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    onClicked: bar.categorySelected(row.modelData.id)
+                }
+            }
+        }
     }
 }

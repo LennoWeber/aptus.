@@ -12,6 +12,7 @@ Scope {
 
     property var launcherState  // LauncherState
     property var shellState     // ShellState
+    property var settingsState  // SettingsAppState
     property var captureState   // CaptureState
     property var controlCenter  // ControlCenter
     property var audioState     // AudioState
@@ -82,7 +83,8 @@ Scope {
         }
 
         function settingsToggle(): void {
-            throw new Error("not implemented")
+            if (root.settingsState.open) root.settingsState.closeWindow()
+            else root.settingsState.openWindow("")
         }
 
         function sessionLock(): void {
