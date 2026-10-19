@@ -568,7 +568,9 @@ Rückmeldung: Kontrollzentrum gut; Sound-Kachel zeigte „Muted“ über dem Reg
 - **Drehen:** nur im Tablet-Modus mit `touch.autoRotate`, nicht bei gesperrter Drehung; `hyprctl eval hl.monitor{... transform}` (normal, left-up=1, bottom-up=2, right-up=3). Beim Verlassen des Tablet-Modus zurück auf 0. Zuordnung der Richtungen ungetestet (kein Kippen möglich).
 - **Randwischen** (`EdgeStrip`, 16 px, nur Touch, 60 px Weg): oben = Kontrollzentrum, links = Launcher (Settings `touch.edgeGestures`). Im Tablet-Modus mit versteckter Leiste zeigt der erste Wisch von oben die Leiste (5 s), erst der zweite öffnet die Aktion.
 - **Leiste im Tablet-Modus** (`touch.tabletBarAutoHide`): gleitet aus (260 ms), Platz wird frei.
-- Offen: Dreh-Schalter im Kontrollzentrum, Lagesensor-Hinweis (OSD), Touch auf Greeter.
+- **Tablet-Modus von Hand (Nachtrag, weil der HP-WMI-Schalter dieses Laptops beim Umklappen nicht meldet, zweimal 60 s gemessen):** Knopf „Tablet“ neben dem Power-Knopf über dem Kontrollzentrum (gefüllt = an) und IPC `tabletToggle`. `DeviceModeState.tabletMode = switchTablet || manualTablet`.
+- **Bildschirmtastatur überall** (`services/Osk`, `osk/OskPanel`, `osk/OskWindow`): Textfelder melden ihren Fokus an `Osk.track`; im Tablet-Modus (Einstellung `touch.autoOnScreenKeyboard`) oder nach IPC `oskToggle` erscheint die Tastatur (gleiche wie auf dem Sperrbildschirm, mit Taste ⌄ zum Schließen). Launcher und Kontrollzentrum zeichnen sie selbst (Vollbild-Overlay würde ein eigenes Fenster verdecken), andere Fenster (AI-Leiste, Settings) nutzen das Tastaturfenster. Felder: Launcher, AI-Eingabe, Settings-Suche und -Zeilen, WLAN-Passwort.
+- Offen: Dreh-Schalter im Kontrollzentrum, Hinweis beim Drehen (OSD), Tippen über die Tastatur nur per Bildschirmbild geprüft (Tasten von Hand).
 
 ## Nächster Schritt
 

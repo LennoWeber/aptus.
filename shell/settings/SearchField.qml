@@ -1,5 +1,6 @@
 import QtQuick
 import qs.theme
+import qs.services
 import qs.components
 
 // Search field of the settings app: always at the top, results filter live.
@@ -30,6 +31,7 @@ Item {
         clip: true
         text: field.query
         onTextEdited: field.edited(text)
+        onActiveFocusChanged: Osk.track(input, activeFocus)
 
         Text {
             visible: input.text === "" && !input.preeditText

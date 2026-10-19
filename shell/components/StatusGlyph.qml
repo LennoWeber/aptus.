@@ -5,7 +5,7 @@ import qs.theme
 Canvas {
     id: glyph
 
-    property string kind: "volume"   // wifi | bluetooth | volume | mic | moon | play | pause | next | prev | cup | back | sliders | lock | logout | restart | power | focus | shield | hotspot | capture | sun | cloud | partly | rain | snow | storm | fog
+    property string kind: "volume"   // wifi | bluetooth | volume | mic | moon | play | pause | next | prev | cup | back | sliders | tablet | lock | logout | restart | power | focus | shield | hotspot | capture | sun | cloud | partly | rain | snow | storm | fog
     property real level: 1           // volume: 0..1, drives the number of waves
     property bool muted
     property color color: Tokens.ink
@@ -164,6 +164,11 @@ Canvas {
         } else if (kind === "back") {
             ctx.beginPath()
             ctx.moveTo(9.5, 3); ctx.lineTo(4.5, 8); ctx.lineTo(9.5, 13)
+            ctx.stroke()
+        } else if (kind === "tablet") {
+            ctx.strokeRect(3, 1.5, 10, 13)
+            ctx.beginPath()
+            ctx.moveTo(7, 12.5); ctx.lineTo(9, 12.5)
             ctx.stroke()
         } else if (kind === "lock") {
             ctx.strokeRect(3.5, 7, 9, 6.5)

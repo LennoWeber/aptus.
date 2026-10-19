@@ -2,6 +2,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import qs.models
+import qs.services
 
 // IPC entry for the Hyprland binds. `aptus msg <command> [args]` (called by shell-switch) turns the kebab-case
 // command into a call here: `aptus msg panel-toggle launcher` -> `qs -c aptus ipc call aptus panelToggle launcher`.
@@ -20,6 +21,7 @@ Scope {
     property var displayState   // DisplayState
     property var osd            // Osd
     property var powerMenu      // PowerMenu
+    property var deviceMode     // DeviceModeState
 
     // The launcher and the control center never show together.
     function openControlCenter(): void {
@@ -89,6 +91,16 @@ Scope {
         function settingsToggle(): void {
             if (root.settingsState.open) root.settingsState.closeWindow()
             else root.settingsState.openWindow("")
+        }
+
+        // Tablet mode by hand (the laptop's tablet switch is not reported by every firmware).
+        function tabletToggle(): void {
+            root.deviceMode.toggleManualTablet()
+        }
+
+        // Show the on-screen keyboard for the focused text field even outside tablet mode.
+        function oskToggle(): void {
+            Osk.toggleForced()
         }
 
         function sessionLock(): void {

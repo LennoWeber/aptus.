@@ -14,6 +14,8 @@ Item {
     signal backspace()
     signal enter()
     signal shiftToggled()
+    signal closeRequested()
+    property bool closable  // shows a key that hides the keyboard (not on the lockscreen)
 
     readonly property var letters: ["1234567890ß", "qwertzuiopü", "asdfghjklöä", "yxcvbnm,.-"]
     readonly property var symbolRows: ["!\"§$%&/()=?", "@#€_+*~<>|\\", "[]{}^°'`´;:", "…µ²³¿¡«»„“"]
@@ -60,7 +62,8 @@ Item {
             spacing: 6
             Key { width: kb.keyW * 1.6; text: kb.symbols ? "abc" : "123"; onTapped: kb.symbols = !kb.symbols }
             Key { width: kb.keyW * 1.6; text: "⇧"; active: kb.shifted; onTapped: kb.shiftToggled() }
-            Key { width: kb.keyW * 4.5; text: "space"; onTapped: kb.keyPressed(" ") }
+            Key { width: kb.keyW * (kb.closable ? 3.4 : 4.5); text: "space"; onTapped: kb.keyPressed(" ") }
+            Key { visible: kb.closable; width: kb.closable ? kb.keyW * 1.0 : 0; text: "⌄"; onTapped: kb.closeRequested() }
             Key { width: kb.keyW * 1.6; text: "⌫"; onTapped: kb.backspace() }
             Key { width: kb.keyW * 1.6; text: "Enter"; primary: true; onTapped: kb.enter() }
         }

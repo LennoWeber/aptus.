@@ -13,6 +13,7 @@ import qs.settings
 import qs.lock
 import qs.touch
 import qs.session
+import qs.osk
 
 // Entry point of the aptus shell.
 ShellRoot {
@@ -122,6 +123,10 @@ ShellRoot {
         }
     }
 
+    Binding { target: Osk; property: "tabletMode"; value: deviceObj.tabletMode }
+    Binding { target: Osk; property: "autoShow"; value: settingsObj.get("touch.autoOnScreenKeyboard") !== false }
+    OskWindow {}
+
     PowerMenu { id: powerMenuObj; lockState: lockObj }
 
     DropdownHost {
@@ -153,6 +158,8 @@ ShellRoot {
 
     ControlCenter {
         id: ccObj
+        tabletMode: deviceObj.tabletMode
+        onTabletRequested: deviceObj.toggleManualTablet()
         onPowerRequested: { shellStateObj.closeAll(); powerMenuObj.toggle() }
         shellState: shellStateObj
         audioState: audioObj
@@ -201,6 +208,7 @@ ShellRoot {
         settingsState: settingsAppObj
         lockState: lockObj
         powerMenu: powerMenuObj
+        deviceMode: deviceObj
         captureState: captureObj
         controlCenter: ccObj
         audioState: audioObj

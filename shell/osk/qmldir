@@ -1,0 +1,3 @@
+module qs.osk
+OskPanel 1.0 OskPanel.qml
+OskWindow 1.0 OskWindow.qml

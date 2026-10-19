@@ -6,6 +6,7 @@ import Quickshell.Wayland
 import Quickshell.Hyprland
 import qs.models
 import qs.theme
+import qs.osk
 import qs.services
 
 // Launcher overlay: pill, results, docked AI panel.
@@ -206,5 +207,11 @@ PanelWindow {
         easing.type: Easing.BezierSpline
         easing.bezierCurve: [0.2, 0, 0, 1, 1, 1]
         onFinished: win.launcherState.switching = false
+    }
+
+    // Drawn here because this overlay is full screen and would cover a separate keyboard window.
+    OskPanel {
+        z: 100
+        anchors { horizontalCenter: parent.horizontalCenter; bottom: parent.bottom }
     }
 }

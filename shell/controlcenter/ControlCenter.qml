@@ -5,6 +5,7 @@ import Quickshell.Wayland
 import Quickshell.Hyprland
 import qs.models
 import qs.theme
+import qs.osk
 import qs.components
 import qs.controlcenter.tiles
 
@@ -30,6 +31,8 @@ PanelWindow {
     property var captureState
     property var aiUsageState
     signal powerRequested()
+    signal tabletRequested()
+    property bool tabletMode
 
     // Layout of the tiles on a 6 x 5 grid: { tileId, title, column, row, columnSpan, rowSpan }.
     property var tiles: [
@@ -241,24 +244,35 @@ PanelWindow {
         }
     }
 
-    // Power menu from the board's corner (also reachable by touch).
-    Item {
+    // Round buttons above the board's corner: tablet mode and power menu (both reachable by touch).
+    Row {
         x: board.x + board.width - width
-        y: board.y - height - 8
-        width: 40
-        height: 40
+        y: board.y - 48
+        spacing: 8
         opacity: cc.blurAmount * (1 - detail.progress)
-        Rectangle {
-            anchors.fill: parent
-            radius: 20
-            color: Tokens.surfaceAlt
-            border.width: 1
-            border.color: Tokens.line
-            opacity: powerTap.pressed ? 1 : powerTap.containsMouse ? 0.9 : 0.6
-            Behavior on opacity { NumberAnimation { duration: Tokens.durFast } }
+
+        component CornerButton: Item {
+            id: cornerButton
+            property string glyph
+            property bool active
+            signal clicked()
+            width: 40
+            height: 40
+            Rectangle {
+                anchors.fill: parent
+                radius: 20
+                color: cornerButton.active ? Tokens.ink : Tokens.surfaceAlt
+                border.width: 1
+                border.color: Tokens.line
+                opacity: tap.pressed ? 1 : cornerButton.active || tap.containsMouse ? 0.9 : 0.6
+                Behavior on opacity { NumberAnimation { duration: Tokens.durFast } }
+            }
+            StatusGlyph { anchors.centerIn: parent; kind: cornerButton.glyph; color: cornerButton.active ? Tokens.bg : Tokens.ink }
+            MouseArea { id: tap; anchors.fill: parent; hoverEnabled: true; onClicked: cornerButton.clicked() }
         }
-        StatusGlyph { anchors.centerIn: parent; kind: "power" }
-        MouseArea { id: powerTap; anchors.fill: parent; hoverEnabled: true; onClicked: cc.powerRequested() }
+
+        CornerButton { glyph: "tablet"; active: cc.tabletMode; onClicked: cc.tabletRequested() }
+        CornerButton { glyph: "power"; onClicked: cc.powerRequested() }
     }
 
     // One content component per tile; the same one is used compact in the grid and expanded in the detail view.
@@ -279,4 +293,10 @@ PanelWindow {
     Component { id: hotspotContent; HotspotTile { networkState: cc.networkState } }
     Component { id: aiUsageContent; AiUsageTile { aiUsageState: cc.aiUsageState } }
     Component { id: notificationsContent; NotificationsTile {} }
+
+    // Drawn here because this overlay is full screen and would cover a separate keyboard window.
+    OskPanel {
+        z: 100
+        anchors { horizontalCenter: parent.horizontalCenter; bottom: parent.bottom }
+    }
 }

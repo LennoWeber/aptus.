@@ -1,5 +1,6 @@
 import QtQuick
 import qs.theme
+import qs.services
 import qs.components
 
 // The rounded search bar with the mode symbol at the front.
@@ -71,6 +72,7 @@ Item {
         text: pill.query
         onTextEdited: pill.queryEdited(text)
         onAccepted: pill.accepted()
+        onActiveFocusChanged: Osk.track(field, activeFocus)
         Keys.onPressed: event => pill.navigationKey(event)
 
         Text {

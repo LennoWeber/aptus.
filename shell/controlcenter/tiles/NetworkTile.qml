@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import qs.models
 import qs.theme
+import qs.services
 import qs.components
 
 // Content of the NetworkTile.
@@ -136,6 +137,7 @@ Item {
                                     color: Tokens.ink
                                     clip: true
                                     onAccepted: connectButton.go()
+                                    onActiveFocusChanged: Osk.track(pass, activeFocus)
                                     Text {
                                         visible: pass.text === ""
                                         anchors.verticalCenter: parent.verticalCenter

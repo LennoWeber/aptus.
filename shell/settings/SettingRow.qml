@@ -164,6 +164,7 @@ Item {
             height: 34
             Surface { anchors.fill: parent; cornerRadius: 8 }
             TextInput {
+                id: valueInput
                 anchors { left: parent.left; leftMargin: 12; right: parent.right; rightMargin: 12; verticalCenter: parent.verticalCenter }
                 font.family: Tokens.fontUi
                 font.pixelSize: 14
@@ -172,6 +173,7 @@ Item {
                 echoMode: row.entry && row.entry.secret ? TextInput.Password : TextInput.Normal
                 text: row.draftValue === undefined || row.draftValue === null ? "" : String(row.draftValue)
                 onTextEdited: row.valueEdited(text)
+                onActiveFocusChanged: Osk.track(valueInput, activeFocus)
             }
         }
 

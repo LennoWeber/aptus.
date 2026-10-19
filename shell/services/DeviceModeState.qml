@@ -6,7 +6,9 @@ import Quickshell.Io
 QtObject {
     id: root
 
-    property bool tabletMode         // tablet switch reported by the device
+    property bool switchTablet       // tablet switch reported by the device (this laptop's firmware may never report it)
+    property bool manualTablet       // chosen by hand: control center button or IPC tablet-toggle
+    readonly property bool tabletMode: switchTablet || manualTablet
     property bool touchActive        // last input came from the touchscreen (set by the surfaces that see touch)
     property int orientation         // Enums.Orientation, from the orientation sensor
     property bool autoRotate: true   // follow the sensor in tablet mode
@@ -17,6 +19,10 @@ QtObject {
     readonly property bool following: tabletMode && autoRotate && !rotationLocked
     onFollowingChanged: if (!following && !rotationLocked) apply(tabletMode ? orientation : 0)
     onOrientationChanged: if (following) apply(orientation)
+
+    function toggleManualTablet(): void {
+        manualTablet = !manualTablet
+    }
 
     function setRotationLocked(on: bool): void {
         rotationLocked = on
@@ -58,7 +64,7 @@ while True:
     time.sleep(1)
 `]
         stdout: SplitParser {
-            onRead: line => root.tabletMode = line.trim() === "tablet 1"
+            onRead: line => root.switchTablet = line.trim() === "tablet 1"
         }
     }
 

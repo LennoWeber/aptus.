@@ -227,6 +227,7 @@ PanelWindow {
                 focus: true
                 enabled: !!win.provider
                 onAccepted: win.send()
+                onActiveFocusChanged: Osk.track(field, activeFocus)
                 Keys.onPressed: event => {
                     const lst = win.launcherState
                     if (event.key === Qt.Key_Escape) lst.hide()
