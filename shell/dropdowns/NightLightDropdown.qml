@@ -7,7 +7,6 @@ import qs.components
 // Content of the night light dropdown.
 Item {
     id: dd
-    // TODO(phase 7, section 3b): link to the Display tile of the control center (moreRequested).
 
     property var nightLightState
     property var displayState
@@ -81,6 +80,12 @@ Item {
                 text: dd.displayState ? Math.round(dd.displayState.brightness * 100) + "%" : ""
                 color: Tokens.inkSoft
             }
+        }
+
+        Item { width: 1; height: 6 }
+        ActionButton {
+            text: "More"
+            onClicked: dd.moreRequested(Enums.TileId.Display)
         }
     }
 }

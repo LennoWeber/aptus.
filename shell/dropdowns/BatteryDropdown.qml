@@ -7,7 +7,6 @@ import qs.components
 // Content of the battery dropdown.
 Item {
     id: dd
-    // TODO(phase 7, section 3b): link "More" to the control center (moreRequested).
 
     property var batteryState
     property var powerProfileState
@@ -91,6 +90,12 @@ Item {
                     }
                 }
             }
+        }
+
+        Item { width: 1; height: 6 }
+        ActionButton {
+            text: "More"
+            onClicked: dd.moreRequested(Enums.TileId.PowerProfile)
         }
     }
 }

@@ -614,6 +614,9 @@ Rückmeldung: Kontrollzentrum gut; Sound-Kachel zeigte „Muted“ über dem Reg
 ### Baustein 1: Kontext-Zone (20. Okt.)
 - `ContextState` (services) liefert Einträge: Akku kritisch 90, Timer 60, Notification 40 (hängt am Popup), Musik 30 (nur spielend); sonst Fenstertitel. Klick öffnet die Kachel. Aufnahme bewusst nicht (roter Punkt rechts). Geprüft per Screenshot nur mit Notification; Timer, Musik, Klick, Elide am Gerät offen.
 
+### Baustein 2: „More“-Links (20. Okt.)
+- Audio, Battery, Clock, NightLight haben unten die Zeile „More“ (wie Bluetooth/Network) und öffnen die Kachel Audio, PowerProfile, Calendar, Display. `DropdownHost` leitet das Signal weiter. Lint 0 neue Warnungen, Shell lädt ohne Fehler; Optik und Klick am Gerät offen (kein IPC zum Öffnen eines Dropdowns).
+
 ## Nächster Schritt
 
 Alltagsgebrauch auf dem Laptop; was auffällt, kommt als Feinschliff. Mögliche nächste Bausteine in dieser Reihenfolge: Kontext-Zone der Leiste, „More“-Links der Dropdowns, Kachel-Editor. Wartet auf Lennos Rückmeldung oder „weiter“.

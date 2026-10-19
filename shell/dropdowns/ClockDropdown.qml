@@ -1,12 +1,12 @@
 pragma ComponentBehavior: Bound
 import QtQuick
+import qs.models
 import qs.theme
 import qs.components
 
 // Content of the clock dropdown.
 Item {
     id: dd
-    // TODO(phase 7, later): link to the Calendar tile of the control center (moreRequested).
 
     property var calendarState
     signal moreRequested(int tileId)  // opens the control center on a tile
@@ -40,6 +40,12 @@ Item {
                 width: column.width
                 event: modelData
             }
+        }
+
+        Item { width: 1; height: 6 }
+        ActionButton {
+            text: "More"
+            onClicked: dd.moreRequested(Enums.TileId.Calendar)
         }
     }
 }

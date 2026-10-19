@@ -7,7 +7,6 @@ import qs.components
 // Content of the audio dropdown.
 Item {
     id: dd
-    // TODO(phase 7, section 3b): link "More" to the Audio tile of the control center (moreRequested).
 
     property var audioState
     signal moreRequested(int tileId)  // opens the control center on a tile
@@ -114,6 +113,12 @@ Item {
                 selected: modelData.active
                 onClicked: dd.audioState.setInput(modelData.id)
             }
+        }
+
+        Item { width: 1; height: 6 }
+        ActionButton {
+            text: "More"
+            onClicked: dd.moreRequested(Enums.TileId.Audio)
         }
     }
 }

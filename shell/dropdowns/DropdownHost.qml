@@ -121,8 +121,8 @@ PanelWindow {
             onMoreRequested: tileId => host.tileRequested(tileId)
         }
     }
-    Component { id: audioContent; AudioDropdown { audioState: host.audioState } }
-    Component { id: batteryContent; BatteryDropdown { batteryState: host.batteryState; powerProfileState: host.powerProfileState } }
-    Component { id: nightLightContent; NightLightDropdown { nightLightState: host.nightLightState; displayState: host.displayState } }
-    Component { id: clockContent; ClockDropdown { calendarState: host.calendarState } }
+    Component { id: audioContent; AudioDropdown { audioState: host.audioState; onMoreRequested: tileId => host.tileRequested(tileId) } }
+    Component { id: batteryContent; BatteryDropdown { batteryState: host.batteryState; powerProfileState: host.powerProfileState; onMoreRequested: tileId => host.tileRequested(tileId) } }
+    Component { id: nightLightContent; NightLightDropdown { nightLightState: host.nightLightState; displayState: host.displayState; onMoreRequested: tileId => host.tileRequested(tileId) } }
+    Component { id: clockContent; ClockDropdown { calendarState: host.calendarState; onMoreRequested: tileId => host.tileRequested(tileId) } }
 }
