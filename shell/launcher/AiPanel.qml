@@ -23,8 +23,23 @@ PanelWindow {
     readonly property var provider: AiProviders.find(launcherState ? launcherState.activeProviderId : "")
     readonly property var messages: launcherState ? launcherState.chatMessages : []
     property real slide: shown ? 1 : 0   // 0 = off screen, 1 = in place
+    // The parts settle one after the other: header and thread, then the input. Closing is quicker and all at once.
+    property real headIn: shown ? 1 : 0
+    property real inputIn: shown ? 1 : 0
 
-    Behavior on slide { NumberAnimation { duration: Tokens.durSlow; easing.type: Easing.BezierSpline; easing.bezierCurve: [0.2, 0, 0, 1, 1, 1] } }
+    Behavior on slide { NumberAnimation { duration: win.shown ? Tokens.durSlow : Tokens.durFast; easing.type: Easing.BezierSpline; easing.bezierCurve: [0.2, 0, 0, 1, 1, 1] } }
+    Behavior on headIn {
+        SequentialAnimation {
+            PauseAnimation { duration: win.shown ? 70 : 0 }
+            NumberAnimation { duration: win.shown ? Tokens.durSlow : Tokens.durFast; easing.type: Easing.BezierSpline; easing.bezierCurve: [0.2, 0, 0, 1, 1, 1] }
+        }
+    }
+    Behavior on inputIn {
+        SequentialAnimation {
+            PauseAnimation { duration: win.shown ? 130 : 0 }
+            NumberAnimation { duration: win.shown ? Tokens.durSlow : Tokens.durFast; easing.type: Easing.BezierSpline; easing.bezierCurve: [0.2, 0, 0, 1, 1, 1] }
+        }
+    }
 
     function pickScreen(monitor: var): var {
         const list = Quickshell.screens
@@ -74,10 +89,10 @@ PanelWindow {
         id: card
         width: win.panelWidth
         height: parent.height - 16
-        // Slides in from its edge while it fades.
-        x: win.edge === Enums.DockEdge.Left ? 8 - (1 - win.slide) * 40 : win.edge === Enums.DockEdge.Right ? parent.width - width - 8 + (1 - win.slide) * 40 : (parent.width - width) / 2
-        y: win.edge === Enums.DockEdge.Bottom ? parent.height - height - 8 + (1 - win.slide) * 40 : 8
-        opacity: win.slide
+        // Glides in from beyond its edge (the window clips it) and fades in on the way.
+        x: win.edge === Enums.DockEdge.Left ? 8 - (1 - win.slide) * (width + 16) : win.edge === Enums.DockEdge.Right ? parent.width - width - 8 + (1 - win.slide) * (width + 16) : (parent.width - width) / 2
+        y: win.edge === Enums.DockEdge.Bottom ? parent.height - height - 8 + (1 - win.slide) * (height + 16) : 8
+        opacity: Math.min(1, win.slide * 2)
 
         Surface {
             anchors.fill: parent
@@ -89,7 +104,8 @@ PanelWindow {
         Item {
             id: header
             x: 16
-            y: 10
+            y: 10 + 10 * (1 - win.headIn)
+            opacity: win.headIn
             width: parent.width - 32
             height: 32
 
@@ -133,6 +149,7 @@ PanelWindow {
         Flickable {
             id: scroll
             anchors { top: rule.bottom; topMargin: 8; left: parent.left; right: parent.right; bottom: inputBox.top; bottomMargin: 8; leftMargin: 16; rightMargin: 16 }
+            opacity: win.headIn
             contentWidth: width
             contentHeight: thread.height
             clip: true
@@ -190,7 +207,8 @@ PanelWindow {
 
         Item {
             id: inputBox
-            anchors { left: parent.left; right: parent.right; bottom: parent.bottom; margins: 12 }
+            anchors { left: parent.left; right: parent.right; bottom: parent.bottom; margins: 12; bottomMargin: 12 - 12 * (1 - win.inputIn) }
+            opacity: win.inputIn
             height: 44
 
             Surface {

@@ -21,15 +21,15 @@ Item {
     implicitWidth: contentRow.implicitWidth + 2 * horizontalPadding
     implicitHeight: Tokens.barHeight
 
-    // Soft hover and press shape, never a colour.
+    // Hover and press shape: a soft grey pill that grows in from a little smaller, never a colour.
     Rectangle {
         anchors.verticalCenter: parent.verticalCenter
         anchors.horizontalCenter: parent.horizontalCenter
-        width: parent.width - 2
+        width: (parent.width - 2) * (0.88 + 0.12 * opacity / 0.14)
         height: parent.height - 6
         radius: 6
-        color: Tokens.surfaceAlt
-        opacity: mouse.pressed ? 1 : (mouse.containsMouse || item.active) ? 0.75 : 0
+        color: Tokens.ink
+        opacity: mouse.pressed ? 0.14 : (mouse.containsMouse || item.active) ? 0.09 : 0
         Behavior on opacity { NumberAnimation { duration: Tokens.durFast; easing.type: Easing.BezierSpline; easing.bezierCurve: [0.2, 0, 0, 1, 1, 1] } }
     }
 

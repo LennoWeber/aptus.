@@ -18,15 +18,31 @@ Rectangle {
     color: Tokens.surface
     radius: Tokens.radiusTile
     border.width: 1
-    border.color: Tokens.line
+    border.color: Qt.tint(Tokens.line, Qt.rgba(Tokens.inkFaint.r, Tokens.inkFaint.g, Tokens.inkFaint.b, hover))
 
-    // Hover is a soft tint, never a colour.
+    // Hover: the tile lifts 2 px, its edge darkens a little and the shadow deepens. Never a colour.
+    property real hover: area.pressed ? 0.6 : area.containsMouse ? 1 : 0
+    Behavior on hover { NumberAnimation { duration: Tokens.durFast; easing.type: Easing.BezierSpline; easing.bezierCurve: [0.2, 0, 0, 1, 1, 1] } }
+    transform: Translate { y: -2 * tile.hover }
+
+    Rectangle {
+        z: -1
+        anchors.fill: parent
+        anchors.topMargin: 4 + 2 * tile.hover
+        anchors.bottomMargin: -4 - 2 * tile.hover
+        anchors.leftMargin: 2
+        anchors.rightMargin: 2
+        radius: tile.radius
+        color: Tokens.ink
+        opacity: 0.03 + 0.07 * tile.hover
+    }
+
+    // Soft tint over the surface.
     Rectangle {
         anchors.fill: parent
         radius: tile.radius
         color: Tokens.surfaceAlt
-        opacity: area.pressed ? 0.9 : area.containsMouse ? 0.45 : 0
-        Behavior on opacity { NumberAnimation { duration: Tokens.durFast } }
+        opacity: 0.8 * tile.hover
     }
 
     // Behind the content: controls inside the tile take their own clicks first.
