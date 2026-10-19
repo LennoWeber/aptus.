@@ -35,7 +35,7 @@ QtObject {
     // A tiny loop prints the state when it changes; nothing runs on a machine without the switch.
     property Process switchProbe: Process {
         running: true
-        command: ["python3", "-c", `
+        command: ["setpriv", "--pdeathsig", "TERM", "python3", "-c", `
 import fcntl, array, glob, os, sys, time
 def find():
     for cap in glob.glob('/sys/class/input/event*/device/capabilities/sw'):
@@ -65,7 +65,7 @@ while True:
     // iio-sensor-proxy through monitor-sensor: "=== Accelerometer orientation changed: left-up".
     property Process sensor: Process {
         running: true
-        command: ["monitor-sensor", "--accel"]
+        command: ["setpriv", "--pdeathsig", "TERM", "monitor-sensor", "--accel"]
         stdout: SplitParser {
             onRead: line => {
                 const m = line.match(/orientation changed: (\S+)/) || line.match(/\(orientation: (\S+)/)
