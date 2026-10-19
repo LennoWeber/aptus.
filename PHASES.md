@@ -1,6 +1,6 @@
 # PHASES.md – Projekt „aptus" (sichtbarer Name in der Shell: „shell.“)
 
-Aktuelle Phase: **7 – Implementierung, Abschnitt 7b-2 (Greeter, Installer-Schritte) gebaut, Greeter noch nicht auf dem Laptop installiert; wartet auf deinen Test und „weiter“ zu 7c (Wallpaper, restliche Settings, Aufräumen)**
+Aktuelle Phase: **7 – Implementierung, alle geplanten Abschnitte gebaut (7a bis 7d), Durchgang gemacht; jetzt Gebrauch im Alltag und Feinschliff nach Lennos Rückmeldung**
 
 ## Ziel
 
@@ -603,6 +603,14 @@ Rückmeldung: Kontrollzentrum gut; Sound-Kachel zeigte „Muted“ über dem Reg
 - **Tastenkürzel-Übersicht** (Settings → Shortcuts, nur lesen): alle Kürzel aus `config/hotkeys.json` (neu: Mod+X), Überschneidungen in Amber. Geändert wird in `~/.config/hypr/hyprland.lua` bzw. `hypr/binds.generated.lua`; ein Editor würde die Hyprland-Datei des Nutzers oder eine getrackte Repo-Datei umschreiben und kann aussperren, deshalb bewusst nicht. **Provider-Test:** „Test“ prüft, ob das Programm im PATH liegt (kein Aufruf des Modells).
 - Weiter nur in der Datei: Launcher-Modustasten, Kachel-Reihenfolge.
 
+### Durchgang (20. Okt.)
+- Lint 0 Warnungen/Fehler, Installer-Trockenlauf sauber (Hyprland-Block und shell-switch-Patch erkannt, auch ein neueres shell-switch mit mehr Shells).
+- Entfernt: tote Platzhalter (Modelle `AiProvider`, `ChatMessage`, `ContextItem`, `TileSpec`, `NotificationItem`, `SessionInfo`, `SettingsCategory`, `WorkspaceInfo`, `HotkeyBinding`; `IconButton`, `DebugOverlay`, `settings/editors/*`; unbenutzte Funktionen wie `reportHotkeyLatency`, `webSuggestions`, `parseSystemAction`), erledigte TODO-Zeilen, die alte Testliste 4a.
+- Neu dabei: **offene Fenster in der Launcher-Suche** (Apps-Modus, Setting „Show open windows“; Enter fokussiert das Fenster, `Compositor.focusWindow`). Entfernt: Setting „Show recent apps“ (nie umgesetzt, wirkungslos).
+- Greeter: von Lenno auf dem Laptop installiert, Login läuft („works“); Touch-Tastatur dort ungetestet.
+- **Bewusst offen / nur am Gerät prüfbar:** Touch-Wischen, Tablet-Schalter (meldet auf diesem Gerät nicht, Knopf im Kontrollzentrum), Drehrichtungen, Klicks in den Settings, Idle-Sperre, Bildschirm-Aus, Deckel zu, Warnfarben der AI-Nutzung.
+- **Noch nicht gebaut:** Kontext-Zone der Leiste mit Medien/Timer/Downloads, „More“-Links in den Dropdowns, Kachel-Reihenfolge-Editor, Launcher-Modustasten-Editor, Hintergrundbild für den Login aus dem Picker, Web-Vorschläge, System-Aktionen in der Suche (`wifi off`, `timer 10m`), `enable_repos`/`install_packages` im Installer, Variante B der AI-Nutzung (nur mit Lennos Okay).
+
 ## Nächster Schritt
 
-Test von 7d. Danach offen: Hotkey-Editor, Kachel-Editor, Test-Knopf für Provider, Wallpaper für Login, Feinschliff nach deinem Gebrauch. Wartet auf dein „weiter“ oder neue Wünsche.
+Alltagsgebrauch auf dem Laptop; was auffällt, kommt als Feinschliff. Mögliche nächste Bausteine in dieser Reihenfolge: Kontext-Zone der Leiste, „More“-Links der Dropdowns, Kachel-Editor. Wartet auf Lennos Rückmeldung oder „weiter“.
