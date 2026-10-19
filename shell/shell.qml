@@ -67,6 +67,13 @@ ShellRoot {
     SystemMonitorState { id: systemMonitorObj }
     CaptureState { id: captureObj }
     AiUsageState { id: aiUsageObj }
+    ContextState {
+        id: contextObj
+        battery: batteryObj
+        timer: timerObj
+        media: mediaObj
+        enabled: settingsObj.get("bar.contextZoneEnabled") !== false
+    }
 
     Variants {
         model: Quickshell.screens
@@ -86,6 +93,8 @@ ShellRoot {
             onDropdownRequested: (id, anchor, scr) => dropdownHost.openAt(id, anchor, scr)
             workspaces: Compositor.workspaceList
             windowTitle: Compositor.activeTitle
+            contextItems: contextObj.items
+            onTileRequested: id => ipcObj.openTile(id)
             onWordmarkClicked: launcherObj.toggle(Enums.LauncherMode.Apps)
             onControlCenterRequested: ipcObj.openControlCenter()
         }

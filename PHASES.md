@@ -611,6 +611,9 @@ Rückmeldung: Kontrollzentrum gut; Sound-Kachel zeigte „Muted“ über dem Reg
 - **Bewusst offen / nur am Gerät prüfbar:** Touch-Wischen, Tablet-Schalter (meldet auf diesem Gerät nicht, Knopf im Kontrollzentrum), Drehrichtungen, Klicks in den Settings, Idle-Sperre, Bildschirm-Aus, Deckel zu, Warnfarben der AI-Nutzung.
 - **Noch nicht gebaut:** Kontext-Zone der Leiste mit Medien/Timer/Downloads, „More“-Links in den Dropdowns, Kachel-Reihenfolge-Editor, Launcher-Modustasten-Editor, Hintergrundbild für den Login aus dem Picker, Web-Vorschläge, System-Aktionen in der Suche (`wifi off`, `timer 10m`), `enable_repos`/`install_packages` im Installer, Variante B der AI-Nutzung (nur mit Lennos Okay).
 
+### Baustein 1: Kontext-Zone (20. Okt.)
+- `ContextState` (services) liefert Einträge: Akku kritisch 90, Timer 60, Notification 40 (hängt am Popup), Musik 30 (nur spielend); sonst Fenstertitel. Klick öffnet die Kachel. Aufnahme bewusst nicht (roter Punkt rechts). Geprüft per Screenshot nur mit Notification; Timer, Musik, Klick, Elide am Gerät offen.
+
 ## Nächster Schritt
 
 Alltagsgebrauch auf dem Laptop; was auffällt, kommt als Feinschliff. Mögliche nächste Bausteine in dieser Reihenfolge: Kontext-Zone der Leiste, „More“-Links der Dropdowns, Kachel-Editor. Wartet auf Lennos Rückmeldung oder „weiter“.

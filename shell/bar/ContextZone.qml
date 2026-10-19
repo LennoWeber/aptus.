@@ -6,15 +6,16 @@ import qs.components
 // Middle of the bar: shows what is relevant right now.
 Item {
     id: zone
-    // TODO(phase 7, context items): feed ContextItems from media, timer, downloads and notifications (later sections); the slide-in part of the transition comes with them.
 
-    property var items: []        // list of ContextItem
-    property var current          // ContextItem that wins
+    property var items: []        // list of { id, text, severity, priority, tileId }
+    property var current          // the item that wins
     property real transition: 1   // 0..1 crossfade
     property string fallbackText  // the window title, shown when no item wins
     property int priorityThreshold: 1
 
     implicitHeight: Tokens.barHeight
+
+    signal tileRequested(int tileId)
 
     onItemsChanged: pickCurrent()
     onFallbackTextChanged: pickCurrent()
@@ -42,6 +43,7 @@ Item {
     onCurrentChanged: fade.restart()
 
     Label {
+        id: label
         anchors.verticalCenter: parent.verticalCenter
         anchors.horizontalCenter: parent.horizontalCenter
         width: Math.min(implicitWidth, zone.width)
@@ -53,5 +55,15 @@ Item {
         tone: zone.current ? zone.current.severity : Enums.Severity.Neutral
         color: tone === Enums.Severity.Neutral ? Tokens.inkSoft : Tokens.colorFor(tone)
         opacity: zone.transition
+    }
+
+    // The bar is 28 px, the touch target is the whole zone height of the label row plus padding.
+    MouseArea {
+        anchors.verticalCenter: parent.verticalCenter
+        anchors.horizontalCenter: parent.horizontalCenter
+        width: label.width + 16
+        height: Math.max(Tokens.barHeight, 40)
+        enabled: zone.current && zone.current.tileId !== undefined
+        onClicked: zone.tileRequested(zone.current.tileId)
     }
 }

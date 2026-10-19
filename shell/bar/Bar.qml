@@ -22,12 +22,13 @@ PanelWindow {
     property var caffeineState
     property var focusState
     property var workspaces  // list of workspace objects from Compositor
-    property var contextItems  // list of ContextItem
+    property var contextItems  // see ContextState
     property string windowTitle
     property bool slidOut  // hidden in tablet mode, a swipe from the top edge brings it back
 
     signal wordmarkClicked()
     signal controlCenterRequested()
+    signal tileRequested(int tileId)
     signal dropdownRequested(int dropdownId, var anchorItem, var targetScreen)
 
     screen: modelData
@@ -80,6 +81,7 @@ PanelWindow {
         width: Math.max(0, bar.width - 2 * (Math.max(left.width, right.width) + 16))
         items: bar.contextItems
         fallbackText: bar.windowTitle
+        onTileRequested: id => bar.tileRequested(id)
     }
 
     Row {

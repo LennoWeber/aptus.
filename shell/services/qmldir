@@ -18,6 +18,7 @@ MediaState 1.0 MediaState.qml
 AiUsageState 1.0 AiUsageState.qml
 CalendarState 1.0 CalendarState.qml
 CaffeineState 1.0 CaffeineState.qml
+ContextState 1.0 ContextState.qml
 BrowserState 1.0 BrowserState.qml
 FocusState 1.0 FocusState.qml
 PowerProfileState 1.0 PowerProfileState.qml
