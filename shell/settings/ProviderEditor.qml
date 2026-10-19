@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
+import Quickshell.Io
 import qs.theme
 import qs.models
 import qs.components
@@ -10,6 +11,19 @@ Column {
     id: editor
 
     property string error
+    property string testResult
+
+    Process {
+        id: finder
+        stdout: StdioCollector {
+            onStreamFinished: editor.testResult = text.trim() === "" ? editor.testResult + ": not found in PATH" : editor.testResult + ": found at " + text.trim()
+        }
+    }
+    function testCommand(name: string, command: string): void {
+        testResult = name
+        finder.command = ["sh", "-c", "PATH=\"$HOME/.local/bin:$PATH\"; command -v \"$1\"", "sh", command]
+        finder.running = true
+    }
 
     spacing: 8
 
@@ -52,6 +66,11 @@ Column {
                 anchors { right: parent.right; verticalCenter: parent.verticalCenter }
                 spacing: 12
                 ActionButton {
+                    implicitHeight: 30
+                    text: "Test"
+                    onClicked: editor.testCommand(line.modelData.name, line.modelData.command)
+                }
+                ActionButton {
                     visible: !line.modelData.builtIn
                     implicitHeight: 30
                     text: "Remove"
@@ -70,6 +89,7 @@ Column {
         }
     }
 
+    Label { visible: editor.testResult !== ""; text: editor.testResult; color: Tokens.inkSoft }
     Label { text: "Add a command-line tool"; color: Tokens.inkSoft }
     Row {
         spacing: 8

@@ -600,7 +600,8 @@ Rückmeldung: Kontrollzentrum gut; Sound-Kachel zeigte „Muted“ über dem Reg
 - **Provider-Editor** (Settings → AI): Schalter je Provider (der letzte aktive bleibt an), „Remove“ nur für eigene, „Add a command-line tool“ (Name, Programm, Argumente mit genau einem `{prompt}`; Prüfung vor dem Speichern). Wirkt sofort und liegt in `~/.config/aptus/ai-providers.json` (`providers` und `overrides` für die eingebauten). Der Standard-Provider bietet nur aktive an. Ein Test-Knopf für den Befehl fehlt noch.
 - **Drehsperre:** Knopf neben dem Tablet-Knopf über dem Kontrollzentrum (nur im Tablet-Modus; gefüllt = gesperrt), IPC `rotationLockToggle`, OSD „Rotation locked / follows the device“.
 - **Unschärfe:** Der Regler „Background blur“ steuert jetzt die Hyprland-Unschärfe (`size = Wert/2`, 2 Durchgänge bis 10, sonst 3), beim Start und bei jeder Änderung. Vorher war der Regler wirkungslos.
-- Weiter nur in der Datei: Tastenkürzel, Launcher-Modustasten, Kachel-Reihenfolge.
+- **Tastenkürzel-Übersicht** (Settings → Shortcuts, nur lesen): alle Kürzel aus `config/hotkeys.json` (neu: Mod+X), Überschneidungen in Amber. Geändert wird in `~/.config/hypr/hyprland.lua` bzw. `hypr/binds.generated.lua`; ein Editor würde die Hyprland-Datei des Nutzers oder eine getrackte Repo-Datei umschreiben und kann aussperren, deshalb bewusst nicht. **Provider-Test:** „Test“ prüft, ob das Programm im PATH liegt (kein Aufruf des Modells).
+- Weiter nur in der Datei: Launcher-Modustasten, Kachel-Reihenfolge.
 
 ## Nächster Schritt
 

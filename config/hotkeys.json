@@ -159,6 +159,17 @@
       "command": "session lock"
     },
     {
+      "id": "session.power",
+      "label": "Power menu",
+      "mods": [
+        "SUPER"
+      ],
+      "key": "X",
+      "action": "session.open",
+      "owner": "user",
+      "command": "panel-toggle session"
+    },
+    {
       "id": "launcher.apps.space",
       "label": "Launcher (Space)",
       "mods": [

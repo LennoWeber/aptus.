@@ -22,7 +22,7 @@ Item {
     signal actionRequested()
 
     // Lists and the location have a tall editor under the title; everything else sits to the right of it.
-    readonly property bool wide: !!entry && (entry.kind === "list" || entry.kind === "location" || entry.kind === "providerList")
+    readonly property bool wide: !!entry && (entry.kind === "list" || entry.kind === "location" || entry.kind === "providerList" || entry.kind === "hotkeyList")
 
     implicitHeight: wide ? textColumn.implicitHeight + wideEditor.implicitHeight + 44 : Math.max(64, textColumn.implicitHeight + 28)
 
@@ -72,11 +72,15 @@ Item {
         id: wideEditor
         visible: row.wide
         anchors { left: parent.left; leftMargin: 4; right: parent.right; top: textColumn.bottom; topMargin: 14 }
-        sourceComponent: row.entry && row.entry.kind === "list" ? engineEditor : row.entry && row.entry.kind === "location" ? locationEditor : row.entry && row.entry.kind === "providerList" ? providerEditor : null
+        sourceComponent: row.entry && row.entry.kind === "list" ? engineEditor : row.entry && row.entry.kind === "location" ? locationEditor : row.entry && row.entry.kind === "providerList" ? providerEditor : row.entry && row.entry.kind === "hotkeyList" ? hotkeyList : null
     }
     Component {
         id: engineEditor
         SearchEngineEditor { engines: row.draftValue || []; onChanged: value => row.valueEdited(value) }
+    }
+    Component {
+        id: hotkeyList
+        HotkeyList {}
     }
     Component {
         id: providerEditor

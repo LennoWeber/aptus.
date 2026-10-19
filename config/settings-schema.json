@@ -49,7 +49,7 @@
     { "id": "notifications.popupDurationSec", "category": "notifications", "title": "Popup duration", "kind": "number", "path": "notifications.popupDurationSec", "min": 2, "max": 15, "unit": "s", "advanced": false, "keywords": ["timeout"] },
     { "id": "notifications.position", "category": "notifications", "title": "Popup position", "kind": "choice", "path": "notifications.position", "options": ["top-right", "top-left", "top-center"], "advanced": true, "keywords": ["position"] },
 
-    { "id": "shortcuts.list", "category": "shortcuts", "title": "Keyboard shortcuts", "description": "Change any shortcut. Conflicts are shown right away.", "kind": "hotkeyList", "storage": "hotkeys", "advanced": false, "keywords": ["hotkeys", "keybinds", "keys"] },
+    { "id": "shortcuts.list", "category": "shortcuts", "title": "Keyboard shortcuts", "description": "Overview of all shortcuts. Clashes are marked. Change them in the Hyprland files named below.", "kind": "hotkeyList", "storage": "hotkeys", "advanced": false, "keywords": ["hotkeys", "keybinds", "keys"] },
     { "id": "launcher.modeKeys", "category": "shortcuts", "title": "Launcher mode keys", "description": "Switch modes while the launcher is open.", "kind": "keyMap", "path": "launcher.modeKeys", "advanced": true, "keywords": ["ctrl", "modes"] },
 
     { "id": "system.terminal", "category": "system", "title": "Terminal", "description": "Empty means automatic detection.", "kind": "text", "path": "system.terminal", "advanced": false, "keywords": ["default app"] },
