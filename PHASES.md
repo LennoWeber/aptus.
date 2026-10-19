@@ -532,6 +532,8 @@ Rückmeldung: Kontrollzentrum gut; Sound-Kachel zeigte „Muted“ über dem Reg
 
 **Nachträge 4b (19. Okt.):** Netzwerk- und Bluetooth-Dropdowns (Schalter, Liste, „More“ öffnet die Kachel im Kontrollzentrum über `IpcHandlers.openTile`), Leisten-Symbole WLAN/Bluetooth (Glyphen `wifi`, `bluetooth`), Caffeine und Focus erscheinen grün in der Leiste solange an, Stumm-Symbol rot, Caffeine-OSD, echter Sonnenauf-/untergang für das Nachtlicht (Sonnengleichung, Ort aus Wetter-Einstellung, Berlin 19. Okt. 07:38/18:04 geprüft), iCal-Kalender (`calendar.icsUrl`, nur lesen, einfache Wiederholungen, alle 15 min, TZID als Ortszeit), Fenstertitel in der Leistenmitte exakt zentriert. **Weiter offen:** Sperrbildschirm-Datenschutz (kommt mit dem Sperrbildschirm), Klick-Test der Dropdowns (ydotool klickt hier nicht).
 
+**Kalender (19. Okt.):** mehrere private iCal-Quellen zusammengeführt (`calendar.sources` in `~/.config/aptus/settings.json`, je `name`, `url`, optional `color`; Standardfarben aus einer Palette), farbige Punkte im Monat (max. 3 je Tag), farbige Terminzeilen (`EventRow`), mehrtägige Termine, `panel-open control-center <kachel>`. Monatszelle: Kreis (heute gefüllt, Auswahl Ring) nur um die Zahl, Punkte darunter, nichts überlappt.
+
 ## Nächster Schritt
 
 Test von Abschnitt 3b auf dem Laptop, dann Abschnitt 4 (übrige Kacheln: Benachrichtigungen, Fokus, Timer, Wetter, Systemmonitor, Aufnahme, VPN, Hotspot, KI-Verbrauch; Benachrichtigungs-Popups und OSD). Wartet auf dein „weiter“.

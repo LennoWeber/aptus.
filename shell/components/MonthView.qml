@@ -100,20 +100,30 @@ Item {
                     width: column.width / 7
                     height: mv.cellHeight
 
-                    // Today = filled ink circle, selected = hairline ring.
+                    // The day number sits in a circle (today = filled, selected = ring); the calendar dots sit below it, never inside.
+                    readonly property real circle: Math.min(mv.cellHeight - 10, 34)
+                    readonly property real pad: (mv.cellHeight - (circle + 9)) / 2
+
                     Rectangle {
-                        anchors.centerIn: parent
-                        anchors.verticalCenterOffset: -3
-                        width: Math.min(mv.cellHeight - 4, 40)
+                        x: (parent.width - width) / 2
+                        y: cell.pad
+                        width: cell.circle
                         height: width
                         radius: width / 2
                         color: cell.isToday ? Tokens.ink : "transparent"
                         border.width: cell.isSelected && !cell.isToday ? 1 : 0
                         border.color: Tokens.inkSoft
                     }
-                    // One dot per calendar that has an event on this day.
+                    Label {
+                        x: (parent.width - width) / 2
+                        y: cell.pad + (cell.circle - height) / 2
+                        text: cell.modelData.day
+                        color: cell.isToday ? Tokens.bg : (cell.modelData.inMonth ? Tokens.ink : Tokens.inkFaint)
+                        font.weight: cell.isToday ? Font.DemiBold : Font.Normal
+                    }
                     Row {
-                        anchors { horizontalCenter: parent.horizontalCenter; bottom: parent.bottom; bottomMargin: Math.max(1, (mv.cellHeight - 40) / 2 + 1) }
+                        x: (parent.width - width) / 2
+                        y: cell.pad + cell.circle + 4
                         spacing: 3
                         Repeater {
                             model: cell.dots
@@ -126,13 +136,6 @@ Item {
                                 opacity: cell.modelData.inMonth ? 1 : 0.45
                             }
                         }
-                    }
-                    Label {
-                        anchors.centerIn: parent
-                        anchors.verticalCenterOffset: -3
-                        text: cell.modelData.day
-                        color: cell.isToday ? Tokens.bg : (cell.modelData.inMonth ? Tokens.ink : Tokens.inkFaint)
-                        font.weight: cell.isToday ? Font.DemiBold : Font.Normal
                     }
                     MouseArea {
                         anchors.fill: parent
