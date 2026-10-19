@@ -249,7 +249,10 @@ Scope {
     }
 
     // Action entries: export, import, reset. Others are not wired yet.
+    signal wallpaperRequested()
+
     function runAction(entry: var): void {
+        if (entry.id === "appearance.wallpaper") { wallpaperRequested(); return }
         if (entry.id === "about.export") exportSettings()
         else if (entry.id === "about.import") importSettings()
         else if (entry.id === "about.reset") resetAll()

@@ -579,6 +579,12 @@ Rückmeldung: Kontrollzentrum gut; Sound-Kachel zeigte „Muted“ über dem Reg
 - **Geprüft:** Greeter als normales Fenster unter Hyprland (Bild, Benutzer aus /etc/passwd, Session, Tasten), Lint 0 Warnungen, Installer im Trockenlauf. **Nicht geprüft:** echte Anmeldung über greetd und cage (kein sudo hier), Neustart/Herunterfahren aus dem Greeter, Rechte des Benutzers `greetd` für `systemctl reboot`.
 - Hintergrundbild für Sperrbildschirm und Greeter kommt mit dem Wallpaper-Picker (7c).
 
+### Abschnitt 7c-1 (Wallpaper)
+- Die Shell zeichnet das Hintergrundbild selbst (`wallpaper/WallpaperLayer`, Layer Background, je Bildschirm), kein Wallpaper-Programm nötig. Gewähltes Bild: `~/.local/state/aptus/wallpaper`; Ordner: Setting `wallpaper.directory` (leer = `~/Pictures/Wallpapers`, Settings → Appearance).
+- **Picker** (`Mod+W` = `panel-toggle wallpaper`, auch Settings → Appearance → Wallpaper): Raster aus Vorschaubildern auf demselben Blur wie das Kontrollzentrum, Tippen setzt das Bild sofort, erste Kachel „None“, Esc oder Tippen daneben schließt. Leerer Ordner zeigt einen Hinweis.
+- **Sperrbildschirm** zeigt das Bild mit hellem Schleier (45 %). **Greeter:** Bild nur über `wallpaper` in `/etc/aptus/greeter.json` (Pfad muss für den Benutzer `greetd` lesbar sein, z. B. unter `/usr/local/share/aptus`); ein „für Login übernehmen“ im Picker braucht sudo und kommt später.
+- Zum Testen liegen drei erzeugte Farbverläufe in `~/Pictures/Wallpapers` (löschbar).
+
 ## Nächster Schritt
 
-Test von 7b-2: `./install.sh --greeter` (oder erst `--dry-run`), dann abmelden und prüfen. Danach 7c: Wallpaper-Picker (auch für Sperrbildschirm und Greeter), restliche Settings-Editoren, AI-Nutzung, Aufräumen (README, Lizenz, Umbenennung). Wartet auf dein „weiter“.
+7c-2: restliche Settings-Editoren (Listen, Provider, Kacheln, Hotkeys, Ort), AI-Nutzung mit echten Daten, Aufräumen (README, Lizenz, Umbenennung `aptus.` → `aptus`). Ausstehend vom Test: Greeter nach Neustart. Wartet auf dein „weiter“.

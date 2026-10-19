@@ -16,4 +16,3 @@ LockState 1.0 LockState.qml
 GreeterState 1.0 GreeterState.qml
 SessionInfo 1.0 SessionInfo.qml
 HotkeyBinding 1.0 HotkeyBinding.qml
-WallpaperItem 1.0 WallpaperItem.qml

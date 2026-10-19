@@ -27,6 +27,24 @@ Item {
         }
     }
 
+    Image {
+        anchors.fill: parent
+        visible: Wallpaper.current !== ""
+        source: Wallpaper.current ? "file://" + Wallpaper.current : ""
+        sourceSize: Qt.size(parent.width, parent.height)
+        fillMode: Image.PreserveAspectCrop
+        asynchronous: true
+        opacity: status === Image.Ready ? 1 : 0
+        Behavior on opacity { NumberAnimation { duration: Tokens.durSlow } }
+    }
+    // A light veil keeps the clock and the pill readable on any picture.
+    Rectangle {
+        anchors.fill: parent
+        visible: Wallpaper.current !== ""
+        color: Tokens.bg
+        opacity: 0.45
+    }
+
     Label {
         x: 28
         y: 20

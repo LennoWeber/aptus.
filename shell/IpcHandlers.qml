@@ -22,6 +22,7 @@ Scope {
     property var osd            // Osd
     property var powerMenu      // PowerMenu
     property var deviceMode     // DeviceModeState
+    property var wallpaperPicker  // WallpaperPicker
 
     // The launcher and the control center never show together.
     function openControlCenter(): void {
@@ -59,6 +60,7 @@ Scope {
                 else root.openNotifications()
             }
             else if (name === "session") root.powerMenu.toggle()
+            else if (name === "wallpaper") root.wallpaperPicker.toggle()
             else console.warn("aptus: panel '" + name + "' is not available yet")
         }
 
@@ -77,6 +79,7 @@ Scope {
             }
             else if (name === "notification-center") root.openNotifications()
             else if (name === "session") { if (!root.powerMenu.shown) root.powerMenu.toggle() }
+            else if (name === "wallpaper") root.wallpaperPicker.show()
             else console.warn("aptus: panel '" + name + "' is not available yet")
         }
 

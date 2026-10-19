@@ -14,6 +14,7 @@ import qs.lock
 import qs.touch
 import qs.session
 import qs.osk
+import qs.wallpaper
 
 // Entry point of the aptus shell.
 ShellRoot {
@@ -82,6 +83,15 @@ ShellRoot {
             onControlCenterRequested: ipcObj.openControlCenter()
         }
     }
+
+    Variants {
+        model: Quickshell.screens
+        WallpaperLayer {}
+    }
+
+    WallpaperPicker { id: wallpaperObj }
+    Binding { target: Wallpaper; property: "directory"; value: settingsObj.get("wallpaper.directory") || "" }
+    Connections { target: settingsAppObj; function onWallpaperRequested() { wallpaperObj.show() } }
 
     // Swipe from the top or left edge (touch only).
     Variants {
@@ -208,6 +218,7 @@ ShellRoot {
         settingsState: settingsAppObj
         lockState: lockObj
         powerMenu: powerMenuObj
+        wallpaperPicker: wallpaperObj
         deviceMode: deviceObj
         captureState: captureObj
         controlCenter: ccObj

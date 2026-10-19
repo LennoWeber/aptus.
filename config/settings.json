@@ -1,4 +1,7 @@
 {
+  "wallpaper": {
+    "directory": ""
+  },
   "appearance": {
     "paletteFollowsNightLight": true,
     "blurRadius": 18,
