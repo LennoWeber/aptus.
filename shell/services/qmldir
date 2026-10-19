@@ -1,0 +1,28 @@
+module qs.services
+singleton Search 1.0 Search.qml
+singleton Hotkeys 1.0 Hotkeys.qml
+singleton Compositor 1.0 Compositor.qml
+singleton Notifications 1.0 Notifications.qml
+singleton Wallpaper 1.0 Wallpaper.qml
+singleton Clipboard 1.0 Clipboard.qml
+singleton Session 1.0 Session.qml
+singleton Idle 1.0 Idle.qml
+singleton AiProviders 1.0 AiProviders.qml
+NightLightState 1.0 NightLightState.qml
+AudioState 1.0 AudioState.qml
+NetworkState 1.0 NetworkState.qml
+BluetoothState 1.0 BluetoothState.qml
+BatteryState 1.0 BatteryState.qml
+DisplayState 1.0 DisplayState.qml
+MediaState 1.0 MediaState.qml
+AiUsageState 1.0 AiUsageState.qml
+CalendarState 1.0 CalendarState.qml
+CaffeineState 1.0 CaffeineState.qml
+BrowserState 1.0 BrowserState.qml
+FocusState 1.0 FocusState.qml
+PowerProfileState 1.0 PowerProfileState.qml
+TimerState 1.0 TimerState.qml
+WeatherState 1.0 WeatherState.qml
+SystemMonitorState 1.0 SystemMonitorState.qml
+CaptureState 1.0 CaptureState.qml
+DeviceModeState 1.0 DeviceModeState.qml

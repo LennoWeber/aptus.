@@ -1,0 +1,8 @@
+module qs.dropdowns
+AudioDropdown 1.0 AudioDropdown.qml
+BatteryDropdown 1.0 BatteryDropdown.qml
+BluetoothDropdown 1.0 BluetoothDropdown.qml
+ClockDropdown 1.0 ClockDropdown.qml
+DropdownHost 1.0 DropdownHost.qml
+NetworkDropdown 1.0 NetworkDropdown.qml
+NightLightDropdown 1.0 NightLightDropdown.qml

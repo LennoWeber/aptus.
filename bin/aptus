@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+# Start and IPC wrapper for the aptus shell, shaped so that the user's shell-switch can treat it like noctalia and l-shell.
+#
+#   aptus                start the shell (holds the single-instance lock, then runs quickshell)
+#   aptus msg ARGS...    send a command to the running shell (`aptus msg log-level-status` answers once the shell is ready)
+
+set -u
+
+# Resolve the repo root through symlinks (~/.local/bin/aptus -> <repo>/bin/aptus).
+SELF="$(readlink -f "${BASH_SOURCE[0]}")"
+ROOT="${APTUS_ROOT:-$(dirname "$(dirname "$SELF")")}"
+export APTUS_ROOT="$ROOT"
+SHELL_DIR="$ROOT/shell"
+
+# shell-switch finds the running shell through this file (its patched lock_holder reads it and checks the process).
+# A flock would not do: the lock owner shown in /proc/locks is the flock helper, not the shell, and children would inherit the lock.
+PID_FILE="${XDG_RUNTIME_DIR:-/tmp}/aptus-${WAYLAND_DISPLAY:-wayland-0}.pid"
+
+is_quickshell() {
+    local comm
+    comm="$(cat "/proc/$1/comm" 2>/dev/null)" || return 1
+    [ "$comm" = qs ] || [ "$comm" = quickshell ]
+}
+
+# Refuse a second instance, then record our pid. `exec` below keeps the pid.
+take_pid() {
+    local old
+    old="$(cat "$PID_FILE" 2>/dev/null || true)"
+    if [ -n "$old" ] && [ "$old" != "$$" ] && is_quickshell "$old"; then
+        echo "aptus: already running (pid $old)" >&2
+        exit 1
+    fi
+    echo "$$" >"$PID_FILE"
+}
+
+start_shell() {
+    take_pid
+    exec qs -p "$SHELL_DIR"
+}
+
+# kebab-case command -> IPC call: `panel-toggle launcher` -> `qs ipc -p <dir> call aptus panelToggle launcher`.
+# No extra process besides qs itself; this runs on every key press.
+send_msg() {
+    [ $# -ge 1 ] || { echo "usage: aptus msg COMMAND [ARGS...]" >&2; return 2; }
+    local cmd="$1" fn="" part first=1
+    shift
+    # Two-word commands of the shell-switch vocabulary: "session lock" -> sessionLock.
+    if [ "$cmd" = session ] && [ "${1:-}" = lock ]; then
+        cmd="session-lock"
+        shift
+    fi
+    # keyboard-backlight-up|down|toggle -> keyboardBacklight up|down|toggle
+    case "$cmd" in
+        keyboard-backlight-up|keyboard-backlight-down|keyboard-backlight-toggle)
+            set -- "${cmd##*-}" "$@"
+            cmd="keyboard-backlight"
+            ;;
+    esac
+    local IFS=-
+    for part in $cmd; do
+        if [ "$first" = 1 ]; then fn="$part"; first=0; else fn+="${part^}"; fi
+    done
+    unset IFS
+    exec qs ipc -p "$SHELL_DIR" call aptus "$fn" "$@"
+}
+
+case "${1:-start}" in
+    msg) shift; send_msg "$@" ;;
+    start) start_shell ;;
+    *) echo "usage: aptus [start|msg COMMAND [ARGS...]]" >&2; exit 2 ;;
+esac

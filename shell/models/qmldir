@@ -1,0 +1,22 @@
+module qs.models
+singleton Enums 1.0 Enums.qml
+SearchResult 1.0 SearchResult.qml
+LauncherState 1.0 LauncherState.qml
+ShellState 1.0 ShellState.qml
+TileSpec 1.0 TileSpec.qml
+WorkspaceInfo 1.0 WorkspaceInfo.qml
+ContextItem 1.0 ContextItem.qml
+NotificationItem 1.0 NotificationItem.qml
+ChatMessage 1.0 ChatMessage.qml
+AiProvider 1.0 AiProvider.qml
+AppSettings 1.0 AppSettings.qml
+SettingsCategory 1.0 SettingsCategory.qml
+SettingEntry 1.0 SettingEntry.qml
+SettingsAppState 1.0 SettingsAppState.qml
+SettingsSnapshot 1.0 SettingsSnapshot.qml
+LockState 1.0 LockState.qml
+GreeterState 1.0 GreeterState.qml
+SessionInfo 1.0 SessionInfo.qml
+HotkeyBinding 1.0 HotkeyBinding.qml
+ClipboardEntry 1.0 ClipboardEntry.qml
+WallpaperItem 1.0 WallpaperItem.qml

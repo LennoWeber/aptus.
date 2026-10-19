@@ -1,0 +1,45 @@
+{
+  "default": "claude",
+  "providers": [
+    {
+      "id": "claude",
+      "name": "Claude",
+      "command": "claude",
+      "quickArgs": ["-p", "{prompt}"],
+      "streaming": true,
+      "launchInTerminal": true,
+      "iconName": "claude",
+      "supportsUsage": false,
+      "usageCommand": "",
+      "enabled": true,
+      "verified": false
+    },
+    {
+      "id": "antigravity",
+      "name": "Antigravity",
+      "command": "agy",
+      "quickArgs": ["-p", "{prompt}"],
+      "streaming": true,
+      "launchInTerminal": true,
+      "iconName": "antigravity",
+      "supportsUsage": false,
+      "usageCommand": "",
+      "enabled": true,
+      "verified": false
+    },
+    {
+      "id": "mistral",
+      "name": "Mistral",
+      "command": "vibe",
+      "quickArgs": ["--prompt", "{prompt}", "--max-turns", "3", "--output", "text"],
+      "streaming": true,
+      "launchInTerminal": true,
+      "iconName": "mistral",
+      "supportsUsage": false,
+      "usageCommand": "",
+      "enabled": true,
+      "verified": false
+    }
+  ],
+  "note": "quickArgs is used by the launcher's AI mode for short one-shot questions. launchInTerminal adds an entry to the app launcher that starts the CLI interactively in the terminal. To add a provider, append an entry. 'verified: false' means the arguments still have to be checked against the real CLI."
+}

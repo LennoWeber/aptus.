@@ -1,0 +1,8 @@
+module qs.settings
+CategoryPage 1.0 CategoryPage.qml
+ChangeBar 1.0 ChangeBar.qml
+ConfirmDialog 1.0 ConfirmDialog.qml
+SearchField 1.0 SearchField.qml
+SettingRow 1.0 SettingRow.qml
+SettingsWindow 1.0 SettingsWindow.qml
+Sidebar 1.0 Sidebar.qml

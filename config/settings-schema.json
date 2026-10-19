@@ -1,0 +1,72 @@
+{
+  "note": "Describes how the settings app shows the values in settings.json. 'path' points into settings.json (defaults live there). 'advanced' entries are hidden until 'Show advanced' is switched on. Every entry is searchable from the launcher's Settings mode.",
+  "categories": [
+    { "id": "appearance", "title": "Appearance",      "iconName": "appearance" },
+    { "id": "bar",        "title": "Bar",             "iconName": "bar" },
+    { "id": "launcher",   "title": "Launcher",        "iconName": "launcher" },
+    { "id": "ai",         "title": "AI",              "iconName": "ai" },
+    { "id": "widgets",    "title": "Calendar & Weather", "iconName": "calendar" },
+    { "id": "controlcenter", "title": "Control Center", "iconName": "controlcenter" },
+    { "id": "notifications", "title": "Notifications", "iconName": "notifications" },
+    { "id": "shortcuts",  "title": "Shortcuts",       "iconName": "keyboard" },
+    { "id": "system",     "title": "System",          "iconName": "system" },
+    { "id": "about",      "title": "About & Backup",  "iconName": "info" }
+  ],
+  "entries": [
+    { "id": "appearance.paletteFollowsNightLight", "category": "appearance", "title": "Palette follows night light", "description": "Surfaces get warmer together with the screen colour temperature.", "kind": "toggle", "path": "appearance.paletteFollowsNightLight", "advanced": false, "keywords": ["night light", "warm", "color temperature"] },
+    { "id": "appearance.blurRadius", "category": "appearance", "title": "Background blur", "description": "Blur strength behind the Control Center and launcher.", "kind": "slider", "path": "appearance.blurRadius", "min": 0, "max": 40, "step": 2, "advanced": false, "keywords": ["blur"] },
+    { "id": "appearance.animationSpeed", "category": "appearance", "title": "Animation speed", "description": "Overall speed of motion in the shell.", "kind": "choice", "path": "appearance.animationSpeed", "options": ["calm", "normal", "snappy", "off"], "advanced": false, "keywords": ["motion", "animation"] },
+    { "id": "appearance.wallpaper", "category": "appearance", "title": "Wallpaper", "description": "Opens the wallpaper picker.", "kind": "action", "action": "wallpaper.open", "advanced": false, "keywords": ["background", "wallpaper"] },
+
+    { "id": "bar.clockFormat", "category": "bar", "title": "Clock format", "kind": "choice", "path": "bar.clockFormat", "options": ["24h", "12h"], "advanced": false, "keywords": ["time"] },
+    { "id": "bar.showSeconds", "category": "bar", "title": "Show seconds", "kind": "toggle", "path": "bar.showSeconds", "advanced": false, "keywords": ["clock"] },
+    { "id": "bar.showDate", "category": "bar", "title": "Show date", "kind": "toggle", "path": "bar.showDate", "advanced": false, "keywords": ["clock", "date"] },
+    { "id": "bar.workspaceStyle", "category": "bar", "title": "Workspace style", "kind": "choice", "path": "bar.workspaceStyle", "options": ["numbers", "dots"], "advanced": false, "keywords": ["workspaces"] },
+    { "id": "bar.showBatteryPercent", "category": "bar", "title": "Show battery percentage", "kind": "toggle", "path": "bar.showBatteryPercent", "advanced": false, "keywords": ["battery"] },
+    { "id": "bar.contextZoneEnabled", "category": "bar", "title": "Context zone", "description": "Shows the window title, music, timers and alerts in the middle of the bar.", "kind": "toggle", "path": "bar.contextZoneEnabled", "advanced": false, "keywords": ["title", "center"] },
+    { "id": "bar.height", "category": "bar", "title": "Bar height", "kind": "number", "path": "bar.height", "min": 24, "max": 40, "unit": "px", "advanced": true, "keywords": ["size"] },
+
+    { "id": "launcher.defaultMode", "category": "launcher", "title": "Opens in mode", "description": "Mode used when the launcher is opened without a specific shortcut.", "kind": "choice", "path": "launcher.defaultMode", "options": ["apps", "web", "settings", "ai", "clipboard"], "advanced": true, "keywords": ["default"] },
+    { "id": "launcher.showRecentApps", "category": "launcher", "title": "Show recent apps", "kind": "toggle", "path": "launcher.showRecentApps", "advanced": false, "keywords": ["recent"] },
+    { "id": "launcher.showOpenWindows", "category": "launcher", "title": "Show open windows", "kind": "toggle", "path": "launcher.showOpenWindows", "advanced": false, "keywords": ["windows"] },
+    { "id": "launcher.maxResults", "category": "launcher", "title": "Number of results", "kind": "number", "path": "launcher.maxResults", "min": 4, "max": 12, "advanced": true, "keywords": ["results"] },
+    { "id": "browser.searchEngine", "category": "launcher", "title": "Search engine", "description": "Used by the web mode.", "kind": "choice", "path": "browser.searchEngine", "optionsFrom": "browser.searchEngines", "advanced": false, "keywords": ["google", "search", "web"] },
+    { "id": "browser.searchEngines", "category": "launcher", "title": "Search engines", "description": "Add your own search engine with a URL template.", "kind": "list", "path": "browser.searchEngines", "itemFields": ["name", "urlTemplate"], "advanced": true, "keywords": ["add search engine"] },
+
+    { "id": "ai.defaultProvider", "category": "ai", "title": "Default provider", "kind": "choice", "path": "ai.defaultProvider", "optionsFrom": "providers", "advanced": false, "keywords": ["claude", "mistral", "antigravity"] },
+    { "id": "ai.dockEdge", "category": "ai", "title": "Dock position", "description": "Where the launcher sits in AI mode so the screen stays readable.", "kind": "choice", "path": "ai.dockEdge", "options": ["right", "left", "bottom"], "advanced": false, "keywords": ["position", "side"] },
+    { "id": "ai.dockWidth", "category": "ai", "title": "Panel width", "kind": "number", "path": "ai.dockWidth", "min": 320, "max": 640, "unit": "px", "advanced": true, "keywords": ["size", "width"] },
+    { "id": "ai.providers", "category": "ai", "title": "Providers", "description": "Add, enable or remove AI command-line tools. Each provider needs a name, a command and arguments. A test button checks the command.", "kind": "providerList", "storage": "user-ai-providers", "advanced": false, "keywords": ["add provider", "cli", "agy", "vibe"] },
+
+    { "id": "weather.locationName", "category": "widgets", "title": "Weather location", "kind": "location", "path": "weather", "advanced": false, "keywords": ["weather", "berlin", "city"] },
+    { "id": "weather.units", "category": "widgets", "title": "Units", "kind": "choice", "path": "weather.units", "options": ["metric", "imperial"], "advanced": false, "keywords": ["celsius", "fahrenheit"] },
+    { "id": "calendar.source", "category": "widgets", "title": "Calendar source", "description": "Private iCal address first, Google sign-in later.", "kind": "choice", "path": "calendar.sourceKind", "options": ["ics", "google"], "advanced": false, "keywords": ["google calendar"] },
+    { "id": "calendar.icsUrl", "category": "widgets", "title": "iCal address", "kind": "text", "path": "calendar.icsUrl", "secret": true, "advanced": false, "keywords": ["ics", "url"] },
+
+    { "id": "controlcenter.tiles", "category": "controlcenter", "title": "Tiles", "description": "Choose which tiles appear and in which order.", "kind": "tileList", "path": "controlCenter.tiles", "advanced": false, "keywords": ["widgets", "tiles", "layout"] },
+
+    { "id": "notifications.popupDurationSec", "category": "notifications", "title": "Popup duration", "kind": "number", "path": "notifications.popupDurationSec", "min": 2, "max": 15, "unit": "s", "advanced": false, "keywords": ["timeout"] },
+    { "id": "notifications.position", "category": "notifications", "title": "Popup position", "kind": "choice", "path": "notifications.position", "options": ["top-right", "top-left", "top-center"], "advanced": true, "keywords": ["position"] },
+
+    { "id": "shortcuts.list", "category": "shortcuts", "title": "Keyboard shortcuts", "description": "Change any shortcut. Conflicts are shown right away.", "kind": "hotkeyList", "storage": "hotkeys", "advanced": false, "keywords": ["hotkeys", "keybinds", "keys"] },
+    { "id": "launcher.modeKeys", "category": "shortcuts", "title": "Launcher mode keys", "description": "Switch modes while the launcher is open.", "kind": "keyMap", "path": "launcher.modeKeys", "advanced": true, "keywords": ["ctrl", "modes"] },
+
+    { "id": "system.terminal", "category": "system", "title": "Terminal", "description": "Empty means automatic detection.", "kind": "text", "path": "system.terminal", "advanced": false, "keywords": ["default app"] },
+    { "id": "system.fileManager", "category": "system", "title": "File explorer", "description": "Empty means automatic detection.", "kind": "text", "path": "system.fileManager", "advanced": false, "keywords": ["default app", "files"] },
+    { "id": "system.screenOffAfterMin", "category": "system", "title": "Turn screen off after", "description": "0 = never. Only the display is switched off, the laptop never sleeps.", "kind": "number", "path": "system.screenOffAfterMin", "min": 0, "max": 60, "unit": "min", "advanced": false, "keywords": ["idle", "screen"] },
+    { "id": "system.lockAfterMin", "category": "system", "title": "Lock after", "description": "Locks the screen only. The laptop is never put to sleep or hibernate.", "kind": "number", "path": "system.lockAfterMin", "min": 1, "max": 120, "unit": "min", "advanced": false, "keywords": ["idle", "lock"] },
+
+    { "id": "system.lidClose", "category": "system", "title": "When the lid is closed", "description": "The laptop never goes to sleep. It only locks the screen or does nothing.", "kind": "choice", "path": "system.lidClose", "options": ["lock", "nothing"], "advanced": false, "keywords": ["lid", "cover", "close"] },
+    { "id": "touch.autoOnScreenKeyboard", "category": "system", "title": "On-screen keyboard", "description": "Shows the system on-screen keyboard when you tap a text field. Needs a keyboard app to be installed, otherwise nothing happens.", "kind": "toggle", "path": "touch.autoOnScreenKeyboard", "advanced": false, "keywords": ["touch", "tablet", "keyboard"] },
+    { "id": "system.keepAwakeWhenFullscreen", "category": "system", "title": "Stay awake in fullscreen", "description": "A fullscreen window (reading, video) keeps the screen from locking or switching off.", "kind": "toggle", "path": "system.keepAwakeWhenFullscreen", "advanced": false, "keywords": ["reading", "video", "idle", "fullscreen"] },
+    { "id": "touch.lockKeyboard", "category": "system", "title": "Keyboard on lockscreen", "description": "Built-in on-screen keyboard for unlocking in tablet mode. Auto shows it in tablet mode or after a touch.", "kind": "choice", "path": "touch.lockKeyboard", "options": ["auto", "always", "never"], "advanced": true, "keywords": ["touch", "tablet", "unlock", "password"] },
+    { "id": "touch.edgeGestures", "category": "system", "title": "Edge swipes", "description": "Swipe from the top edge for the Control Center, from the left edge for the launcher.", "kind": "toggle", "path": "touch.edgeGestures.enabled", "advanced": false, "keywords": ["touch", "gesture", "swipe", "tablet"] },
+    { "id": "touch.tabletBarAutoHide", "category": "bar", "title": "Hide bar in tablet mode", "description": "Gives reading more room. Swipe from the top edge to bring it back.", "kind": "toggle", "path": "touch.tabletBarAutoHide", "advanced": false, "keywords": ["tablet", "reading", "hide"] },
+    { "id": "touch.autoRotate", "category": "system", "title": "Auto-rotate in tablet mode", "description": "Turns the screen with the device, for example to portrait for reading.", "kind": "toggle", "path": "touch.autoRotate", "advanced": false, "keywords": ["rotate", "portrait", "tablet", "orientation"] },
+    { "id": "lock.showNotificationContent", "category": "system", "title": "Show notification text on lockscreen", "description": "Off keeps message contents private while the screen is locked.", "kind": "toggle", "path": "lock.showNotificationContent", "advanced": false, "keywords": ["privacy", "lock", "notifications"] },
+
+    { "id": "about.export", "category": "about", "title": "Export settings", "kind": "action", "action": "settings.export", "advanced": false, "keywords": ["backup"] },
+    { "id": "about.import", "category": "about", "title": "Import settings", "kind": "action", "action": "settings.import", "advanced": false, "keywords": ["restore"] },
+    { "id": "about.reset", "category": "about", "title": "Reset all settings", "kind": "action", "action": "settings.resetAll", "confirm": true, "advanced": true, "keywords": ["default"] }
+  ]
+}

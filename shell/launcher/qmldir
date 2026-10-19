@@ -1,0 +1,10 @@
+module qs.launcher
+AiPanel 1.0 AiPanel.qml
+EmptyState 1.0 EmptyState.qml
+Launcher 1.0 Launcher.qml
+ModeIcons 1.0 ModeIcons.qml
+Pill 1.0 Pill.qml
+ResultList 1.0 ResultList.qml
+ResultRow 1.0 ResultRow.qml
+SpecialResult 1.0 SpecialResult.qml
+ModeGlyph 1.0 ModeGlyph.qml

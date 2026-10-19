@@ -1,0 +1,2 @@
+module qs.debug
+DebugOverlay 1.0 DebugOverlay.qml

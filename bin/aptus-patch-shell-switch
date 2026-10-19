@@ -1,0 +1,94 @@
+#!/usr/bin/env python3
+"""Teach the user's shell-switch about aptus.
+
+  aptus-patch-shell-switch [--dry-run] [PATH]
+
+PATH defaults to the shell-switch found in PATH. A backup PATH.before-aptus is written
+before the first change. Running it twice changes nothing.
+"""
+import difflib
+import os
+import shutil
+import sys
+
+MARK = "aptus"
+
+
+def patch(text: str) -> str:
+    """Apply every edit that is not in the text yet, so running it again after an update adds only what is missing."""
+
+    def rep(old: str, new: str, marker: str) -> None:
+        nonlocal text
+        if marker in text:
+            return
+        if text.count(old) != 1:
+            raise SystemExit(f"patch point not found exactly once:\n{old}")
+        text = text.replace(old, new)
+
+    rep("SHELLS=(noctalia l-shell)", "SHELLS=(noctalia l-shell aptus)", "SHELLS=(noctalia l-shell aptus)")
+    rep('        l-shell) echo "L-Shell" ;;\n', '        l-shell) echo "L-Shell" ;;\n        aptus) echo "aptus" ;;\n', '        aptus) echo "aptus" ;;')
+    rep("        *) return 1 ;;\n    esac\n}\n\n# PID, die",
+        "        aptus) command -v aptus ;;\n        *) return 1 ;;\n    esac\n}\n\n# PID, die", "        aptus) command -v aptus ;;")
+    rep("case \"$target\" in noctalia | l-shell) ;; *) target=\"noctalia\" ;; esac",
+        "case \"$target\" in noctalia | l-shell | aptus) ;; *) target=\"noctalia\" ;; esac", "noctalia | l-shell | aptus) ;; *) target")
+    rep("            noctalia | l-shell) ;;\n            *)\n                echo \"Verwendung: shell-switch to noctalia|l-shell\" >&2",
+        "            noctalia | l-shell | aptus) ;;\n            *)\n                echo \"Verwendung: shell-switch to noctalia|l-shell|aptus\" >&2", "to noctalia|l-shell|aptus")
+    rep("--lines 2 --width 30", "--lines 3 --width 30", "--lines 3 --width 30")
+    # activate(): stop ALL other shells, not only one fallback.
+    rep('''        stop_shell "$fallback" || {
+            log "$fallback ließ sich nicht beenden, Wechsel abgebrochen"
+            notify 3 5000 "$(label "$fallback") ließ sich nicht beenden"
+            return 1
+        }
+''', '''        local other
+        for other in "${SHELLS[@]}"; do
+            [ "$other" = "$target" ] && continue
+            stop_shell "$other" || {
+                log "$other ließ sich nicht beenden, Wechsel abgebrochen"
+                notify 3 5000 "$(label "$other") ließ sich nicht beenden"
+                return 1
+            }
+        done
+''', 'for other in "${SHELLS[@]}"; do')
+    # lock_holder(): aptus is found through its pid file (a flock helper process would show the wrong pid).
+    rep('''lock_holder() {
+    local lock=''', '''lock_holder() {
+    if [ "$1" = aptus ]; then
+        local pidfile="$RUNTIME_DIR/aptus-${WAYLAND_DISPLAY:-wayland-0}.pid" apid acomm
+        apid="$(cat "$pidfile" 2>/dev/null)" || return 1
+        acomm="$(cat "/proc/$apid/comm" 2>/dev/null)" || return 1
+        case "$acomm" in qs | quickshell) echo "$apid" ;; *) return 1 ;; esac
+        return 0
+    fi
+    local lock=''', 'aptus-${WAYLAND_DISPLAY')
+    return text
+
+
+def main() -> int:
+    args = [a for a in sys.argv[1:] if not a.startswith("--")]
+    dry = "--dry-run" in sys.argv
+    path = args[0] if args else shutil.which("shell-switch")
+    if not path or not os.path.exists(path):
+        print("shell-switch not found", file=sys.stderr)
+        return 1
+    path = os.path.realpath(path)
+    old = open(path, encoding="utf-8").read()
+    new = patch(old)
+    if new == old:
+        print("already patched, nothing to do")
+        return 0
+    diff = "".join(difflib.unified_diff(old.splitlines(True), new.splitlines(True), path, path + " (patched)"))
+    if dry:
+        print(diff)
+        return 0
+    backup = path + ".before-aptus"
+    if not os.path.exists(backup):
+        shutil.copy2(path, backup)
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(new)
+    print(f"patched {path}, backup: {backup}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

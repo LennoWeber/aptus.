@@ -1,0 +1,173 @@
+{
+  "note": "Source for the hotkey table. owner 'user' = already bound in the user's own hyprland.lua (aptus only answers the shell-switch command and shows it); owner 'aptus' = generated into binds.generated.lua. Hardware keys (volume, brightness, media, keyboard backlight, mic) stay in the user's file and reach aptus as shell-switch commands.",
+  "hotkeys": [
+    {
+      "id": "launcher.apps",
+      "label": "Launcher",
+      "mods": [
+        "SUPER"
+      ],
+      "key": "D",
+      "action": "launcher.open:apps",
+      "owner": "user",
+      "command": "panel-toggle launcher"
+    },
+    {
+      "id": "launcher.web",
+      "label": "Web search",
+      "mods": [
+        "SUPER",
+        "SHIFT"
+      ],
+      "key": "B",
+      "action": "launcher.open:web",
+      "owner": "aptus",
+      "command": "launcher-open web"
+    },
+    {
+      "id": "launcher.settings",
+      "label": "Search settings",
+      "mods": [
+        "SUPER"
+      ],
+      "key": "S",
+      "action": "launcher.open:settings",
+      "owner": "user",
+      "command": "settings-toggle"
+    },
+    {
+      "id": "launcher.ai",
+      "label": "Ask AI",
+      "mods": [
+        "SUPER"
+      ],
+      "key": "A",
+      "action": "launcher.open:ai",
+      "owner": "aptus",
+      "command": "launcher-open ai"
+    },
+    {
+      "id": "launcher.clipboard",
+      "label": "Clipboard history",
+      "mods": [
+        "SUPER",
+        "SHIFT"
+      ],
+      "key": "C",
+      "action": "launcher.open:clipboard",
+      "owner": "aptus",
+      "command": "launcher-open clipboard"
+    },
+    {
+      "id": "controlcenter.open",
+      "label": "Control Center",
+      "mods": [
+        "SUPER"
+      ],
+      "key": "C",
+      "action": "controlcenter.open",
+      "owner": "user",
+      "command": "panel-toggle control-center"
+    },
+    {
+      "id": "notifications.open",
+      "label": "Notifications",
+      "mods": [
+        "SUPER"
+      ],
+      "key": "N",
+      "action": "controlcenter.open:notifications",
+      "owner": "user",
+      "command": "panel-toggle notification-center"
+    },
+    {
+      "id": "wallpaper.open",
+      "label": "Wallpaper picker",
+      "mods": [
+        "SUPER"
+      ],
+      "key": "W",
+      "action": "wallpaper.open",
+      "owner": "user",
+      "command": "panel-toggle wallpaper"
+    },
+    {
+      "id": "app.files",
+      "label": "File explorer",
+      "mods": [
+        "SUPER"
+      ],
+      "key": "E",
+      "action": "exec:fileManager",
+      "owner": "user",
+      "command": "exec:fileManager"
+    },
+    {
+      "id": "app.terminal",
+      "label": "Terminal",
+      "mods": [
+        "SUPER"
+      ],
+      "key": "Return",
+      "action": "exec:terminal",
+      "owner": "user",
+      "command": "exec:terminal"
+    },
+    {
+      "id": "capture.screenshot",
+      "label": "Screenshot",
+      "mods": [
+        "SUPER",
+        "SHIFT"
+      ],
+      "key": "S",
+      "action": "capture.screenshot",
+      "owner": "user",
+      "command": "screenshot-region"
+    },
+    {
+      "id": "workspace.switch",
+      "label": "Switch workspace 1-9",
+      "mods": [
+        "SUPER"
+      ],
+      "key": "1..9",
+      "action": "workspace.switch",
+      "owner": "user",
+      "command": "workspace.switch"
+    },
+    {
+      "id": "browser.open",
+      "label": "Browser",
+      "mods": [
+        "SUPER"
+      ],
+      "key": "B",
+      "action": "exec:browser",
+      "owner": "user",
+      "command": "exec:browser"
+    },
+    {
+      "id": "session.lock",
+      "label": "Lock",
+      "mods": [
+        "SUPER"
+      ],
+      "key": "L",
+      "action": "session.lock",
+      "owner": "user",
+      "command": "session lock"
+    },
+    {
+      "id": "launcher.apps.space",
+      "label": "Launcher (Space)",
+      "mods": [
+        "SUPER"
+      ],
+      "key": "Space",
+      "action": "launcher.open:apps",
+      "owner": "user",
+      "command": "panel-toggle launcher"
+    }
+  ]
+}

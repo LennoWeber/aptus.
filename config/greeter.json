@@ -1,0 +1,14 @@
+{
+  "note": "System-wide settings for the aptus greeter. Lives in /etc/aptus/greeter.json because the greeter runs before any user session and cannot read a user's config.",
+  "wallpaper": "",
+  "blurRadius": 18,
+  "showClock": true,
+  "rememberLastUser": true,
+  "rememberLastSession": true,
+  "defaultSession": "hyprland",
+  "showPowerButtons": true,
+  "powerActions": ["restart", "shutdown"],
+  "sessions": [
+    { "id": "hyprland", "name": "Hyprland", "command": "start-hyprland" }
+  ]
+}

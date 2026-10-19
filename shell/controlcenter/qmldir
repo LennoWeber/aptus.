@@ -1,0 +1,4 @@
+module qs.controlcenter
+ControlCenter 1.0 ControlCenter.qml
+DetailFrame 1.0 DetailFrame.qml
+Tile 1.0 Tile.qml

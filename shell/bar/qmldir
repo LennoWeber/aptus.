@@ -1,0 +1,7 @@
+module qs.bar
+Bar 1.0 Bar.qml
+BarItem 1.0 BarItem.qml
+Clock 1.0 Clock.qml
+ContextZone 1.0 ContextZone.qml
+StatusGroup 1.0 StatusGroup.qml
+WorkspaceStrip 1.0 WorkspaceStrip.qml

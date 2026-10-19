@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# Runs outside the shell. Restores a settings snapshot unless the change is confirmed in time.
+# Signatures only. Bodies and the command dispatcher come in phase 7.
+#
+# Planned usage:
+#   aptus-settings-watchdog start   <snapshot-id> <timeout-seconds>
+#   aptus-settings-watchdog confirm <snapshot-id>
+#   aptus-settings-watchdog restore <snapshot-id>
+
+not_implemented() {
+    echo "not implemented: ${FUNCNAME[1]}" >&2
+    return 1
+}
+
+# Wait for the timeout, then restore the snapshot unless a confirmation exists.
+# TODO(phase 7): must keep running if the shell dies (detached process or systemd transient timer).
+start() { # $1 snapshot id, $2 timeout in seconds
+    not_implemented
+}
+
+# Mark the snapshot as confirmed and stop the countdown.
+confirm() { # $1 snapshot id
+    not_implemented
+}
+
+# Copy settings, hotkeys and providers back from the snapshot and reload Hyprland.
+# TODO(phase 7): also reload Hyprland if the hotkeys file was part of the snapshot.
+restore() { # $1 snapshot id
+    not_implemented
+}
+
+# Print where snapshots are stored.
+snapshot_dir() {
+    not_implemented
+}

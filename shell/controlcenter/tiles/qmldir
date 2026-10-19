@@ -1,0 +1,18 @@
+module qs.controlcenter.tiles
+AiUsageTile 1.0 AiUsageTile.qml
+AudioTile 1.0 AudioTile.qml
+BluetoothTile 1.0 BluetoothTile.qml
+CaffeineTile 1.0 CaffeineTile.qml
+CalendarTile 1.0 CalendarTile.qml
+CaptureTile 1.0 CaptureTile.qml
+DisplayTile 1.0 DisplayTile.qml
+FocusTile 1.0 FocusTile.qml
+HotspotTile 1.0 HotspotTile.qml
+MediaTile 1.0 MediaTile.qml
+NetworkTile 1.0 NetworkTile.qml
+NotificationsTile 1.0 NotificationsTile.qml
+PowerProfileTile 1.0 PowerProfileTile.qml
+SystemMonitorTile 1.0 SystemMonitorTile.qml
+TimerTile 1.0 TimerTile.qml
+VpnTile 1.0 VpnTile.qml
+WeatherTile 1.0 WeatherTile.qml

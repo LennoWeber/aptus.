@@ -1,0 +1,10 @@
+# Template for /etc/greetd/config.toml with the aptus greeter.
+# The installer backs up the existing file first (currently noctalia-greeter-session).
+# The greeter wrapper name and its arguments are placeholders and get checked when it is built.
+
+[terminal]
+vt = 1
+
+[default_session]
+command = "/usr/bin/aptus-greeter-session -- --session Hyprland"
+user = "greetd"

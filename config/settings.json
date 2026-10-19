@@ -1,0 +1,96 @@
+{
+  "appearance": {
+    "paletteFollowsNightLight": true,
+    "blurRadius": 18,
+    "animationSpeed": "normal"
+  },
+  "bar": {
+    "height": 28,
+    "clockFormat": "24h",
+    "showSeconds": false,
+    "showDate": true,
+    "workspaceStyle": "numbers",
+    "showBatteryPercent": true,
+    "contextZoneEnabled": true
+  },
+  "launcher": {
+    "defaultMode": "apps",
+    "modeKeys": {
+      "apps": "Ctrl+1",
+      "web": "Ctrl+2",
+      "settings": "Ctrl+3",
+      "ai": "Ctrl+4",
+      "clipboard": "Ctrl+5"
+    },
+    "showRecentApps": true,
+    "showOpenWindows": true,
+    "maxResults": 8
+  },
+  "browser": {
+    "command": "zen",
+    "windowClass": "zen",
+    "searchEngine": "google",
+    "searchEngines": [
+      { "id": "google", "name": "Google", "urlTemplate": "https://www.google.com/search?q={query}" },
+      { "id": "duckduckgo", "name": "DuckDuckGo", "urlTemplate": "https://duckduckgo.com/?q={query}" },
+      { "id": "bing", "name": "Bing", "urlTemplate": "https://www.bing.com/search?q={query}" }
+    ]
+  },
+  "ai": {
+    "defaultProvider": "claude",
+    "shortAnswersOnly": true,
+    "dockEdge": "right",
+    "dockWidth": 420,
+    "providerSwitchKeys": { "previous": "Alt+Left", "next": "Alt+Right" }
+  },
+  "controlCenter": {
+    "tiles": ["calendar", "network", "bluetooth", "caffeine", "media"]
+  },
+  "weather": {
+    "locationName": "Berlin",
+    "latitude": 52.52,
+    "longitude": 13.405,
+    "source": "open-meteo",
+    "units": "metric"
+  },
+  "calendar": {
+    "sourceKind": "ics",
+    "icsUrl": ""
+  },
+  "caffeine": {
+    "autoOff": false
+  },
+  "notifications": {
+    "popupDurationSec": 5,
+    "position": "top-right"
+  },
+  "system": {
+    "terminal": "",
+    "fileManager": "",
+    "screenOffAfterMin": 10,
+    "lockAfterMin": 5,
+    "lidClose": "lock",
+    "keepAwakeWhenFullscreen": true
+  },
+  "touch": {
+    "autoOnScreenKeyboard": true,
+    "lockKeyboard": "auto",
+    "minTargetPx": 40,
+    "edgeGestures": {
+      "enabled": true,
+      "stripWidthPx": 16,
+      "actions": { "top": "controlcenter.open", "left": "launcher.open:apps" }
+    },
+    "tabletBarAutoHide": true,
+    "autoRotate": true
+  },
+  "lock": {
+    "showNotificationContent": false
+  },
+  "settingsApp": {
+    "confirmTimeoutSec": 15
+  },
+  "navigation": {
+    "escapeStepsBack": true
+  }
+}
