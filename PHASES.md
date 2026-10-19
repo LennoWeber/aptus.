@@ -1,6 +1,6 @@
 # PHASES.md – Projekt „aptus" (sichtbarer Name in der Shell: „shell.“)
 
-Aktuelle Phase: **7 – Implementierung, Abschnitt 7b-1 (Power-Menü, Tablet-Modus, Randwischen, Drehen) gebaut, wartet auf deinen Test und „weiter“ zu 7b-2 (Greeter, Installer)**
+Aktuelle Phase: **7 – Implementierung, Abschnitt 7b-2 (Greeter, Installer-Schritte) gebaut, Greeter noch nicht auf dem Laptop installiert; wartet auf deinen Test und „weiter“ zu 7c (Wallpaper, restliche Settings, Aufräumen)**
 
 ## Ziel
 
@@ -572,6 +572,13 @@ Rückmeldung: Kontrollzentrum gut; Sound-Kachel zeigte „Muted“ über dem Reg
 - **Bildschirmtastatur überall** (`services/Osk`, `osk/OskPanel`, `osk/OskWindow`): Textfelder melden ihren Fokus an `Osk.track`; im Tablet-Modus (Einstellung `touch.autoOnScreenKeyboard`) oder nach IPC `oskToggle` erscheint die Tastatur (gleiche wie auf dem Sperrbildschirm, mit Taste ⌄ zum Schließen). Launcher und Kontrollzentrum zeichnen sie selbst (Vollbild-Overlay würde ein eigenes Fenster verdecken), andere Fenster (AI-Leiste, Settings) nutzen das Tastaturfenster. Felder: Launcher, AI-Eingabe, Settings-Suche und -Zeilen, WLAN-Passwort.
 - Offen: Dreh-Schalter im Kontrollzentrum, Hinweis beim Drehen (OSD), Tippen über die Tastatur nur per Bildschirmbild geprüft (Tasten von Hand).
 
+### Abschnitt 7b-2 (Greeter, Installer)
+- **Greeter** (`greeter/`, `shell/models/GreeterState.qml`): Login-Bildschirm im Stil des Sperrbildschirms (Uhr, Benutzername, Passwortpille, Session, Restart/Shut down, eingebaute Tastatur, optionales Hintergrundbild mit Schleier). Anmeldung über `Quickshell.Services.Greetd` (createSession → Passwort bei der Frage → readyToLaunch → launch). Benutzer aus /etc/passwd (UID 1000..59999, mit Shell), Einstellungen aus `/etc/aptus/greeter.json`, letzter Benutzer/Session in `/var/cache/aptus-greeter/state.json`. Kein Sleep-Knopf.
+- **Start:** greetd → `/usr/local/bin/aptus-greeter-session` → `cage -s -- qs -p /usr/local/share/aptus/greeter`. Cage zeigt genau ein Fenster; der Greeter ist deshalb ein normales Vollbildfenster. `bin/aptus-greeter-build DEST` baut den eigenständigen Ordner (greetd-Benutzer kann dein Home nicht lesen): Greeter-Dateien, theme, components, zwei Modelle, drei Teile des Sperrbildschirms, tokens.json.
+- **Installer:** `./install.sh --greeter` (fragt, sichert `/etc/greetd/config.toml` als `.before-aptus`, sudo je Schritt, greetd wird nicht neu gestartet), `--uninstall-greeter` stellt zurück; Notweg per Konsole (Strg+Alt+F3) steht in der Ausgabe. `ensure_cliphist` und `check_lid_policy` prüfen nur und sagen, was zu tun wäre. `enable_repos`/`install_packages` bleiben Platzhalter.
+- **Geprüft:** Greeter als normales Fenster unter Hyprland (Bild, Benutzer aus /etc/passwd, Session, Tasten), Lint 0 Warnungen, Installer im Trockenlauf. **Nicht geprüft:** echte Anmeldung über greetd und cage (kein sudo hier), Neustart/Herunterfahren aus dem Greeter, Rechte des Benutzers `greetd` für `systemctl reboot`.
+- Hintergrundbild für Sperrbildschirm und Greeter kommt mit dem Wallpaper-Picker (7c).
+
 ## Nächster Schritt
 
-Test von Abschnitt 7b-1 (Mod+X, Knopf im Kontrollzentrum; Tablet-Modus und Wischen nur am Gerät prüfbar), dann 7b-2: Greeter (greetd), Installer-Schritte, Hintergrundbild auf dem Sperrbildschirm. Wartet auf dein „weiter“.
+Test von 7b-2: `./install.sh --greeter` (oder erst `--dry-run`), dann abmelden und prüfen. Danach 7c: Wallpaper-Picker (auch für Sperrbildschirm und Greeter), restliche Settings-Editoren, AI-Nutzung, Aufräumen (README, Lizenz, Umbenennung). Wartet auf dein „weiter“.

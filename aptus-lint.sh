@@ -12,7 +12,7 @@ find shell -name '*.qml' | sort | while read -r f; do
 done
 echo "===== greeter =====" >> "$OUT"
 find greeter -name '*.qml' | sort | while read -r f; do
-  r=$($LINT -I /usr/lib64/qt6/qml -I greeter "$f" 2>&1); [ -n "$r" ] && printf '%s\n' "$r" >> "$OUT"
+  r=$($LINT -I /usr/lib64/qt6/qml -I "$T" -I greeter "$f" 2>&1); [ -n "$r" ] && printf '%s\n' "$r" >> "$OUT"
 done
 rm -rf "$T"
 echo "===== summary =====" >> "$OUT"

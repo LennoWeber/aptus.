@@ -1,5 +1,0 @@
-module greeter
-GreeterSurface 1.0 GreeterSurface.qml
-PowerButtons 1.0 PowerButtons.qml
-SessionPicker 1.0 SessionPicker.qml
-UserPicker 1.0 UserPicker.qml

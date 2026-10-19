@@ -1,0 +1,18 @@
+#!/bin/sh
+# Started by greetd as user `greetd` (see /etc/greetd/config.toml): runs the aptus greeter inside cage,
+# a compositor that shows exactly one window. Log: /var/cache/aptus-greeter/greeter.log
+set -eu
+SHARE="${APTUS_GREETER_SHARE:-/usr/local/share/aptus}"
+LOG=/var/cache/aptus-greeter/greeter.log
+exec >>"$LOG" 2>&1
+echo "=== aptus-greeter-session $(date -Iseconds) ==="
+
+# greetd's PAM stack may not give the greeter user a runtime dir.
+if [ -z "${XDG_RUNTIME_DIR:-}" ] || [ ! -w "$XDG_RUNTIME_DIR" ]; then
+    XDG_RUNTIME_DIR="/tmp/aptus-greeter-runtime-$(id -u)"
+    mkdir -p "$XDG_RUNTIME_DIR"
+    chmod 700 "$XDG_RUNTIME_DIR"
+    export XDG_RUNTIME_DIR
+fi
+unset WAYLAND_DISPLAY
+exec cage -s -- qs -p "$SHARE/greeter"

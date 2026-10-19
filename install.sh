@@ -6,6 +6,7 @@
 ROOT="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
 DRY_RUN=0
 ASSUME_YES=0
+WITH_GREETER=0
 BIN_DIR="$HOME/.local/bin"
 STATE_DIR="$HOME/.local/state/aptus"
 CONFIG_DIR="$HOME/.config/aptus"
@@ -121,22 +122,72 @@ patch_shell_switch() {
     fi
 }
 
-# cliphist is needed for the clipboard history and is missing today.
-# TODO(phase 7): dnf package if it exists in the enabled repos, else a release binary with a checksum after asking.
-ensure_cliphist() { not_implemented; }
+# cliphist is needed for the clipboard history. Only checks; installing is the user's call.
+ensure_cliphist() {
+    if command -v cliphist >/dev/null 2>&1; then return 0; fi
+    say "cliphist is missing (clipboard history). Install it with:  sudo dnf install cliphist"
+    say "(it is in the COPR lionheartp/Hyprland, or get a release binary from github.com/sentriz/cliphist)"
+}
 
-# Check only: closing the lid must never suspend. Looks for HandleLidSwitch=ignore in the active logind config
-# (systemd-analyze cat-config systemd/logind.conf). Does not write anything; warns and explains if it is missing.
-# TODO(phase 7): print the exact drop-in the user can add; never write to /etc/systemd without asking.
-check_lid_policy() { not_implemented; }
+# Check only: closing the lid must never suspend. Never writes to /etc/systemd.
+check_lid_policy() {
+    command -v systemd-analyze >/dev/null 2>&1 || return 0
+    if systemd-analyze cat-config systemd/logind.conf 2>/dev/null | grep -q '^HandleLidSwitch=ignore'; then
+        return 0
+    fi
+    say "Closing the lid may still suspend this laptop. aptus never suspends; to make logind ignore the lid, create"
+    say "/etc/systemd/logind.conf.d/50-aptus-lid.conf with:"
+    say "    [Login]"
+    say "    HandleLidSwitch=ignore"
+    say "    HandleLidSwitchExternalPower=ignore"
+    say "(aptus locks the screen on lid close by itself.)"
+}
 
-# Ask, back up /etc/greetd/config.toml, then install the aptus greeter.
-# TODO(phase 7): back up /etc/greetd/config.toml first, ask before replacing, keep the old greeter as a way back.
-install_greeter() { not_implemented; }
+GREETER_SHARE=/usr/local/share/aptus
+GREETD_CONFIG=/etc/greetd/config.toml
 
+# Opt-in (--greeter): replace the login screen. The old greetd config is saved as config.toml.before-aptus and
+# --uninstall-greeter puts it back. Needs sudo for each step; nothing else on the system is changed.
+install_greeter() {
+    command -v cage >/dev/null 2>&1 || { say "cage is missing:  sudo dnf install cage"; return 1; }
+    [ -f "$GREETD_CONFIG" ] || { say "$GREETD_CONFIG not found: greetd is not installed."; return 1; }
+    say "The aptus greeter will replace the login screen. Current config:"
+    sed 's/^/    /' "$GREETD_CONFIG"
+    say "Backup: $GREETD_CONFIG.before-aptus. Way back: ./install.sh --uninstall-greeter, or from a console (Ctrl+Alt+F3):"
+    say "    sudo cp $GREETD_CONFIG.before-aptus $GREETD_CONFIG && sudo systemctl restart greetd"
+    ask "Install the aptus greeter now?" || return 0
 
-# Restore backups and remove everything the installer added.
-uninstall() { not_implemented; }
+    local tmp
+    tmp="$(mktemp -d)"
+    "$ROOT/bin/aptus-greeter-build" "$tmp"
+    do_it sudo rm -rf "$GREETER_SHARE/greeter" "$GREETER_SHARE/theme"
+    do_it sudo mkdir -p "$GREETER_SHARE" /etc/aptus
+    do_it sudo cp -r "$tmp/greeter" "$tmp/theme" "$GREETER_SHARE/"
+    do_it sudo chmod -R a+rX "$GREETER_SHARE"
+    [ -e /etc/aptus/greeter.json ] || do_it sudo cp "$ROOT/config/greeter.json" /etc/aptus/greeter.json
+    do_it sudo install -m 755 "$ROOT/bin/aptus-greeter-session" /usr/local/bin/aptus-greeter-session
+    do_it sudo install -d -o greetd -g greetd -m 755 /var/cache/aptus-greeter
+    [ -e "$GREETD_CONFIG.before-aptus" ] || do_it sudo cp "$GREETD_CONFIG" "$GREETD_CONFIG.before-aptus"
+    if [ "$DRY_RUN" = 1 ]; then
+        say "  [dry-run] write $GREETD_CONFIG"
+    else
+        printf '[terminal]\nvt = 1\n\n[default_session]\ncommand = "/usr/local/bin/aptus-greeter-session"\nuser = "greetd"\n' | sudo tee "$GREETD_CONFIG" >/dev/null
+    fi
+    rm -rf "$tmp"
+    say "Greeter installed. It starts at the next login screen (log out or reboot); greetd is not restarted now,"
+    say "so your current session stays. Log: /var/cache/aptus-greeter/greeter.log"
+}
+
+uninstall_greeter() {
+    if [ ! -f "$GREETD_CONFIG.before-aptus" ]; then
+        say "No backup $GREETD_CONFIG.before-aptus found; nothing to restore."
+        return 0
+    fi
+    ask "Restore the old greetd config?" || return 0
+    do_it sudo cp "$GREETD_CONFIG.before-aptus" "$GREETD_CONFIG"
+    do_it sudo rm -rf "$GREETER_SHARE" /usr/local/bin/aptus-greeter-session
+    say "Old login screen restored; it is used at the next login screen."
+}
 
 main() {
     local arg
@@ -144,7 +195,9 @@ main() {
         case "$arg" in
             --dry-run) DRY_RUN=1 ;;
             --yes) ASSUME_YES=1 ;;
-            -h|--help) say "usage: install.sh [--dry-run] [--yes]"; exit 0 ;;
+            --greeter) WITH_GREETER=1 ;;
+            --uninstall-greeter) uninstall_greeter; exit 0 ;;
+            -h|--help) say "usage: install.sh [--dry-run] [--yes] [--greeter | --uninstall-greeter]"; exit 0 ;;
             *) say "unknown option: $arg"; exit 2 ;;
         esac
     done
@@ -153,7 +206,10 @@ main() {
     install_launcher
     patch_shell_switch
     install_hyprland_binds
-    # TODO(phase 7, later sections): enable_repos, install_packages, ensure_cliphist, check_lid_policy, install_greeter (they are still stubs and are not called yet).
+    ensure_cliphist
+    check_lid_policy
+    [ "$WITH_GREETER" = 1 ] && install_greeter
+    # TODO(phase 7, last section): enable_repos and install_packages are still stubs.
     say "Done. Start with: aptus   (or: shell-switch to aptus)"
 }
 

@@ -1,10 +1,14 @@
 import QtQuick
+import qs.models
+import qs.components
 
-// Restart and shut down.
-// Phase 2/3/4 skeleton. Body comes in phase 7.
-Item {
-    // TODO(phase 7): only restart and shutdown; never a sleep button.
+// Restart and shut down. There is no sleep button on purpose.
+Row {
+    id: buttons
 
-    property var actions  // list of Enums.PowerAction
     signal actionRequested(int action)
+    spacing: 10
+
+    ActionButton { implicitHeight: 44; text: "Restart"; onClicked: buttons.actionRequested(Enums.PowerAction.Restart) }
+    ActionButton { implicitHeight: 44; text: "Shut down"; onClicked: buttons.actionRequested(Enums.PowerAction.Shutdown) }
 }

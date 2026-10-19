@@ -1,10 +1,31 @@
 import QtQuick
 import Quickshell
+import qs.models
+import qs.theme
 
-// Entry point of the aptus greeter (started by greetd).
-// Phase 2/3/4 skeleton. Body comes in phase 7.
+// Entry point of the aptus greeter. greetd starts it inside cage (a one-window compositor), so it is an ordinary
+// full-size window. Settings come from /etc/aptus/greeter.json; APTUS_GREETER_CONFIG and APTUS_GREETER_CACHE
+// override the paths for tests.
 ShellRoot {
-    // TODO(phase 7): create the greeter surfaces per screen; reads /etc/aptus/greeter.json.
-    // TODO(phase 7): reuse PasswordPill, OnScreenKeyboard and ClockBlock from shell/lock.
+    GreeterState {
+        id: greeterState
+        configPath: Quickshell.env("APTUS_GREETER_CONFIG") || "/etc/aptus/greeter.json"
+        cachePath: Quickshell.env("APTUS_GREETER_CACHE") || "/var/cache/aptus-greeter/state.json"
+    }
 
+    SystemClock { id: clock; precision: SystemClock.Seconds }
+
+    FloatingWindow {
+        visible: true
+        title: "aptus greeter"
+        color: Tokens.bg
+        implicitWidth: 1280
+        implicitHeight: 720
+
+        GreeterSurface {
+            anchors.fill: parent
+            greeterState: greeterState
+            now: clock.date
+        }
+    }
 }

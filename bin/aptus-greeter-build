@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# Build the self-contained greeter tree: aptus-greeter-build DEST
+# The greeter runs as the user `greetd`, which cannot read a home directory, so it gets its own copy of the few
+# shell files it needs (theme, components, two models, three lockscreen parts) next to the greeter files.
+#   DEST/greeter/   config folder for `qs -p` (shell.qml, qs.theme, qs.components, qs.models, qs.lock)
+#   DEST/theme/     tokens.json (Tokens finds it through shellPath("..") )
+set -euo pipefail
+ROOT="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
+DEST="${1:?usage: aptus-greeter-build DEST}"
+
+rm -rf "$DEST/greeter" "$DEST/theme"
+mkdir -p "$DEST/greeter/lock" "$DEST/theme"
+cp "$ROOT"/greeter/*.qml "$DEST/greeter/"
+cp -r "$ROOT/shell/theme" "$ROOT/shell/components" "$DEST/greeter/"
+mkdir "$DEST/greeter/models"
+cp "$ROOT"/shell/models/{Enums,GreeterState}.qml "$DEST/greeter/models/"
+printf 'module qs.models\nsingleton Enums 1.0 Enums.qml\nGreeterState 1.0 GreeterState.qml\n' >"$DEST/greeter/models/qmldir"
+cp "$ROOT"/shell/lock/{ClockBlock,PasswordPill,OnScreenKeyboard}.qml "$DEST/greeter/lock/"
+printf 'module qs.lock\nClockBlock 1.0 ClockBlock.qml\nPasswordPill 1.0 PasswordPill.qml\nOnScreenKeyboard 1.0 OnScreenKeyboard.qml\n' >"$DEST/greeter/lock/qmldir"
+cp "$ROOT/theme/tokens.json" "$DEST/theme/"
+chmod -R a+rX "$DEST"
