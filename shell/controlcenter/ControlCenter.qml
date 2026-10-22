@@ -205,17 +205,24 @@ PanelWindow {
             delegate: Tile {
                 id: tile
                 required property var modelData
+                required property int index
                 tileId: modelData.tileId
+                order: index
+                shown: cc.isOpen
+                // Caffeine and focus are plain switches: ink when on, no detail view.
+                active: (modelData.tileId === Enums.TileId.Caffeine || modelData.tileId === Enums.TileId.Focus) && body.item !== null && body.item.on === true
+                hasDetail: modelData.tileId !== Enums.TileId.Caffeine && modelData.tileId !== Enums.TileId.Focus
                 title: modelData.title
                 spec: modelData
                 x: modelData.column * (cc.cellWidth + cc.gap)
                 y: modelData.row * (cc.cellHeight + cc.gap)
                 width: modelData.columnSpan * cc.cellWidth + (modelData.columnSpan - 1) * cc.gap
                 height: modelData.rowSpan * cc.cellHeight + (modelData.rowSpan - 1) * cc.gap
-                opacity: 1 - detail.progress
+                opacity: (1 - detail.progress) * appear
                 onActivated: tid => cc.activate(tid, Qt.rect(x, y, width, height))
 
                 Loader {
+                    id: body
                     anchors.fill: parent
                     sourceComponent: cc.componentFor(tile.tileId)
                     onLoaded: item.expanded = false

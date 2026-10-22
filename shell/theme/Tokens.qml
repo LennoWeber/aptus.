@@ -46,7 +46,7 @@ Singleton {
     // shape
     readonly property int radiusWindow: 10
     readonly property int radiusDropdown: 10
-    readonly property int radiusTile: 16
+    readonly property int radiusTile: 18
     readonly property int radiusPill: 999
 
     // spacing
@@ -60,6 +60,8 @@ Singleton {
     readonly property int durFast: 140
     readonly property int durSlow: 260
     readonly property int feedbackBudgetMs: 50
+    readonly property int staggerMs: 40         // delay between tiles when the control center opens
+    readonly property real tileLift: 3          // px a tile rises on hover
 
     // typography
     property string fontUi: "Inter"          // load() picks "Inter Variable" or "Inter", whichever is installed

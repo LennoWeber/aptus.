@@ -798,3 +798,8 @@ Alle neuen Funktionen haben einen Platzhalter-Körper (`throw new Error("not imp
 **Notch:** Lennos Antworten auf die acht Fragen (oder „nimm die Vorschläge“), dann Phase 1b (Mockup) und Phase 2. Sonst:
 
 Alle Bausteine 1 bis 9 aus dem Handoff sind gebaut. Alltagsgebrauch auf dem Laptop, Rückmeldung zu den „Am Gerät offen“-Punkten der Bausteine, dann Feinschliff. README-Screenshot wäre ein guter Abschluss.
+
+## Redesign „warm UI“ (22. Okt., Entwurf im Design-Canvas von Lenno abgenommen)
+Entwurf (nur Warm-Palette, Off-white verworfen): Leiste mit Claude-Usage-Ring, Launcher mit gleitender Modus-Anzeige und gestaffelten Zeilen, Control Center mit gestaffeltem Auftritt, Hover-Anheben, Ink-Kacheln für Schalter und Öffnen-Pfeil, Detailansichten (Network, Calendar, Media, AI usage) füllen die ganze Fläche ohne leere Bereiche.
+- **Abschnitt R1 (Control Center, gebaut, nicht auf dem Laptop getestet, kein qmllint in der Cloud-Umgebung):** `Tile.qml` (Auftritt mit Stagger `Tokens.staggerMs`, Hover-Anheben `Tokens.tileLift` = 3 px, Druck-Skalierung, Ink-Füllung bei `active`, Öffnen-Pfeil bei Hover), `StatusGlyph` neue Form `open`, Caffeine/Focus auf Ink mit grünem Punkt, `DetailFrame` (Zurück-Pille, größerer Radius), `radiusTile` 18.
+- **Offen:** R2 Leiste mit Usage-Icon und Dropdown, R3 Launcher (Pille, Stagger, Öffnen), R4 Detailansichten auf voller Fläche (Network, Calendar, Media, AI usage; `detailWidth/Height` in `ControlCenter.qml` erst dann vergrößern).

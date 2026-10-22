@@ -40,7 +40,7 @@ Item {
         y: frame.originRect.y + (frame.targetRect.y - frame.originRect.y) * frame.progress
         width: frame.originRect.width + (frame.targetRect.width - frame.originRect.width) * frame.progress
         height: frame.originRect.height + (frame.targetRect.height - frame.originRect.height) * frame.progress
-        cornerRadius: Tokens.radiusTile
+        cornerRadius: Tokens.radiusTile + 4
         elevated: true
 
         MouseArea { anchors.fill: parent }
@@ -59,13 +59,16 @@ Item {
                 height: 40
                 Rectangle {
                     anchors.fill: parent
-                    radius: 10
+                    radius: height / 2
                     color: Tokens.surfaceAlt
-                    opacity: backArea.pressed ? 1 : backArea.containsMouse ? 0.7 : 0
+                    border.width: 1
+                    border.color: Tokens.line
+                    opacity: backArea.pressed ? 1 : backArea.containsMouse ? 0.9 : 0.55
                     Behavior on opacity { NumberAnimation { duration: Tokens.durFast } }
                 }
                 StatusGlyph {
-                    x: 12
+                    x: 12 - 2 * (backArea.containsMouse ? 1 : 0)
+                    Behavior on x { NumberAnimation { duration: Tokens.durFast; easing.type: Easing.BezierSpline; easing.bezierCurve: [0.2, 0, 0, 1, 1, 1] } }
                     anchors.verticalCenter: parent.verticalCenter
                     kind: "back"
                     color: Tokens.ink
