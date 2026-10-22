@@ -4,6 +4,7 @@ singleton Hotkeys 1.0 Hotkeys.qml
 singleton Compositor 1.0 Compositor.qml
 singleton Notifications 1.0 Notifications.qml
 singleton Wallpaper 1.0 Wallpaper.qml
+singleton ThemeSource 1.0 ThemeSource.qml
 singleton Clipboard 1.0 Clipboard.qml
 singleton Session 1.0 Session.qml
 singleton Idle 1.0 Idle.qml

@@ -4,7 +4,7 @@ Aktuelle Phase: **7 – Implementierung, alle geplanten Abschnitte gebaut (7a bi
 
 Zweiter Phasenablauf (neue Funktion „Notch“, ab 22. Okt.): **Phase 1 (Plan) geschrieben, wartet auf Lennos Entscheidungen**, siehe Abschnitt „Notch“ weiter unten.
 
-Dritter Phasenablauf (neue Funktion „Bild-Theming“, 22. Okt.): **Phase 1 und 2 erledigt, wartet auf „weiter“ für Phase 3**, siehe Abschnitt „Bild-Theming“ weiter unten.
+Dritter Phasenablauf (neue Funktion „Bild-Theming“, 22. Okt.): **Phase 1 bis 3 erledigt, wartet auf „weiter“ für Phase 4**, siehe Abschnitt „Bild-Theming“ weiter unten.
 
 ## Ziel
 
@@ -747,7 +747,7 @@ Review: Phase 1 hat kein Review (laut Skill).
 **Phasenplan:**
 - Phase 1: Plan und Mockup. **Erledigt.**
 - Phase 2: Strukturen. **Erledigt** (siehe unten).
-- Phase 3: Signaturen: `ThemeSource` (Farben lesen, als Singleton), `Tokens.applyStyle`, `Tokens.styleColors`, Laden der drei Einstellungen in `AppSettings`.
+- Phase 3: Signaturen. **Erledigt** (siehe unten).
 - Phase 4: TODO-Markierungen: Leiste (`Tokens.bar`), Kacheln (`wash1..4`), Control Center/Launcher (`glass`, `grain`), Dropdown-Auswahl (`selection`), Lockscreen und Greeter, Settings-Vorschau.
 - Phase 5: Probe-Implementierung (Rechnung als Node-Test gegen die Mockup-Werte, dann auf dem Laptop mit echten Bildern), danach zurückgesetzt.
 - Phase 6: Invarianten: beide Stile haben dieselben Schlüssel, Tinte auf Fläche mindestens 4,5 zu 1, Quelle `wallpaper` ohne lesbares Bild fällt auf `fallbackColors` zurück, nie ohne Farben.
@@ -764,9 +764,19 @@ Review: Phase 1 hat kein Review (laut Skill).
 
 **Review Phase 2** (ohne Sub-Agenten, per Prüfskript): JSON gültig; jeder Schema-Pfad existiert in `settings.json`, keine doppelten Ids; die drei neuen Werte stehen in ihren Optionen; beide Stile haben dieselben Schlüssel; keine neuen Enum-Wertkollisionen (die schon vorhandenen, z. B. `None` in mehreren Enums, sind älter und unverändert); keine Funktion in den neuen Dateien. Nicht prüfbar: `qmllint` und Quickshell sind hier nicht installiert, ob `readonly property WallpaperColors colors: WallpaperColors {}` im Singleton und `import qs.models` in `Wallpaper.qml` bei dir durchgehen, zeigt erst der Lauf (Phase 5).
 
+### Phase 3: Signaturen (erledigt)
+Alle neuen Funktionen haben einen Platzhalter-Körper (`throw new Error("not implemented")`).
+- Neuer Singleton `shell/services/ThemeSource.qml` (in `qmldir` eingetragen): `read(path)` (Bildfarben lesen, setzt `Wallpaper.colors`), `extract(rgba, options)` (rein, wählt vier Farben, ohne Quickshell testbar), `fallbackEntries(style)`.
+- `Tokens.qml`: `refreshTheme()` (Quelle wählen, berechnen, anwenden), `styleColors(style, entries, tone)` (rein, liefert alle Farben des Stils), `applyStyle(colors)`, `nightShift(c, blend)` (Nachtlicht auch auf Stilfarben), Farbrechnung `hexToHsl`, `hslToHex`, `shiftHue`.
+- `AppSettings.qml` bekommt in dieser Phase keine Signatur: Das Laden der drei Einstellungen geschieht in der bestehenden Funktion `refreshViews()` (Nachschlagetabellen wie bei `aiDockEdge`). Das ist Logik in einem bestehenden Körper und gehört deshalb als TODO in Phase 4 und in die Umsetzung (Phase 7).
+
+**Review Phase 3** (ohne Sub-Agenten, per Prüfskript und Diff): Der Diff enthält nur hinzugefügte Zeilen (38), keine bestehende Funktion wurde verändert. Tokens hat 12 Funktionen, davon 7 neue mit Platzhalter; ThemeSource 3 von 3. Kein Funktionsname kollidiert mit einer Property. Keine Aufrufe, keine neuen Properties oder Typen.
+- Notiert für Phase 5: Reihenfolge der Berechnung klären. Vorschlag: `styleColors` mit Tagfarben, danach `nightShift` mit `Tokens.blend`. `applyPalette(blend)` darf bei Quelle ungleich Standard die Stilfarben nicht überschreiben.
+- Nicht prüfbar: `qmllint`/Quickshell nicht installiert; ob `refreshTheme` als Funktionsname im Singleton `Tokens` mit `applyPalette` und `load` sauber zusammenspielt, zeigt der Lauf.
+
 ## Nächster Schritt
 
-**Bild-Theming:** Lennos „weiter“, dann Phase 3 (Signaturen).
+**Bild-Theming:** Lennos „weiter“, dann Phase 4 (TODO-Markierungen).
 
 **Notch:** Lennos Antworten auf die acht Fragen (oder „nimm die Vorschläge“), dann Phase 1b (Mockup) und Phase 2. Sonst:
 

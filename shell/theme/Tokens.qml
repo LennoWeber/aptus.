@@ -143,4 +143,41 @@ Singleton {
         default: return ink
         }
     }
+
+    // The colour theme from the source selected by themeSource: the neutral palette, the fallback colours of the style, or
+    // the colours of the wallpaper. Called when a setting or the wallpaper colours change.
+    function refreshTheme(): void {
+        throw new Error("not implemented")
+    }
+
+    // Pure: the shell colours for a style from the source colours (entries as in WallpaperColors.entries, at least four).
+    // Returns { paper, surface, line, ink, inkSoft, inkFaint, selection, bar, barInk, glass, grain, wash: [4], signal: { ok, warn, critical } }
+    // with every colour as "#RRGGBB" (glass as "#AARRGGBB"), computed from themeStyles in tokens.json.
+    function styleColors(style: int, entries: var, tone: int): var {
+        throw new Error("not implemented")
+    }
+
+    // Write the result of styleColors into the colour properties.
+    function applyStyle(colors: var): void {
+        throw new Error("not implemented")
+    }
+
+    // Move a colour toward the warm night tint by `blend` (0 day .. 1 night), so the night light also works on style colours.
+    function nightShift(c: color, blend: real): color {
+        throw new Error("not implemented")
+    }
+
+    // Colour maths for styleColors.
+    function hexToHsl(hex: string): var {        // { h: 0..360, s: 0..100, l: 0..100 }
+        throw new Error("not implemented")
+    }
+
+    function hslToHex(h: real, s: real, l: real): string {
+        throw new Error("not implemented")
+    }
+
+    // Hue h moved toward `target` by the fraction `amount`, along the shorter way round the colour wheel.
+    function shiftHue(h: real, target: real, amount: real): real {
+        throw new Error("not implemented")
+    }
 }
