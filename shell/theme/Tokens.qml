@@ -27,6 +27,22 @@ Singleton {
     property color warn: "#B7791F"
     property color critical: "#B3382C"
 
+    // colour theming (settings appearance.themeSource, appearance.style, bar.tone); the defaults reproduce the standard palette
+    property int themeSource: Enums.ThemeSource.Standard
+    property int themeStyle: Enums.ThemeStyle.Watercolor
+    property int barTone: Enums.BarTone.OffWhite
+    property var styles                       // raw themeStyles of tokens.json
+    property var extraction                   // raw themeExtraction of tokens.json
+    property color bar: "#F4F3EF"             // top bar fill
+    property color barInk: "#1C2127"          // text and icons on the bar
+    property color wash1: "#ECEAE4"           // tile tints, taken from the four source colours
+    property color wash2: "#ECEAE4"
+    property color wash3: "#ECEAE4"
+    property color wash4: "#ECEAE4"
+    property color selection: "#ECEAE4"       // selected row
+    property color glass: "#B8FBFAF7"         // fill of the blurred surfaces (Control Center, launcher)
+    property string grain: "none"             // "none" | "paper" | "weave", only on large surfaces
+
     // shape
     readonly property int radiusWindow: 10
     readonly property int radiusDropdown: 10

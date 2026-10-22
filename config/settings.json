@@ -5,10 +5,13 @@
   "appearance": {
     "paletteFollowsNightLight": true,
     "blurRadius": 18,
-    "animationSpeed": "normal"
+    "animationSpeed": "normal",
+    "themeSource": "standard",
+    "style": "watercolor"
   },
   "bar": {
     "height": 28,
+    "tone": "offwhite",
     "clockFormat": "24h",
     "showSeconds": false,
     "showDate": true,

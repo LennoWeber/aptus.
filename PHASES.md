@@ -4,6 +4,8 @@ Aktuelle Phase: **7 – Implementierung, alle geplanten Abschnitte gebaut (7a bi
 
 Zweiter Phasenablauf (neue Funktion „Notch“, ab 22. Okt.): **Phase 1 (Plan) geschrieben, wartet auf Lennos Entscheidungen**, siehe Abschnitt „Notch“ weiter unten.
 
+Dritter Phasenablauf (neue Funktion „Bild-Theming“, 22. Okt.): **Phase 1 und 2 erledigt, wartet auf „weiter“ für Phase 3**, siehe Abschnitt „Bild-Theming“ weiter unten.
+
 ## Ziel
 
 Eine komplette, eigenständige Desktop-Shell für **Fedora + Hyprland** (1920x1080), die professionell aussieht, sich ruhig und hochwertig anfühlt und gestalterisch eigene Wege geht. Am Ende: öffentliches GitHub-Repo mit Installer. UI-Sprache: Englisch.
@@ -724,7 +726,47 @@ Rückmeldung: Kontrollzentrum gut; Sound-Kachel zeigte „Muted“ über dem Reg
 
 Review: Phase 1 hat kein Review (laut Skill).
 
+## Bild-Theming (neue Funktion, dritter Phasenablauf, 22. Okt.)
+
+**Ziel (Lenno):** Weg von festen „Material You“-artigen Paletten. Gewünscht ist ein **Stil**, den man einstellt: **Wasserfarbe** oder **Öl**. Die Farben kommen automatisch aus dem Hintergrundbild, der Stil dämpft sie und macht sie weich. Weiß wird Off-White oder Beige. Gemeint ist die Stimmung gedeckter Outdoor- und Laufmode-Farben: Oliv, Khaki, Stein, Salbei, Tonerde, wie bei Camo-Tönen, bedeckt statt bunt. Die **Leiste** ist einstellbar (Off-White oder mit Bildfarbe getönt). „Farbe nur funktional“ gilt für Icons und Knöpfe, die Shell selbst darf Farbe tragen. Aussehen und Gefühl vor Umfang.
+
+**Entscheidung gegenüber früher:** Die Vorgabe „Palette neutral“ gilt nur noch für Icons und Knöpfe. Das Farbthema aus dem Notch-Plan (`appearance.palette`, neutral | wallpaper) ist damit durch diese Umsetzung ersetzt. Es wurde nichts aus tacit übernommen (GPL-3.0), Verfahren und Werte sind eigene.
+
+**Vorlage:** Live-Mockup „shell. Theming“ (Artifact in der Claude-Sitzung vom 22. Okt.). Seine Zahlen stehen jetzt als Parameter in `theme/tokens.json` unter `themeStyles`. Lenno hat das Mockup freigegeben („genauso einbauen“).
+
+**Verfahren:**
+1. Quelle: Bild (`wallpaper`), eingebaute Farben des Stils (`fixed`, `fallbackColors`) oder die bisherige neutrale Palette (`standard`, Standardwert, Aussehen bleibt wie bisher).
+2. Aus dem Bild vier deutlich verschiedene Farben lesen (verkleinerte Kopie, Clustern, Gewichtung nach Menge und Sättigung; `themeExtraction`).
+3. Der Stil rechnet um: Sättigung stark runter, Wasserfarbe heller und leicht kühl (Zielton 205°), Öl dichter und wärmer (Zielton 35°). Daraus Papier, Fläche, Linie, Tinte, drei Textstufen, vier Kachel-Lasuren, Auswahl, Glasfüllung, Leiste.
+4. `ok`, `warn`, `critical` bleiben feste, gedämpfte Pigmente je Stil.
+5. Korn nur auf großen Flächen: Papier (Wasserfarbe), Leinwandgewebe (Öl). Nie auf Leiste und Dropdowns.
+6. Nachtlicht: Die Mischung Tag/Nacht (`Tokens.blend`) wirkt weiter auf das Ergebnis (Plan für Phase 3: erst Stilfarben berechnen, dann Nachtlicht darüber).
+
+**Einstellungen (neu):** `appearance.themeSource` (standard | fixed | wallpaper), `appearance.style` (watercolor | oil), `bar.tone` (offwhite | tinted). Alle drei laufen durch das Speichern mit 15 Sekunden Rückfrage.
+
+**Phasenplan:**
+- Phase 1: Plan und Mockup. **Erledigt.**
+- Phase 2: Strukturen. **Erledigt** (siehe unten).
+- Phase 3: Signaturen: `ThemeSource` (Farben lesen, als Singleton), `Tokens.applyStyle`, `Tokens.styleColors`, Laden der drei Einstellungen in `AppSettings`.
+- Phase 4: TODO-Markierungen: Leiste (`Tokens.bar`), Kacheln (`wash1..4`), Control Center/Launcher (`glass`, `grain`), Dropdown-Auswahl (`selection`), Lockscreen und Greeter, Settings-Vorschau.
+- Phase 5: Probe-Implementierung (Rechnung als Node-Test gegen die Mockup-Werte, dann auf dem Laptop mit echten Bildern), danach zurückgesetzt.
+- Phase 6: Invarianten: beide Stile haben dieselben Schlüssel, Tinte auf Fläche mindestens 4,5 zu 1, Quelle `wallpaper` ohne lesbares Bild fällt auf `fallbackColors` zurück, nie ohne Farben.
+- Phase 7: Umsetzung und Test auf dem Laptop.
+
+### Phase 2: Strukturen (erledigt)
+- `Enums.qml`: `ThemeSource { Standard, Fixed, FromWallpaper }`, `ThemeStyle { Watercolor, Oil }`, `BarTone { OffWhite, Tinted }`. „Neutral“ wäre mit `Severity.Neutral` kollidiert, deshalb `Standard`.
+- `config/settings.json` und `config/settings-schema.json`: die drei Einstellungen, Standardwerte `standard`, `watercolor`, `offwhite`. Art `choice`, kein neuer Editor nötig.
+- `theme/tokens.json`: `themeStyles` (watercolor, oil, gleiche 20 Schlüssel) und `themeExtraction`.
+- `Tokens.qml`: Properties `themeSource`, `themeStyle`, `barTone`, `styles`, `extraction`, `bar`, `barInk`, `wash1..4`, `selection`, `glass`, `grain`. Die Standardwerte entsprechen der bisherigen Palette.
+- Neu: `shell/models/WallpaperColors.qml` (`path`, `entries`, `ready`, `failed`), in `qmldir` eingetragen. `Wallpaper.qml` hält `colors`.
+- `AppSettings.qml`: `themeSource`, `themeStyle`, `barTone`.
+- Nichts verdrahtet: `Bar.qml` und alle Kacheln nutzen weiter die alten Tokens, das Aussehen ändert sich noch nicht.
+
+**Review Phase 2** (ohne Sub-Agenten, per Prüfskript): JSON gültig; jeder Schema-Pfad existiert in `settings.json`, keine doppelten Ids; die drei neuen Werte stehen in ihren Optionen; beide Stile haben dieselben Schlüssel; keine neuen Enum-Wertkollisionen (die schon vorhandenen, z. B. `None` in mehreren Enums, sind älter und unverändert); keine Funktion in den neuen Dateien. Nicht prüfbar: `qmllint` und Quickshell sind hier nicht installiert, ob `readonly property WallpaperColors colors: WallpaperColors {}` im Singleton und `import qs.models` in `Wallpaper.qml` bei dir durchgehen, zeigt erst der Lauf (Phase 5).
+
 ## Nächster Schritt
+
+**Bild-Theming:** Lennos „weiter“, dann Phase 3 (Signaturen).
 
 **Notch:** Lennos Antworten auf die acht Fragen (oder „nimm die Vorschläge“), dann Phase 1b (Mockup) und Phase 2. Sonst:
 

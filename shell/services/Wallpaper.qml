@@ -2,11 +2,15 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import qs.models
 
 // The wallpaper: the shell draws it itself (WallpaperLayer), so no wallpaper daemon is needed.
 // The chosen file is remembered in ~/.local/state/aptus/wallpaper; the folder to pick from is a setting.
 Singleton {
     id: root
+
+    // colours read from `current`, the source of the picture-based theme
+    readonly property WallpaperColors colors: WallpaperColors {}
 
     property string directory           // settings wallpaper.directory, empty = ~/Pictures/Wallpapers
     readonly property string folder: directory || (Quickshell.env("HOME") + "/Pictures/Wallpapers")

@@ -61,4 +61,15 @@ QtObject {
 
     // Screen edges (edge swipes).
     enum Edge { Top, Left, Right, Bottom }
+
+    // Where the shell colours come from (settings appearance.themeSource: "standard" | "fixed" | "wallpaper").
+    // Standard is the neutral palette of theme/tokens.json, Fixed the built-in colours of the chosen style,
+    // FromWallpaper the colours read from the picture. ("Neutral" is taken by Severity.)
+    enum ThemeSource { Standard, Fixed, FromWallpaper }
+
+    // How colours are softened (settings appearance.style: "watercolor" | "oil").
+    enum ThemeStyle { Watercolor, Oil }
+
+    // Colour of the top bar (settings bar.tone: "offwhite" | "tinted").
+    enum BarTone { OffWhite, Tinted }
 }

@@ -38,6 +38,9 @@ Scope {
     property string aiDefaultProviderId
     property int aiDockEdge            // Enums.DockEdge
     property int aiDockWidthPx
+    property int themeSource           // Enums.ThemeSource, appearance.themeSource, "standard" by default
+    property int themeStyle            // Enums.ThemeStyle, appearance.style, "watercolor" by default
+    property int barTone               // Enums.BarTone, bar.tone, "offwhite" by default
     property bool lockShowNotificationContent
     property int lockAfterMin          // system.lockAfterMin, 5
     property int screenOffAfterMin     // system.screenOffAfterMin, 10, always after the lock
