@@ -4,7 +4,7 @@ Aktuelle Phase: **7 – Implementierung, alle geplanten Abschnitte gebaut (7a bi
 
 Zweiter Phasenablauf (neue Funktion „Notch“, ab 22. Okt.): **Phase 1 (Plan) geschrieben, wartet auf Lennos Entscheidungen**, siehe Abschnitt „Notch“ weiter unten.
 
-Dritter Phasenablauf (neue Funktion „Bild-Theming“, 22. Okt.): **Phase 1 bis 4 erledigt, wartet auf „weiter“ für Phase 5**, siehe Abschnitt „Bild-Theming“ weiter unten.
+Dritter Phasenablauf (neue Funktion „Bild-Theming“, 22. Okt.): **Phase 1 bis 5 erledigt, wartet auf „weiter“ für Phase 6**, siehe Abschnitt „Bild-Theming“ weiter unten.
 
 ## Ziel
 
@@ -749,8 +749,8 @@ Review: Phase 1 hat kein Review (laut Skill).
 - Phase 2: Strukturen. **Erledigt** (siehe unten).
 - Phase 3: Signaturen. **Erledigt** (siehe unten).
 - Phase 4: TODO-Markierungen. **Erledigt** (siehe unten).
-- Phase 5: Probe-Implementierung (Rechnung als Node-Test gegen die Mockup-Werte, dann auf dem Laptop mit echten Bildern), danach zurückgesetzt.
-- Phase 6: Invarianten: beide Stile haben dieselben Schlüssel, Tinte auf Fläche mindestens 4,5 zu 1, Quelle `wallpaper` ohne lesbares Bild fällt auf `fallbackColors` zurück, nie ohne Farben.
+- Phase 5: Probe-Implementierung. **Erledigt** (Rechnung mit Node geprüft; Lauf mit echten Bildern bleibt für Phase 7 auf dem Laptop).
+- Phase 6: Invarianten: beide Stile haben dieselben Schlüssel, `fallbackColors` genau vier, `styleColors` liefert immer vier Lasuren, Kontrast Tinte auf Fläche mindestens 7 zu 1 und `inkSoft` auf Fläche und Lasur mindestens 4,5 zu 1, Quelle `wallpaper` ohne lesbares Bild fällt auf `fallbackColors` zurück (nie ohne Farben), `blend` und Mischanteile im Bereich 0 bis 1.
 - Phase 7: Umsetzung und Test auf dem Laptop.
 
 ### Phase 2: Strukturen (erledigt)
@@ -766,8 +766,8 @@ Review: Phase 1 hat kein Review (laut Skill).
 
 ### Phase 3: Signaturen (erledigt)
 Alle neuen Funktionen haben einen Platzhalter-Körper (`throw new Error("not implemented")`).
-- Neuer Singleton `shell/services/ThemeSource.qml` (in `qmldir` eingetragen): `read(path)` (Bildfarben lesen, setzt `Wallpaper.colors`), `extract(rgba, options)` (rein, wählt vier Farben, ohne Quickshell testbar), `fallbackEntries(style)`.
-- `Tokens.qml`: `refreshTheme()` (Quelle wählen, berechnen, anwenden), `styleColors(style, entries, tone)` (rein, liefert alle Farben des Stils), `applyStyle(colors)`, `nightShift(c, blend)` (Nachtlicht auch auf Stilfarben), Farbrechnung `hexToHsl`, `hslToHex`, `shiftHue`.
+- Neuer Singleton `shell/services/ThemeSource.qml` (in `qmldir` eingetragen): `read(path)` (Bildfarben lesen, setzt `Wallpaper.colors`), `extract(rgba, options)` (rein, wählt bis zu vier Farben, ohne Quickshell testbar). (`fallbackEntries` entfiel in Phase 5.)
+- `Tokens.qml`: `refreshTheme(entries)` (Quelle wählen, berechnen, anwenden; `entries` seit Phase 5), `styleColors(style, entries, tone)` (rein, liefert alle Farben des Stils), `applyStyle(colors)`, `nightShift(c, blend)` (Nachtlicht auch auf Stilfarben), Farbrechnung `hexToHsl`, `hslToHex`, `shiftHue`.
 - `AppSettings.qml` bekommt in dieser Phase keine Signatur: Das Laden der drei Einstellungen geschieht in der bestehenden Funktion `refreshViews()` (Nachschlagetabellen wie bei `aiDockEdge`). Das ist Logik in einem bestehenden Körper und gehört deshalb als TODO in Phase 4 und in die Umsetzung (Phase 7).
 
 **Review Phase 3** (ohne Sub-Agenten, per Prüfskript und Diff): Der Diff enthält nur hinzugefügte Zeilen (38), keine bestehende Funktion wurde verändert. Tokens hat 12 Funktionen, davon 7 neue mit Platzhalter; ThemeSource 3 von 3. Kein Funktionsname kollidiert mit einer Property. Keine Aufrufe, keine neuen Properties oder Typen.
@@ -775,7 +775,7 @@ Alle neuen Funktionen haben einen Platzhalter-Körper (`throw new Error("not imp
 - Nicht prüfbar: `qmllint`/Quickshell nicht installiert; ob `refreshTheme` als Funktionsname im Singleton `Tokens` mit `applyPalette` und `load` sauber zusammenspielt, zeigt der Lauf.
 
 ### Phase 4: TODO-Markierungen (erledigt)
-23 Zeilen `TODO(phase 7, Bild-Theming): ...` in 19 Dateien (je höchstens zwei Zeilen), nur Kommentare:
+25 Zeilen `TODO(phase 7, Bild-Theming): ...` in 21 Dateien (je höchstens zwei Zeilen), nur Kommentare (23 in Phase 4, 2 in Phase 5 nachgezogen: `shell.qml`, `install.sh`):
 - **Ablauf:** `Tokens.load` (nach `applyPalette` `refreshTheme` aufrufen), `Tokens.applyPalette` (bei Stil als Quelle Stilfarben nicht überschreiben), `NightLightState.onBlendChanged` (`refreshTheme` statt `applyPalette`), `Wallpaper.setWallpaper` und Start (`ThemeSource.read`), `AppSettings.refreshViews` (drei Einstellungen laden und weitergeben).
 - **Leiste:** `Bar.qml` (Füllung `Tokens.bar`, Text `Tokens.barInk`), `BarItem`, `Clock`, `ContextZone`, `StatusGroup`, `WorkspaceStrip` (Text und Icons).
 - **Flächen:** `Tile.qml` (`wash1..4` nach Kachelposition), `ControlCenter.qml` und `Launcher.qml` (Schleier `Tokens.glass`, Korn), `Pill.qml` und `ListRow.qml` (`Tokens.selection`), `LockSurface.qml` (Glas, Korn), `GreeterSurface.qml` (Entscheidung offen, siehe unten).
@@ -783,7 +783,7 @@ Alle neuen Funktionen haben einen Platzhalter-Körper (`throw new Error("not imp
 
 **Review Phase 4** (ohne Sub-Agenten): Der Diff hat 23 hinzugefügte Zeilen, 0 entfernte, und jede hinzugefügte Zeile ist ein TODO-Kommentar. Kein Code, keine Typen, keine Signaturen verändert.
 
-**Lücken, gemeldet statt still behoben (gehören in Phase 2/3, Phase 5 bestätigt sie):**
+**Lücken, gemeldet statt still behoben (in Phase 5 geklärt und nachgezogen, siehe dort):**
 1. **`surfaceAlt` fehlt im Stil.** 25 Dateien nutzen `Tokens.surfaceAlt`, aber `themeStyles` und das Ergebnis von `styleColors` kennen keinen Wert dafür (Phase 2 und 3). Vorschlag: aus Papier und Linie mischen (`mix(paper, line, 0.5)`), ohne neues Token.
 2. **`barInkSoft` und `barInkFaint` fehlen.** Leistentext braucht gedämpfte Stufen auf der (getönten) Leiste. Vorschlag: als Mischung `mix(barInk, bar, 0.4 und 0.6)` im Code, ohne neue Tokens. Alternative: zwei neue Tokens (Phase 2).
 3. **Kachel-Lasur nach Position:** `Tile` hat keine Property dafür. Vorschlag: Ausdruck `(column + row) % 4` aus `TileSpec`, ohne neue Property. Alternative: `washIndex` in `TileSpec` (Phase 2).
@@ -791,9 +791,24 @@ Alle neuen Funktionen haben einen Platzhalter-Körper (`throw new Error("not imp
 5. **Greeter:** Er hat keine Nutzereinstellungen. Entscheidung in Phase 5: `standard` oder Stil mit `fallbackColors`.
 6. **Korn-Bilder:** `theme/grain-paper.png` und `theme/grain-weave.png` müssen noch erzeugt werden (Phase 7, kachelbar, klein).
 
+### Phase 5: Probe-Implementierung (erledigt, wieder zurückgesetzt)
+**Umfang und Grenzen:** Auf einem Wegwerf-Stand (Basis `b0b3a33`) wurden 8 Platzhalter gefüllt (`Tokens.shiftHue`, `hexToHsl`, `hslToHex`, `nightShift`, `styleColors`, `applyStyle`, `ThemeSource.extract`, `fallbackEntries`). Ausgeführt wurde nur die reine Rechnung mit Node (die Funktionskörper aus den QML-Dateien gezogen) gegen 10 künstliche Bilder (Dünen, Bucht, Wald wie im Mockup, Schwarz, Weiß, Grauverlauf, Neonrot, reines Blau, Zufallsrauschen, dunkles Bild), je zwei Stile und zwei Leistentöne. Nicht prüfbar: Quickshell, `qmllint`, der ImageMagick-Aufruf, Aussehen und Gefühl. `ThemeSource.read` und `Tokens.refreshTheme` wurden nicht probiert (brauchen Quickshell). Danach wurde alles zurückgesetzt, im Code steht keine Probe-Implementierung; das Testskript liegt nicht im Repo.
+
+**Was die Rechnung bestätigt hat:** Hex und HSL laufen ohne Verlust hin und zurück, `shiftHue` wickelt über 0°/360° richtig, bei allen 10 Bildern keine ungültigen Werte. `extract` braucht 3 bis 60 ms je Bild (erster Lauf mit Anlaufzeit). Kontrast, kleinster Wert über alle Läufe: Tinte auf Fläche 11,0; `inkSoft` auf Fläche 6,3 und auf Lasur 4,8 (nach Korrektur); `inkSoft` auf `surfaceAlt` 5,2; ok auf Fläche 5,6; critical 5,1; warn 3,8 (nur als Punkt mit Text). Bei der Nachtlicht-Verschiebung (`nightShift` bei 1) bleibt der Kontrast.
+
+**Lücken, zugeordnet und nachgezogen** (mit den Regeln der jeweiligen Phase):
+- Phase 2: (1) `inkSoft` Wasserfarbe von 36 auf 32 Prozent Helligkeit, weil es auf den Lasuren nur 4,24 zu 1 erreichte. (2) `barInkSoft` und `barInkFaint` als Tokens, dazu `barInkSoftMix` 0,15 und `barInkFaintMix` 0,4 in `themeStyles` (aus der Probe: mindestens 4,8 und 3,2 zu 1 auf der Leiste; 0,4 für weichen Text war zu blass, 3,2). (3) Pixel lesen braucht einen Prozess: `Process` `reader` in `ThemeSource` (ImageMagick `magick … txt:-`), `sampleWidth` 96 und `sampleStep` 1 (rund 5 000 Proben wie in der Probe). (4) Schema-Feld `visibleWhen` für `appearance.style` und `bar.tone`.
+- Phase 3: (5) `refreshTheme(entries)`: Tokens darf die Services nicht importieren (Importschleife, die Services importieren Tokens), der Aufrufer übergibt die Bildfarben. (6) `styleColors` nimmt null bis vier Einträge und füllt aus `fallbackColors` auf: flache Bilder (Schwarz, Weiß, Neonrot, reines Blau) liefern nur 1 bis 2 Farben. Deshalb entfällt `ThemeSource.fallbackEntries`. (7) `ThemeSource` braucht `import qs.theme`. (8) Die Rückgabe von `styleColors` führt `surfaceAlt` (Mitte aus Papier und Linie, Kontrast geprüft), `barInkSoft`, `barInkFaint` auf.
+- Phase 4: (9) `shell.qml` ist die Verdrahtungsstelle (Einstellungen und `Wallpaper.colors` → `Tokens`, dann `refreshTheme`). (10) `install.sh`: ImageMagick als Paket. TODO-Texte an Leiste, Settings, Tokens und AppSettings angepasst.
+
+**Offen:**
+- **Greeter:** Standard (kein Bild vor dem Login). Bleibt so, solange Lenno nichts anderes sagt.
+- **Rauschen:** Bei reinem RGB-Rauschen sinkt der Kontrast von warn auf der Lasur auf 2,36 zu 1. Das ist kein realistisches Bild, und ein Warn-Punkt steht immer mit Text.
+- **Korn-Bilder** noch zu erzeugen (Phase 7). `ThemeSource.read` und die Verdrahtung sind erst am Laptop prüfbar.
+
 ## Nächster Schritt
 
-**Bild-Theming:** Lennos „weiter“, dann Phase 5 (Probe-Implementierung, danach zurückgesetzt).
+**Bild-Theming:** Lennos „weiter“, dann Phase 6 (Invarianten).
 
 **Notch:** Lennos Antworten auf die acht Fragen (oder „nimm die Vorschläge“), dann Phase 1b (Mockup) und Phase 2. Sonst:
 

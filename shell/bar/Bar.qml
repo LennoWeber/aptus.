@@ -141,7 +141,7 @@ PanelWindow {
             StatusGlyph {
                 anchors.verticalCenter: parent.verticalCenter
                 kind: "sliders"
-                // TODO(phase 7, Bild-Theming): text and icons on the bar use Tokens.barInk; soft and faint variants are mixes of barInk and bar.
+                // TODO(phase 7, Bild-Theming): text and icons on the bar use Tokens.barInk; secondary text barInkSoft, inactive icons barInkFaint.
                 color: Tokens.ink
             }
         }

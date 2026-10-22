@@ -21,6 +21,8 @@ ShellRoot {
     id: root
 
     AppSettings { id: settingsObj }
+    // TODO(phase 7, Bild-Theming): when the theme settings, the wallpaper or Wallpaper.colors change: set Tokens.themeSource, themeStyle and barTone from
+    //     settingsObj, then call Tokens.refreshTheme(Wallpaper.colors.entries). Tokens cannot import the services itself.
     // The compositor draws the blur; the setting sets its size and passes (applied now and on every change).
     readonly property int blurSetting: settingsObj.get("appearance.blurRadius") ?? 18
     onBlurSettingChanged: applyBlur()

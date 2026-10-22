@@ -49,6 +49,7 @@ check_fedora() {
 }
 
 # Every package aptus uses at run time (the greeter adds cage, see install_greeter).
+# TODO(phase 7, Bild-Theming): add ImageMagick (`magick`), ThemeSource reads the wallpaper colours with it.
 REQUIRED_PACKAGES=(quickshell hyprsunset brightnessctl playerctl grim slurp wl-clipboard cliphist curl
     power-profiles-daemon NetworkManager iio-sensor-proxy wf-recorder libnotify python3)
 COPR_REPO=lionheartp/Hyprland   # has quickshell, hyprsunset and cliphist for Fedora

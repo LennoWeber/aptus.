@@ -39,6 +39,8 @@ Singleton {
     property color wash2: "#ECEAE4"
     property color wash3: "#ECEAE4"
     property color wash4: "#ECEAE4"
+    property color barInkSoft: "#5A616B"      // secondary text on the bar: a mix of barInk and bar (barInkSoftMix)
+    property color barInkFaint: "#8D939B"     // inactive icons on the bar (barInkFaintMix)
     property color selection: "#ECEAE4"       // selected row
     property color glass: "#B8FBFAF7"         // fill of the blurred surfaces (Control Center, launcher)
     property string grain: "none"             // "none" | "paper" | "weave", only on large surfaces
@@ -96,7 +98,7 @@ Singleton {
             console.error("aptus: cannot read tokens.json (" + e + "), using built-in day colours")
             return
         }
-        // TODO(phase 7, Bild-Theming): then call refreshTheme(); also read themeStyles and themeExtraction from the file. The palette stays the Standard source.
+        // TODO(phase 7, Bild-Theming): read themeStyles and themeExtraction from the file; the shell root then calls refreshTheme(entries). The palette stays the Standard source.
         applyPalette(blend)
     }
 
@@ -147,13 +149,15 @@ Singleton {
     }
 
     // The colour theme from the source selected by themeSource: the neutral palette, the fallback colours of the style, or
-    // the colours of the wallpaper. Called when a setting or the wallpaper colours change.
-    function refreshTheme(): void {
+    // the colours of the wallpaper. `entries` are the wallpaper colours (WallpaperColors.entries; empty for Fixed or when the
+    // picture cannot be read). Tokens does not import the services, so the caller (shell.qml) passes them.
+    function refreshTheme(entries: var): void {
         throw new Error("not implemented")
     }
 
-    // Pure: the shell colours for a style from the source colours (entries as in WallpaperColors.entries, at least four).
-    // Returns { paper, surface, line, ink, inkSoft, inkFaint, selection, bar, barInk, glass, grain, wash: [4], signal: { ok, warn, critical } }
+    // Pure: the shell colours for a style from the source colours (entries as in WallpaperColors.entries, zero to four; missing
+    // ones come from the style's fallbackColors). Returns { paper, surface, surfaceAlt, line, ink, inkSoft, inkFaint, selection,
+    // bar, barInk, barInkSoft, barInkFaint, glass, grain, wash: [4], signal: { ok, warn, critical } }
     // with every colour as "#RRGGBB" (glass as "#AARRGGBB"), computed from themeStyles in tokens.json.
     function styleColors(style: int, entries: var, tone: int): var {
         throw new Error("not implemented")
