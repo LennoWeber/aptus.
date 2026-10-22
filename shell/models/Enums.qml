@@ -61,4 +61,7 @@ QtObject {
 
     // Screen edges (edge swipes).
     enum Edge { Top, Left, Right, Bottom }
+
+    // The three stages of the notch: a small pill at rest, one line of news, the opened sheet.
+    enum NotchStage { Rest, Alert, Open }
 }

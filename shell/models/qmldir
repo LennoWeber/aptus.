@@ -5,5 +5,6 @@ LauncherState 1.0 LauncherState.qml
 ShellState 1.0 ShellState.qml
 AppSettings 1.0 AppSettings.qml
 SettingsAppState 1.0 SettingsAppState.qml
+NotchState 1.0 NotchState.qml
 LockState 1.0 LockState.qml
 GreeterState 1.0 GreeterState.qml

@@ -11,6 +11,7 @@ Item {
     property string format: "24h"  // 24h | 12h
     property bool showSeconds
     property bool showDate: true
+    property int itemHeight: Tokens.barHeight  // the bar's height; the notch's sheet uses 40 for touch
     property var now: sysClock.date  // Date
     signal clicked()
 

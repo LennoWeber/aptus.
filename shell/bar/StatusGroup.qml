@@ -15,6 +15,7 @@ Item {
     property var caffeineState
     property var focusState
     property bool showBatteryPercent: true
+    property int itemHeight: Tokens.barHeight  // the bar's height; the notch's sheet uses 40 for touch
     signal itemClicked(int dropdownId, var anchorItem)
 
     implicitWidth: row.implicitWidth

@@ -1,0 +1,10 @@
+module qs.notch
+NotchHost 1.0 NotchHost.qml
+Notch 1.0 Notch.qml
+NotchShape 1.0 NotchShape.qml
+NotchRest 1.0 NotchRest.qml
+NotchAlert 1.0 NotchAlert.qml
+NotchSheet 1.0 NotchSheet.qml
+NotchMedia 1.0 NotchMedia.qml
+NotchButton 1.0 NotchButton.qml
+LevelBars 1.0 LevelBars.qml

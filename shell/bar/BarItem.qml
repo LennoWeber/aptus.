@@ -14,6 +14,7 @@ Item {
     property bool active
     property bool emphasis                         // semibold text (the wordmark)
     property int horizontalPadding: 8
+    property int itemHeight: Tokens.barHeight      // the bar's height; the notch's sheet uses 40 for touch
     default property alias content: contentRow.data
     signal clicked()
 

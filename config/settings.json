@@ -8,6 +8,7 @@
     "animationSpeed": "normal"
   },
   "bar": {
+    "style": "bar",
     "height": 28,
     "clockFormat": "24h",
     "showSeconds": false,
@@ -15,6 +16,14 @@
     "workspaceStyle": "numbers",
     "showBatteryPercent": true,
     "contextZoneEnabled": true
+  },
+  "notch": {
+    "look": "light",
+    "mediaWings": true,
+    "alerts": true,
+    "alertSeconds": 4,
+    "hoverOpen": false,
+    "reserveSpace": true
   },
   "launcher": {
     "defaultMode": "apps",

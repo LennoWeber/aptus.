@@ -23,6 +23,7 @@ Scope {
     property var powerMenu      // PowerMenu
     property var deviceMode     // DeviceModeState
     property var wallpaperPicker  // WallpaperPicker
+    property var notchState     // NotchState
 
     function toggleRotationLock(): void {
         deviceMode.setRotationLocked(!deviceMode.rotationLocked)

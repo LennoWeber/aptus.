@@ -2,7 +2,7 @@
   "note": "Describes how the settings app shows the values in settings.json. 'path' points into settings.json (defaults live there). 'advanced' entries are hidden until 'Show advanced' is switched on. Every entry is searchable from the launcher's Settings mode.",
   "categories": [
     { "id": "appearance", "title": "Appearance",      "iconName": "appearance" },
-    { "id": "bar",        "title": "Bar",             "iconName": "bar" },
+    { "id": "bar",        "title": "Bar & Notch",     "iconName": "bar" },
     { "id": "launcher",   "title": "Launcher",        "iconName": "launcher" },
     { "id": "ai",         "title": "AI",              "iconName": "ai" },
     { "id": "widgets",    "title": "Calendar & Weather", "iconName": "calendar" },
@@ -19,6 +19,13 @@
     { "id": "appearance.wallpaperDirectory", "category": "appearance", "title": "Wallpaper folder", "description": "Pictures to choose from. Empty means ~/Pictures/Wallpapers.", "kind": "text", "path": "wallpaper.directory", "advanced": false, "keywords": ["background", "folder", "pictures"] },
     { "id": "appearance.wallpaper", "category": "appearance", "title": "Wallpaper", "description": "Opens the wallpaper picker.", "kind": "action", "action": "wallpaper.open", "advanced": false, "keywords": ["background", "wallpaper"] },
 
+    { "id": "bar.style", "category": "bar", "title": "Top of the screen", "description": "Show the bar or the notch. Only one of them is shown. Saving asks you to confirm, and goes back by itself if you do not.", "kind": "choice", "path": "bar.style", "options": ["bar", "notch"], "advanced": false, "keywords": ["notch", "bar", "top", "island"] },
+    { "id": "notch.look", "category": "bar", "title": "Notch look", "description": "Light surface like the bar, or ink with light text. Only used when the notch is shown.", "kind": "choice", "path": "notch.look", "options": ["light", "ink"], "advanced": false, "keywords": ["notch", "dark", "colour", "color"] },
+    { "id": "notch.mediaWings", "category": "bar", "title": "Music in the notch", "description": "Cover and a small level display next to the time while something plays, and the player in the opened notch.", "kind": "toggle", "path": "notch.mediaWings", "advanced": false, "keywords": ["notch", "music", "media", "streaming", "player"] },
+    { "id": "notch.alerts", "category": "bar", "title": "Notch alerts", "description": "The notch widens for a moment for a new notification, a low battery, a finished timer and a new track.", "kind": "toggle", "path": "notch.alerts", "advanced": false, "keywords": ["notch", "notifications", "peek"] },
+    { "id": "notch.alertSeconds", "category": "bar", "title": "Alert time", "description": "How long an alert stays in the notch.", "kind": "number", "path": "notch.alertSeconds", "min": 2, "max": 10, "unit": "s", "advanced": true, "keywords": ["notch", "duration"] },
+    { "id": "notch.hoverOpen", "category": "bar", "title": "Open on hover", "description": "Also open the notch when the pointer rests on it. Click and touch always work.", "kind": "toggle", "path": "notch.hoverOpen", "advanced": false, "keywords": ["notch", "mouse"] },
+    { "id": "notch.reserveSpace", "category": "bar", "title": "Keep windows below the notch", "description": "On: windows start below the notch, as with the bar. Off: the notch floats over windows.", "kind": "toggle", "path": "notch.reserveSpace", "advanced": true, "keywords": ["notch", "space", "float", "reserve"] },
     { "id": "bar.clockFormat", "category": "bar", "title": "Clock format", "kind": "choice", "path": "bar.clockFormat", "options": ["24h", "12h"], "advanced": false, "keywords": ["time"] },
     { "id": "bar.showSeconds", "category": "bar", "title": "Show seconds", "kind": "toggle", "path": "bar.showSeconds", "advanced": false, "keywords": ["clock"] },
     { "id": "bar.showDate", "category": "bar", "title": "Show date", "kind": "toggle", "path": "bar.showDate", "advanced": false, "keywords": ["clock", "date"] },
