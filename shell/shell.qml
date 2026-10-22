@@ -15,6 +15,7 @@ import qs.touch
 import qs.session
 import qs.osk
 import qs.wallpaper
+import qs.dock
 
 // Entry point of the aptus shell.
 ShellRoot {
@@ -75,8 +76,54 @@ ShellRoot {
         enabled: settingsObj.get("bar.contextZoneEnabled") !== false
     }
 
+    // The top of the screen: the bar, or the notch (setting bar.style). The bar is also the fallback when the
+    // notch fails to load, so the shell never ends up without one.
+    readonly property bool notchWanted: settingsObj.get("bar.style") === "notch"
+    readonly property bool showBar: !notchWanted || notchLoader.status === Loader.Error
+    NotchState {
+        id: notchObj
+        enabled: root.notchWanted && notchLoader.status === Loader.Ready
+        alertsEnabled: settingsObj.get("notch.alerts") !== false
+        alertHoldMs: (settingsObj.get("notch.alertSeconds") || 4) * 1000
+        mediaWingsEnabled: settingsObj.get("notch.mediaWings") !== false
+    }
+    Loader {
+        id: notchLoader
+        active: root.notchWanted
+        source: "notch/NotchHost.qml"
+        onLoaded: {
+            item.shellState = shellStateObj
+            item.appSettings = settingsObj
+            item.notchState = notchObj
+            item.audioState = audioObj
+            item.networkState = networkObj
+            item.bluetoothState = bluetoothObj
+            item.batteryState = batteryObj
+            item.nightLightState = nightLightObj
+            item.caffeineState = caffeineObj
+            item.focusState = focusObj
+            item.mediaState = mediaObj
+            item.timerState = timerObj
+            item.captureState = captureObj
+            item.dropdownRequested.connect((id, anchor, scr, offset) => dropdownHost.openAt(id, anchor, scr, offset))
+            item.tileRequested.connect(id => ipcObj.openTile(id))
+            item.controlCenterRequested.connect(() => ipcObj.openControlCenter())
+            item.launcherRequested.connect(() => launcherObj.toggle(Enums.LauncherMode.Apps))
+        }
+        onStatusChanged: if (status === Loader.Error) console.warn("aptus: the notch failed to load, the bar stays")
+    }
+    Binding { target: notchLoader.item; property: "workspaces"; value: Compositor.workspaceList; when: notchLoader.status === Loader.Ready }
+    Binding { target: notchLoader.item; property: "windowTitle"; value: Compositor.activeTitle; when: notchLoader.status === Loader.Ready }
+    Binding { target: notchLoader.item; property: "slidOut"; value: root.barAutoHidden && !root.barRevealed; when: notchLoader.status === Loader.Ready }
+
+    // The dock (setting dock.enabled).
     Variants {
-        model: Quickshell.screens
+        model: settingsObj.get("dock.enabled") === true ? Quickshell.screens : []
+        Dock { appSettings: settingsObj }
+    }
+
+    Variants {
+        model: root.showBar ? Quickshell.screens : []
 
         Bar {
             shellState: shellStateObj
@@ -246,6 +293,7 @@ ShellRoot {
         displayState: displayObj
         osd: osdObj
         shellState: shellStateObj
+        notchState: notchObj
     }
 
     LockState { id: lockObj; keyboardMode: settingsObj.lockKeyboardMode || "auto"; showNotificationContent: settingsObj.lockShowNotificationContent }

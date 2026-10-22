@@ -2,7 +2,7 @@
   "note": "Describes how the settings app shows the values in settings.json. 'path' points into settings.json (defaults live there). 'advanced' entries are hidden until 'Show advanced' is switched on. Every entry is searchable from the launcher's Settings mode.",
   "categories": [
     { "id": "appearance", "title": "Appearance",      "iconName": "appearance" },
-    { "id": "bar",        "title": "Bar & Notch",     "iconName": "bar" },
+    { "id": "bar",        "title": "Bar, Notch & Dock",     "iconName": "bar" },
     { "id": "launcher",   "title": "Launcher",        "iconName": "launcher" },
     { "id": "ai",         "title": "AI",              "iconName": "ai" },
     { "id": "widgets",    "title": "Calendar & Weather", "iconName": "calendar" },
@@ -32,6 +32,9 @@
     { "id": "bar.workspaceStyle", "category": "bar", "title": "Workspace style", "kind": "choice", "path": "bar.workspaceStyle", "options": ["numbers", "dots"], "advanced": false, "keywords": ["workspaces"] },
     { "id": "bar.showBatteryPercent", "category": "bar", "title": "Show battery percentage", "kind": "toggle", "path": "bar.showBatteryPercent", "advanced": false, "keywords": ["battery"] },
     { "id": "bar.contextZoneEnabled", "category": "bar", "title": "Context zone", "description": "Shows the window title, music, timers and alerts in the middle of the bar.", "kind": "toggle", "path": "bar.contextZoneEnabled", "advanced": false, "keywords": ["title", "center"] },
+    { "id": "dock.enabled", "category": "bar", "title": "Dock", "description": "A dock at the bottom edge with pinned apps and open windows. Works with the bar and with the notch. Right-click or long-press an app to pin it.", "kind": "toggle", "path": "dock.enabled", "advanced": false, "keywords": ["dock", "apps", "taskbar"] },
+    { "id": "dock.autoHide", "category": "bar", "title": "Hide the dock", "description": "The dock slides away and comes back when the pointer touches the bottom edge.", "kind": "toggle", "path": "dock.autoHide", "advanced": false, "keywords": ["dock", "hide"] },
+    { "id": "dock.iconSize", "category": "bar", "title": "Dock icon size", "kind": "number", "path": "dock.iconSize", "min": 32, "max": 72, "unit": "px", "advanced": true, "keywords": ["dock", "size"] },
     { "id": "bar.height", "category": "bar", "title": "Bar height", "kind": "number", "path": "bar.height", "min": 24, "max": 40, "unit": "px", "advanced": true, "keywords": ["size"] },
 
     { "id": "launcher.defaultMode", "category": "launcher", "title": "Opens in mode", "description": "Mode used when the launcher is opened without a specific shortcut.", "kind": "choice", "path": "launcher.defaultMode", "options": ["apps", "web", "settings", "ai", "clipboard"], "advanced": true, "keywords": ["default"] },

@@ -31,7 +31,7 @@ PanelWindow {
     Behavior on appear { NumberAnimation { duration: Tokens.durFast; easing.type: Easing.BezierSpline; easing.bezierCurve: [0.2, 0, 0, 1, 1, 1] } }
 
     // Open under a bar item; a second click on the same item closes it.
-    function openAt(id: int, anchor: var, targetScreen: var): void {
+    function openAt(id: int, anchor: var, targetScreen: var, offsetX: real = 0): void {
         if (!shellState) return
         if (shellState.activeOverlay !== Enums.Overlay.None) return  // a dropdown never opens over the launcher
         if (shellState.stage !== Enums.Stage.Closed && shellState.stage !== Enums.Stage.Dropdown) return
@@ -41,7 +41,7 @@ PanelWindow {
         }
         const p = anchor.mapToItem(null, 0, 0)
         anchorItem = anchor
-        anchorX = p.x
+        anchorX = p.x + offsetX
         anchorWidth = anchor.width
         anchorScreen = targetScreen
         dropdownId = id

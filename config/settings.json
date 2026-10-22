@@ -17,6 +17,12 @@
     "showBatteryPercent": true,
     "contextZoneEnabled": true
   },
+  "dock": {
+    "enabled": false,
+    "autoHide": true,
+    "iconSize": 44,
+    "pinned": ["org.gnome.Nautilus", "firefox", "org.gnome.Ptyxis", "org.gnome.Settings"]
+  },
   "notch": {
     "look": "light",
     "mediaWings": true,

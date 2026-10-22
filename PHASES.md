@@ -729,3 +729,9 @@ Review: Phase 1 hat kein Review (laut Skill).
 **Notch:** Lennos Antworten auf die acht Fragen (oder „nimm die Vorschläge“), dann Phase 1b (Mockup) und Phase 2. Sonst:
 
 Alle Bausteine 1 bis 9 aus dem Handoff sind gebaut. Alltagsgebrauch auf dem Laptop, Rückmeldung zu den „Am Gerät offen“-Punkten der Bausteine, dann Feinschliff. README-Screenshot wäre ein guter Abschluss.
+
+## Notch und Dock: Stand (22. Okt., Branch `notch`)
+- Auf Lennos Wunsch (aptus-Palette, Dock mit angehefteten und laufenden Apps, zwei getrennte Schalter) in einem Zug gebaut, ohne Probe-Phase. **Auf dem Laptop noch nicht getestet** (hier gibt es kein Quickshell und kein qmllint).
+- Notch: `shell/notch/*`, Zustand `models/NotchState.qml`, Laden über Loader in `shell.qml` (Leiste bleibt Rückfall bei Ladefehler). Einstellungen `bar.style`, `notch.*`. IPC `notchToggle`, `notchOpen`.
+- Dock: `shell/dock/*`, Einstellungen `dock.enabled` (aus), `dock.autoHide`, `dock.iconSize`, `dock.pinned` (Rechtsklick/langes Drücken auf eine App).
+- Offen: Lint auf dem Laptop, Dropdown-Position aus dem Notch-Sheet, Mehrmonitor, Doppelanzeige von Benachrichtigung (Popup + Notch), Look-B-Feinschliff, Hover-Öffnen.

@@ -3,6 +3,7 @@ import Quickshell
 import Quickshell.Io
 import qs.models
 import qs.services
+import Quickshell.Hyprland
 
 // IPC entry for the Hyprland binds. `aptus msg <command> [args]` (called by shell-switch) turns the kebab-case
 // command into a call here: `aptus msg panel-toggle launcher` -> `qs -c aptus ipc call aptus panelToggle launcher`.
@@ -96,6 +97,19 @@ Scope {
             // Same hotkey with the mode already open closes the launcher.
             const modes = { apps: Enums.LauncherMode.Apps, web: Enums.LauncherMode.Web, settings: Enums.LauncherMode.Settings, ai: Enums.LauncherMode.Ai, clipboard: Enums.LauncherMode.Clipboard }
             root.launcherState.toggle(modes[modeName])
+        }
+
+        // The notch of the focused screen: open, or close when it is open. Does nothing while the bar is shown.
+        function notchToggle(): void {
+            if (!root.notchState || !root.notchState.enabled) return
+            const mon = Hyprland.focusedMonitor
+            root.notchState.toggle(mon ? mon.name : (Quickshell.screens.length > 0 ? Quickshell.screens[0].name : ""))
+        }
+
+        function notchOpen(): void {
+            if (!root.notchState || !root.notchState.enabled) return
+            const mon = Hyprland.focusedMonitor
+            root.notchState.open(mon ? mon.name : (Quickshell.screens.length > 0 ? Quickshell.screens[0].name : ""))
         }
 
         // Open the settings app at one entry, e.g. `settingsFocus weather.locationName`.

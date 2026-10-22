@@ -1,19 +1,32 @@
 import QtQuick
 import qs.theme
 
-// The body of the notch: opaque, a hairline instead of a shadow, hung from the top edge. Only the lower corners are
-// round; the upper ones sit beyond the screen edge (the body is taller than it shows and clipped).
+// A body that hangs from the top edge of the screen: only the lower corners are round. The body is a rounded
+// rectangle that reaches above the item; the item clips it, so the top corners are never seen.
 Item {
     id: shape
 
-    property string look: "light"       // light | ink
-    property real cornerRadius: 14      // of the lower corners
-    property int severity: 0            // Enums.Severity, only an alert may carry one
-    property real shownWidth            // the animated size of the body
-    property real shownHeight
-    default property alias content: inner.data
+    property real cornerRadius: 14
+    property color fill: Tokens.surface
+    property color stroke: Tokens.line
+    property bool outlined: true
+    default property alias content: holder.data
+
+    clip: true
+
+    Rectangle {
+        x: 0
+        y: -shape.cornerRadius
+        width: shape.width
+        height: shape.height + shape.cornerRadius
+        radius: shape.cornerRadius
+        color: shape.fill
+        border.width: shape.outlined ? 1 : 0
+        border.color: shape.stroke
+    }
 
     Item {
-        id: inner
+        id: holder
+        anchors.fill: parent
     }
 }
