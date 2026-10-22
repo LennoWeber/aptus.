@@ -2,6 +2,8 @@
 
 Aktuelle Phase: **7 – Implementierung, alle geplanten Abschnitte gebaut (7a bis 7d), Durchgang gemacht; jetzt Gebrauch im Alltag und Feinschliff nach Lennos Rückmeldung**
 
+Zweiter Phasenablauf (neue Funktion „Notch“, ab 22. Okt.): **Phase 1 (Plan) geschrieben, wartet auf Lennos Entscheidungen**, siehe Abschnitt „Notch“ weiter unten.
+
 ## Ziel
 
 Eine komplette, eigenständige Desktop-Shell für **Fedora + Hyprland** (1920x1080), die professionell aussieht, sich ruhig und hochwertig anfühlt und gestalterisch eigene Wege geht. Am Ende: öffentliches GitHub-Repo mit Installer. UI-Sprache: Englisch.
@@ -657,6 +659,73 @@ Rückmeldung: Kontrollzentrum gut; Sound-Kachel zeigte „Muted“ über dem Reg
 - Installer verlinkt `aptus-ai-usage` nach `~/.local/bin` (auf dem Laptop von Hand verlinkt).
 - Geprüft: Helfer direkt (50 % / 15 % gegen 26 % / 12 % im Cache), Lint 17, Kachel live mit Schalter an (Screenshot, kein „old“), Shell-Log ohne Token. Nicht geprüft: Verhalten bei abgelaufenem Token und ohne Netz am echten Gerät (Pfade nur im Code).
 
+## Notch (neue Funktion, zweiter Phasenablauf, 22. Okt.)
+
+### Phase 1: Verstehen und planen
+
+**Ziel (Lenno):** Ein Notch oben am Bildschirm als **Alternative** zur Leiste. In den Einstellungen wählt man, ob man Leiste oder Notch will. Aussehen und Gefühl zählen mehr als Umfang. Außerdem will Lenno sich das Theming und die Farben des Vorbilds ansehen, um zu entscheiden, ob davon etwas in aptus soll.
+
+**Vorbild:** `ciscobugger/tacit` (Arch-Distro mit Quickshell-Desktop). Dort heißt das Ding „island“ bzw. Notch (`modules/ii/island`, Einstellungen `NotchConfig.qml`). Nur zum Ansehen geklont. **Lizenz:** tacit steht unter GPL-3.0, aptus unter MIT. Deshalb wird **kein Code, kein Text, kein Name und keine Konstante übernommen**; aptus bekommt eine eigene Umsetzung und eigene Gestaltung (passt auch zu Lennos Vorgabe „eigene Ideen“).
+
+**Was die Idee bei tacit ausmacht (nur das Konzept):**
+- Kleine Pille oben mittig im Ruhezustand. Bei Ereignissen (Benachrichtigung, Lautstärke, Helligkeit, Akku, Netz, Workspace-Wechsel, Timer, Download, lange Jobs) wird sie kurz breiter, sagt eine Zeile und wird wieder still.
+- Antippen oder Hover klappt sie zu einem Blatt mit Details auf (Musik mit Wellenform, Timer, Verlauf).
+- Schalter „Leiste ausblenden, der Notch ersetzt sie“; Abstand zum Rand; reservierte Höhe; Anzeige über Vollbild nur bei laufender Musik.
+- Technik: ein Fenster pro Bildschirm in fester Größe, nur der Inhalt bewegt sich, alles außerhalb ist per Maske klick-durchlässig (Hyprland animiert Größenänderungen von Layer-Fenstern, das ließ den Notch „schwimmen“).
+- Theming bei tacit: Farben folgen dem Hintergrundbild (matugen-Palette); Textstufen entstehen über Helligkeit mit festem Kontrast (APCA), nie über Transparenz; Farbe hat feste Bedeutung (Akzent = Standard-Aktion, Risiko-Farbe nur mit Warnzeichen). Das ist das Gegenteil von aptus („Palette neutral, Farbe nur als Zustand, feste Palette mit Nachtlicht-Verschiebung“).
+
+**Was aptus schon hat (wird wiederverwendet):**
+- `ContextState` liefert schon priorisierte Einträge (Akku kritisch 90, Timer 60, Benachrichtigung 40, Musik 30) mit Schweregrad und Ziel-Kachel. Das sind die „Meldungen“ des Notch.
+- `StatusGroup`, `WorkspaceStrip`, `Clock`, `BarItem` und die Dropdowns (`DropdownHost.openAt(id, anker, screen)`) sind fertig, nur an die Leiste gebunden.
+- Das Settings-System (Entwurf → Speichern → 15 s Bestätigung → Rücknahme durch Watchdog) schützt das Umschalten Leiste/Notch automatisch vor Aussperren.
+
+**Konzept (Vorschlag, eigene Gestaltung):**
+- **Umschalter:** Einstellung `bar.style` (`bar` | `notch`, Standard `bar`), Settings → Bar, ganz oben. Immer nur eines ist aktiv. Wechsel ohne Neustart (die jeweils andere Fläche wird nicht geladen). Weitere Notch-Einstellungen nur sichtbar, wenn Notch gewählt ist.
+- **Drei Zustände:** *Ruhe* (kleine Pille mit Uhr und, wenn nötig, einem Zustandspunkt), *Meldung* (breiter, eine Zeile aus `ContextState`, 260 ms hin, 140 ms zurück, geht von selbst zurück), *Offen* (aufgeklappt: Workspaces, Status-Symbole mit den bekannten Dropdowns, Kontextzeile/Musik, Knöpfe Control Center und Launcher).
+- **Bedienung:** Antippen/Klick öffnet, Esc schließt (eine Stufe zurück, wie überall). Hover-Öffnen nur als Option (Standard aus, Touch-Regel: nichts hängt an Hover). Die Ruhe-Pille ist optisch klein, die Trefferfläche mindestens 40 px.
+- **Platz:** Standard reserviert der Notch dieselbe Höhe wie die Leiste (28 px), damit Fenster beim Umschalten nicht springen; neben der Pille ist der Streifen durchsichtig (Hintergrundbild). Option „über Fenstern schweben“ (advanced).
+- **Tablet:** Wie die Leiste: im Tablet-Modus automatisch weg, Wischen von oben bringt ihn zurück (`barAutoHidden` gilt für beide).
+- **Look (aptus-Regeln bleiben):** deckend, kein Glas, Haarlinie statt Schatten, Farbe nur als Signal, Radius Pille 999, obere Kante bündig am Bildschirmrand, 140/260 ms, Kurve [0.2, 0, 0, 1]. Zwei Varianten zur Wahl (Entscheidung nach Mockup): **A** helle Fläche (`Tokens.surface`) mit Haarlinie, **B** Tinte (`Tokens.ink`) mit hellem Text, wie ein echter Notch; beide folgen dem Nachtlicht.
+- **tacit-Farbthema:** nicht Teil dieses Auftrags, weil es Lennos Vorgabe „Palette neutral“ umkehrt. Als eigene, spätere Option `appearance.palette` (`neutral` | `wallpaper`) denkbar. Zum Ansehen zeigt das Look-Mockup beide Fassungen nebeneinander; Lenno entscheidet danach.
+
+**Betroffene Dateien (Plan):**
+- Neu: `shell/notch/` mit `Notch.qml` (Fenster je Bildschirm, feste Größe, Maske), `NotchRest.qml`, `NotchAlert.qml`, `NotchSheet.qml`, `qmldir`; `shell/models/NotchState.qml` (Zustand: Ruhe/Meldung/Offen, aktuelle Meldung, Haltezeit).
+- Neue Typen: `Enums.NotchStage { Rest, Alert, Open }`; Einstellungen `bar.style`, `notch.hoverOpen`, `notch.reserveSpace`, `notch.look` (a | b), `notch.showClock` in `config/settings.json` und `config/settings-schema.json` (Art `choice` und `toggle` gibt es schon, kein neuer Editor).
+- Geändert: `shell/shell.qml` (Leiste nur bei `bar`, Notch nur bei `notch`, `barAutoHidden` für beide), `shell/IpcHandlers.qml` (`notchToggle`, `notchOpen`), `config/hotkeys.json` (optional, Taste offen), `bin/aptus` (kebab-case-Übersetzung prüfen).
+- **Bindung an die Leiste lösen:** `Tokens.barHeight` steckt in `DropdownHost` (Rand oben), `AiPanel` (Rand oben), `NotificationPopups` (Abstand), `ControlCenter` (y-Start) und in den Leistenteilen (`BarItem`, `Clock`, `WorkspaceStrip`, `StatusGroup`, `ContextZone` als `implicitHeight`). Plan: ein Wert `ShellState.topInset` (Leiste = 28, Notch = Reserve), die vier Fenster lesen ihn statt `Tokens.barHeight`; die Leistenteile bekommen eine eigene Höhen-Property, damit sie im Sheet wiederverwendbar sind.
+
+**Risiken und offene Technik:**
+1. **Dropdown-Verankerung:** `openAt` nutzt nur die x-Lage des Ankers; das Dropdown-Fenster beginnt bei `Tokens.barHeight`. Im Notch-Modus muss es unter dem Sheet oder unter der Pille erscheinen, ohne dass das Sheet es verdeckt. Wahrscheinlich: Sheet schließt, Dropdown öffnet unter der Pille. In Phase 5 am Gerät ausprobieren.
+2. **Vollbild:** Hyprland legt die Top-Ebene unter Vollbild-Fenster; der Notch ist dort unsichtbar (Idle-Sperre bleibt durch den Inhibitor aktiv). Optional später Overlay-Ebene.
+3. **Mehrere Bildschirme:** Leiste läuft heute je Bildschirm. Vorschlag: Notch ebenso (Entscheidung offen).
+4. **Doppelte Meldungen:** OSD-Pille und Benachrichtigungs-Popups gibt es schon. Version 1 lässt sie unverändert; der Notch zeigt nur die Kontextzeile. Ob sie später im Notch aufgehen, ist offen.
+5. **Rückmeldung ≤ 50 ms:** Der Notch wird vorab geladen und nur in Größe und Deckkraft animiert (kein Laden beim Öffnen).
+6. **Lint:** Basis sind 17 Warnungen (`./aptus-lint.sh`); keine neuen.
+7. **Nicht prüfbar ohne Laptop:** Gefühl der Animation, Touch-Treffer, Verhalten unter Hyprland 0.56. Alles Gebaute wird auf dem Laptop per Screenshot geprüft, wie bisher.
+
+**Phasenplan Notch:**
+- Phase 1b (auf Wunsch zuerst): **Look-Mockup** als statisches HTML (`docs/mockups/notch.html`): Ruhe, Meldung, Offen, Varianten A/B, Tag und Nacht, dazu das tacit-Farbthema zum Vergleichen. Das ist die Grundlage für Lennos Look-Entscheidung.
+- Phase 2: Strukturen (`NotchStage`, `NotchState`-Properties, Einstellungs-Schlüssel, leere Komponenten mit Properties, `qmldir`).
+- Phase 3: Signaturen (`NotchState.show/open/close/alert/…`, IPC-Funktionen, `ShellState.topInset`), alle mit Platzhalter.
+- Phase 4: TODO-Marken an `shell.qml`, `DropdownHost`, `AiPanel`, `NotificationPopups`, `ControlCenter`, `IpcHandlers`.
+- Phase 5: Probe-Implementierung auf dem Laptop (wird wieder verworfen), Lücken zuordnen.
+- Phase 6: Invarianten (z. B. nie Leiste und Notch gleichzeitig, Meldung nie im Zustand Offen, `topInset` ≥ 0).
+- Phase 7: Umsetzung in Abschnitten: N1 Umschalter, Fenster, Ruhe; N2 Offen mit Status, Workspaces, Dropdowns; N3 Meldungen aus `ContextState`; N4 Feinschliff Look nach Lennos Test.
+
+**Entscheidungen, die Lenno treffen sollte (mit Vorschlag):**
+1. Form: an den oberen Rand gehängt, obere Ecken gerade (Vorschlag) oder schwebend mit Abstand?
+2. Ruhe-Inhalt: Uhr (Vorschlag), nur ein Punkt oder Fenstertitel?
+3. Öffnen: Tippen/Klick (Vorschlag), Hover als Option.
+4. Platz: wie Leiste reservieren, 28 px (Vorschlag), oder schweben?
+5. Meldungen: nur Kontextzeile (Vorschlag) oder auch OSD und Popups im Notch?
+6. Mehrere Bildschirme: je Bildschirm (Vorschlag) oder nur der fokussierte?
+7. Look A (hell) oder B (Tinte): nach dem Mockup.
+8. tacit-Farbthema (Palette aus Hintergrundbild): nur ansehen oder als spätere Option planen?
+
+Review: Phase 1 hat kein Review (laut Skill).
+
 ## Nächster Schritt
+
+**Notch:** Lennos Antworten auf die acht Fragen (oder „nimm die Vorschläge“), dann Phase 1b (Mockup) und Phase 2. Sonst:
 
 Alle Bausteine 1 bis 9 aus dem Handoff sind gebaut. Alltagsgebrauch auf dem Laptop, Rückmeldung zu den „Am Gerät offen“-Punkten der Bausteine, dann Feinschliff. README-Screenshot wäre ein guter Abschluss.
