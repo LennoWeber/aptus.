@@ -20,6 +20,7 @@ Scope {
 
     // The palette follows slowly: a change takes a few seconds, never a flash.
     Behavior on blend { NumberAnimation { duration: 4000; easing.type: Easing.InOutSine } }
+    // TODO(phase 7, Bild-Theming): with a style as source call Tokens.refreshTheme() so nightShift applies; the Standard source keeps applyPalette.
     onBlendChanged: Tokens.applyPalette(Math.max(0, Math.min(1, blend)))
 
     // Scheduled mode checks once a minute.

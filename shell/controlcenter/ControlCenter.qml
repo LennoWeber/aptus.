@@ -183,6 +183,7 @@ PanelWindow {
     Rectangle {
         id: scrim
         anchors.fill: parent
+        // TODO(phase 7, Bild-Theming): the veil behind the board uses Tokens.glass; a grain image (Tokens.grain) tiles over the board, never over the bar.
         color: Tokens.bg
         opacity: Tokens.overlayDim * 2 * cc.blurAmount
         MouseArea {

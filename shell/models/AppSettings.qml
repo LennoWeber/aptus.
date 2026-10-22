@@ -108,6 +108,8 @@ Scope {
         aiDefaultProviderId = get("ai.defaultProvider")
         aiDockEdge = edge[get("ai.dockEdge")] ?? Enums.DockEdge.Right
         aiDockWidthPx = get("ai.dockWidth")
+        // TODO(phase 7, Bild-Theming): load appearance.themeSource, appearance.style and bar.tone into themeSource, themeStyle, barTone (lookup tables like `edge`),
+        //     pass them to Tokens and call Tokens.refreshTheme().
         lockShowNotificationContent = get("lock.showNotificationContent")
         lockAfterMin = get("system.lockAfterMin")
         screenOffAfterMin = get("system.screenOffAfterMin")

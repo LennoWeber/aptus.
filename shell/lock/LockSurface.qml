@@ -41,6 +41,7 @@ Item {
     Rectangle {
         anchors.fill: parent
         visible: Wallpaper.current !== ""
+        // TODO(phase 7, Bild-Theming): the veil over the wallpaper uses Tokens.glass; Tokens.grain on the large surface. The lockscreen follows the user's style.
         color: Tokens.bg
         opacity: 0.45
     }

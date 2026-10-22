@@ -21,6 +21,7 @@ Item {
     Rectangle {
         anchors.fill: parent
         radius: 8
+        // TODO(phase 7, Bild-Theming): the selected and hovered row use Tokens.selection.
         color: Tokens.surfaceAlt
         opacity: mouse.pressed ? 1 : (mouse.containsMouse || row.selected) ? 0.7 : 0
         Behavior on opacity { NumberAnimation { duration: Tokens.durFast } }

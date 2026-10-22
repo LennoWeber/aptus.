@@ -65,6 +65,7 @@ Item {
         font.family: Tokens.fontUi
         font.pixelSize: 17
         color: Tokens.ink
+        // TODO(phase 7, Bild-Theming): text selection uses Tokens.selection.
         selectionColor: Tokens.surfaceAlt
         selectedTextColor: Tokens.ink
         clip: true

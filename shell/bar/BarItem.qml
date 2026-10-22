@@ -27,6 +27,7 @@ Item {
         width: (parent.width - 2) * (0.88 + 0.12 * opacity / 0.14)
         height: parent.height - 6
         radius: 6
+        // TODO(phase 7, Bild-Theming): bar text uses Tokens.barInk, see Bar.qml.
         color: Tokens.ink
         opacity: mouse.pressed ? 0.14 : (mouse.containsMouse || item.active) ? 0.09 : 0
         Behavior on opacity { NumberAnimation { duration: Tokens.durFast; easing.type: Easing.BezierSpline; easing.bezierCurve: [0.2, 0, 0, 1, 1, 1] } }

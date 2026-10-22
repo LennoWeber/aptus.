@@ -77,6 +77,7 @@ Scope {
     function visibleEntries(): var {
         const q = query.trim().toLowerCase()
         return entries.filter(e => {
+            // TODO(phase 7, Bild-Theming): hide appearance.style and bar.tone while appearance.themeSource is standard (no effect then); needs a rule, see the gaps in PHASES.md.
             if (e.advanced && !showAdvanced) return false
             if (q === "") return e.category === activeCategoryId
             return matches(e, q)

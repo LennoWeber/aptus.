@@ -96,6 +96,7 @@ Singleton {
             console.error("aptus: cannot read tokens.json (" + e + "), using built-in day colours")
             return
         }
+        // TODO(phase 7, Bild-Theming): then call refreshTheme(); also read themeStyles and themeExtraction from the file. The palette stays the Standard source.
         applyPalette(blend)
     }
 
@@ -119,6 +120,7 @@ Singleton {
     function applyPalette(blend: real): void {
         if (!(blend >= 0 && blend <= 1)) throw new Error("invariant: Tokens.applyPalette: blend outside 0..1")
         // TODO(phase 7, night light): NightLightState calls this when its blend changes; move smoothly over minutes, never a flash.
+        // TODO(phase 7, Bild-Theming): with a themeSource other than Standard the style owns bg, surface, line and the ink colours; do not overwrite them here.
         const p = paletteAt(blend)
         root.blend = blend
         bg = p.bg

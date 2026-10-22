@@ -10,6 +10,7 @@ hl.config({
 		-- one hairline, dark on light, no colour accent
 		border_size = 1,
 		col = {
+			-- TODO(phase 7, Bild-Theming): borders and shadow use the Standard ink. Decide whether they follow the style ink (generated) or stay.
 			active_border = "rgba(1c212740)",
 			inactive_border = "rgba(1c212718)",
 		},

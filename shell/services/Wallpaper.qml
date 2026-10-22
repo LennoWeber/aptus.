@@ -39,6 +39,7 @@ Singleton {
 
     function setWallpaper(path: string): void {
         if (path !== "" && path[0] !== "/") throw new Error("invariant: Wallpaper.setWallpaper: path must be absolute")
+        // TODO(phase 7, Bild-Theming): after storing, call ThemeSource.read(path); an empty path marks colors.failed so Tokens falls back to the style colours.
         current = path
         stateView.setText(path)
     }
@@ -48,6 +49,7 @@ Singleton {
         path: root.stateFile
         blockLoading: true
         printErrors: false
+        // TODO(phase 7, Bild-Theming): also read the colours of the remembered picture at start.
         Component.onCompleted: root.current = text().trim()
     }
 

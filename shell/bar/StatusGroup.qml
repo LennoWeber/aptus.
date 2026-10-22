@@ -52,6 +52,7 @@ Item {
             StatusGlyph {
                 anchors.verticalCenter: parent.verticalCenter
                 kind: "bluetooth"
+                // TODO(phase 7, Bild-Theming): all neutral, soft and faint colours in this file become barInk and mixes of barInk and bar, see Bar.qml.
                 color: group.bluetoothState && group.bluetoothState.connectedCount > 0 ? Tokens.ink : Tokens.inkFaint
             }
         }

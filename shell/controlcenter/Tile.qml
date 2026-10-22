@@ -15,6 +15,7 @@ Rectangle {
     default property alias content: contentArea.data
     signal activated(int tileId)
 
+    // TODO(phase 7, Bild-Theming): with a style the fill is one of Tokens.wash1..wash4 by tile position (for example (column + row) % 4); Standard keeps surface.
     color: Tokens.surface
     radius: Tokens.radiusTile
     border.width: 1

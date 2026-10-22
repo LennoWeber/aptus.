@@ -33,6 +33,7 @@ Item {
     Rectangle {
         anchors.fill: parent
         visible: surface.greeterState && surface.greeterState.wallpaper !== ""
+        // TODO(phase 7, Bild-Theming): the greeter has no user settings (/etc/aptus/greeter.json). Decide: Standard, or the style with its fallbackColors; never the wallpaper colours before login.
         color: Tokens.bg
         opacity: 0.55
     }

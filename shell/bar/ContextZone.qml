@@ -53,6 +53,7 @@ Item {
         text: zone.current ? zone.current.text : ""
         role: Enums.TextRole.Bar
         tone: zone.current ? zone.current.severity : Enums.Severity.Neutral
+        // TODO(phase 7, Bild-Theming): neutral bar text uses a soft mix of Tokens.barInk and Tokens.bar, see Bar.qml.
         color: tone === Enums.Severity.Neutral ? Tokens.inkSoft : Tokens.colorFor(tone)
         opacity: zone.transition
     }

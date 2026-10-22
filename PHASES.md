@@ -4,7 +4,7 @@ Aktuelle Phase: **7 – Implementierung, alle geplanten Abschnitte gebaut (7a bi
 
 Zweiter Phasenablauf (neue Funktion „Notch“, ab 22. Okt.): **Phase 1 (Plan) geschrieben, wartet auf Lennos Entscheidungen**, siehe Abschnitt „Notch“ weiter unten.
 
-Dritter Phasenablauf (neue Funktion „Bild-Theming“, 22. Okt.): **Phase 1 bis 3 erledigt, wartet auf „weiter“ für Phase 4**, siehe Abschnitt „Bild-Theming“ weiter unten.
+Dritter Phasenablauf (neue Funktion „Bild-Theming“, 22. Okt.): **Phase 1 bis 4 erledigt, wartet auf „weiter“ für Phase 5**, siehe Abschnitt „Bild-Theming“ weiter unten.
 
 ## Ziel
 
@@ -748,7 +748,7 @@ Review: Phase 1 hat kein Review (laut Skill).
 - Phase 1: Plan und Mockup. **Erledigt.**
 - Phase 2: Strukturen. **Erledigt** (siehe unten).
 - Phase 3: Signaturen. **Erledigt** (siehe unten).
-- Phase 4: TODO-Markierungen: Leiste (`Tokens.bar`), Kacheln (`wash1..4`), Control Center/Launcher (`glass`, `grain`), Dropdown-Auswahl (`selection`), Lockscreen und Greeter, Settings-Vorschau.
+- Phase 4: TODO-Markierungen. **Erledigt** (siehe unten).
 - Phase 5: Probe-Implementierung (Rechnung als Node-Test gegen die Mockup-Werte, dann auf dem Laptop mit echten Bildern), danach zurückgesetzt.
 - Phase 6: Invarianten: beide Stile haben dieselben Schlüssel, Tinte auf Fläche mindestens 4,5 zu 1, Quelle `wallpaper` ohne lesbares Bild fällt auf `fallbackColors` zurück, nie ohne Farben.
 - Phase 7: Umsetzung und Test auf dem Laptop.
@@ -774,9 +774,26 @@ Alle neuen Funktionen haben einen Platzhalter-Körper (`throw new Error("not imp
 - Notiert für Phase 5: Reihenfolge der Berechnung klären. Vorschlag: `styleColors` mit Tagfarben, danach `nightShift` mit `Tokens.blend`. `applyPalette(blend)` darf bei Quelle ungleich Standard die Stilfarben nicht überschreiben.
 - Nicht prüfbar: `qmllint`/Quickshell nicht installiert; ob `refreshTheme` als Funktionsname im Singleton `Tokens` mit `applyPalette` und `load` sauber zusammenspielt, zeigt der Lauf.
 
+### Phase 4: TODO-Markierungen (erledigt)
+23 Zeilen `TODO(phase 7, Bild-Theming): ...` in 19 Dateien (je höchstens zwei Zeilen), nur Kommentare:
+- **Ablauf:** `Tokens.load` (nach `applyPalette` `refreshTheme` aufrufen), `Tokens.applyPalette` (bei Stil als Quelle Stilfarben nicht überschreiben), `NightLightState.onBlendChanged` (`refreshTheme` statt `applyPalette`), `Wallpaper.setWallpaper` und Start (`ThemeSource.read`), `AppSettings.refreshViews` (drei Einstellungen laden und weitergeben).
+- **Leiste:** `Bar.qml` (Füllung `Tokens.bar`, Text `Tokens.barInk`), `BarItem`, `Clock`, `ContextZone`, `StatusGroup`, `WorkspaceStrip` (Text und Icons).
+- **Flächen:** `Tile.qml` (`wash1..4` nach Kachelposition), `ControlCenter.qml` und `Launcher.qml` (Schleier `Tokens.glass`, Korn), `Pill.qml` und `ListRow.qml` (`Tokens.selection`), `LockSurface.qml` (Glas, Korn), `GreeterSurface.qml` (Entscheidung offen, siehe unten).
+- **Sonst:** `SettingsAppState.visibleEntries` (Stil und Leistenton ausblenden, solange die Quelle `standard` ist), `hypr/aptus-look.lua` (Rahmenfarben).
+
+**Review Phase 4** (ohne Sub-Agenten): Der Diff hat 23 hinzugefügte Zeilen, 0 entfernte, und jede hinzugefügte Zeile ist ein TODO-Kommentar. Kein Code, keine Typen, keine Signaturen verändert.
+
+**Lücken, gemeldet statt still behoben (gehören in Phase 2/3, Phase 5 bestätigt sie):**
+1. **`surfaceAlt` fehlt im Stil.** 25 Dateien nutzen `Tokens.surfaceAlt`, aber `themeStyles` und das Ergebnis von `styleColors` kennen keinen Wert dafür (Phase 2 und 3). Vorschlag: aus Papier und Linie mischen (`mix(paper, line, 0.5)`), ohne neues Token.
+2. **`barInkSoft` und `barInkFaint` fehlen.** Leistentext braucht gedämpfte Stufen auf der (getönten) Leiste. Vorschlag: als Mischung `mix(barInk, bar, 0.4 und 0.6)` im Code, ohne neue Tokens. Alternative: zwei neue Tokens (Phase 2).
+3. **Kachel-Lasur nach Position:** `Tile` hat keine Property dafür. Vorschlag: Ausdruck `(column + row) % 4` aus `TileSpec`, ohne neue Property. Alternative: `washIndex` in `TileSpec` (Phase 2).
+4. **Bedingte Sichtbarkeit in der Settings-App:** Das Schema hat kein Feld, das einen Eintrag nur bei bestimmtem Wert eines anderen zeigt. Vorschlag: Feld `visibleWhen` im Schema (Phase 2), sonst feste Regel in `visibleEntries`.
+5. **Greeter:** Er hat keine Nutzereinstellungen. Entscheidung in Phase 5: `standard` oder Stil mit `fallbackColors`.
+6. **Korn-Bilder:** `theme/grain-paper.png` und `theme/grain-weave.png` müssen noch erzeugt werden (Phase 7, kachelbar, klein).
+
 ## Nächster Schritt
 
-**Bild-Theming:** Lennos „weiter“, dann Phase 4 (TODO-Markierungen).
+**Bild-Theming:** Lennos „weiter“, dann Phase 5 (Probe-Implementierung, danach zurückgesetzt).
 
 **Notch:** Lennos Antworten auf die acht Fragen (oder „nimm die Vorschläge“), dann Phase 1b (Mockup) und Phase 2. Sonst:
 

@@ -128,6 +128,7 @@ PanelWindow {
     Rectangle {
         id: scrim
         anchors.fill: parent
+        // TODO(phase 7, Bild-Theming): the veil behind the pill uses Tokens.glass; grain as in ControlCenter.qml.
         color: Tokens.bg
         opacity: Tokens.overlayDim * win.blurAmount * 2
         MouseArea {
