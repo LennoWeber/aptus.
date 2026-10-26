@@ -1,6 +1,7 @@
 pragma Singleton
 import QtQuick
 import Quickshell
+import Quickshell.Io
 
 // The look of the island (setting island.look). The ten looks are data in theme/island-looks.json; the values
 // below are those of the chosen look, resolved against the current colours of Tokens.
@@ -28,6 +29,13 @@ Singleton {
     property real gap                     // distance from the top edge in px, 0 = flush with the edge
     property bool monoClock               // the time in the mono font
     property bool accentLine              // 2 px signal line at the bottom edge
+
+    FileView {
+        id: looksFile
+        path: Tokens.rootDir + "/theme/island-looks.json"
+        blockLoading: true
+        printErrors: false
+    }
 
     readonly property string defaultId: "paper"
 

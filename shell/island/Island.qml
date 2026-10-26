@@ -25,6 +25,7 @@ PanelWindow {
     property var timerState
     property var captureState
     property var displayState
+    property var weatherState
     property var workspaces
     property string windowTitle
     property bool slidOut
@@ -33,6 +34,9 @@ PanelWindow {
     property bool hoverOpen
     property bool reserveSpace
     property bool mediaWings
+    property bool showWorkspaces
+    property bool showStatus
+    property bool showWeather
     property string clockFormat
 
     // This screen's stage and view: Open and Hover only on the screen that was opened; an alert shows on every screen.
@@ -42,11 +46,19 @@ PanelWindow {
     property bool isHover
     property bool isAlert
 
+    // Colours of the current stage: the look's ink for the pill, or for the opened island.
+    property bool openLike
+    property color fg
+    property color fgSoft
+    property color hairline
+
     // Morph: how far the island has grown toward the launcher or control center (0 = itself, 1 = fully there).
     property real morphProgress
     property real slide
 
     // Size of the body for the current stage and view.
+    readonly property real restWidthPx: 560   // the island at rest, wide enough for workspaces, time and status icons
+    // TODO(phase 7, Island): restWidth = restWidthPx; the rest content comes from the settings island.showWorkspaces, island.showStatus, island.showWeather.
     property real restWidth
     property real targetWidth
     property real targetHeight
@@ -86,6 +98,12 @@ PanelWindow {
 
     // Close it and tell the host that something else was asked for.
     function closeAndThen(action: string): void {
+        throw new Error("not implemented")
+    }
+
+    // TODO(phase 7, Island): call viewShown() when `view` or `isOpen` changes (onViewChanged, onIsOpenChanged).
+    // The opened view changed: reset the view that is shown now (selection, query, armed action), start its reveal.
+    function viewShown(): void {
         throw new Error("not implemented")
     }
 }

@@ -6,7 +6,7 @@ import qs.components
 
 // Wallpaper view: the pictures come out of the island one after the other as a row of cards; the one in the middle
 // is chosen with the arrow keys, the wheel or a tap, and set at once.
-Item {
+FocusScope {
     id: wall
 
     property int selectedIndex

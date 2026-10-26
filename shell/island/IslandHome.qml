@@ -1,4 +1,5 @@
 import QtQuick
+import Quickshell
 import qs.models
 import qs.theme
 import qs.components
@@ -28,4 +29,7 @@ Item {
     signal dropdownRequested(int dropdownId, var anchorItem)
     signal launcherRequested()
     signal controlCenterRequested()
+
+    SystemClock { id: sys; precision: SystemClock.Minutes }
+    readonly property var english: Qt.locale("en_GB")
 }

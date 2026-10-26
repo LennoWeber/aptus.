@@ -5,7 +5,7 @@ import qs.services
 import qs.components
 
 // Power view: lock, log out, restart, shut down. Never suspend or hibernate. Restart and shut down need a second tap.
-Item {
+FocusScope {
     id: power
 
     property var lockState  // LockState
@@ -17,6 +17,9 @@ Item {
     property color line
 
     signal closeRequested()
+
+    // The second tap has to come within a few seconds.
+    Timer { id: armTimer; interval: 4000 }
 
     readonly property var defaultActions: [
         { id: "lock", label: "Lock", glyph: "lock" },

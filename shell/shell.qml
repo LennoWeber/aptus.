@@ -16,6 +16,7 @@ import qs.session
 import qs.osk
 import qs.wallpaper
 import qs.dock
+// TODO(phase 7, Island): import qs.theme here (IslandLook), for the topInset binding and the look.
 
 // Entry point of the aptus shell.
 ShellRoot {
@@ -79,8 +80,12 @@ ShellRoot {
         enabled: settingsObj.get("bar.contextZoneEnabled") !== false
     }
 
+    // The island look from the settings (island.look).
+    // TODO(phase 7, Island): bind to settingsObj.get("island.look") || "paper"; onIslandLookChanged calls IslandLook.apply(islandLook).
+    property string islandLook
+
     // TODO(phase 7, Island): replace this whole notch block by the island: IslandState (settings island.alerts, island.alertSeconds, island.mediaWings, island.hoverOpen),
-    //     a Loader of island/IslandHost.qml that hands over the states (incl. lockState, displayState), bar.style "island" instead of "notch".
+    //     a Loader of island/IslandHost.qml that hands over the states (incl. lockState, displayState, weatherState), bar.style "island" instead of "notch".
     // The top of the screen: the bar, or the notch (setting bar.style). The bar is also the fallback when the
     // notch fails to load, so the shell never ends up without one.
     readonly property bool notchWanted: settingsObj.get("bar.style") === "notch"

@@ -29,6 +29,9 @@
   "island": {
     "look": "paper",
     "hoverOpen": true,
+    "showWorkspaces": true,
+    "showStatus": true,
+    "showWeather": true,
     "mediaWings": true,
     "alerts": true,
     "alertSeconds": 4,

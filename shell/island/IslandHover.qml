@@ -22,6 +22,8 @@ Item {
     property color ink
     property color inkSoft
     property color line
+    property color fill       // the island's fill, for the glyph on an ink-filled switch
 
     signal tileRequested(int tileId)
+    signal controlCenterRequested()
 }

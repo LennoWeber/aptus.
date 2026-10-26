@@ -5,7 +5,7 @@ import qs.services
 import qs.components
 
 // Screenshot view: region, screen, window, and screen recording (start and stop).
-Item {
+FocusScope {
     id: shot
 
     property var captureState  // CaptureState

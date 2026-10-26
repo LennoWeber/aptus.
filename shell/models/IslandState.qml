@@ -27,9 +27,17 @@ Scope {
     // Enums.MorphTarget: set while the launcher or the control center is shown.
     property int morph: Enums.MorphTarget.None
 
+    // The screen whose hover is about to start (set when the pointer arrives, read when the delay is over).
+    property string pendingHoverScreen: ""
+
     signal alertShown(var alert)
     signal opened(string screenName, int view)
     signal closed()
+
+    // Delays: the alert stays for alertHoldMs; hover starts after resting on the island and ends a moment after leaving it.
+    Timer { id: hold }
+    Timer { id: hoverIn; interval: 280 }
+    Timer { id: hoverOut; interval: 320 }
 
     // Open the island on a screen, showing view (Enums.IslandView). Does nothing while the bar is shown.
     function open(screenName: string, view: int): void {

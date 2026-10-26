@@ -48,6 +48,26 @@ Scope {
         controlCenter.openTileById(tileId)
     }
 
+    // Name of the screen with the focused monitor (the first screen when none is focused).
+    function focusedScreenName(): string {
+        throw new Error("not implemented")
+    }
+
+    // Enums.IslandView for a name used on the command line: home, power, screenshot, clipboard, emoji, wallpaper (unknown = home).
+    function viewByName(viewName: string): int {
+        throw new Error("not implemented")
+    }
+
+    // The power menu: the island's Power view while the island is shown, else the full-screen menu.
+    function openPower(): void {
+        throw new Error("not implemented")
+    }
+
+    // The wallpaper picker: the island's Wallpaper view while the island is shown, else the picker window.
+    function openWallpaper(): void {
+        throw new Error("not implemented")
+    }
+
     function openNotifications(): void {
         launcherState.hide()
         openControlCenter()
