@@ -1,15 +1,32 @@
 /* aptus-theme-apps: generated from theme/tokens.json, do not edit (run aptus-theme-apps again) */
 :root {
-  --aptus-bg: {{bg}};
-  --aptus-surface: {{surface}};
-  --aptus-alt: {{surfaceAlt}};
-  --aptus-line: {{line}};
-  --aptus-ink: {{ink}};
-  --aptus-soft: {{inkSoft}};
-  --aptus-faint: {{inkFaint}};
-  --aptus-sel-bg: {{selection_bg}};
-  --aptus-sel-fg: {{selection_fg}};
+  --aptus-bg: {{light_bg}};
+  --aptus-surface: {{light_surface}};
+  --aptus-alt: {{light_surfaceAlt}};
+  --aptus-line: {{light_line}};
+  --aptus-ink: {{light_ink}};
+  --aptus-soft: {{light_inkSoft}};
+  --aptus-faint: {{light_inkFaint}};
+  --aptus-sel-bg: {{light_selection_bg}};
+  --aptus-sel-fg: {{light_selection_fg}};
+  --aptus-link: {{light_link}};
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --aptus-bg: {{dark_bg}};
+    --aptus-surface: {{dark_surface}};
+    --aptus-alt: {{dark_surfaceAlt}};
+    --aptus-line: {{dark_line}};
+    --aptus-ink: {{dark_ink}};
+    --aptus-soft: {{dark_inkSoft}};
+    --aptus-faint: {{dark_inkFaint}};
+    --aptus-sel-bg: {{dark_selection_bg}};
+    --aptus-sel-fg: {{dark_selection_fg}};
+    --aptus-link: {{dark_link}};
+  }
+}
 
+:root {
   --toolbar-bgcolor: var(--aptus-bg) !important;
   --toolbar-color: var(--aptus-ink) !important;
   --toolbar-field-background-color: var(--aptus-surface) !important;

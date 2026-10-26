@@ -10,6 +10,7 @@ singleton Session 1.0 Session.qml
 singleton Idle 1.0 Idle.qml
 singleton AiProviders 1.0 AiProviders.qml
 NightLightState 1.0 NightLightState.qml
+ColorModeState 1.0 ColorModeState.qml
 AudioState 1.0 AudioState.qml
 NetworkState 1.0 NetworkState.qml
 BluetoothState 1.0 BluetoothState.qml

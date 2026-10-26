@@ -17,6 +17,9 @@ Singleton {
     // raw data of theme/tokens.json and the current day/night blend (0 day .. 1 night)
     property var palette             // { day: {...}, night: {...} }
     property real blend: 0
+    // Colour mode: 0 = light palette .. 1 = dark palette (ColorModeState drives it); the night light tints on top.
+    property real darkAmount: 0
+    property int colorModeMs: 300
 
     // colors (semantic)
     property color bg: "#F4F3EF"

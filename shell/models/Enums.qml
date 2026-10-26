@@ -6,6 +6,9 @@ QtObject {
     // The three stages of the shell UI: dropdown -> control center -> detail.
     enum Stage { Closed, Dropdown, ControlCenter, Detail }
 
+    // Colour mode of shell and apps (setting appearance.colorMode): Auto is dark while the night light runs.
+    enum ColorMode { Light, Dark, Auto }
+
     // Modes of the launcher pill.
     enum LauncherMode { Apps, Web, Settings, Ai, Clipboard }
 

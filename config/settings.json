@@ -3,6 +3,7 @@
     "directory": ""
   },
   "appearance": {
+    "colorMode": "light",
     "paletteFollowsNightLight": true,
     "blurRadius": 18,
     "animationSpeed": "normal",

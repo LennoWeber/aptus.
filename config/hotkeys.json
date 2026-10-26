@@ -179,6 +179,17 @@
       "action": "launcher.open:apps",
       "owner": "user",
       "command": "panel-toggle launcher"
+    },
+    {
+      "id": "appearance.colorMode",
+      "label": "Light or dark",
+      "mods": [
+        "SUPER"
+      ],
+      "key": "T",
+      "action": "appearance.colorMode:toggle",
+      "owner": "user",
+      "command": "theme-mode-toggle"
     }
   ]
 }
