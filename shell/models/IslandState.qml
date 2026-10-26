@@ -85,7 +85,7 @@ Scope {
     }
 
     // Show the on-screen indicator on the pill: kind is Enums.OsdKind, level 0..1, label replaces the bar when not empty.
-    function showOsd(kind: int, level: real, muted: bool, label: string): void {
+    function showOsd(kind: int, level: real, muted: bool, label: string, detail: string): void {
         if (kind < Enums.OsdKind.Volume || kind > Enums.OsdKind.Caffeine) throw new Error("invariant: IslandState.showOsd: unknown OSD kind")
         if (!enabled || stage === Enums.IslandStage.Open || morph !== Enums.MorphTarget.None) return
         osd = { kind: kind, level: Math.max(0, Math.min(1, level)), muted: muted, label: label || "" }
@@ -143,6 +143,12 @@ Scope {
         }
         queue = queue.filter(q => q.id !== id).concat([a])
         if (queue.length > queueDepth) queue = queue.slice(queue.length - queueDepth)
+    }
+
+    // Push an alert with a card: kind is Enums.AlertKind, data holds the fields of IslandState.alert beyond id, kind, severity and tileId
+    // (text, detail, appName, appIcon, image, body, album, actions, notificationId, progress, playing, holdMs).
+    function pushRichAlert(id: string, kind: int, severity: int, tileId: int, data: var): void {
+        throw new Error("not implemented")
     }
 
     function dismissAlert(): void {

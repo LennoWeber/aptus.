@@ -39,6 +39,11 @@ Scope {
     }
     onPlayerChanged: positionSec = player && player.positionSupported ? player.position : 0
 
+    // Icon source for a desktop entry ("spotify"), "" when the theme has none.
+    function iconFor(entry: string): string {
+        throw new Error("not implemented")
+    }
+
     function playPause(): void {
         if (!available) throw new Error("invariant: MediaState.playPause: no media player")
         player.togglePlaying()

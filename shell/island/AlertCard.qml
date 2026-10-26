@@ -20,6 +20,16 @@ Item {
     property bool hasProgress            // the alert has a progress bar (a download, a track)
     property bool hasActions             // the alert has action buttons
 
+    // Name of the app in capitals for the header line ("SPOTIFY"), "" when the alert has none.
+    function appLabel(): string {
+        throw new Error("not implemented")
+    }
+
+    // First letter for the badge when there is neither a cover nor an app icon.
+    function badgeLetter(): string {
+        throw new Error("not implemented")
+    }
+
     signal dismissed()
     signal activated()
     signal actionInvoked(string actionId)

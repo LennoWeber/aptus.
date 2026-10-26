@@ -24,7 +24,7 @@ PanelWindow {
     // No fade in (instant feedback), 140 ms fade out.
     Behavior on fade { enabled: !win.shown; NumberAnimation { duration: Tokens.durFast } }
 
-    function flash(newKind: int, newLevel: real, isMuted: bool, newLabel: string): void {
+    function flash(newKind: int, newLevel: real, isMuted: bool, newLabel: string, newDetail: string): void {
         if (newKind < Enums.OsdKind.Volume || newKind > Enums.OsdKind.Caffeine) throw new Error("invariant: Osd.flash: unknown OSD kind")
         // The island shows the indicator when it is the top element; this window stays hidden then.
         if (islandState && islandState.enabled) {

@@ -96,11 +96,16 @@ PanelWindow {
 
     // Sizes of the body (px) for each stage and view; Home takes the height of its content.
     readonly property real alertWidth: 380
-    readonly property real osdWidth: 320      // the on-screen indicator
-    readonly property real osdHeight: 46
+    readonly property real osdWidth: 360      // the on-screen indicator
+    readonly property real osdHeight: 72
     readonly property int osdGrowMs: 160      // ms: the body grows to the indicator in this time
     readonly property int hoverGrowMs: 260    // ms: the body grows to the card when the pointer opened it
     readonly property real alertHeight: 38
+    readonly property real alertCardWidth: 420     // the grown alert card
+    readonly property real alertCardMinHeight: 76
+    readonly property real alertCardMaxHeight: 132
+    readonly property real alertMediaHeight: 96
+    readonly property int alertGrowMs: 340         // ms: the body grows to the card in this time, with a little overshoot
     readonly property real homeWidth: cardStyle ? card.widthFor(homeStyle) : design === "pill" ? 480 : 520
     readonly property var viewSizes: ({
         power: { w: 480, h: 150 },
@@ -137,6 +142,11 @@ PanelWindow {
         if (stageId === Enums.IslandStage.Osd) return osdGrowMs
         if (stageId === Enums.IslandStage.Open) return byHover ? hoverGrowMs : openGrowMs
         return stageId === Enums.IslandStage.Alert ? 220 : Tokens.durSlow
+    }
+
+    // Body size (object with w and h) of the card for an alert (IslandState.alert), told by its kind and its content.
+    function alertSizeFor(a: var): var {
+        throw new Error("not implemented")
     }
 
     // Open the island of this screen at a view.

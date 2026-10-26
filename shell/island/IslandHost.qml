@@ -39,6 +39,21 @@ Scope {
     property string lastTrackKey: ""
     property bool batteryAnnounced
 
+    // Enums.AlertKind of a notification, told by its app and text: Mail, Download, or plain Notification.
+    function classifyNotification(n: var): int {
+        throw new Error("not implemented")
+    }
+
+    // The fields of IslandState.pushRichAlert's data for a notification (app, icon, picture, body, actions).
+    function notificationData(n: var): var {
+        throw new Error("not implemented")
+    }
+
+    // The fields of IslandState.pushRichAlert's data for the track that plays (cover, artist and album, app, progress).
+    function mediaData(m: var, reason: string): var {
+        throw new Error("not implemented")
+    }
+
     // Push an alert for the notification at the top of Notifications.popupItems when it is a new one.
     function announceNotification(): void {
         const list = Notifications.popupItems

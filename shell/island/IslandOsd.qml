@@ -20,6 +20,11 @@ Item {
         return kind === Enums.OsdKind.Brightness ? "sun" : kind === Enums.OsdKind.Microphone ? "mic" : kind === Enums.OsdKind.Caffeine ? "cup" : kind === Enums.OsdKind.Rotation ? "rotate" : "volume"
     }
 
+    // Title for an Enums.OsdKind ("Volume", "Brightness", ...).
+    function titleFor(kind: int): string {
+        throw new Error("not implemented")
+    }
+
     // The value as text: "42%", "Muted", or the label.
     function valueText(): string {
         if (!osd) return ""
