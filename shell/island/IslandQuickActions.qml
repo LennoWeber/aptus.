@@ -4,7 +4,7 @@ import qs.models
 import qs.theme
 import qs.components
 
-// The lower part of the hover card: the power profile and the shortcuts that open a view of the island.
+// The lower part of the quick settings card: the power profile and the shortcuts that open a view of the island.
 Item {
     id: actions
 

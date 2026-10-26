@@ -34,8 +34,6 @@ PanelWindow {
     property bool slidOut
 
     // Settings, as read from appSettings.
-    // TODO(phase 7): delete: the setting island.hoverOpen is gone, nothing reads it.
-    property bool hoverOpen: appSettings ? appSettings.get("island.hoverOpen") !== false : true
     property bool reserveSpace: appSettings ? appSettings.get("island.reserveSpace") !== false : true
     property bool mediaWings: appSettings ? appSettings.get("island.mediaWings") !== false : true
     property string workspaceStyle: appSettings ? appSettings.get("bar.workspaceStyle") || "bubbles" : "bubbles"   // bar.workspaceStyle
@@ -44,35 +42,25 @@ PanelWindow {
     property bool showWeather: appSettings ? appSettings.get("island.showWeather") !== false : true
     property string clockFormat: appSettings ? appSettings.get("bar.clockFormat") || "24h" : "24h"
 
-    // This screen's stage and view: Open and Hover only on the screen that was opened; an alert shows on every screen.
+    // This screen's stage and view: Open only on the screen that was opened; an alert shows on every screen.
     property int stage: {
         if (!islandState) return Enums.IslandStage.Rest
         const s = islandState.stage
-        // TODO(phase 7): Stage Hover is gone: test for Open only; fix the comment above (Open only).
-        if ((s === Enums.IslandStage.Open || s === Enums.IslandStage.Hover) && islandState.openScreen !== modelData.name)
+        if (s === Enums.IslandStage.Open && islandState.openScreen !== modelData.name)
             return islandState.alert ? Enums.IslandStage.Alert : Enums.IslandStage.Rest
         return s
     }
     property int view: islandState ? islandState.view : Enums.IslandView.Home
     property bool isOpen: stage === Enums.IslandStage.Open
     onStageChanged: if (stage < Enums.IslandStage.Rest || stage > Enums.IslandStage.Open) throw new Error("invariant: Island: unknown stage")
-    // TODO(phase 7): without hoverIsHome: the quick card shows under Home only while the island is open on Home.
-    property bool homeWithQuick: hoverIsHome || (isOpen && view === Enums.IslandView.Home)   // the opened Home shows the quick settings below the header (every design)
+    property bool homeWithQuick: isOpen && view === Enums.IslandView.Home   // the opened Home shows the quick settings below the header (every design)
     readonly property int openGrowMs: 220   // ms: the body grows to an opened view in this time
-    // TODO(phase 7): delete isHover (the Hover stage is gone) and fix every reader below.
-    property bool isHover: stage === Enums.IslandStage.Hover
     property bool isAlert: stage === Enums.IslandStage.Alert
-    // TODO(phase 7): delete isPinned and this invariant: the opened island already takes the keyboard.
-    onIsPinnedChanged: if (isPinned && !isHover) throw new Error("invariant: Island: pinned without the hover card")
-    property bool isPinned: isHover && islandState && islandState.pinned   // the hover card is pinned on this screen
 
-    // The design (setting island.design): capsule, ninja, ticker or shade. It sets the size at rest, the shape, and whether
-    // resting the pointer on the island shows the quick settings (capsule, ticker, shade) or opens the home card (ninja).
+    // The design (setting island.design): capsule, pill, ticker or shade. It sets the size at rest and the shape.
     readonly property string design: IslandLook.design
-    // TODO(phase 7): delete; rename the design "ninja" to "pill" in this block and in radiusRest, radiusOpen, homeWidth; fix the comment (no hover any more).
-    readonly property bool hoverIsHome: design === "ninja"
-    readonly property real radiusRest: design === "ninja" ? IslandLook.restHeight / 2 : design === "shade" ? 3 : IslandLook.radiusRest
-    readonly property real radiusOpen: design === "ninja" ? 26 : design === "shade" ? 18 : IslandLook.radiusOpen
+    readonly property real radiusRest: design === "pill" ? IslandLook.restHeight / 2 : design === "shade" ? 3 : IslandLook.radiusRest
+    readonly property real radiusOpen: design === "pill" ? 26 : design === "shade" ? 18 : IslandLook.radiusOpen
 
     // Morph: how far the island has grown toward the launcher or control center (0 = itself, 1 = fully there).
     property real morphProgress: islandState && islandState.morph !== Enums.MorphTarget.None ? 1 : 0
@@ -82,22 +70,18 @@ PanelWindow {
 
     // Size of the body for the current stage and view.
     property real restWidth: rest.wantedWidth
-    // TODO(phase 7): content height is home + quick only; no isHover branch.
-    property real targetWidth: sizeFor(stage, view, isHover && !hoverIsHome ? hoverPanel.implicitHeight : home.implicitHeight + (homeWithQuick ? hoverPanel.implicitHeight : 0), islandState ? islandState.morph : Enums.MorphTarget.None).w
-    property real targetHeight: sizeFor(stage, view, isHover && !hoverIsHome ? hoverPanel.implicitHeight : home.implicitHeight + (homeWithQuick ? hoverPanel.implicitHeight : 0), islandState ? islandState.morph : Enums.MorphTarget.None).h
+    property real targetWidth: sizeFor(stage, view, home.implicitHeight + (homeWithQuick ? quick.implicitHeight : 0), islandState ? islandState.morph : Enums.MorphTarget.None).w
+    property real targetHeight: sizeFor(stage, view, home.implicitHeight + (homeWithQuick ? quick.implicitHeight : 0), islandState ? islandState.morph : Enums.MorphTarget.None).h
 
     signal dropdownRequested(int dropdownId, var anchorItem, var targetScreen, real offsetX)
     signal tileRequested(int tileId)
     signal controlCenterRequested()
     signal launcherRequested()
 
-    // Sizes of the body (px) for each stage and view; Home and Hover take the height of their content.
-    // TODO(phase 7): delete hoverGrowMs and hoverWidth (no Hover stage); openGrowMs stays.
-    readonly property int hoverGrowMs: 180   // ms: the body grows to the hover card in this time (the other sizes take Tokens.durSlow)
+    // Sizes of the body (px) for each stage and view; Home takes the height of its content.
     readonly property real alertWidth: 380
     readonly property real alertHeight: 38
-    readonly property real hoverWidth: design === "shade" ? 460 : 440
-    readonly property real homeWidth: design === "ninja" ? 480 : 520
+    readonly property real homeWidth: design === "pill" ? 480 : 520
     readonly property var viewSizes: ({
         power: { w: 480, h: 150 },
         screenshot: { w: 440, h: 150 },
@@ -108,13 +92,11 @@ PanelWindow {
     readonly property var morphSizes: ({ launcher: { w: 640, h: 52 }, controlCenter: { w: 760, h: 150 } })
 
     // Body size (object with w and h) for a stage and view (Enums.IslandStage, Enums.IslandView); contentHeight is the
-    // content height of Home or Hover. While morph is not None the morph size wins.
+    // content height of Home. While morph is not None the morph size wins.
     function sizeFor(stageId: int, viewId: int, contentHeight: real, morph: int): var {
         if (morph === Enums.MorphTarget.Launcher) return morphSizes.launcher
         if (morph === Enums.MorphTarget.ControlCenter) return morphSizes.controlCenter
         if (stageId === Enums.IslandStage.Alert) return { w: alertWidth, h: alertHeight }
-        // TODO(phase 7): delete this branch.
-        if (stageId === Enums.IslandStage.Hover) return { w: hoverIsHome ? homeWidth : hoverWidth, h: contentHeight + 4 }
         if (stageId === Enums.IslandStage.Open) {
             switch (viewId) {
             case Enums.IslandView.Power: return viewSizes.power
@@ -128,12 +110,10 @@ PanelWindow {
         return { w: restWidth, h: IslandLook.restHeight }
     }
 
-    // Duration (ms) of the body's growth for a stage and a view (Enums.IslandStage, Enums.IslandView): hoverGrowMs for Hover,
-    // openGrowMs for an opened view, Tokens.durSlow otherwise.
+    // Duration (ms) of the body's growth for a stage and a view (Enums.IslandStage, Enums.IslandView): openGrowMs for an opened view, Tokens.durSlow otherwise.
     function growMsFor(stageId: int, viewId: int): int {
         if (stageId < Enums.IslandStage.Rest || stageId > Enums.IslandStage.Open) throw new Error("invariant: Island.growMsFor: unknown stage")
-        // TODO(phase 7): Open and the rest only; fix the comment above.
-        return stageId === Enums.IslandStage.Hover ? hoverGrowMs : stageId === Enums.IslandStage.Open ? openGrowMs : Tokens.durSlow
+        return stageId === Enums.IslandStage.Open ? openGrowMs : Tokens.durSlow
     }
 
     // Open the island of this screen at a view.
@@ -153,15 +133,13 @@ PanelWindow {
     screen: modelData
     anchors.top: true
     implicitWidth: 940
-    // TODO(phase 7): fix the comment: the opened Home with an open quick section is the tallest body.
-    implicitHeight: 660   // the hover card with an open section is the tallest body (about 560 px)
+    implicitHeight: 660   // the opened Home with an open quick section is the tallest body (about 560 px)
     exclusiveZone: reserveSpace && !slidOut ? Tokens.topInset : 0
     color: "transparent"
     mask: Region { item: body }
     WlrLayershell.namespace: "aptus-island"
     WlrLayershell.layer: WlrLayer.Top
-    // TODO(phase 7): isOpen only.
-    WlrLayershell.keyboardFocus: isOpen || isPinned ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+    WlrLayershell.keyboardFocus: isOpen ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
 
     // Fullscreen windows and caffeine keep the screen awake (policy in Idle); the island holds the inhibitor
     // while it is the top element, as the bar does.
@@ -173,14 +151,12 @@ PanelWindow {
     // A click outside closes the opened island.
     HyprlandFocusGrab {
         windows: [win]
-        // TODO(phase 7): win.isOpen only.
-        active: win.isOpen || win.isPinned
+        active: win.isOpen
         onCleared: if (win.islandState) win.islandState.close()
     }
 
-    // TODO(phase 7): openLike = isOpen, or drop it and use isOpen.
-    readonly property bool openLike: isOpen || isHover
-    onOpenLikeChanged: if (!openLike) hoverPanel.expanded = ""
+    readonly property bool openLike: isOpen
+    onOpenLikeChanged: if (!openLike) quick.expanded = ""
     readonly property color fg: openLike ? IslandLook.inkOpen : IslandLook.inkRest
     readonly property color fgSoft: Qt.rgba(fg.r, fg.g, fg.b, 0.65)
     readonly property color hairline: Qt.rgba(fg.r, fg.g, fg.b, 0.16)
@@ -257,14 +233,11 @@ PanelWindow {
             }
         }
 
-        // Hover: the quick settings.
-        // TODO(phase 7): rename the type to IslandQuick and the id hoverPanel to quick (all readers in this file); fix the comment above.
-        IslandHover {
-            id: hoverPanel
-            anchors { left: parent.left; right: parent.right; top: parent.top; topMargin: win.homeWithQuick ? home.implicitHeight : 0 }
-            // Ninja: the quick settings sit under the home card, so hover and tap show the same card.
-            // TODO(phase 7): shows when the island is open on Home; no isHover.
-            opacity: win.homeWithQuick ? (win.isHover || (win.isOpen && win.view === Enums.IslandView.Home) ? 1 : 0) : win.isHover ? 1 : 0
+        // The quick settings, under the opened Home.
+        IslandQuick {
+            id: quick
+            anchors { left: parent.left; right: parent.right; top: parent.top; topMargin: home.implicitHeight }
+            opacity: win.homeWithQuick ? 1 : 0
             visible: opacity > 0.01
             Behavior on opacity { NumberAnimation { duration: Tokens.durFast } }
             appSettings: win.appSettings
@@ -278,8 +251,7 @@ PanelWindow {
             focusState: win.focusState
             mediaState: win.mediaState
             powerProfileState: win.powerProfileState
-            // TODO(phase 7): focus only while a section is open (win.homeWithQuick && expanded !== ""): the Wi-Fi password field needs the keyboard; the opened scope below then takes focus only when this one does not.
-            focus: win.isPinned
+            focus: win.homeWithQuick && expanded !== ""   // a section with a field (the Wi-Fi password) takes the keyboard
             ink: win.fg
             inkSoft: win.fgSoft
             line: win.hairline
@@ -287,17 +259,13 @@ PanelWindow {
             onControlCenterRequested: win.closeAndThen("controlCenter")
             onViewRequested: v => win.openView(v)
             onCloseRequested: win.islandState.close()
-            // TODO(phase 7): delete the pin call; keep the handler only if something else needs it, else delete the signal in IslandQuick too.
-            onSectionToggled: name => { if (name !== "") win.islandState.pin(win.modelData.name) }
         }
 
         // Opened: one view at a time, each fades in when the body has grown.
         FocusScope {
             anchors.fill: parent
-            // TODO(phase 7): focus: win.isOpen && !quick.focus (the quick card keeps it while a section is open).
-            focus: win.isOpen
-            // TODO(phase 7): win.isOpen only.
-            opacity: win.isOpen || (win.isHover && win.hoverIsHome) ? 1 : 0
+            focus: win.isOpen && !quick.focus
+            opacity: win.isOpen ? 1 : 0
             visible: opacity > 0.01
             Behavior on opacity { NumberAnimation { duration: Tokens.durFast } }
             Keys.onEscapePressed: win.islandState.close()
@@ -305,8 +273,7 @@ PanelWindow {
             IslandHome {
                 id: home
                 anchors { left: parent.left; right: parent.right; top: parent.top }
-                // TODO(phase 7): win.view === Enums.IslandView.Home only.
-                opacity: win.view === Enums.IslandView.Home || win.isHover ? 1 : 0
+                opacity: win.view === Enums.IslandView.Home ? 1 : 0
                 visible: opacity > 0.01
                 Behavior on opacity { NumberAnimation { duration: Tokens.durFast } }
                 appSettings: win.appSettings
@@ -403,16 +370,6 @@ PanelWindow {
             }
         }
 
-        // TODO(phase 7): delete the HoverHandler below (id: hover) and its comment; nothing else uses it (check `hover.` readers).
-        // Hover: the pointer resting on the island shows the quick settings; leaving takes them back.
-        HoverHandler {
-            id: hover
-            onHoveredChanged: {
-                if (!win.islandState) return
-                if (hovered) win.islandState.hoverEnter(win.modelData.name)
-                else win.islandState.hoverLeave(win.modelData.name)
-            }
-        }
     }
 
     // A view is reset when it is shown.

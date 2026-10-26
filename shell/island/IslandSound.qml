@@ -4,7 +4,7 @@ import qs.models
 import qs.theme
 import qs.components
 
-// The Sound section of the hover card: the output devices, a tap makes one the output.
+// The Sound section of the quick settings card: the output devices, a tap makes one the output.
 FocusScope {
     id: sound
 

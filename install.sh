@@ -48,20 +48,10 @@ check_fedora() {
     command -v hyprctl >/dev/null 2>&1 || say "Warning: hyprctl not found. aptus needs Hyprland."
 }
 
-# Every package aptus uses at run time (the greeter adds cage, see install_greeter).
-# TODO(phase 7, Bild-Theming): add ImageMagick (`magick`), ThemeSource reads the wallpaper colours with it.
-# TODO(phase 7): read the names from packages/aptus-dnf.txt (groups required, session, backup) through bin/aptus-packages; one list only.
-REQUIRED_PACKAGES=(quickshell hyprsunset brightnessctl playerctl grim slurp wl-clipboard cliphist curl
-    power-profiles-daemon NetworkManager iio-sensor-proxy wf-recorder libnotify python3)
+# The packages aptus uses at run time are listed in packages/aptus-dnf.txt (groups required, session, backup);
+# bin/aptus-packages reads the list (the greeter adds cage, see install_greeter).
 COPR_REPO=lionheartp/Hyprland   # has quickshell, hyprsunset and cliphist for Fedora
 MIN_QUICKSHELL=0.3.2
-
-# The packages among the arguments that are not installed.
-# TODO(phase 7): delete this function: bin/aptus-packages missing does it (and understands a|b); install_packages calls that.
-missing_packages() {
-    local p
-    for p in "$@"; do rpm -q "$p" >/dev/null 2>&1 || printf '%s\n' "$p"; done
-}
 
 # Enable the COPR for the packages the Fedora repositories do not have. Only with --copr, and it asks first:
 # a COPR is a third-party source that can replace system packages.
@@ -89,11 +79,12 @@ check_quickshell_version() {
 # There is no way back for packages (remove them with dnf if you want them gone).
 install_packages() {
     if ! command -v dnf >/dev/null 2>&1; then
-        say "dnf not found. Install these yourself: ${REQUIRED_PACKAGES[*]}"
+        say "dnf not found. Install these yourself: $("$ROOT/bin/aptus-packages" list | tr '\n' ' ')"
         return 0
     fi
     local missing=() unavailable=() installable=() p
-    mapfile -t missing < <(missing_packages "${REQUIRED_PACKAGES[@]}")
+    # a name like a|b means either one is enough; the first one is installed
+    mapfile -t missing < <("$ROOT/bin/aptus-packages" missing | sed 's/|.*//')
     if [ "${#missing[@]}" -eq 0 ]; then
         check_quickshell_version
         return 0
@@ -145,16 +136,19 @@ install_hyprland_binds() {
 }
 
 # Put bin/aptus into ~/.local/bin and link the config into ~/.config/quickshell/aptus.
-# TODO(phase 7): also link bin/aptus-packages into BIN_DIR.
 install_launcher() {
     do_it mkdir -p "$BIN_DIR" "$STATE_DIR"
     link_into "$ROOT/bin/aptus" "$BIN_DIR/aptus"
     link_into "$ROOT/bin/aptus-patch-shell-switch" "$BIN_DIR/aptus-patch-shell-switch"
+    link_into "$ROOT/bin/aptus-packages" "$BIN_DIR/aptus-packages"
     link_into "$ROOT/bin/aptus-settings-watchdog" "$BIN_DIR/aptus-settings-watchdog"
     link_into "$ROOT/bin/aptus-ai-usage" "$BIN_DIR/aptus-ai-usage"
     # The window look is read from the state dir, so a settings change can rewrite it.
-    # TODO(phase 7): copy the look file when it differs from the repo copy (keep a .before copy), so new values reach an existing install.
     if [ ! -e "$STATE_DIR/hyprland-look.lua" ]; then
+        do_it cp "$ROOT/hypr/aptus-look.lua" "$STATE_DIR/hyprland-look.lua"
+    elif ! cmp -s "$ROOT/hypr/aptus-look.lua" "$STATE_DIR/hyprland-look.lua"; then
+        # a newer look (for example window transparency) reaches an existing install; the old file is kept once
+        [ -e "$STATE_DIR/hyprland-look.lua.before" ] || do_it cp "$STATE_DIR/hyprland-look.lua" "$STATE_DIR/hyprland-look.lua.before"
         do_it cp "$ROOT/hypr/aptus-look.lua" "$STATE_DIR/hyprland-look.lua"
     fi
     case ":$PATH:" in *":$BIN_DIR:"*) ;; *) say "Note: $BIN_DIR is not in your PATH." ;; esac

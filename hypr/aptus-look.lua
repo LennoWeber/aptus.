@@ -3,7 +3,7 @@
 -- so a settings change can rewrite and reload it.
 -- Monitor, input and touch settings stay in the user's own file.
 
--- Window transparency and blur (values for the window look; applied below once the look is wired in).
+-- Window transparency and blur: apps stay easy to read (92 % / 85 %), the blur is strong enough to calm the wallpaper behind them.
 local windowLook = {
 	activeOpacity = 0.92,
 	inactiveOpacity = 0.85,
@@ -33,10 +33,11 @@ hl.config({
 		},
 	},
 
-	-- TODO(phase 7): active_opacity and inactive_opacity from windowLook; blur size, passes, brightness, contrast, vibrancy, noise, popups from windowLook (the table above).
 	decoration = {
 		rounding = 10,
 		rounding_power = 2,
+		active_opacity = windowLook.activeOpacity,
+		inactive_opacity = windowLook.inactiveOpacity,
 		-- soft, short shadow, barely there
 		shadow = {
 			enabled = true,
@@ -45,13 +46,16 @@ hl.config({
 			offset = "0 4",
 			color = "rgba(1c212721)",
 		},
-		-- blur stays on globally; windows have none of their own, the shell asks for it per surface
+		-- blur stays on globally and blurs what shows through a transparent window; the shell asks for its own surfaces itself
 		blur = {
 			enabled = true,
-			size = 8,
-			passes = 3,
-			brightness = 1.0,
-			vibrancy = 0.1,
+			size = windowLook.blurSize,
+			passes = windowLook.blurPasses,
+			brightness = windowLook.blurBrightness,
+			contrast = windowLook.blurContrast,
+			vibrancy = windowLook.blurVibrancy,
+			noise = windowLook.blurNoise,
+			popups = true,
 		},
 	},
 })

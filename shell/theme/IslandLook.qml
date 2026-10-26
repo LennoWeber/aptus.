@@ -12,8 +12,7 @@ Singleton {
     property string name: entry("name") || ""
     property var looks                    // raw data of theme/island-looks.json: { id, name, ... } per look
 
-    // TODO(phase 7): fix the comment: Open = the opened island.
-    // colours: Rest = pill and alert, Open = hover panel and opened island
+    // colours: Rest = pill and alert, Open = the opened island
     property color fillRest: colorByName(entry("fillRest") || "")
     property color fillOpen: colorByName(entry("fillOpen") || "")
     property color inkRest: colorByName(entry("inkRest") || "")
@@ -30,10 +29,8 @@ Singleton {
     // The design (setting island.design) decides the height at rest and whether the island floats; the look the rest.
     property string design: "capsule"                        // capsule, pill, ticker or shade
     onDesignChanged: if (["capsule", "pill", "ticker", "shade"].indexOf(design) < 0) throw new Error("invariant: IslandLook: unknown design " + design)
-    // TODO(phase 7): "pill" instead of "ninja" in restHeight and gap.
-    // TODO(phase 7): shade: 10 px instead of 6 (the line is opened by a click now, not by hover).
-    readonly property real restHeight: design === "ninja" ? 36 : design === "shade" ? 6 : Tokens.barHeight
-    readonly property real gap: design === "ninja" ? 6 : design === "capsule" ? (entry("gap") ?? 0) : 0   // distance from the top edge in px, 0 = flush with the edge
+    readonly property real restHeight: design === "pill" ? 36 : design === "shade" ? 10 : Tokens.barHeight
+    readonly property real gap: design === "pill" ? 6 : design === "capsule" ? (entry("gap") ?? 0) : 0   // distance from the top edge in px, 0 = flush with the edge
     property bool monoClock: entry("monoClock") === true     // the time in the mono font
     property bool accentLine: entry("accentLine") === true   // 2 px signal line at the bottom edge
 

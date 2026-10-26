@@ -31,12 +31,8 @@ Scope {
     signal closed()
 
     // Open the island on a screen, showing view (Enums.IslandView). Does nothing while the bar is shown.
-    // TODO(phase 7): delete the hoverIn/hoverOut stops and the pinned reset (those objects are gone).
     function open(screenName: string, view: int): void {
         if (!enabled) return
-        hoverIn.stop()
-        hoverOut.stop()
-        pinned = false
         openScreen = screenName
         root.view = view
         stage = Enums.IslandStage.Open
@@ -45,12 +41,8 @@ Scope {
     }
 
     // Back to rest, or to the alert that waits.
-    // TODO(phase 7): test for Open only; no hoverIn/hoverOut stops, no pinned reset.
     function close(): void {
-        if (stage !== Enums.IslandStage.Open && stage !== Enums.IslandStage.Hover) return
-        hoverIn.stop()
-        hoverOut.stop()
-        pinned = false
+        if (stage !== Enums.IslandStage.Open) return
         openScreen = ""
         view = Enums.IslandView.Home
         stage = alert ? Enums.IslandStage.Alert : Enums.IslandStage.Rest
@@ -68,33 +60,6 @@ Scope {
     function showView(view: int): void {
         if (stage !== Enums.IslandStage.Open) throw new Error("invariant: IslandState.showView: the island is not open")
         root.view = view
-    }
-
-    // Pin the hover card of that screen (pinned = true): it takes keyboard focus and stays until Esc or a click elsewhere,
-    // the stage stays Hover. Does nothing unless the island is in the Hover stage on that screen.
-    // TODO(phase 7): delete pin(): the Hover stage and pinned are gone; fix the comment.
-    function pin(screenName: string): void {
-        if (!screenName) throw new Error("invariant: IslandState.pin: empty screen name")
-        if (stage !== Enums.IslandStage.Hover || openScreen !== screenName || pinned) return
-        hoverOut.stop()
-        pinned = true
-    }
-
-    // The pointer rests on the island of that screen. Only has an effect while hoverEnabled and nothing is open.
-    // TODO(phase 7): delete hoverEnter() and hoverLeave(): the pointer no longer opens the island.
-    function hoverEnter(screenName: string): void {
-        if (!enabled || !hoverEnabled || morph !== Enums.MorphTarget.None) return
-        hoverOut.stop()
-        if (stage === Enums.IslandStage.Open) return
-        if (stage === Enums.IslandStage.Hover && openScreen === screenName) return
-        pendingHoverScreen = screenName
-        hoverIn.restart()
-    }
-
-    // The pointer left the island of that screen.
-    function hoverLeave(screenName: string): void {
-        hoverIn.stop()
-        if (stage === Enums.IslandStage.Hover && openScreen === screenName && !pinned) hoverOut.restart()
     }
 
     // severity: Enums.Severity. Critical goes first; the rest waits its turn (at most queueDepth, oldest dropped).
@@ -127,8 +92,7 @@ Scope {
     // Show an alert on the pill (an alert is: id, text, detail, severity, tileId, holdMs).
     function show(a: var): void {
         alert = a
-        // TODO(phase 7): Open only.
-        if (stage !== Enums.IslandStage.Open && stage !== Enums.IslandStage.Hover) {
+        if (stage !== Enums.IslandStage.Open) {
             stage = Enums.IslandStage.Alert
             hold.interval = a.holdMs
             hold.restart()
@@ -142,13 +106,7 @@ Scope {
         if (target !== Enums.MorphTarget.None) close()
     }
 
-    // The hover card is pinned only while the stage is Hover; both times must be positive.
-    // TODO(phase 7): delete this invariant and the Component.onCompleted hover-times check below; fix the comment above.
-    onStageChanged: if (pinned && stage !== Enums.IslandStage.Hover) throw new Error("invariant: IslandState: pinned outside the Hover stage")
-    Component.onCompleted: if (hoverInMs <= 0 || hoverOutMs <= 0) throw new Error("invariant: IslandState: hover times must be positive")
-
     Timer { id: hold; onTriggered: root.dismissAlert() }
 
-    // TODO(phase 7): drop pinned, hoverIn and hoverOut from the reset.
-    onEnabledChanged: if (!enabled) { pinned = false; hold.stop(); hoverIn.stop(); hoverOut.stop(); alert = null; queue = []; openScreen = ""; view = Enums.IslandView.Home; stage = Enums.IslandStage.Rest; morph = Enums.MorphTarget.None }
+    onEnabledChanged: if (!enabled) { hold.stop(); alert = null; queue = []; openScreen = ""; view = Enums.IslandView.Home; stage = Enums.IslandStage.Rest; morph = Enums.MorphTarget.None }
 }

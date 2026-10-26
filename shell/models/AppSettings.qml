@@ -87,8 +87,7 @@ Scope {
             return out
         }
         defaults = read(defaultsFile)
-        // TODO(phase 7): pass the user tree through migrateValues() before merging.
-        values = merge(defaults, read(userFile))
+        values = merge(defaults, migrateValues(read(userFile)))
         refreshViews()
     }
 
@@ -96,7 +95,8 @@ Scope {
     // Rename values that older versions saved (island.design "ninja" is now "pill") in the tree read from the user's file.
     // Returns the tree with the old values replaced.
     function migrateValues(tree: var): var {
-        throw new Error("not implemented")
+        if (tree && tree.island && tree.island.design === "ninja") tree.island.design = "pill"
+        return tree
     }
 
     // Copy the typed properties from the settings tree. Called after load() and every set().

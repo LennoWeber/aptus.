@@ -4,7 +4,7 @@ import qs.models
 import qs.theme
 import qs.components
 
-// The Wi-Fi section of the hover card: the nearby networks, a tap connects, a secured network that is not saved asks for
+// The Wi-Fi section of the quick settings card: the nearby networks, a tap connects, a secured network that is not saved asks for
 // its password in a row under it. Scanning runs only while the section is shown.
 FocusScope {
     id: wifi

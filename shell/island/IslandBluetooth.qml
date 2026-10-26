@@ -4,7 +4,7 @@ import qs.models
 import qs.theme
 import qs.components
 
-// The Bluetooth section of the hover card: the known and nearby devices, a tap connects or disconnects.
+// The Bluetooth section of the quick settings card: the known and nearby devices, a tap connects or disconnects.
 // Discovery runs only while the section is shown.
 FocusScope {
     id: bluetooth

@@ -12,34 +12,61 @@ ROOT="$(dirname "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")")"
 LIST_FILE="$ROOT/packages/aptus-dnf.txt"
 DEFAULT_GROUPS=(required session backup)
 
-# print the package names of the given groups from LIST_FILE.
+# Print the package names of the given groups (default groups when none) from LIST_FILE, one per line.
 list_packages() {
-    echo "aptus-packages: list_packages not implemented" >&2
-    return 1
+    local groups=("$@")
+    [ "${#groups[@]}" -gt 0 ] || groups=("${DEFAULT_GROUPS[@]}")
+    [ -r "$LIST_FILE" ] || { echo "aptus-packages: cannot read $LIST_FILE" >&2; return 1; }
+    awk -v wanted="${groups[*]}" '
+        BEGIN { n = split(wanted, w, " "); for (i = 1; i <= n; i++) ok[w[i]] = 1 }
+        /^##[ \t]+/ { group = $2; next }
+        { sub(/#.*/, ""); gsub(/[ \t]+/, "") }
+        $0 != "" && ok[group] { print $0 }
+    ' "$LIST_FILE"
 }
 
-# the names from list_packages that rpm -q does not find.
+# The names from list_packages that rpm does not know.
 missing_packages() {
-    echo "aptus-packages: missing_packages not implemented" >&2
-    return 1
+    local name
+    local alt found
+    while IFS= read -r name; do
+        found=0
+        for alt in ${name//|/ }; do
+            rpm -q "$alt" >/dev/null 2>&1 && found=1
+        done
+        [ "$found" = 1 ] || printf '%s\n' "$name"
+    done < <(list_packages "$@")
 }
 
-# print "sudo dnf install -y ..." for the missing packages, or say that nothing is missing.
+# The sudo dnf command for the missing packages, or a line saying that nothing is missing. It only prints.
 install_command() {
-    echo "aptus-packages: install_command not implemented" >&2
-    return 1
+    local missing=() name
+    mapfile -t missing < <(missing_packages "$@")
+    if [ "${#missing[@]}" -eq 0 ]; then echo "Nothing is missing."; return 0; fi
+    local first=()
+    for name in "${missing[@]}"; do first+=("${name%%|*}"); done
+    echo "sudo dnf install -y ${first[*]}"
 }
 
-# per group, the installed and the missing packages.
+# Per group: how many packages are installed, and which are missing.
 check_all() {
-    echo "aptus-packages: check_all not implemented" >&2
-    return 1
+    local group missing
+    for group in required session backup optional; do
+        missing="$(missing_packages "$group" | tr '\n' ' ')"
+        if [ -z "$missing" ]; then echo "$group: all installed"; else echo "$group: missing $missing"; fi
+    done
 }
 
-# dispatch the sub-commands (list, missing, command, check) and the usage text.
 main() {
-    echo "aptus-packages: not implemented" >&2
-    return 1
+    local cmd="${1:-check}"
+    [ "$#" -gt 0 ] && shift
+    case "$cmd" in
+        list) list_packages "$@" ;;
+        missing) missing_packages "$@" ;;
+        command) install_command "$@" ;;
+        check) check_all ;;
+        *) sed -n '2,8p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; return 2 ;;
+    esac
 }
 
 main "$@"

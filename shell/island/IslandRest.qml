@@ -7,8 +7,7 @@ import qs.components
 
 // The island at rest. What it shows depends on the design (setting island.design):
 //   capsule  workspaces and window title on the left, time and date in the middle, weather, status and battery on the right (560 px)
-// TODO(phase 7): rename the design "ninja" to "pill" in this file: header comment, the case, ninjaSide, ninjaLeft, ninjaClock, ninjaRight, visible test.
-//   ninja    a floating pill: workspace pips, time, day and date, music wings; as wide as its content
+//   pill     a floating pill: workspace pips, time, day and date, music wings; as wide as its content
 //   ticker   workspaces, one line that rolls through time, weather, music or window, battery; status icons
 //   shade    nothing but a line (the body itself)
 // While music plays or a recording runs, it takes the place of the window title.
@@ -50,14 +49,13 @@ Item {
     // Width the design wants at rest.
     readonly property real wantedWidth: {
         switch (design) {
-        // TODO(phase 7): "pill"; see the note at the header.
-        case "ninja": return Math.max(316, Math.ceil(2 * ninjaSide + ninjaClock.implicitWidth + 64))
+        case "pill": return Math.max(316, Math.ceil(2 * pillSide + pillClock.implicitWidth + 64))
         case "ticker": return 440
         case "shade": return 120
         default: return 560
         }
     }
-    readonly property real ninjaSide: Math.max(ninjaLeft.implicitWidth, ninjaRight.implicitWidth)
+    readonly property real pillSide: Math.max(pillLeft.implicitWidth, pillRight.implicitWidth)
 
     signal workspaceClicked(int workspaceId)
 
@@ -247,16 +245,15 @@ Item {
         }
     }
 
-    // ---- ninja ---------------------------------------------------------------------------------------------------
+    // ---- pill  ---------------------------------------------------------------------------------------------------
 
     Item {
-        // TODO(phase 7): "pill".
-        visible: rest.design === "ninja"
+        visible: rest.design === "pill"
         anchors.fill: parent
 
         // Workspace pips: the active one is a long pill.
         Row {
-            id: ninjaLeft
+            id: pillLeft
             anchors { left: parent.left; leftMargin: 18; verticalCenter: parent.verticalCenter }
             spacing: 5
             Repeater {
@@ -283,7 +280,7 @@ Item {
         }
 
         Label {
-            id: ninjaClock
+            id: pillClock
             anchors.centerIn: parent
             text: rest.timeText
             color: rest.ink
@@ -294,7 +291,7 @@ Item {
         }
 
         Row {
-            id: ninjaRight
+            id: pillRight
             anchors { right: parent.right; rightMargin: 18; verticalCenter: parent.verticalCenter }
             spacing: 8
             Cover { visible: rest.wingMedia && !rest.recording; anchors.verticalCenter: parent.verticalCenter }
