@@ -1366,3 +1366,40 @@ Alle Programme, die Lenno nutzt, sehen aus wie aptus: dieselbe ruhige Palette au
   - **Nicht gemacht:** Flatpak-Pfad für Zen (Zen ist RPM); Hinweis `warn` in Hell 3,3:1 bleibt (Zustandsmarker).
   - **Nicht geprüft (nicht installiert oder nur am Bildschirm sichtbar):** Starship (nicht installiert), fish, Spotify/Spicetify (nicht installiert), Aussehen in Zen (läuft erst nach Neustart des Browsers), Thunderbird (noch kein Profil), fastfetch-Thema (liegt bereit, `config.jsonc` bindet es nicht ein), hyprlock am Gerät.
   - **Offen für Lenno:** Thunderbird einmal starten und `aptus-theme-apps --only thunderbird` wiederholen; Starship installieren (`aptus-packages apps`, COPR atim/starship); Spotify (Flatpak) und Spicetify installieren und `spicetify config current_theme aptus color_scheme Base && spicetify apply`; Zen neu starten; fastfetch: Farben in `config.jsonc` (Dotfiles) übernehmen oder das Thema einbinden; Dunkel mit `aptus-theme-apps --mode dark --all`; es gibt noch keinen Schalter in der Shell, der Hell/Dunkel bei den Apps mitzieht; Dotfiles-Repo hat uncommittete neue Dateien (hyprlock-colors.conf, yazi/flavors, fastfetch/themes, nvim/plugins/aptus.lua) und geänderte (hyprlock.conf, yazi/theme.toml, fish/config.fish nicht verlinkt); Branch `app-theming` ist nicht gemerged, nichts gepusht.
+
+## Ablauf 11: Hell/Dunkel für Shell und alle Apps, Mod+T schaltet
+
+Stand 27. Okt. 2026 (Branch `color-mode` von `main`): **Phase 1 geschrieben; Phasen 2 bis 7 laufen ohne Pause** ([[feedback_phasen_ohne_weiter]]).
+
+### Ziel und Entscheidungen (Lenno)
+- **Mod+T** wechselt zwischen Hell und Dunkel; **alles** zieht automatisch mit: die Shell selbst (Island/Leiste, Launcher, Kontrollzentrum, Benachrichtigungen, Sperrbild) **und** alle Apps aus Ablauf 10.
+- Zustand bleibt (Setting `appearance.colorMode`: `light` | `dark` | `auto`, Standard `light`). `auto` = dunkel, solange das Nachtlicht läuft, sonst hell. Erscheint in den Settings.
+- Entscheidung „nur Apps“ oder „nur Hotkey ohne Setting“ wurde abgelehnt.
+
+### Ist-Stand (geprüft)
+- `~/.config/hypr/hyprland.lua:333` bindet Mod+T schon an `shell-switch msg theme-mode-toggle`; `bin/aptus` macht daraus den IPC-Aufruf `aptus themeModeToggle`. **Es fehlt nur die Funktion in `IpcHandlers.qml`**; Hyprland braucht keine Änderung. `config/hotkeys.json` kennt T nicht (Eintrag mit `owner: user` ergänzen, damit die Settings-Tabelle ihn zeigt).
+- Shell-Farben stehen zentral in `shell/theme/Tokens.qml` (`palette.day`/`night`, `blend` von `NightLightState`, `paletteAt`, `applyPalette`); nur zwei Hex-Werte liegen ausserhalb. `palette.dark` existiert seit Ablauf 10 in `tokens.json`. Die Shell hat **keinen** Dunkelmodus: Aufgabe ist eine zweite Überblendung `darkAmount` (0 hell … 1 dunkel), danach die Nachtlicht-Tönung.
+- `aptus-theme-apps` kennt `--mode light|dark`, schreibt aber teils feste Dateien, die sich nicht von selbst umschalten.
+
+### Plan nach Bereichen
+1. **Shell:** `Tokens.darkAmount`, `paletteAt` mischt Tag → Dunkel → Nachtlicht (im Dunkeln wird Nachtlicht nur leicht wärmer), sanfter Übergang (~300 ms, nie ein Blitz). Neuer Dienst `shell/services/ColorModeState.qml`: liest `appearance.colorMode`, `resolved` (light/dark), `toggle()`, `set(mode)`, schreibt die Setting, ruft nach dem Wechsel `aptus-theme-apps --mode <resolved> --all --quiet` (Process, entprellt). IPC: `themeModeToggle`, `themeModeSet <light|dark|auto>`. Settings-Eintrag in `settings-schema.json` + `config/settings.json`, Hotkey-Eintrag.
+2. **Apps, die sich selbst umschalten (ohne Neustart):** Zen und Thunderbird: CSS enthält beide Paletten unter `@media (prefers-color-scheme: dark)`; Ghostty: `theme = light:aptus-light,dark:aptus-dark`; yazi: Flavor `aptus-light` und `aptus-dark`; GTK/Libadwaita und Qt (qt6ct beobachtet die Datei) über `gsettings` und Farbdatei; Starship liest die Datei bei jedem Prompt.
+3. **Apps, die das Skript bei jedem Wechsel neu schreibt/benachrichtigt:** kitty (`USR1`), cava (`USR2`), Hyprland-Rahmen + `hyprctl reload`, hyprlock, btop, zathura, fish (universelle `fish_color_*`, damit offene Terminals mitziehen), Neovim (Signal `USR1`, das Plugin lädt `aptus` neu), Spotify (`spicetify config color_scheme light|dark` + `apply`, Neustart von Spotify nötig), fastfetch (erzeugte Config `aptus-config.jsonc` mit passenden Farben + fish-Alias), xsettingsd (`adw-gtk3`/`adw-gtk3-dark`).
+4. **Skript:** `--quiet`, `--mode auto` (liest `appearance.colorMode`/Nachtlicht nicht, nur light/dark); Vorlagen mit beiden Schemata (`light`/`dark` Abschnitte) wo das Programm das selbst wählt; Rückgabewert 0 auch wenn eine App fehlt.
+5. **Prüfung/Lücken (Audit) am Ende:** Liste, was nicht umschaltet.
+
+### Audit: was heute nicht (oder nicht live) mitzieht
+Spotify braucht Neustart; Thunderbird hat noch kein Profil; fastfetch bindet das Thema nicht ein; Firefox (RPM) hat Profil unter `~/.mozilla` und ist nicht gefärbt (nur Zen gewünscht); `bat`/`eza`/`fzf` folgen den Terminalfarben (ANSI), `bat` braucht `BAT_THEME=ansi`; kein tmux, kein fuzzel eingerichtet (nichts zu tun); VLC/OBS folgen Qt (Fusion + qt6ct-Farben); Kvantum steht auf Dracula, wird aber vom Stil Fusion überstimmt; GTK-Apps über `adw-gtk3`; X11-Apps über `xsettingsd`; Greeter (`greetd`) hat eigene Palette und bleibt hell; Noctalia (Backup-Shell) nicht angefasst.
+
+### Betroffene Dateien
+`shell/theme/Tokens.qml`, neu `shell/services/ColorModeState.qml` (+ `qmldir`), `shell/services/NightLightState.qml` (ruft `applyPalette`), `shell/IpcHandlers.qml`, `shell/shell.qml` (Dienst laden), `config/settings-schema.json`, `config/settings.json`, `config/hotkeys.json`, `shell/models/Enums.qml`, `bin/aptus-theme-apps`, `theme/apps/*`, `~/dotfiles/nvim/.config/nvim/lua/plugins/aptus.lua` (Signal-Handler), `~/.config/fish/conf.d/aptus.fish` (erzeugt), README.
+
+### Risiken
+- Farbwechsel muss weich sein und darf Bindungsschleifen mit `NightLightState.blend` vermeiden; Lesbarkeit im Dunkeln (Kontrast prüfen, `check_contrast`).
+- Jeder Wechsel startet das Python-Skript (kurz); darf den Hotkey nicht verzögern (Shell wechselt zuerst, Apps danach im Hintergrund).
+- `hyprctl reload` bei jedem Wechsel flackert eventuell kurz; falls ja, nur Rahmenfarben per `hyprctl keyword`.
+- Schreiben in Dotfiles (Link-Ordner) bei jedem Wechsel: möglichst nur Dateien ausserhalb des Repos ändern.
+- Spotify/Spicetify: `apply` ist langsam (Sekunden) und kann bei Flatpak-Updates scheitern: Fehler nur loggen.
+
+### Phasen dieses Ablaufs
+1 Plan · 2 Strukturen · 3 Signaturen · 4 TODOs · 5 Probe · 6 Invarianten · 7 Implementierung, jede mit frischem Review.
