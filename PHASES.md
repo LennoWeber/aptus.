@@ -1064,3 +1064,51 @@ Arbeitsregel wie beim vierten Ablauf: nie auf „weiter“ warten, jede Phase pr
 - **Getestet (Gerät, beide Bildschirme, echter Zeiger per `hyprctl eval`):** Shell lädt ohne neue Warnungen und Fehler; Blasen in Leiste, capsule, ticker; Hover öffnet; Wi-Fi-Bereich zeigt die echten Netze; Bluetooth-Bereich; Anheften hält die Karte nach dem Wegbewegen; Energieprofil wechseln (Performance → Balanced); Schließen setzt zurück. Nach den Fixes erneut mit Screenshot geprüft.
 - **Nicht getestet (braucht echte Klicks und Tasten, kein Eingabe-Werkzeug hier):** Tippen auf ein Netz (Verbinden, Trennen), Passworteingabe samt Tastaturfokus im Textfeld, Klick daneben schließt die angeheftete Karte, Kopplung eines Bluetooth-Geräts, die Schnellaktionen per Klick, Berührung. Lint: `qmllint` ist hier vorhanden (`qmllint-qt6`), löst aber die `qs.*`-Importe außerhalb von `aptus-lint.sh` nicht auf; `aptus-lint.sh` läuft über 2 Minuten und wurde nicht abgewartet.
 - **Offen:** Lennos Test am Gerät; Merge von `island-bubbles` nach `main` erst danach, kein Push. Der Link `~/.local/bin/aptus` zeigt in das `main`-Repo, deshalb erreichen Hotkeys (`shell-switch msg`) die Shell aus dem Worktree nicht, bis gemergt ist; nach dem Merge reicht `shell-switch to aptus`.
+
+## Island: Wallpaper-Picker, ruhige Karten, Hover mit Auswahl (sechster Phasenablauf, 26. Okt., Branch `island-bubbles`)
+
+Arbeitsregel wie zuvor: nie auf „weiter“ warten, jede Phase protokollieren und selbst prüfen, Pushen und Löschen außerhalb des Repos erst nach Rückfrage.
+
+### Ziel (Lenno, 26. Okt.)
+1. Wallpaper-Picker und Hover der Insel müssen **richtig funktionieren und schnell reagieren**.
+2. Die Menüs sollen **gut aussehen**: im Wallpaper-Picker ist viel leerer Platz, überall soll der Platz gut genutzt sein; **geordnet, modern, funktional, nicht leer**.
+3. Beim Hover soll man **WLAN, Bluetooth „etc.“ auswählen** können.
+4. Lenno sah **keine Veränderung am Hover**.
+
+### Befund (Phase 1)
+- **Warum der Hover unverändert war:** `~/.local/bin/aptus` zeigte auf `~/Code/Projekte/aptus/bin/aptus` (Repo `main`). Lenno wechselte über `shell-switch` auf aptus und lief damit auf dem Stand ohne `island-bubbles`. Behoben am 26. Okt. 17:27: der Link zeigt jetzt auf `~/Code/Projekte/aptus-island/bin/aptus`, die Shell läuft aus dem Worktree, `shell-switch msg …` und die Hyprland-Binds erreichen sie (geprüft: `log-level-status` antwortet `ok`, `panel-toggle wallpaper` öffnet den Picker). Zurück nach dem Merge: `ln -sfn ~/Code/Projekte/aptus/bin/aptus ~/.local/bin/aptus`.
+- **Wallpaper-Picker:** `IslandWallpaper` ist ein Karussell mit sieben Karten für viele Bilder in einer festen Karte von 900 x 270 px. `~/Pictures/Wallpapers` enthält **ein** Bild; es steht allein in der Mitte, rundherum ist leer. Das Einblenden dauert 520 ms (Karten nacheinander), also träge.
+- **Die übrigen Ansichten** (Power, Screenshot, Clipboard, Emoji) sind gefüllt und geordnet (Screenshots geprüft). **Home** (Tippen auf die Insel im Ruhezustand) ist dünn: Kopfzeile, Medien, Workspaces und Statussymbole, sonst nichts; es hat nicht die Schnelleinstellungen der Hover-Karte. Für Touch (kein Hover) ist Home die einzige Karte, damit fehlt dort WLAN und Bluetooth.
+- **Hover-Karte:** hat WLAN und Bluetooth als aufklappbare Bereiche (Phase 7 davor), die Kopfzeilen sind aber reiner Text ohne Symbol; es fehlt die Auswahl der Audio-Ausgabe (`AudioState.outputs`, `setOutput` gibt es schon).
+
+### Entscheidungen (selbst getroffen, Lenno kann sie ändern)
+- **Wallpaper-Picker wird eine Galerie:** Raster aus Vorschaubildern (16:9), die Karte passt ihre Größe der Zahl der Bilder an. Kopfzeile „Wallpaper · n pictures“ mit Ordner, Fußzeile mit Name des gewählten Bildes und Tastenhinweis. Größen: bis 2 Bilder 300 x 169 px je Vorschau (eine Spalte pro Bild), 3 bis 4 Bilder 220 x 124, mehr 200 x 112, höchstens 4 Spalten und 3 sichtbare Zeilen (dann scrollt es). Mit einem Bild: eine große Vorschau mit Namen und Hinweis, wo man mehr Bilder ablegt. Leerer Ordner: ein gestalteter Leerzustand mit Ordnerpfad statt nur einer Zeile.
+- **Bedienung:** Pfeiltasten bewegen die Auswahl im Raster (links, rechts, hoch, runter), Enter setzt und schließt, Leertaste setzt ohne zu schließen, Esc schließt, Mausrad scrollt, Tippen wählt und setzt. Das aktuelle Bild trägt einen grünen Punkt und „Current“.
+- **Tempo:** Kein gestaffeltes Einblenden mehr; Raster blendet in 140 ms ein, die Karte wächst in 220 ms (Hover bleibt bei 180 ms). Die Liste der Bilder bleibt zwischen den Öffnungen im Speicher (Anzeige sofort, Neuabruf im Hintergrund); Vorschaubilder werden asynchron und in doppelter Anzeigegröße geladen.
+- **Home und Hover vereint:** Tippen auf die Insel (aus dem Ruhezustand) öffnet für **alle** Entwürfe dieselbe Karte: Kopfzeile, Medien, Workspaces und Status, darunter die Schnelleinstellungen der Hover-Karte (bisher nur bei ninja). Hover bleibt die kompakte Karte mit den Schnelleinstellungen. So hat auch Touch WLAN, Bluetooth und Ton.
+- **Hover-Karte, geordnet:** Reihenfolge Regler, Schalter, drei Auswahl-Bereiche **WLAN, Bluetooth, Ton** (je mit Symbol, Wert rechts, Pfeil), Energieprofil, Schnellaktionen, Fuß. Ton listet die Ausgabegeräte; Tippen macht ein Gerät zur Ausgabe.
+- Kein neues Setting. Das Layout ergibt sich aus Inhalt und Anzahl.
+
+### Betroffene Dateien
+- Neu: `shell/island/IslandSound.qml` (Liste der Ausgabegeräte, Tippen setzt die Ausgabe).
+- Geändert: `island/IslandWallpaper.qml` (Galerie statt Karussell), `island/Island.qml` (Größe des Wallpaper-Fensters aus dem Inhalt, Home mit Schnelleinstellungen für alle Entwürfe, Wachstumsdauer je Stufe, Übergabe `audioState`), `island/IslandHover.qml` (Kopfzeilen mit Symbol, Bereich Ton, Reihenfolge), `island/qmldir`, `services/Wallpaper.qml` (Liste behalten, Neuabruf im Hintergrund, Anzahl), `models/IslandState.qml` und `PHASES.md`.
+- Wiederverwendet: `Wallpaper.list/current/setWallpaper/scan`, `AudioState.outputs/setOutput`, `StatusGlyph` (Symbole `wifi`, `bluetooth`, `volume`), Muster von `IslandWifi`.
+
+### Neue Strukturen und Funktionen (Plan)
+- Phase 2 (Strukturen): `IslandWallpaper`: `columns`, `thumbWidth`, `thumbHeight`, `visibleRows`, `contentWidth`, `contentHeight` (die Karte liest diese), `folderLabel`; `IslandSound`: `audioState`, `shown`, `maxRows`, Farben, Signal `closeRequested`; `IslandHover`: Property `audioState`, erlaubter Bereich `sound`; `Island`: Property `homeWithQuick`, Konstante `openGrowMs`; `Wallpaper`: Property `count`, `loaded`.
+- Phase 3 (Signaturen): `IslandWallpaper.columnsFor(count)`, `thumbSizeFor(count)`, `moveSelection(dx, dy)`, `setSelected(index)`; `IslandSound.setOutput(id)`; `Island.growMsFor` bekommt die Ansicht als zweiten Parameter; `IslandHover.sectionValue(name)` (Text rechts in der Kopfzeile).
+- Phase 4 (TODOs): `Island.qml` (Größe Wallpaper, Home-Stapel, `growMsFor`-Aufrufe, Übergabe `audioState`), `IslandWallpaper.qml` (Raster, Tasten, Rad), `IslandHover.qml` (Kopfzeilen, Bereich Ton), `Wallpaper.qml` (Liste behalten).
+
+### Risiken
+1. **Größenschleife:** die Karte liest `contentHeight` des Wallpaper-Fensters, das von der Zahl der Bilder abhängt; keine Abhängigkeit von der Kartengröße einbauen (feste Vorschaugrößen, Raster innen scrollbar).
+2. **Viele Bilder (34 im Ordner `~/.hyprconf/hypr/Wallpaper`, Nutzer können hunderte haben):** `GridView` mit Zwischenspeicher, Vorschau mit `sourceSize` begrenzt, keine Bilder außerhalb des Sichtfensters laden.
+3. **Home mit Schnelleinstellungen** macht die Karte höher (bis etwa 640 px mit offenem Bereich); das Fenster ist 660 px hoch, prüfen, ob das reicht oder die Höhe wachsen muss.
+4. **Fokus:** Das Raster liegt im `FocusScope` der Ansicht; Pfeiltasten müssen im Picker ankommen (Fokus per Test prüfbar nur mit echten Tasten, siehe unten).
+5. **Test ohne Tasten und Klicks:** weiter nur Zeiger per `hyprctl eval` und eine temporäre Test-IPC (wird vor jedem Commit entfernt). Echte Klicks, Pfeiltasten und Passworteingabe prüft Lenno.
+6. **Ordner mit nur einem Bild** bleibt Lennos Ist-Zustand; zum Test mit vielen Bildern wird `wallpaper.directory` kurz auf `~/.hyprconf/hypr/Wallpaper` gesetzt und danach zurückgesetzt (Datei `~/.config/aptus/settings.json` vorher sichern).
+
+### Phasen dieses Ablaufs
+1. Plan (dieser Abschnitt) – erledigt. 2. Strukturen. 3. Signaturen. 4. TODOs. 5. Probe am Gerät, danach zurückgesetzt. 6. Invarianten. 7. Implementierung, Test mit 1, 3 und 34 Bildern, Screenshots.
+
+### Protokoll Island-Galerie
+**Phase 1 (Plan), erledigt:** Ursache des unveränderten Hovers gefunden und behoben (Link auf `main`). Picker, Home und Hover am Gerät fotografiert und gelesen. Kein Code, kein Review in dieser Phase.
