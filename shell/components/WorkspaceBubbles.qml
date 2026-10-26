@@ -11,6 +11,7 @@ Item {
     property var workspaces: []     // list of { id, name, active, urgent, occupied }
     property color ink
     property color inkSoft
+    property bool numbered          // the active bubble shows the number of its workspace (style bubbles); without: style dots
     property color inkOn            // colour of the number inside the active bubble (the opposite of ink)
     property int cellHeight         // height of one cell (the bar's height, 40 on the island for touch)
     property int cellWidth: 24

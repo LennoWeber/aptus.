@@ -161,6 +161,7 @@ Item {
     }
 
     // The workspaces: bubbles, or the numbers (bar.workspaceStyle).
+    // TODO(phase 7, Island-Galerie): bubbles and dots both show the bubble row (numbered only for bubbles); only numbers show the labels.
     component WorkspaceNumbers: Item {
         implicitWidth: rest.workspaceStyle === "bubbles" ? bubbles.implicitWidth : labels.implicitWidth
         implicitHeight: 28

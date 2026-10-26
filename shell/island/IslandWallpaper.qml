@@ -21,6 +21,9 @@ FocusScope {
     property real contentWidth      // size this view wants (Island.sizeFor reads it)
     property real contentHeight
     property string folderLabel     // the folder shown in the header, with ~ for home
+    property int count              // number of pictures
+    property int gridHeight         // height of the visible grid
+    property bool current           // the chosen picture is the wallpaper now
     property color ink
     property color inkSoft
     property color line
@@ -110,6 +113,7 @@ FocusScope {
 
     // TODO(phase 7, Island-Galerie): The seven slots of the carousel become a header (title, count, folder), a GridView of 16:9 thumbnails (columns, thumbWidth, thumbHeight, visibleRows,
     // TODO(phase 7, Island-Galerie): async, sourceSize about twice the shown size), a footer (name, "Current" marker, key hint), and an empty state with the folder path.
+    // TODO(phase 7, Island-Galerie): Elide long folder paths in header and empty state; show the key hint only when the card is wide; one picture gets 448 x 252.
     Repeater {
         // Seven slots around the middle; the picture of a slot is selectedIndex + offset.
         model: wall.visibleSide * 2 + 1

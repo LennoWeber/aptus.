@@ -249,7 +249,7 @@ PanelWindow {
 
         // Hover: the quick settings.
         IslandHover {
-            // TODO(phase 7, Island-Galerie): Hand over audioState; topMargin and opacity follow homeWithQuick (the card sits under the Home header whenever Home shows it).
+            // TODO(phase 7, Island-Galerie): topMargin and opacity follow homeWithQuick (audioState is handed over already) (the card sits under the Home header whenever Home shows it).
             id: hoverPanel
             anchors { left: parent.left; right: parent.right; top: parent.top; topMargin: win.hoverIsHome ? home.implicitHeight : 0 }
             // Ninja: the quick settings sit under the home card, so hover and tap show the same card.

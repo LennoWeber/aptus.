@@ -104,6 +104,7 @@ Item {
 
             // Workspaces: bubbles, or numbers where the state is carried by weight, never by colour; urgent is the one signal colour.
             WorkspaceBubbles {
+                // TODO(phase 7, Island-Galerie): Same: the bubble row for bubbles and dots (numbered for bubbles), the labels for numbers.
                 visible: home.workspaceStyle === "bubbles"
                 anchors { left: parent.left; verticalCenter: parent.verticalCenter }
                 workspaces: home.workspaces

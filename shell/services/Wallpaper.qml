@@ -73,6 +73,7 @@ Singleton {
 
     Process {
         id: lister
+        // TODO(phase 7, Island-Galerie): Follow symbolic links (find -L), so that a folder of links lists its pictures.
         command: ["sh", "-c", "find \"$1\" -maxdepth 2 -type f \\( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' -o -iname '*.webp' \\) 2>/dev/null | sort", "sh", root.folder]
         stdout: StdioCollector {
             onStreamFinished: {
