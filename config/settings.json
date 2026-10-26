@@ -29,7 +29,6 @@
   "island": {
     "design": "capsule",
     "look": "paper",
-    "hoverOpen": true,
     "showWorkspaces": true,
     "showStatus": true,
     "showWeather": true,

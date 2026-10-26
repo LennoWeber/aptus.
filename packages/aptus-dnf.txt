@@ -1,4 +1,4 @@
-# Packages for aptus as the main shell (Fedora, dnf). One name per line; "## group" starts a group; text after # is a note.
+# Packages for aptus as the main shell (Fedora, dnf). One name per line (a|b: either one is enough); "## group" starts a group; text after # is a note.
 # bin/aptus-packages reads this file. Nothing here is installed by reading it.
 
 ## required
@@ -16,7 +16,7 @@ libnotify             # notify-send
 curl                  # weather and web search
 python3               # AI usage helper, patch scripts
 ImageMagick           # wallpaper colours (magick)
-power-profiles-daemon # power profiles
+power-profiles-daemon|tuned-ppd # power profiles (either one; powerprofilesctl)
 NetworkManager        # Wi-Fi (nmcli)
 iio-sensor-proxy      # rotation and light sensor
 bluez                 # Bluetooth
@@ -30,7 +30,7 @@ hyprlock              # backup lock screen
 polkit                # the shell shows the password prompt
 
 ## backup
-noctalia-nightly      # the backup shell, started by shell-switch if aptus does not come up
+noctalia              # the backup shell, started by shell-switch if aptus does not come up
 
 ## optional
 ghostty               # terminal

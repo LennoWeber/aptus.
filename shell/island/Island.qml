@@ -277,7 +277,7 @@ PanelWindow {
             focusState: win.focusState
             mediaState: win.mediaState
             powerProfileState: win.powerProfileState
-            // TODO(phase 7): focus: win.isOpen && win.view === Enums.IslandView.Home.
+            // TODO(phase 7): focus only while a section is open (win.homeWithQuick && expanded !== ""): the Wi-Fi password field needs the keyboard; the opened scope below then takes focus only when this one does not.
             focus: win.isPinned
             ink: win.fg
             inkSoft: win.fgSoft
@@ -293,6 +293,7 @@ PanelWindow {
         // Opened: one view at a time, each fades in when the body has grown.
         FocusScope {
             anchors.fill: parent
+            // TODO(phase 7): focus: win.isOpen && !quick.focus (the quick card keeps it while a section is open).
             focus: win.isOpen
             // TODO(phase 7): win.isOpen only.
             opacity: win.isOpen || (win.isHover && win.hoverIsHome) ? 1 : 0

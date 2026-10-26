@@ -57,6 +57,7 @@ COPR_REPO=lionheartp/Hyprland   # has quickshell, hyprsunset and cliphist for Fe
 MIN_QUICKSHELL=0.3.2
 
 # The packages among the arguments that are not installed.
+# TODO(phase 7): delete this function: bin/aptus-packages missing does it (and understands a|b); install_packages calls that.
 missing_packages() {
     local p
     for p in "$@"; do rpm -q "$p" >/dev/null 2>&1 || printf '%s\n' "$p"; done
