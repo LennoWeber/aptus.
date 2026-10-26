@@ -1428,3 +1428,47 @@ Spotify braucht Neustart; Thunderbird hat noch kein Profil; fastfetch bindet das
   - **Test:** Harness-Shell mit Fake-HOME und Symlinks auf `models/theme/services`: Umschalten, Auto + Nachtlicht, Repaint (Zustandsdatei `color-mode`), `paletteAt` für Hell unverändert (`#f4f3ef`/`#1c2127`), Dunkel (`#1c2127`/`#f4f3ef`), Nachtlicht in Dunkel schwächer.
   - **Review Phase 7, behoben:** Super+T schrieb die Einstellung nicht auf die Platte (`writeUserConfig` ergänzt); `spicetify` mit Zeitüberschreitung/Fehler beendet das Skript nicht mehr; `start()` bricht ohne Tokens-Datei nicht mehr ab (Warnung statt Fehler); fastfetch löscht die alte `themes/aptus.jsonc` nur noch, wenn sie unsere Kopfzeile trägt und kein Link ist.
   - **Bekannt, nicht geändert:** Auto beim nächtlichen Login kann einmal Hell→Dunkel wechseln (Nachtlicht wird erst kurz nach dem Start erkannt); xsettingsd/ghostty/yazi schreiben durch Links ins Dotfiles-Repo; `MODE_FILE` gilt auch, wenn ein einzelnes Programm (z. B. Spicetify) fehlte; hängt `Process` beim Start, bleibt `applying` wahr; `Qt.lighter(ok)` in den zwei Kacheln, `LevelBars` mit Standard `black` und feste Kalenderfarben (Identitätsfarben, in beiden Modi lesbar) wurden nicht am Gerät geprüft.
+
+---
+
+## Ablauf 12: Island-Meldungen und Spotify-Knöpfe (27. Okt. 2026, Branch `island-notify` von `color-mode`)
+
+Stand: **Phase 1 geschrieben; Phasen 2 bis 7 laufen ohne Pause** ([[feedback_phasen_ohne_weiter]], Selbst-Review am Diff, kein Sub-Agent). Die zwei uncommitteten Dateien aus Ablauf 11 (`bin/aptus-theme-apps`, `theme/apps/thunderbird-chrome.css`) gehören nicht zu diesem Ablauf und werden nie mit committet (Commits immer mit Pfadliste).
+
+### Ziel (Lenno)
+1. **Spicetify** färbt einige Knöpfe nicht richtig (Screenshot: die Play-Knöpfe der Schnellzugriff-Kacheln auf Home sind leere helle Quadrate, Icon unsichtbar; weitere Encore-Knöpfe fallen aus dem Thema).
+2. **Island-Meldungen** (Medien, Mail, Browser-Downloads, normale Benachrichtigungen) und die **OSD-Anzeige** sollen klarer sein und mehr Infos zeigen: App-Symbol und App-Name, Album, Cover, Absender/Betreff, Fortschritt, Aktionen. Die Island darf per Animation deutlich größer und anschaulicher werden, nicht minimalistisch bleiben.
+3. Vorbild: die Island von shell-ninja (Sicherung `~/shell-backup-2026-10-26.tar.gz`, `.hyprconf/quickshell/island/CollapsedBar.qml`, entpackt im Scratchpad): Toast mit Symbol-Plakette links, App-Name in Kapitälchen mit „Now“, fetter Titel, Text bis zwei Zeilen, Aktionsknöpfe, Schließen-Knopf; OSD mit Symbol-Plakette, Titel, Prozentwert und Balken; Größe folgt dem Inhalt.
+
+### Ist-Stand (geprüft)
+- `IslandState.pushAlert(id, text, detail, severity, tileId)` kennt nur Text und Detail; `IslandAlert.qml` ist eine 38 px hohe Zeile (Punkt, Text, Detail). `IslandHost` schickt: Benachrichtigung (`summary`, `appName`), Wiedergabe („Playing“/„Paused“ + Titel), neuer Titel (Titel + Künstler), Timer, Batterie.
+- `MediaState` hat `title/artist/album/artUrl/playerName`, aber kein App-Symbol; `NotificationCard` löst Symbole mit `Quickshell.iconPath` auf (gleiches Muster wiederverwenden).
+- Die OSD in der Island (`IslandOsd.qml`, 320×46) zeigt Symbol, Balken, Prozent; kein Titel, kein Gerät. `Osd.flash(kind, level, muted, label)` hat vier Parameter, Aufrufer in `IpcHandlers.qml` (6×) und `shell.qml`.
+- `NotificationPopups` zeigt die Karten **zusätzlich** zur Island-Meldung, auch wenn die Island aktiv ist (doppelte Anzeige).
+- Mail und Downloads haben keine eigene Quelle: sie kommen als freedesktop-Benachrichtigung (Thunderbird `appName` „Thunderbird“, Zen/Firefox „Download complete“/„Download finished“ o. ä.).
+- Spicetify: `spicetify-user.css` setzt nur `.main-playButton-*`; Spotify Encore nutzt Variablen (`--background-base`, `--essential-base`, `--text-base` …), die die „inverted“-Sätze aus `--spice-text` und `--spice-sidebar` bilden; Schnellzugriff-Play-Knöpfe sind Encore-Knöpfe, deren Klassen gehasht sind (nicht per Klasse stabil ansprechbar), per Attribut (`[data-encore-id]`) und Variablen schon.
+
+### Plan
+**Datenmodell:** `Enums.AlertKind { Plain, Notification, Media, Mail, Download, Timer, Battery }`. Eine Meldung ist: `id, kind, text, detail, severity, tileId, holdMs` plus optional `appName, appIcon, image, body, album, actions[{id,label}], notificationId, progress (0..1, -1 = keiner), playing, time`. Neue Funktion `IslandState.pushRichAlert(id, kind, severity, tileId, data)`, `pushAlert` bleibt als Kurzform.
+**Anzeige:** neue `AlertCard.qml` (eine Karte für alle Arten: Plakette/Cover 52 px mit kleinem App-Symbol, Kopfzeile APP · Zeit/Zustand, Titel, Zeile 2 (Künstler · Album / Absender / Text), Fortschrittsbalken, Aktionsknöpfe, Schließen-Knopf, bei Medien Prev/Play/Next). `IslandAlert.qml` wählt je nach Art Karte oder die alte Zeile. `Island.qml`: Größe je Art (Medien 420×92, Benachrichtigung/Mail 420×(76 bis 128), Download 420×84), Wachsen mit leichtem Überschwingen (`OutBack`-Kurve), Inhalt blendet verzögert ein.
+**OSD:** `IslandOsd.qml` bekommt Symbol-Plakette, Titel („Volume“, „Brightness“…), Gerätename als Zeile 2, große Prozentzahl, dickeren Balken; Island wächst auf 360×72. `showOsd`/`flash` bekommen einen fünften Parameter `detail`.
+**Quellen (`IslandHost`):** Benachrichtigung klassifizieren (Mail, Download, sonst Benachrichtigung) anhand `appName`/`summary`; Wiedergabe und neuer Titel als Art `Media` mit Cover, Album, App-Name und -Symbol (`MediaState.appIcon`, `desktopEntry`), „Play/Pause“ ändert nur den Zustand, nicht den Titel; Timer/Batterie als eigene Arten mit Symbol.
+**Popups:** `NotificationPopups` bleibt aus, solange die Island Meldungen zeigt (`islandHandles`).
+**Spicetify:** `spicetify-user.css` setzt die Encore-Variablen für Knöpfe (`--background-base`, `--essential-base`, `--text-base` …) für beide Modi, rundet die Play-Knöpfe, färbt Chips, Create-Knopf, Player-Knöpfe, Herz/„Add“-Symbole und Fortschritt. Prüfung am echten Spotify (Screenshot mit `grim`).
+
+### Betroffene Dateien
+`shell/models/Enums.qml`, `shell/models/IslandState.qml`, `shell/services/MediaState.qml`, `shell/island/IslandHost.qml`, `shell/island/IslandAlert.qml`, neu `shell/island/AlertCard.qml` (+ `qmldir`), `shell/island/Island.qml`, `shell/island/IslandOsd.qml`, `shell/osd/Osd.qml`, `shell/IpcHandlers.qml`, `shell/shell.qml`, `shell/notifications/NotificationPopups.qml`, `theme/apps/spicetify-user.css` (+ evtl. `spicetify-color.ini`), README/Settings-Beschreibung `island.alerts`.
+
+### Risiken
+- Island-Fenster ist 940×660 fest, Meldungen bis 128 px passen; die Maske (`Region { item: body }`) gilt weiter.
+- Erkennung von Mail/Download ist heuristisch (Texte, App-Namen); Fallback ist die normale Benachrichtigungskarte.
+- Cover-URLs von Spotify sind `https://`; `Image` lädt sie asynchron: bis dahin Platzhalter, die Karte darf nie blockieren.
+- Hash-Klassen in Spotify ändern sich bei Updates; deshalb nur Variablen und `[data-encore-id]`/`aria-label`.
+- Ohne `qmllint` (nicht installiert) prüfe ich QML durch Neustart der Shell und `qs log`.
+- Popups ausblenden: Meldungen jenseits der Warteschlange (3) erscheinen nur noch im Verlauf.
+
+### Phasen dieses Ablaufs
+1 Plan · 2 Strukturen · 3 Signaturen · 4 TODOs · 5 Probe · 6 Invarianten · 7 Implementierung, jede mit Selbst-Review am Diff.
+
+### Protokoll Ablauf 12
+- **Phase 1 (Plan), erledigt.**
