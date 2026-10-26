@@ -96,6 +96,7 @@ Scope {
     }
     Connections {
         target: host.mediaState
+        // TODO(phase 7): add onPlayingChanged: call announcePlayback().
         function onTitleChanged() {
             const m = host.mediaState
             const key = m.title + "|" + m.artist

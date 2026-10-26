@@ -33,6 +33,7 @@ Item {
     // Diameter of the bubble of one workspace entry (ring, dot or active).
     function sizeFor(entry: var): int {
         if (!entry) throw new Error("invariant: WorkspaceBubbles.sizeFor: no workspace entry")
+        // TODO(phase 7): sizeFor stays the diameter; with oval every dot is ovalHeight high.
         return entry.active ? activeSize : (entry.occupied || entry.urgent) ? dotSize : ringSize
     }
 
@@ -62,6 +63,7 @@ Item {
             // Size and weight carry the state; urgent is the one signal colour.
             Rectangle {
                 anchors.centerIn: parent
+                // TODO(phase 7): width: bubbles.widthFor(cell.modelData); height: bubbles.oval ? ovalHeight : width; radius: height / 2; cellWidth must hold ovalWidth (28 for ovals).
                 width: bubbles.sizeFor(cell.modelData)
                 height: width
                 radius: width / 2

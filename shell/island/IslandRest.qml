@@ -168,6 +168,7 @@ Item {
         WorkspaceBubbles {
             id: bubbles
             visible: rest.workspaceStyle !== "numbers"
+            // TODO(phase 7): add oval: rest.workspaceStyle === "ovals" and cellWidth 28 for ovals.
             numbered: rest.workspaceStyle === "bubbles"
             workspaces: rest.workspaces
             ink: rest.ink

@@ -54,7 +54,9 @@ PanelWindow {
     property bool isOpen: stage === Enums.IslandStage.Open
     onStageChanged: if (stage < Enums.IslandStage.Rest || stage > Enums.IslandStage.Open) throw new Error("invariant: Island: unknown stage")
     property bool homeWithQuick: isOpen && view === Enums.IslandView.Home   // the opened Home shows the quick settings below the header (every design)
+    // TODO(phase 7): openGrowMs 200.
     readonly property int openGrowMs: 220   // ms: the body grows to an opened view in this time
+    // TODO(phase 7): add isOsd (stage === Osd); the stage getter shows Osd on every screen like an alert.
     property bool isAlert: stage === Enums.IslandStage.Alert
 
     // The design (setting island.design): capsule, pill, ticker or shade. It sets the size at rest and the shape.
@@ -100,6 +102,7 @@ PanelWindow {
     function sizeFor(stageId: int, viewId: int, contentHeight: real, morph: int): var {
         if (morph === Enums.MorphTarget.Launcher) return morphSizes.launcher
         if (morph === Enums.MorphTarget.ControlCenter) return morphSizes.controlCenter
+        // TODO(phase 7): sizeFor: Osd returns { w: osdWidth, h: osdHeight }.
         if (stageId === Enums.IslandStage.Alert) return { w: alertWidth, h: alertHeight }
         if (stageId === Enums.IslandStage.Open) {
             switch (viewId) {
@@ -116,6 +119,7 @@ PanelWindow {
 
     // Duration (ms) of the body's growth for a stage and a view (Enums.IslandStage, Enums.IslandView): openGrowMs for an opened view, Tokens.durSlow otherwise.
     function growMsFor(stageId: int, viewId: int): int {
+        // TODO(phase 7): growMsFor: Osd osdGrowMs, Open after a hover hoverGrowMs, Alert 220, else Tokens.durSlow; fix the range test.
         if (stageId < Enums.IslandStage.Rest || stageId > Enums.IslandStage.Open) throw new Error("invariant: Island.growMsFor: unknown stage")
         return stageId === Enums.IslandStage.Open ? openGrowMs : Tokens.durSlow
     }
@@ -153,6 +157,7 @@ PanelWindow {
     }
 
     // A click outside closes the opened island.
+    // TODO(phase 7): a click on the body (MouseArea, TapHandler) calls islandState.keepOpen(modelData.name); add a HoverHandler on the body: enter -> hoverEnter, leave -> hoverLeave.
     HyprlandFocusGrab {
         windows: [win]
         active: win.isOpen
@@ -160,6 +165,7 @@ PanelWindow {
     }
 
     readonly property bool openLike: isOpen
+    // TODO(phase 7): also keepOpen when a section opens: wire quick.onSectionToggled to islandState.keepOpen.
     onOpenLikeChanged: if (!openLike) quick.expanded = ""
     readonly property color fg: openLike ? IslandLook.inkOpen : IslandLook.inkRest
     readonly property color fgSoft: Qt.rgba(fg.r, fg.g, fg.b, 0.65)
@@ -181,12 +187,14 @@ PanelWindow {
         opacity: 1 - win.morphProgress
         Behavior on width { NumberAnimation { duration: win.growMsFor(win.stage, win.view); easing.type: Easing.BezierSpline; easing.bezierCurve: [0.2, 0, 0, 1, 1, 1] } }
         Behavior on height { NumberAnimation { duration: win.growMsFor(win.stage, win.view); easing.type: Easing.BezierSpline; easing.bezierCurve: [0.2, 0, 0, 1, 1, 1] } }
+        // TODO(phase 7): same duration as the growth (win.growMsFor), so the corners do not lag.
         Behavior on cornerRadius { NumberAnimation { duration: Tokens.durSlow } }
 
         // Rest: a tap opens.
         IslandRest {
             id: rest
             anchors.fill: parent
+            // TODO(phase 7): hide the rest content while isOsd too.
             opacity: !win.openLike && !win.isAlert && win.design !== "shade" ? 1 : 0
             visible: opacity > 0.01
             Behavior on opacity { NumberAnimation { duration: Tokens.durFast } }
@@ -222,6 +230,7 @@ PanelWindow {
             }
         }
 
+        // TODO(phase 7): add the IslandOsd instance here (anchors.fill, opacity win.isOsd, osd: islandState.osd, inks from win.fg); hide the alert while isOsd.
         IslandAlert {
             anchors.fill: parent
             opacity: win.isAlert ? 1 : 0

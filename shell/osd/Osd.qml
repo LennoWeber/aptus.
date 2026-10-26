@@ -23,6 +23,7 @@ PanelWindow {
     // No fade in (instant feedback), 140 ms fade out.
     Behavior on fade { enabled: !win.shown; NumberAnimation { duration: Tokens.durFast } }
 
+    // TODO(phase 7): flash(): when islandState is set and enabled, call islandState.showOsd(...) and return, leaving this window hidden.
     function flash(newKind: int, newLevel: real, isMuted: bool, newLabel: string): void {
         if (newKind < Enums.OsdKind.Volume || newKind > Enums.OsdKind.Caffeine) throw new Error("invariant: Osd.flash: unknown OSD kind")
         kind = newKind
