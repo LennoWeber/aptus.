@@ -1,29 +1,29 @@
 pragma ComponentBehavior: Bound
 import QtQuick
+import Quickshell
 import qs.models
 import qs.theme
 import qs.services
 import qs.components
 
-// Wallpaper view: the pictures come out of the island one after the other as a row of cards; the one in the middle
-// is chosen with the arrow keys, the wheel or a tap, and set at once.
+// Wallpaper view: a gallery. A header (title, folder, number of pictures), a grid of 16:9 pictures that fits the number
+// of pictures, a footer with the name of the chosen one. Arrow keys move in the grid, Enter sets and closes, a tap sets.
 FocusScope {
     id: wall
 
     property int selectedIndex
-    // TODO(phase 7, Island-Galerie): No staggered 520 ms reveal: the grid fades in with 140 ms; reveal can stay as a 0..1 value for the fade.
-    property real reveal: active ? 1 : 0      // 0..1, how far the cards have come out of the island
+    property real reveal: active ? 1 : 0      // 0..1, the grid fades in
     property bool active       // the view is the one shown
-    property int columns            // columns of the grid
-    property int thumbWidth         // size of one picture in the grid
-    property int thumbHeight
-    property int visibleRows        // rows shown at once, the grid scrolls beyond that
-    property real contentWidth      // size this view wants (Island.sizeFor reads it)
-    property real contentHeight
-    property string folderLabel     // the folder shown in the header, with ~ for home
-    property int count              // number of pictures
-    property int gridHeight         // height of the visible grid
-    property bool current           // the chosen picture is the wallpaper now
+    property int columns: columnsFor(count)
+    property int thumbWidth: thumbSizeFor(count).w
+    property int thumbHeight: thumbSizeFor(count).h
+    property int visibleRows: count === 0 ? 0 : Math.min(maxRows, Math.ceil(count / columns))
+    property real contentWidth: count === 0 ? 480 : Math.max(480, columns * thumbWidth + (columns - 1) * gap + 2 * padding)
+    property real contentHeight: count === 0 ? 210 : headerHeight + gridHeight + footerHeight
+    property string folderLabel: Wallpaper.folder.replace(Quickshell.env("HOME"), "~")
+    property int count: pictures.length
+    property int gridHeight: visibleRows * thumbHeight + Math.max(0, visibleRows - 1) * gap
+    property bool current: count > 0 && selectedIndex < count && pictures[selectedIndex].path === Wallpaper.current
     property color ink
     property color inkSoft
     property color line
@@ -41,50 +41,51 @@ FocusScope {
     readonly property int headerHeight: 44
     readonly property int footerHeight: 40
 
-    // How many cards are shown around the middle one.
-    readonly property int visibleSide: 3
-    readonly property int cardWidth: 200
-    readonly property int cardHeight: 112
     readonly property var pictures: Wallpaper.list
 
-    Behavior on reveal { NumberAnimation { duration: 520; easing.type: Easing.BezierSpline; easing.bezierCurve: [0.2, 0, 0, 1, 1, 1] } }
-
-    // Move the middle card by delta pictures.
-    function step(delta: int): void {
-        if (pictures.length === 0) return
-        selectedIndex = Math.max(0, Math.min(pictures.length - 1, selectedIndex + delta))
-    }
+    Behavior on reveal { NumberAnimation { duration: Tokens.durFast; easing.type: Easing.BezierSpline; easing.bezierCurve: [0.2, 0, 0, 1, 1, 1] } }
 
     // Columns of the grid for a number of pictures: one per picture up to maxColumns.
     function columnsFor(count: int): int {
         if (count < 0) throw new Error("invariant: IslandWallpaper.columnsFor: negative number of pictures")
-        throw new Error("not implemented")
+        return Math.max(1, Math.min(maxColumns, count))
     }
 
     // Size { w, h } of one picture for a number of pictures: large for one or two, smaller as there are more.
     function thumbSizeFor(count: int): var {
         if (count < 0) throw new Error("invariant: IslandWallpaper.thumbSizeFor: negative number of pictures")
-        throw new Error("not implemented")
+        if (count === 1) return { w: 448, h: 252 }
+        if (count === 2) return { w: 300, h: 169 }
+        if (count <= 4) return { w: 220, h: 124 }
+        return { w: 200, h: 112 }
     }
 
     // Move the selection in the grid by dx columns and dy rows, stopping at the edges.
     function moveSelection(dx: int, dy: int): void {
         if (dx !== 0 && dy !== 0) throw new Error("invariant: IslandWallpaper.moveSelection: a move is along one axis")
-        throw new Error("not implemented")
+        if (pictures.length === 0) return
+        let i = selectedIndex
+        if (dx !== 0) i = Math.max(0, Math.min(pictures.length - 1, i + dx))
+        if (dy !== 0) {
+            const j = i + dy * columns
+            if (j >= 0 && j < pictures.length) i = j
+        }
+        selectedIndex = i
     }
 
     // Select the picture at index (a tap or a hover).
     function setSelected(index: int): void {
-        throw new Error("not implemented")
+        if (pictures.length === 0) return
+        selectedIndex = Math.max(0, Math.min(pictures.length - 1, index))
     }
 
-    // Set the middle picture as wallpaper.
+    // Set the chosen picture as wallpaper.
     function activateSelected(): void {
         if (pictures.length === 0) return
         Wallpaper.setWallpaper(pictures[selectedIndex].path)
     }
 
-    // Scan the folder and start the reveal when the view is shown.
+    // Scan the folder and select the current picture when the view is shown.
     function show(): void {
         Wallpaper.scan()
         const i = pictures.findIndex(p => p.path === Wallpaper.current)
@@ -92,7 +93,7 @@ FocusScope {
         forceActiveFocus()
     }
 
-    // Take the cards back when the view is left.
+    // Nothing to take back: the grid fades with the view.
     function hide(): void {
     }
 
@@ -104,96 +105,128 @@ FocusScope {
         }
     }
 
-    // TODO(phase 7, Island-Galerie): Arrows move in the grid (moveSelection(dx, dy)): left, right, up, down; Enter sets and closes, Space sets, Esc closes.
+    onSelectedIndexChanged: grid.positionViewAtIndex(selectedIndex, GridView.Contain)
+
     Keys.onPressed: event => {
-        if (event.key === Qt.Key_Left) { step(-1); event.accepted = true }
-        else if (event.key === Qt.Key_Right) { step(1); event.accepted = true }
+        if (event.key === Qt.Key_Left) { moveSelection(-1, 0); event.accepted = true }
+        else if (event.key === Qt.Key_Right) { moveSelection(1, 0); event.accepted = true }
+        else if (event.key === Qt.Key_Up) { moveSelection(0, -1); event.accepted = true }
+        else if (event.key === Qt.Key_Down) { moveSelection(0, 1); event.accepted = true }
         else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) { activateSelected(); closeRequested(); event.accepted = true }
         else if (event.key === Qt.Key_Space) { activateSelected(); event.accepted = true }
     }
 
-    WheelHandler {
-        acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
-        onWheel: event => wall.step(event.angleDelta.y < 0 || event.angleDelta.x < 0 ? 1 : -1)
+    // Header: the title, and on the right the folder and the number of pictures.
+    Item {
+        id: header
+        anchors { left: parent.left; right: parent.right; top: parent.top; leftMargin: wall.padding; rightMargin: wall.padding }
+        height: wall.headerHeight
+        opacity: wall.reveal
+        Label {
+            id: title
+            anchors { left: parent.left; verticalCenter: parent.verticalCenter }
+            text: "Wallpaper"
+            role: Enums.TextRole.Title
+            color: wall.ink
+        }
+        Label {
+            anchors { left: title.right; leftMargin: 16; right: parent.right; verticalCenter: parent.verticalCenter }
+            horizontalAlignment: Text.AlignRight
+            elide: Text.ElideMiddle
+            text: wall.count > 0 ? wall.folderLabel + "  ·  " + wall.count + (wall.count === 1 ? " picture" : " pictures") : wall.folderLabel
+            role: Enums.TextRole.Bar
+            color: wall.inkSoft
+        }
     }
 
-    // TODO(phase 7, Island-Galerie): The seven slots of the carousel become a header (title, count, folder), a GridView of 16:9 thumbnails (columns, thumbWidth, thumbHeight, visibleRows,
-    // TODO(phase 7, Island-Galerie): async, sourceSize about twice the shown size), a footer (name, "Current" marker, key hint), and an empty state with the folder path.
-    // TODO(phase 7, Island-Galerie): Elide long folder paths in header and empty state; show the key hint only when the card is wide; one picture gets 448 x 252.
-    Repeater {
-        // Seven slots around the middle; the picture of a slot is selectedIndex + offset.
-        model: wall.visibleSide * 2 + 1
+    // Grid.
+    GridView {
+        id: grid
+        visible: wall.count > 0
+        anchors { horizontalCenter: parent.horizontalCenter; horizontalCenterOffset: wall.gap / 2; top: header.bottom }
+        width: wall.columns * cellWidth   // the last cell includes the gap; the offset keeps the pictures centred
+        height: wall.gridHeight
+        cellWidth: wall.thumbWidth + wall.gap
+        cellHeight: wall.thumbHeight + wall.gap
+        clip: true
+        interactive: wall.count > wall.columns * wall.visibleRows
+        boundsBehavior: Flickable.StopAtBounds
+        model: wall.pictures
+        opacity: wall.reveal
         delegate: Item {
-            id: slot
+            id: cell
+            required property var modelData
             required property int index
-            readonly property int offset: index - wall.visibleSide
-            readonly property int pictureIndex: wall.selectedIndex + offset
-            readonly property bool valid: pictureIndex >= 0 && pictureIndex < wall.pictures.length
-            // The cards leave the island from the middle, the near ones first.
-            readonly property real p: Math.max(0, Math.min(1, (wall.reveal - Math.abs(offset) * 0.09) / (1 - wall.visibleSide * 0.09)))
-            readonly property bool isMiddle: offset === 0
-            visible: valid && p > 0.01
-            width: wall.cardWidth
-            height: wall.cardHeight
-            x: wall.width / 2 - width / 2 + offset * (wall.cardWidth + 16) * p
-            y: 18 + (1 - p) * -40
-            scale: (isMiddle ? 1.12 : 0.9) * (0.35 + 0.65 * p)
-            opacity: p * (1 - Math.abs(offset) * 0.16)
-            z: 10 - Math.abs(offset)
-            Behavior on x { NumberAnimation { duration: 240; easing.type: Easing.BezierSpline; easing.bezierCurve: [0.2, 0, 0, 1, 1, 1] } }
-            Behavior on scale { NumberAnimation { duration: 240; easing.type: Easing.BezierSpline; easing.bezierCurve: [0.2, 0, 0, 1, 1, 1] } }
-
+            readonly property bool chosen: index === wall.selectedIndex
+            readonly property bool isCurrent: modelData.path === Wallpaper.current
+            width: grid.cellWidth
+            height: grid.cellHeight
             Rectangle {
-                anchors.fill: parent
-                radius: 14
+                width: wall.thumbWidth
+                height: wall.thumbHeight
+                radius: 12
                 color: wall.line
                 clip: true
-                border.width: slot.isMiddle ? 2 : 1
-                border.color: slot.isMiddle ? wall.ink : wall.line
+                border.width: cell.chosen ? 2 : 1
+                border.color: cell.chosen ? wall.ink : wall.line
+                scale: cell.chosen ? 1.0 : 0.97
+                Behavior on scale { NumberAnimation { duration: Tokens.durFast; easing.type: Easing.BezierSpline; easing.bezierCurve: [0.2, 0, 0, 1, 1, 1] } }
                 Image {
-                    anchors.fill: parent
-                    anchors.margins: 0
-                    source: slot.valid ? "file://" + wall.pictures[slot.pictureIndex].path : ""
-                    sourceSize.width: 400
-                    sourceSize.height: 225
+                    anchors { fill: parent; margins: cell.chosen ? 2 : 0 }
+                    source: "file://" + cell.modelData.path
+                    sourceSize.width: wall.thumbWidth * 2
+                    sourceSize.height: wall.thumbHeight * 2
                     fillMode: Image.PreserveAspectCrop
                     asynchronous: true
                     cache: true
                 }
-                // current wallpaper: a small ink dot
                 Rectangle {
-                    visible: slot.valid && wall.pictures[slot.pictureIndex].path === Wallpaper.current
+                    visible: cell.isCurrent
                     anchors { right: parent.right; top: parent.top; margins: 8 }
-                    width: 10
-                    height: 10
-                    radius: 5
+                    width: 10; height: 10; radius: 5
                     color: Tokens.ok
                     border.width: 2
                     border.color: Tokens.surface
                 }
-            }
-            MouseArea {
-                anchors.fill: parent
-                onClicked: {
-                    if (slot.isMiddle) wall.activateSelected()
-                    else wall.selectedIndex = slot.pictureIndex
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: { wall.setSelected(cell.index); wall.activateSelected() }
                 }
             }
         }
     }
 
-    Label {
-        visible: wall.pictures.length > 0
-        anchors { horizontalCenter: parent.horizontalCenter; bottom: parent.bottom; bottomMargin: 14 }
-        text: wall.pictures.length > 0 && wall.selectedIndex < wall.pictures.length ? wall.pictures[wall.selectedIndex].name : ""
-        role: Enums.TextRole.Bar
-        color: wall.inkSoft
+    // Footer: the name of the chosen picture, and the keys (only when the card is wide enough for both).
+    Item {
+        anchors { left: parent.left; right: parent.right; bottom: parent.bottom; leftMargin: wall.padding; rightMargin: wall.padding }
+        height: wall.footerHeight
+        visible: wall.count > 0
         opacity: wall.reveal
+        Label {
+            anchors { left: parent.left; right: hint.visible ? hint.left : parent.right; rightMargin: 12; verticalCenter: parent.verticalCenter }
+            text: wall.count > 0 && wall.selectedIndex < wall.count ? wall.pictures[wall.selectedIndex].name + (wall.current ? "   ·   current" : "") : ""
+            role: Enums.TextRole.Bar
+            color: wall.ink
+            elide: Text.ElideMiddle
+        }
+        Label {
+            id: hint
+            visible: wall.width >= 600
+            anchors { right: parent.right; verticalCenter: parent.verticalCenter }
+            text: "← ↑ ↓ →  choose     Enter  set"
+            role: Enums.TextRole.Bar
+            color: wall.inkSoft
+        }
     }
-    Label {
-        visible: wall.pictures.length === 0
-        anchors.centerIn: parent
-        text: "No pictures in " + Wallpaper.folder
-        color: wall.inkSoft
+
+    // Empty state: where to put pictures.
+    Column {
+        visible: wall.count === 0
+        anchors { horizontalCenter: parent.horizontalCenter; verticalCenter: parent.verticalCenter; verticalCenterOffset: 12 }
+        width: parent.width - 2 * wall.padding
+        spacing: 6
+        Label { width: parent.width; horizontalAlignment: Text.AlignHCenter; text: "No pictures yet"; role: Enums.TextRole.Title; color: wall.ink }
+        Label { width: parent.width; horizontalAlignment: Text.AlignHCenter; elide: Text.ElideMiddle; text: "Put pictures into " + wall.folderLabel; role: Enums.TextRole.Bar; color: wall.inkSoft }
+        Label { width: parent.width; horizontalAlignment: Text.AlignHCenter; text: "or pick another folder in Settings, Appearance"; role: Enums.TextRole.Bar; color: wall.inkSoft }
     }
 }

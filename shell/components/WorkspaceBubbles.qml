@@ -64,7 +64,7 @@ Item {
                 Behavior on color { ColorAnimation { duration: Tokens.durFast } }
             }
             Text {
-                visible: cell.modelData.active
+                visible: bubbles.numbered && cell.modelData.active
                 anchors.centerIn: parent
                 text: cell.modelData.name
                 font.family: Tokens.fontUi

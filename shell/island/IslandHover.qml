@@ -1,3 +1,4 @@
+pragma ComponentBehavior: Bound
 import QtQuick
 import qs.models
 import qs.theme
@@ -42,7 +43,38 @@ FocusScope {
     // Text on the right of the header row of a section (the network, the number of devices, the output).
     function sectionValue(name: string): string {
         if (name !== "wifi" && name !== "bluetooth" && name !== "sound") throw new Error("invariant: IslandHover.sectionValue: unknown section")
-        throw new Error("not implemented")
+        if (name === "wifi") return networkState && networkState.wifiEnabled ? (networkState.ssid || "Not connected") : "Off"
+        if (name === "bluetooth") return bluetoothState && bluetoothState.powered ? (bluetoothState.connectedCount > 0 ? bluetoothState.connectedCount + " connected" : "On") : "Off"
+        return audioState ? (audioState.outputName || "No output") : ""
+    }
+
+    // A header row of a section: symbol, title, the value, a chevron.
+    component SectionHeader: Item {
+        id: hdr
+        property string name
+        property string glyph
+        property string title
+        width: parent.width
+        height: 38
+        Rectangle {
+            anchors.fill: parent
+            radius: 10
+            color: hoverPanel.ink
+            opacity: hdrMouse.pressed ? 0.10 : hoverPanel.expanded === hdr.name ? 0.06 : 0
+            Behavior on opacity { NumberAnimation { duration: Tokens.durFast } }
+        }
+        StatusGlyph { id: hdrGlyph; anchors { left: parent.left; leftMargin: 8; verticalCenter: parent.verticalCenter } kind: hdr.glyph; color: hoverPanel.ink }
+        Label { id: hdrTitle; anchors { left: hdrGlyph.right; leftMargin: 10; verticalCenter: parent.verticalCenter } text: hdr.title; role: Enums.TextRole.Bar; color: hoverPanel.ink; font.weight: Font.Medium }
+        Label {
+            anchors { left: hdrTitle.right; leftMargin: 12; right: chevron.left; rightMargin: 8; verticalCenter: parent.verticalCenter }
+            horizontalAlignment: Text.AlignRight
+            text: hoverPanel.sectionValue(hdr.name)
+            role: Enums.TextRole.Bar
+            elide: Text.ElideRight
+            color: hoverPanel.inkSoft
+        }
+        Label { id: chevron; anchors { right: parent.right; rightMargin: 10; verticalCenter: parent.verticalCenter } text: hoverPanel.expanded === hdr.name ? "⌃" : "⌄"; color: hoverPanel.inkSoft }
+        MouseArea { id: hdrMouse; anchors.fill: parent; onClicked: hoverPanel.toggleSection(hdr.name) }
     }
 
     // Open the section name ("wifi" or "bluetooth"), or close it when it is open; the other one closes.
@@ -112,20 +144,8 @@ FocusScope {
             }
         }
 
-        // Header rows open the sections (34 px high: big enough for touch, which the toggle labels are not).
-        Item {
-            width: parent.width
-            height: 34
-            Label {
-                anchors { left: parent.left; verticalCenter: parent.verticalCenter }
-                // TODO(phase 7, Island-Galerie): Header row: StatusGlyph on the left, title, the value from sectionValue(name) on the right, chevron; same look for Bluetooth and the new Sound row.
-                text: "Wi-Fi  " + (hoverPanel.networkState && hoverPanel.networkState.wifiEnabled ? (hoverPanel.networkState.ssid || "not connected") : "off")
-                role: Enums.TextRole.Bar
-                color: hoverPanel.ink
-            }
-            Label { anchors { right: parent.right; verticalCenter: parent.verticalCenter } text: hoverPanel.expanded === "wifi" ? "⌃" : "⌄"; color: hoverPanel.inkSoft }
-            MouseArea { anchors.fill: parent; onClicked: hoverPanel.toggleSection("wifi") }
-        }
+        // Header rows open the sections (big enough for touch).
+        SectionHeader { name: "wifi"; glyph: "wifi"; title: "Wi-Fi" }
         IslandWifi {
             visible: hoverPanel.expanded === "wifi"
             width: parent.width
@@ -135,25 +155,23 @@ FocusScope {
             ink: hoverPanel.ink; inkSoft: hoverPanel.inkSoft; line: hoverPanel.line; fill: hoverPanel.fill
             onCloseRequested: hoverPanel.closeRequested()
         }
-        Item {
-            width: parent.width
-            height: 34
-            Label {
-                anchors { left: parent.left; verticalCenter: parent.verticalCenter }
-                text: "Bluetooth  " + (hoverPanel.bluetoothState && hoverPanel.bluetoothState.powered ? (hoverPanel.bluetoothState.connectedCount + " connected") : "off")
-                role: Enums.TextRole.Bar
-                color: hoverPanel.ink
-            }
-            Label { anchors { right: parent.right; verticalCenter: parent.verticalCenter } text: hoverPanel.expanded === "bluetooth" ? "⌃" : "⌄"; color: hoverPanel.inkSoft }
-            MouseArea { anchors.fill: parent; onClicked: hoverPanel.toggleSection("bluetooth") }
-        }
-        // TODO(phase 7, Island-Galerie): Under the Bluetooth section: a Sound header row and IslandSound (audioState, shown, closeRequested), then the profile and the shortcuts.
+        SectionHeader { name: "bluetooth"; glyph: "bluetooth"; title: "Bluetooth" }
         IslandBluetooth {
             visible: hoverPanel.expanded === "bluetooth"
             width: parent.width
             height: visible ? implicitHeight : 0
             bluetoothState: hoverPanel.bluetoothState
             shown: hoverPanel.expanded === "bluetooth"
+            ink: hoverPanel.ink; inkSoft: hoverPanel.inkSoft; line: hoverPanel.line; fill: hoverPanel.fill
+            onCloseRequested: hoverPanel.closeRequested()
+        }
+        SectionHeader { name: "sound"; glyph: "volume"; title: "Sound" }
+        IslandSound {
+            visible: hoverPanel.expanded === "sound"
+            width: parent.width
+            height: visible ? implicitHeight : 0
+            audioState: hoverPanel.audioState
+            shown: hoverPanel.expanded === "sound"
             ink: hoverPanel.ink; inkSoft: hoverPanel.inkSoft; line: hoverPanel.line; fill: hoverPanel.fill
             onCloseRequested: hoverPanel.closeRequested()
         }

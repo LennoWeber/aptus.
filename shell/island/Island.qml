@@ -53,7 +53,7 @@ PanelWindow {
     }
     property int view: islandState ? islandState.view : Enums.IslandView.Home
     property bool isOpen: stage === Enums.IslandStage.Open
-    property bool homeWithQuick     // the opened Home shows the quick settings below the header (every design)
+    property bool homeWithQuick: hoverIsHome || (isOpen && view === Enums.IslandView.Home)   // the opened Home shows the quick settings below the header (every design)
     readonly property int openGrowMs: 220   // ms: the body grows to an opened view in this time
     property bool isHover: stage === Enums.IslandStage.Hover
     property bool isAlert: stage === Enums.IslandStage.Alert
@@ -75,10 +75,8 @@ PanelWindow {
 
     // Size of the body for the current stage and view.
     property real restWidth: rest.wantedWidth
-    // TODO(phase 7, Island-Galerie): Home (opened from rest) stacks home and the quick settings in every design: homeWithQuick = hoverIsHome or (isOpen and view Home),
-    // TODO(phase 7, Island-Galerie): then the height is home.implicitHeight + hoverPanel.implicitHeight, as ninja has it now; the same for targetHeight and for the hover panel below.
-    property real targetWidth: sizeFor(stage, view, isHover && !hoverIsHome ? hoverPanel.implicitHeight : home.implicitHeight + (hoverIsHome ? hoverPanel.implicitHeight : 0), islandState ? islandState.morph : Enums.MorphTarget.None).w
-    property real targetHeight: sizeFor(stage, view, isHover && !hoverIsHome ? hoverPanel.implicitHeight : home.implicitHeight + (hoverIsHome ? hoverPanel.implicitHeight : 0), islandState ? islandState.morph : Enums.MorphTarget.None).h
+    property real targetWidth: sizeFor(stage, view, isHover && !hoverIsHome ? hoverPanel.implicitHeight : home.implicitHeight + (homeWithQuick ? hoverPanel.implicitHeight : 0), islandState ? islandState.morph : Enums.MorphTarget.None).w
+    property real targetHeight: sizeFor(stage, view, isHover && !hoverIsHome ? hoverPanel.implicitHeight : home.implicitHeight + (homeWithQuick ? hoverPanel.implicitHeight : 0), islandState ? islandState.morph : Enums.MorphTarget.None).h
 
     signal dropdownRequested(int dropdownId, var anchorItem, var targetScreen, real offsetX)
     signal tileRequested(int tileId)
@@ -95,9 +93,7 @@ PanelWindow {
         power: { w: 480, h: 150 },
         screenshot: { w: 440, h: 150 },
         clipboard: { w: 520, h: 380 },
-        emoji: { w: 480, h: 340 },
-        // TODO(phase 7, Island-Galerie): The wallpaper view sets its own size (wallpaper.contentWidth/contentHeight, from the number of pictures); drop this fixed size.
-        wallpaper: { w: 900, h: 270 }
+        emoji: { w: 480, h: 340 }
     })
     // The island grows to this size toward the launcher (its pill) and the control center before it fades out.
     readonly property var morphSizes: ({ launcher: { w: 640, h: 52 }, controlCenter: { w: 760, h: 150 } })
@@ -115,7 +111,7 @@ PanelWindow {
             case Enums.IslandView.Screenshot: return viewSizes.screenshot
             case Enums.IslandView.Clipboard: return viewSizes.clipboard
             case Enums.IslandView.Emoji: return viewSizes.emoji
-            case Enums.IslandView.Wallpaper: return viewSizes.wallpaper
+            case Enums.IslandView.Wallpaper: return { w: wallpaper.contentWidth, h: wallpaper.contentHeight }
             default: return { w: homeWidth, h: contentHeight + 4 }
             }
         }
@@ -126,7 +122,7 @@ PanelWindow {
     // openGrowMs for an opened view, Tokens.durSlow otherwise.
     function growMsFor(stageId: int, viewId: int): int {
         if (stageId < Enums.IslandStage.Rest || stageId > Enums.IslandStage.Open) throw new Error("invariant: Island.growMsFor: unknown stage")
-        return stageId === Enums.IslandStage.Hover ? hoverGrowMs : Tokens.durSlow
+        return stageId === Enums.IslandStage.Hover ? hoverGrowMs : stageId === Enums.IslandStage.Open ? openGrowMs : Tokens.durSlow
     }
 
     // Open the island of this screen at a view.
@@ -188,9 +184,8 @@ PanelWindow {
         accent: win.isAlert && win.islandState && win.islandState.alert && win.islandState.alert.severity !== Enums.Severity.Neutral ? Tokens.colorFor(win.islandState.alert.severity) : win.hairline
         accentOpacity: win.isAlert ? 1 : 0.5
         opacity: 1 - win.morphProgress
-        // TODO(phase 7, Island-Galerie): Pass win.view as second argument of growMsFor (both Behaviors); an opened view takes openGrowMs.
-        Behavior on width { NumberAnimation { duration: win.growMsFor(win.stage); easing.type: Easing.BezierSpline; easing.bezierCurve: [0.2, 0, 0, 1, 1, 1] } }
-        Behavior on height { NumberAnimation { duration: win.growMsFor(win.stage); easing.type: Easing.BezierSpline; easing.bezierCurve: [0.2, 0, 0, 1, 1, 1] } }
+        Behavior on width { NumberAnimation { duration: win.growMsFor(win.stage, win.view); easing.type: Easing.BezierSpline; easing.bezierCurve: [0.2, 0, 0, 1, 1, 1] } }
+        Behavior on height { NumberAnimation { duration: win.growMsFor(win.stage, win.view); easing.type: Easing.BezierSpline; easing.bezierCurve: [0.2, 0, 0, 1, 1, 1] } }
         Behavior on cornerRadius { NumberAnimation { duration: Tokens.durSlow } }
 
         // Rest: a tap opens.
@@ -249,11 +244,10 @@ PanelWindow {
 
         // Hover: the quick settings.
         IslandHover {
-            // TODO(phase 7, Island-Galerie): topMargin and opacity follow homeWithQuick (audioState is handed over already) (the card sits under the Home header whenever Home shows it).
             id: hoverPanel
-            anchors { left: parent.left; right: parent.right; top: parent.top; topMargin: win.hoverIsHome ? home.implicitHeight : 0 }
+            anchors { left: parent.left; right: parent.right; top: parent.top; topMargin: win.homeWithQuick ? home.implicitHeight : 0 }
             // Ninja: the quick settings sit under the home card, so hover and tap show the same card.
-            opacity: win.hoverIsHome ? (win.isHover || (win.isOpen && win.view === Enums.IslandView.Home) ? 1 : 0) : win.isHover ? 1 : 0
+            opacity: win.homeWithQuick ? (win.isHover || (win.isOpen && win.view === Enums.IslandView.Home) ? 1 : 0) : win.isHover ? 1 : 0
             visible: opacity > 0.01
             Behavior on opacity { NumberAnimation { duration: Tokens.durFast } }
             appSettings: win.appSettings
@@ -373,7 +367,6 @@ PanelWindow {
             }
 
             IslandWallpaper {
-                // TODO(phase 7, Island-Galerie): The view grows the body to its own contentWidth/contentHeight; its reveal is quick (see IslandWallpaper).
                 id: wallpaper
                 anchors.fill: parent
                 opacity: win.view === Enums.IslandView.Wallpaper ? 1 : 0
