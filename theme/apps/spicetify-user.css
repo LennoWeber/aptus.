@@ -3,5 +3,18 @@
 .main-card-card, .main-entityHeader-image, .main-image-image { border-radius: 10px; }
 .Root__top-container { gap: 8px; }
 .main-nowPlayingBar-nowPlayingBar { border-top: 1px solid var(--spice-highlight-elevated); }
-.main-playButton-PlayButton, .main-playButton-primary { background-color: var(--spice-button) !important; color: var(--spice-main) !important; }
-/* TODO(phase 7, spicetify): Encore button variables for both modes, round play buttons, chips, Create, player buttons, heart/add icons, progress; only variables and [data-encore-id], no hashed classes. */
+
+/* Buttons: Spotify (Encore) paints them from sets of variables, and the "bright accent" set (play buttons, Follow, Upgrade)
+   and the "inverted" sets take Spotify's own light fill with a dark symbol. aptus pins them: the fill is --spice-button, the
+   symbol and the text on it --spice-main, so a button reads in the light and in the dark scheme. */
+.encore-bright-accent-set, .encore-inverted-light-set, .encore-inverted-set {
+  --background-base: var(--spice-button);
+  --background-highlight: color-mix(in srgb, var(--spice-button) 90%, var(--spice-main));
+  --background-press: color-mix(in srgb, var(--spice-button) 80%, var(--spice-main));
+  --essential-base: var(--spice-main);
+  --essential-bright-accent: var(--spice-main);
+  --text-base: var(--spice-main);
+  --text-bright-accent: var(--spice-main);
+}
+/* Icon-only buttons are round, whatever the radius of text buttons is. */
+[data-encore-id="buttonPrimary"][data-is-icon-only="true"] > span { border-radius: 9999px; }
