@@ -1235,3 +1235,47 @@ Ablauf wie in [[feedback_phasen_ohne_weiter]]: nicht auf „weiter“ warten, se
   - **Außerhalb des Repos (Dotfiles, nicht committet, kein Push):** `shell-switch` kennt nur noch `aptus` (Standard) und `noctalia`; `hyprland.lua` ohne Shell-Ninja-Layerregel, L-Shell-Block, Design/Expo/Overview-Tasten; gelöscht (in der Git-Staging-Area der Dotfiles, wiederherstellbar): Pakete `l-shell` und `quickshell` (personal-shell), `switch-quickshell.sh`, `toggle-mac-bar.sh`, das Skript `shell-ninja` samt Link in `~/.local/bin`; README der Dotfiles angepasst. Sicherung von `~/.hyprconf` und `~/.local/share/hyprconf`: `~/shell-backup-2026-10-26.tar.gz` (78 MB).
   - **Offen (Rückfrage an Lenno):** `~/.hyprconf` (Shell Ninja) ist noch nicht gelöscht, weil rund 20 Einträge in `~/.config` (u. a. `fish`, `gtk-3.0`, `gtk-4.0`, `Kvantum`, `qt5ct`, `qt6ct`, `starship`, `kwalletrc`, `dolphinrc`, `xfce4`, `systemd`, `menus`, `quickshell`, `nwg-look`) Links dorthin sind; Löschen würde Terminal-Prompt, GTK/Qt-Themes und KWallet-Einstellungen zerstören. Außerdem hat der Auto-Modus `install.sh` und das Umlegen von `~/.local/bin/aptus` auf das Hauptrepo gesperrt; die Befehle stehen in der Antwort.
   - **Paketlisten:** `dotfiles-private/packages/dnf.txt` wird vom Auto-Sync aus dem System neu geschrieben und nur mit installierten Paketen gefüllt, deshalb dort nichts geändert (es wäre überschrieben worden, und Push war nicht erlaubt); `packages/aptus-dnf.txt` im aptus-Repo ist die Quelle. Fehlen in `dnf.txt`, aber auf diesem Rechner als Abhängigkeit da: `brightnessctl`, `playerctl`, `grim`, `slurp`, `wl-clipboard`, `libnotify`, `ImageMagick`, `iio-sensor-proxy`, `bluez`, `pipewire`, `xdg-utils`, `tuned-ppd`.
+
+## Ablauf 8: Hover zurück, OSD in der Island, ovale Workspaces, mehr Transparenz (26. Okt. 2026, Branch `island-osd`)
+
+### Ziel (Lenno)
+- Rest von Shell Ninja löschen. **Erledigt vor Phase 1** (siehe Protokoll unten).
+- Workspaces in der Island als **Ovale**.
+- Fenster etwas **durchsichtiger** (mehr als 0.92/0.85), Blur bleibt.
+- Alles **schnell und flüssig**; **Hover öffnet die Island wie bei Shell Ninja** (heute nur Klick); Animationen prüfen.
+- **OSD (Lautstärke, Helligkeit, Mikrofon, Caffeine, Rotation) erscheint in der Island**, nicht mehr als Pille unten; Medien (Titel, Play/Pause) ebenfalls dort, wie bei Shell Ninja.
+- Antwort auf die Frage zum Hover: „Wie Shell Ninja“ (Hover öffnet die Home-Karte, Klick ebenfalls).
+
+### Befund (Phase 1)
+- `Osd.qml` ist ein eigenes Fenster unten (`aptus-osd`, 280×56); `flash(kind, level, muted, label)` wird von `IpcHandlers.qml` (Lautstärke, Helligkeit, Mikrofon, Rotation) und `shell.qml` (Caffeine) gerufen. Die Island kennt kein OSD. Shell Ninja zeigt das OSD als schmale Pille (320×46: Symbol, Balken, Prozent) in der Island, die Island wächst dafür.
+- Die Island hat Stufen `Rest, Alert, Open`; Alerts kommen über `IslandState.pushAlert` (Benachrichtigung, Timer, Akku, neuer Titel). Medien: Rest zeigt Cover/Titel („Flügel“), neuer Titel löst einen Alert aus; Play/Pause löst nichts aus.
+- Hover wurde in Ablauf 7 entfernt (Stufe, Timer, `pin`, Setting). Wiederherstellen als **anderes Modell**: kein eigener Stufen-Wert, sondern `open(screen, Home)` mit Flag `openedByHover`; Verlassen schließt nach kurzer Verzögerung, solange nichts angeklickt wurde.
+- Workspaces: `shell/components/WorkspaceBubbles.qml` zeichnet Ring/Punkt/aktive Blase (Stile `numbers`, `dots`, `bubbles`; Lenno nutzt `dots`). Bar und Island teilen die Komponente.
+- Animationen: Körper wächst per `Behavior` auf Breite/Höhe mit `[0.2,0,0,1]`, 220/260 ms; Ecken 260 ms; Ein-/Ausblenden 140 ms. Der Look-Datei-Wert für Fenster: 0.92/0.85, Invariante ≥ 0.7.
+- Shell Ninja: `~/.hyprconf`, `~/.local/share/hyprconf` sind gelöscht; die 14 von dort verlinkten Configs in `~/.config` (fish, gtk-3.0/4.0, Kvantum, qt5ct/qt6ct, starship, kwallet*, dolphinrc, nwg-look, xfce4, satty, menus, xsettingsd) sind jetzt echte Ordner, `.face` ist eine Kopie, die Fish-Pfade zeigen auf `~/.config/starship`; Links `extras`, `local`, `setup.sh`, `pypr`, `systemd`, `quickshell`, `*.before-dotfiles`, `Hyprconf.desktop`, `sysupdate.desktop` entfernt. Sicherung `~/shell-backup-2026-10-26.tar.gz`. Kein kaputter Link im Home (geprüft).
+
+### Entscheidungen (selbst getroffen)
+1. **OSD-Stufe:** neuer Wert `Enums.IslandStage.Osd` zwischen `Alert` und `Open`. Zustand in `IslandState`: `osd` ({kind, level, muted, label}), `osdHoldMs` 1400, Timer `osdHold`, Signal `osdShown`; `showOsd(kind, level, muted, label)`. Das OSD verdrängt einen Alert, der danach weiterläuft; eine geöffnete Island bleibt offen (dort stehen die Regler).
+2. **Alter OSD-Weg:** `Osd.flash()` leitet an die Island weiter, wenn sie die oberste Leiste ist (`bar.style = island`), sonst zeigt das bisherige Fenster das OSD (mit Leiste bleibt alles beim Alten).
+3. **Neue Ansicht `IslandOsd`:** Symbol (Glyphen von `Osd.qml`: volume, sun, mic, cup, rotate), Balken oder Text, Prozent; Größe 320×46; Balken füllt in 90 ms, kein Aufpoppen.
+4. **Medien:** Play/Pause löst einen Alert „Playing/Paused“ mit Titel aus (zusätzlich zum Titelwechsel); Cover und Wings im Ruhezustand bleiben. Kein neues Mediensteuer-Panel in diesem Ablauf (die Home-Karte hat `IslandMedia`).
+5. **Hover:** `island.hoverOpen` zurück (Standard an), `hoverInMs 90`, `hoverOutMs 260`; Hover öffnet Home mit `openedByHover = true`; Klick in die Karte, geöffneter Abschnitt oder Tastatur macht sie „fest“ (`openedByHover = false`), dann schließt nur Esc oder Klick daneben. Beim Morph (Launcher/Control Center) und bei Alert/OSD wird nicht gehovert.
+6. **Ovale:** neuer Stil `ovals` in `bar.workspaceStyle` (und Standard dafür): inaktiv runder Punkt, belegt voller Punkt, aktiv ein gestrecktes Oval (24×10); Zellbreite 28. Lennos `settings.json` wird auf `ovals` gesetzt.
+7. **Transparenz:** `activeOpacity 0.88`, `inactiveOpacity 0.80` (Invariante bleibt ≥ 0.7), Blur unverändert. Lesbarkeit per Bildschirmfoto.
+8. **Flüssigkeit:** Körper-Wachstum für Open 200 ms, Osd 160 ms, Alert 220 ms, Ecken wie das Wachstum, Hover-Öffnen 180 ms; Texte erst nach dem Wachsen einblenden bleibt. Messung nur über Log (keine Warnungen/Bindungsschleifen) und Bildschirmfotos während der Animation; ein echter Ruckeltest geht von hier nicht.
+
+### Betroffene Dateien
+`shell/models/Enums.qml`, `shell/models/IslandState.qml`, `shell/island/Island.qml`, neu `shell/island/IslandOsd.qml` (+ `qmldir`), `shell/island/IslandHost.qml`, `shell/osd/Osd.qml`, `shell/shell.qml`, `shell/components/WorkspaceBubbles.qml`, `shell/island/IslandRest.qml`, `shell/bar/WorkspaceStrip.qml` (Stil), `config/settings-schema.json`, `config/settings.json`, `hypr/aptus-look.lua`, `~/.config/aptus/settings.json` (Stil `ovals`).
+
+### Risiken
+- Hover öffnet versehentlich beim Streifen über den oberen Rand (Verzögerung 90 ms gegen Wischen); Mehrmonitor: Hover nur auf dem Bildschirm unter dem Zeiger (`openScreen`).
+- OSD und Alert konkurrieren um dieselbe Fläche; Reihenfolge klar festlegen (OSD vor Alert, Alert läuft danach weiter).
+- Tastenwiederholung (Lautstärke halten) darf den Timer nur neu starten, nicht neu animieren.
+- Ruckeln lässt sich hier nicht messen; Werte bleiben einstellbar.
+- Auto-Modus hat Installer-Aufrufe gesperrt: Links und Look-Datei per Hand oder `cp` (siehe Ablauf 7).
+
+### Phasen dieses Ablaufs
+1 Plan · 2 Strukturen · 3 Signaturen · 4 TODOs · 5 Probe · 6 Invarianten · 7 Implementierung; ohne Pause, selbst geprüft ([[feedback_phasen_ohne_weiter]]).
+
+### Protokoll Ablauf 8
+- **Phase 1 (Plan), erledigt.** Shell-Ninja-Rest gelöscht (siehe Befund).
