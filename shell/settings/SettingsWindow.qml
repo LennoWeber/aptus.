@@ -96,6 +96,7 @@ FloatingWindow {
 
         // TODO(phase 7): a quiet line with the category description (activeCategory().description) under the heading;
         // TODO(phase 7): move the page down by its height.
+        // TODO(phase 7): the description must sit in an Item of its own: a Label with `height: implicitHeight` makes a binding loop.
         CategoryPage {
             anchors { left: parent.left; leftMargin: 28; right: parent.right; rightMargin: 28; top: heading.bottom; topMargin: 12; bottom: parent.bottom }
             appState: win.appState

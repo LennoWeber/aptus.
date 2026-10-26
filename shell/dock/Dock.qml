@@ -38,12 +38,16 @@ PanelWindow {
     readonly property bool menuOpen: menuFor !== null
     readonly property bool shown: !autoHide || hover.hovered || menuOpen
 
+    // TODO(phase 7): ready starts false and turns true after the first frame (Qt.callLater) so the dock slides in; look and magnify become readonly bindings;
+    // TODO(phase 7): fill maxZoom, cellRest, dividerWidth, dividerIndex and restWidth from the settings and entries.
     screen: modelData
     anchors { left: true; right: true; bottom: true }
-    // TODO(phase 7): the window must stay taller than the zoomed icons plus tooltip and menu; check against iconSize 72 * 1.6.
+    // TODO(phase 7): the window height follows the size setting: round(iconSize * maxZoom) + 120 (zoomed icon, tooltip, menu); iconSize goes up to 96.
     implicitHeight: 190
+    // TODO(phase 7): dock.reserveSpace: exclusiveZone = dock height (icon size + 26 + 16) when on and autoHide is off, else 0.
     exclusiveZone: 0
     color: "transparent"
+    // TODO(phase 7): blur behind the glass panel (BackgroundEffect.blurRegion, as the launcher does), only for look glass.
     mask: Region { item: hot; Region { item: menuBox } }
     WlrLayershell.namespace: "aptus-dock"
     WlrLayershell.layer: WlrLayer.Top

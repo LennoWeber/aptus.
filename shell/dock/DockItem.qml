@@ -22,6 +22,7 @@ Item {
     signal menuRequested()
 
     // TODO(phase 7): width, height and icon size follow zoom (rest size times zoom), smoothly; the row grows around the pointer.
+    // TODO(phase 7): size = iconSize * zoom (+ hover boost without zoom); the icon stands on the cell bottom; hop drives the start bounce.
     width: iconSize + 14
     height: iconSize + 18
 
