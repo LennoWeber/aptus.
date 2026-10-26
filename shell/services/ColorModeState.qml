@@ -166,11 +166,14 @@ Scope {
 
     // Choose the theme `step` places after (or before, negative) the one in effect; wraps around. Used by Super+T in the picker.
     function next(step: int): void {
+        if (!Number.isInteger(step) || step === 0) throw new Error("invariant: ColorModeState.next: step is a non-zero integer")
         throw new Error("not implemented")
     }
 
     // Show the theme `id` in the shell only (the picker's preview); the apps and the setting stay as they are.
     function preview(id: string): void {
+        if (!isValid(id) || id === "auto") throw new Error("invariant: ColorModeState.preview: not a theme")
+        if (!appSettings) throw new Error("invariant: ColorModeState.preview: appSettings not set")
         throw new Error("not implemented")
     }
 
@@ -181,21 +184,25 @@ Scope {
 
     // Keep the previewed theme: same as setTheme(previewId), then the preview ends.
     function commitPreview(): void {
+        if (!appSettings) throw new Error("invariant: ColorModeState.commitPreview: appSettings not set")
         throw new Error("not implemented")
     }
 
     // ThemeSource has a new palette (the wallpaper changed): when the wallpaper theme is chosen, fade to it and repaint the apps.
     function onWallpaperThemeChanged(): void {
+        if (!ThemeSource.palette) throw new Error("invariant: ColorModeState.onWallpaperThemeChanged: ThemeSource has no palette")
         throw new Error("not implemented")
     }
 
     // The setting appearance.theme, or light (with a warning) when it is not a theme, e.g. a hand-edited file.
     function settingTheme(): string {
+        if (!appSettings) throw new Error("invariant: ColorModeState.settingTheme: appSettings not set")
         throw new Error("not implemented")
     }
 
     // Tell ThemeSource whether the wallpaper theme is wanted (chosen or previewed) and which tone it should have.
     function followWallpaperTheme(): void {
+        if (!appSettings) throw new Error("invariant: ColorModeState.followWallpaperTheme: appSettings not set")
         throw new Error("not implemented")
     }
 }

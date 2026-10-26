@@ -105,16 +105,20 @@ Singleton {
     // Hand the current picture and fit to the login helper when loginSync is on, the helper is installed and they differ from
     // loginSynced. Quiet when the helper refuses (no password prompt is shown for an automatic sync); the reason goes to the log.
     function syncLogin(): void {
+        if (!(fit >= Enums.WallpaperFit.Fill && fit <= Enums.WallpaperFit.Tile)) throw new Error("invariant: Wallpaper.syncLogin: unknown fit")
+        if (current !== "" && current[0] !== "/") throw new Error("invariant: Wallpaper.syncLogin: the picture path must be absolute")
         throw new Error("not implemented")
     }
 
     // The name of an Enums.WallpaperFit as the setting and the login config spell it.
     function fitName(fit: int): string {
+        if (!(fit >= Enums.WallpaperFit.Fill && fit <= Enums.WallpaperFit.Tile)) throw new Error("invariant: Wallpaper.fitName: unknown fit")
         throw new Error("not implemented")
     }
 
     // The login helper finished: a manual call reports in loginStatus, an automatic one remembers what it handed over.
     function onLoginExited(code: int): void {
+        if (!Number.isInteger(code)) throw new Error("invariant: Wallpaper.onLoginExited: exit code must be an integer")
         throw new Error("not implemented")
     }
 }

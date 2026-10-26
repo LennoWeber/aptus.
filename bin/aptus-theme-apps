@@ -87,33 +87,39 @@ def theme_ids() -> list:
 def theme_data(theme: str) -> dict:
     """The raw palette of a theme as in tokens.json (roles, accent roles, base, name, optional accents). For wallpaper it
     is read from WALLPAPER_THEME. Raises ValueError for an unknown theme."""
+    assert isinstance(theme, str) and THEME_ID.fullmatch(theme), "theme id must be a lower case word"
     raise NotImplementedError
 
 
 def theme_mode(theme: str) -> str:
     """The base of a theme, "light" or "dark" (light for light, dark for dark)."""
+    assert isinstance(theme, str) and theme, "theme id must be a non-empty string"
     raise NotImplementedError
 
 
 def theme_stamp(theme: str) -> str:
     """What MODE_FILE holds after a run for `theme`: its id, and for wallpaper also a short hash of the generated palette."""
+    assert isinstance(theme, str) and theme, "theme id must be a non-empty string"
     raise NotImplementedError
 
 
 def check_theme(theme: str, d: dict) -> None:
     """Raise AssertionError unless the theme is complete: base, all roles as #RRGGBB, bg lighter than ink iff base is light, text contrast >= 4.5."""
+    assert isinstance(d, dict), "a theme is a dict"
     raise NotImplementedError
 
 
 def palette_for(m: str) -> dict:
     """The palette written into the per-mode files (Ghostty and yazi have a light and a dark theme file): the neutral one,
     except for the file of the base of a colour theme, which holds that theme."""
+    assert m in MODES, f"unknown mode {m}"
     raise NotImplementedError
 
 
 def theme_palette(theme: str) -> dict:
     """Like palette(mode) for any theme: the roles of the theme plus the syntax hues (its own accents, or those of its base),
     without the keys note, name and base."""
+    assert isinstance(theme, str) and theme, "theme id must be a non-empty string"
     raise NotImplementedError
 
 

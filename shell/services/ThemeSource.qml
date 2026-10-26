@@ -37,6 +37,7 @@ Singleton {
     // bin/aptus-wallpaper-theme, sets status to "working", then "ready" and `palette`, or "failed" and `error`. An empty path
     // or an unreadable picture fails; the previous palette stays.
     function generate(path: string, tone: string): void {
+        if (["auto", "light", "dark"].indexOf(tone) < 0) throw new Error("invariant: ThemeSource.generate: tone is auto, light or dark")
         throw new Error("not implemented")
     }
 
@@ -52,6 +53,7 @@ Singleton {
 
     // The generator finished: on code 0 read the file and emit changed(), else status "failed" with the first line of its stderr.
     function onGenerated(code: int): void {
+        if (!Number.isInteger(code)) throw new Error("invariant: ThemeSource.onGenerated: exit code must be an integer")
         throw new Error("not implemented")
     }
 }

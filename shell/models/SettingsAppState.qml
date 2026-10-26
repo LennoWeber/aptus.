@@ -76,6 +76,8 @@ Scope {
 
     // Whether an entry is shown given its `visibleWhen` ({ path, equals } or { path, notEquals } against the setting in effect).
     function entryVisible(entry: var): bool {
+        if (!entry) throw new Error("invariant: SettingsAppState.entryVisible: no entry")
+        if (entry.visibleWhen && !(typeof entry.visibleWhen.path === "string" && ("equals" in entry.visibleWhen) !== ("notEquals" in entry.visibleWhen))) throw new Error("invariant: SettingsAppState.entryVisible: visibleWhen needs a path and exactly one of equals, notEquals")
         throw new Error("not implemented")
     }
 

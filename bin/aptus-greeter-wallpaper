@@ -52,6 +52,7 @@ def remove_old():
 def parse_args(argv):
     """(path, clear, fit) from the command line: path is None with --clear, fit is None when --fit is not given.
     Anything else ends the program with the usage message."""
+    assert isinstance(argv, list), "argv is a list"
     raise NotImplementedError
 
 

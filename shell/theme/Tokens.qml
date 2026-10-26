@@ -224,6 +224,7 @@ Singleton {
     // palette.dark (base dark), the colour themes are palette.themes, wallpaper is customTheme. null for an unknown id,
     // or for wallpaper while customTheme is null.
     function themeColors(id: string): var {
+        if (typeof id !== "string" || id === "") throw new Error("invariant: Tokens.themeColors: id must be a non-empty string")
         throw new Error("not implemented")
     }
 
@@ -234,22 +235,29 @@ Singleton {
 
     // The darkness (0 light .. 1 dark) of the colours showing at `fade` between fromColors and toColors; the night tint is weaker the darker it is.
     function darknessAt(fade: real): real {
+        if (!(fade >= 0 && fade <= 1)) throw new Error("invariant: Tokens.darknessAt: fade outside 0..1")
         throw new Error("not implemented")
     }
 
     // Pure: mix two flat colour maps role by role. t in 0..1; roles missing in either map are taken from the other.
     function mixColors(a: var, b: var, t: real): var {
+        if (!(t >= 0 && t <= 1)) throw new Error("invariant: Tokens.mixColors: t outside 0..1")
+        if (!a || !b) throw new Error("invariant: Tokens.mixColors: both colour maps are needed")
         throw new Error("not implemented")
     }
 
     // Show the theme `id`: `animate` fades from the colours showing now (also while a fade runs), otherwise it switches at once
     // (start-up). Does nothing for an unknown id.
     function setTheme(id: string, animate: bool): void {
+        if (typeof id !== "string" || id === "") throw new Error("invariant: Tokens.setTheme: id must be a non-empty string")
+        if (id === "auto") throw new Error("invariant: Tokens.setTheme: auto is a setting value, ColorModeState resolves it")
         throw new Error("not implemented")
     }
 
     // The generated palette for the theme "wallpaper" (ThemeSource.palette), or null. When the wallpaper theme shows, it fades to the new colours.
     function setCustomTheme(colors: var): void {
+        if (colors !== null && !(colors.base === "light" || colors.base === "dark")) throw new Error("invariant: Tokens.setCustomTheme: the palette needs a base, light or dark")
+        if (colors !== null && ["bg", "surface", "surfaceAlt", "line", "ink", "inkSoft", "inkFaint", "ok", "warn", "critical", "accent", "accentInk", "on"].some(k => String(colors[k])[0] !== "#")) throw new Error("invariant: Tokens.setCustomTheme: the palette misses a colour")
         throw new Error("not implemented")
     }
 
@@ -260,11 +268,13 @@ Singleton {
 
     // The Enums.WallpaperFit for a name of the setting wallpaper.fit (fill, fit, stretch, center, tile); Fill for anything else.
     function fitFromName(name: string): int {
+        if (typeof name !== "string") throw new Error("invariant: Tokens.fitFromName: name must be a string")
         throw new Error("not implemented")
     }
 
     // The Image.fillMode that shows a picture the way `fit` (Enums.WallpaperFit) says. Shared by the desktop and the login screen.
     function fillModeFor(fit: int): int {
+        if (!(fit >= Enums.WallpaperFit.Fill && fit <= Enums.WallpaperFit.Tile)) throw new Error("invariant: Tokens.fillModeFor: unknown fit")
         throw new Error("not implemented")
     }
 }

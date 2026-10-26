@@ -26,11 +26,14 @@ PanelWindow {
 
     // Open on the focused screen with the theme in effect selected, remember it as startThemeId.
     function show(): void {
+        if (!themeState) throw new Error("invariant: ThemePicker.show: themeState not set")
+        if (entries.length === 0) throw new Error("invariant: ThemePicker.show: Tokens.themeList is empty (tokens not loaded)")
         throw new Error("not implemented")
     }
 
     // Close. `keep` true keeps the selected theme (commit), false puts the starting theme back.
     function hide(keep: bool): void {
+        if (!themeState) throw new Error("invariant: ThemePicker.hide: themeState not set")
         throw new Error("not implemented")
     }
 
@@ -41,11 +44,15 @@ PanelWindow {
 
     // Move the selection by `step` places (wraps) and show that theme in the shell.
     function move(step: int): void {
+        if (!Number.isInteger(step)) throw new Error("invariant: ThemePicker.move: step must be an integer")
+        if (!isOpen) throw new Error("invariant: ThemePicker.move: the picker is not open")
         throw new Error("not implemented")
     }
 
     // Select the entry at `index` and show its theme in the shell (a click or a hover).
     function select(index: int): void {
+        if (index < 0 || index >= entries.length) throw new Error("invariant: ThemePicker.select: index outside the entries")
+        if (!isOpen) throw new Error("invariant: ThemePicker.select: the picker is not open")
         throw new Error("not implemented")
     }
 

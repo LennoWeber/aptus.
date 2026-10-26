@@ -166,6 +166,7 @@ Scope {
         // Move the theme on by `step` places (1 next, -1 previous) without the picker: `aptus msg theme-next 1`.
         function themeNext(step: int): void {
         // TODO(phase 7, themes): colorModeState.next(step) (no picker, no preview).
+            if (!Number.isInteger(step) || step === 0) throw new Error("invariant: IpcHandlers.themeNext: step is a non-zero integer")
             throw new Error("not implemented")
         }
 

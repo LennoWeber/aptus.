@@ -35,6 +35,7 @@ def dominant_tone(pixels: list) -> tuple:
     """(hue 0..360, saturation 0..1) of the tone that stands out: a hue histogram in which every pixel counts with its
     saturation times its lightness weight (so a big flat grey or a black edge does not win). Grey pictures give
     (FALLBACK_HUE, low saturation)."""
+    assert isinstance(pixels, list), "pixels is a list of (r, g, b)"
     raise NotImplementedError
 
 
@@ -45,6 +46,7 @@ def mean_lightness(pixels: list) -> float:
 
 def hsl_hex(h: float, s: float, l: float) -> str:
     """#RRGGBB for hue 0..360, saturation 0..1, lightness 0..1."""
+    assert 0 <= s <= 1 and 0 <= l <= 1, "saturation and lightness are 0..1"
     raise NotImplementedError
 
 
@@ -55,6 +57,7 @@ def contrast(a: str, b: str) -> float:
 
 def fit_contrast(color: str, bg: str, toward: str, ratio: float = MIN_CONTRAST_TEXT) -> str:
     """Mix `color` toward `toward` in small steps until it has `ratio`:1 contrast on bg (the last step is `toward`)."""
+    assert ratio >= 1, "a contrast ratio is at least 1"
     raise NotImplementedError
 
 
@@ -62,22 +65,29 @@ def build_palette(hue: float, saturation: float, base: str) -> dict:
     """The theme for a tone and a base ("light" or "dark"): all roles as #RRGGBB, plus "name": "Wallpaper" and "base".
     Neutrals carry the hue with low saturation, the accent carries it with the picture's saturation (kept between a calm
     minimum and maximum), ok/warn/critical are fixed hues fitted to the background."""
+    assert base in ("light", "dark"), "base is light or dark"
+    assert 0 <= saturation <= 1, "saturation is 0..1"
     raise NotImplementedError
 
 
 def make_theme(path: str, tone: str) -> dict:
     """Read the picture and build its theme (build_palette with the dominant tone and the base chosen by `tone`). Adds
     "tone" (as asked) and "source": { "path", "size", "mtime" } for the cache check."""
+    assert tone in TONES, "tone is auto, light or dark"
+    assert os.path.isabs(path), "the picture path must be absolute"
     raise NotImplementedError
 
 
 def is_current(out: str, path: str, tone: str) -> bool:
     """Whether the file `out` already holds the theme for this picture (path, size, mtime) and tone."""
+    assert tone in TONES, "tone is auto, light or dark"
     raise NotImplementedError
 
 
 def write_atomic(out: str, theme: dict) -> None:
     """Write the theme as JSON to `out` (creates the folder), via a temporary file and a rename."""
+    assert os.path.isabs(out), "the output path must be absolute"
+    assert theme.get("base") in ("light", "dark"), "a theme needs a base"
     raise NotImplementedError
 
 
