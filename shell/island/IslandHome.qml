@@ -100,6 +100,7 @@ Item {
             width: parent.width
             height: 40
 
+            // TODO(phase 7, Island-Blasen): Bubbles instead of the numbers when bar.workspaceStyle is "bubbles" (40 px cells for touch).
             // Workspaces: the state is carried by weight, never by colour; urgent is the one signal colour.
             Row {
                 anchors { left: parent.left; verticalCenter: parent.verticalCenter }

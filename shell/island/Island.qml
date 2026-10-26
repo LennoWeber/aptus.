@@ -177,6 +177,7 @@ PanelWindow {
         accent: win.isAlert && win.islandState && win.islandState.alert && win.islandState.alert.severity !== Enums.Severity.Neutral ? Tokens.colorFor(win.islandState.alert.severity) : win.hairline
         accentOpacity: win.isAlert ? 1 : 0.5
         opacity: 1 - win.morphProgress
+        // TODO(phase 7, Island-Blasen): Growing to the hover card takes growMsFor(stage) (180 ms), the other changes Tokens.durSlow; same for the height below.
         Behavior on width { NumberAnimation { duration: Tokens.durSlow; easing.type: Easing.BezierSpline; easing.bezierCurve: [0.2, 0, 0, 1, 1, 1] } }
         Behavior on height { NumberAnimation { duration: Tokens.durSlow; easing.type: Easing.BezierSpline; easing.bezierCurve: [0.2, 0, 0, 1, 1, 1] } }
         Behavior on cornerRadius { NumberAnimation { duration: Tokens.durSlow } }
@@ -235,6 +236,8 @@ PanelWindow {
 
         // Hover: the quick settings.
         IslandHover {
+            // TODO(phase 7, Island-Blasen): Hand over powerProfileState; viewRequested closes the card into that view (islandState.open), sectionToggled calls islandState.pin(modelData.name).
+            // TODO(phase 7, Island-Blasen): Closing the card (hoverLeave, close) must also reset hoverPanel.expanded to "" and stop the Wi-Fi scan.
             id: hoverPanel
             anchors { left: parent.left; right: parent.right; top: parent.top; topMargin: win.hoverIsHome ? home.implicitHeight : 0 }
             // Ninja: the quick settings sit under the home card, so hover and tap show the same card.

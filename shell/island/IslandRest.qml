@@ -128,6 +128,7 @@ Item {
         }
     }
 
+    // TODO(phase 7, Island-Blasen): With bar.workspaceStyle "bubbles" this row is a WorkspaceBubbles (capsule and ticker); numbers and dots keep this one. Read the style from appSettings in Island.qml.
     component WorkspaceNumbers: Row {
         Repeater {
             model: rest.workspaces

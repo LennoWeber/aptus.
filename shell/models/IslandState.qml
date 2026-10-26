@@ -144,6 +144,7 @@ Scope {
     // Resting 280 ms on the island shows the hover panel; leaving it for 320 ms takes it back.
     Timer {
         id: hoverIn
+        // TODO(phase 7, Island-Blasen): Use hoverInMs (90 ms), not the 280 ms written here.
         interval: 280
         onTriggered: {
             root.openScreen = root.pendingHoverScreen
@@ -152,6 +153,7 @@ Scope {
             hold.stop()
         }
     }
+    // TODO(phase 7, Island-Blasen): Use hoverOutMs (220 ms); and hoverLeave must not close a pinned (Open) island.
     Timer { id: hoverOut; interval: 320; onTriggered: root.close() }
 
     onEnabledChanged: if (!enabled) { hold.stop(); hoverIn.stop(); hoverOut.stop(); alert = null; queue = []; openScreen = ""; view = Enums.IslandView.Home; stage = Enums.IslandStage.Rest; morph = Enums.MorphTarget.None }

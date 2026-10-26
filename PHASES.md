@@ -1029,3 +1029,8 @@ Arbeitsregel wie beim vierten Ablauf: nie auf „weiter“ warten, jede Phase pr
 - Konstanten: `IslandState.hoverInMs 90`, `hoverOutMs 220`; `Island.hoverGrowMs 180`; `hoverWidth` 440 (Shade 460); Blasengrößen 8/10/16 px, Zellbreite 24; `maxRows 5` für Wi-Fi und Bluetooth.
 - Verhalten ist unverändert: die Timer in `IslandState` lesen noch 280/320 ms, keine Funktion wird aufgerufen. Einzige sichtbare Folge: die Hover-Karte ist 60 px breiter.
 - Prüfung: Diff gelesen; nur Signaturen, Platzhalter und Konstanten; keine Struktur geändert (Phase 2 unberührt), keine Aufrufe eingebaut; nicht gebaut.
+
+**Phase 4 (TODO-Markierungen), erledigt:**
+- 15 Kommentare `TODO(phase 7, Island-Blasen): …` in 9 Dateien, nur Kommentare: `bar/WorkspaceStrip.qml` (2: Blasen-Stil, Linie nur für Nummern), `bar/Bar.qml` (Stil 2 lesen), `island/IslandRest.qml` (`WorkspaceNumbers` je nach Stil), `island/IslandHome.qml` (Workspace-Zeile), `island/IslandHover.qml` (3: Karte wächst mit Inhalt, Wi-Fi- und Bluetooth-Schalter öffnen Bereiche), `island/Island.qml` (3: Dauer des Wachsens, Übergabe und Signale der Hover-Karte, Zurücksetzen beim Schließen), `island/IslandHost.qml` und `shell.qml` (`powerProfileState` durchreichen), `models/IslandState.qml` (2: Timer auf `hoverInMs`/`hoverOutMs`, `hoverLeave` schließt eine angeheftete Insel nicht).
+- Nichts fehlt aus Phase 2 oder 3 (jede TODO-Stelle hat ihr Gegenstück). Die Rümpfe von `IslandWifi`, `IslandBluetooth`, `IslandQuickActions` und `WorkspaceBubbles` füllt Phase 7; sie haben keine Aufrufstelle im laufenden Code und brauchen daher kein TODO.
+- Prüfung: `git diff` zeigt nur Kommentarzeilen, `git diff --check` leer.
