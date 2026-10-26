@@ -55,6 +55,7 @@ PanelWindow {
     }
     property int view: islandState ? islandState.view : Enums.IslandView.Home
     property bool isOpen: stage === Enums.IslandStage.Open
+    onStageChanged: if (stage < Enums.IslandStage.Rest || stage > Enums.IslandStage.Open) throw new Error("invariant: Island: unknown stage")
     // TODO(phase 7): without hoverIsHome: the quick card shows under Home only while the island is open on Home.
     property bool homeWithQuick: hoverIsHome || (isOpen && view === Enums.IslandView.Home)   // the opened Home shows the quick settings below the header (every design)
     readonly property int openGrowMs: 220   // ms: the body grows to an opened view in this time

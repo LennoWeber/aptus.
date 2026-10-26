@@ -15,6 +15,11 @@ local windowLook = {
 	blurNoise = 0.02,
 }
 
+-- Invariants: text must stay readable (no window below 70 % opaque) and the blur must be a real blur.
+assert(windowLook.activeOpacity >= 0.7 and windowLook.activeOpacity <= 1, "aptus-look: activeOpacity outside 0.7 to 1")
+assert(windowLook.inactiveOpacity >= 0.7 and windowLook.inactiveOpacity <= windowLook.activeOpacity, "aptus-look: inactiveOpacity must be 0.7 to activeOpacity")
+assert(windowLook.blurSize >= 1 and windowLook.blurPasses >= 1, "aptus-look: blur needs size and passes of at least 1")
+
 hl.config({
 	general = {
 		gaps_in = 4,
