@@ -23,6 +23,7 @@ Item {
 
     // True if shown[index] opens a new section (a different section than the entry before it).
     function startsSection(index: int): bool {
+        if (index < 0 || index >= shown.length) throw new Error("invariant: CategoryPage.startsSection: index outside the shown entries")
         throw new Error("not implemented")
     }
 

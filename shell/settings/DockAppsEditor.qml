@@ -21,22 +21,29 @@ Column {
     }
 
     function nameOf(id: string): string {
+        if (id === "") throw new Error("invariant: DockAppsEditor.nameOf: empty id")
         throw new Error("not implemented")
     }
 
     function iconOf(id: string): string {
+        if (id === "") throw new Error("invariant: DockAppsEditor.iconOf: empty id")
         throw new Error("not implemented")
     }
 
     function shift(index: int, delta: int): void {
+        if (Math.abs(delta) !== 1) throw new Error("invariant: DockAppsEditor.shift: delta must be -1 or 1")
+        if (index < 0 || index >= apps.length) throw new Error("invariant: DockAppsEditor.shift: index outside the list")
         throw new Error("not implemented")
     }
 
     function removeAt(index: int): void {
+        if (index < 0 || index >= apps.length) throw new Error("invariant: DockAppsEditor.removeAt: index outside the list")
         throw new Error("not implemented")
     }
 
     function addApp(id: string): void {
+        if (id === "") throw new Error("invariant: DockAppsEditor.addApp: empty id")
+        if (apps.indexOf(id) >= 0) throw new Error("invariant: DockAppsEditor.addApp: app already in the list")
         throw new Error("not implemented")
     }
 }

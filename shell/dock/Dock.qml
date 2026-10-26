@@ -74,21 +74,25 @@ PanelWindow {
 
     // Zoom factor (1 .. 1.6) of an icon whose centre is at `centerX` along the dock, from the pointer distance.
     function zoomAt(centerX: real): real {
+        if (!isFinite(centerX)) throw new Error("invariant: Dock.zoomAt: centre is not a number")
         throw new Error("not implemented")
     }
 
     // True if a thin divider belongs before entries[index]: the first app that is not kept in the dock.
     function dividerBefore(index: int): bool {
+        if (index < 0 || index >= entries.length) throw new Error("invariant: Dock.dividerBefore: index outside the entries")
         throw new Error("not implemented")
     }
 
     // Centre of entries[index] from the middle of the dock when nothing is zoomed.
     function restCentre(index: int): real {
+        if (index < 0 || index >= entries.length) throw new Error("invariant: Dock.restCentre: index outside the entries")
         throw new Error("not implemented")
     }
 
     // Remember that `it` was started, so its icon bounces until a window shows up or a moment has passed.
     function markLaunching(it: var): void {
+        if (!it || !it.key) throw new Error("invariant: Dock.markLaunching: entry without key")
         throw new Error("not implemented")
     }
 

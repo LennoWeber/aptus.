@@ -87,16 +87,19 @@ Scope {
 
     // Categories grouped for the sidebar, in schema order: [{ group, categories: [category] }].
     function categoryGroups(): var {
+        if (categories.some(c => !c.id || !c.title)) throw new Error("invariant: SettingsAppState.categoryGroups: category without id or title")
         throw new Error("not implemented")
     }
 
     // The category that is open, or undefined.
     function activeCategory(): var {
+        if (categories.length === 0) throw new Error("invariant: SettingsAppState.activeCategory: schema not loaded")
         throw new Error("not implemented")
     }
 
     // "Category › Section" of an entry, shown with search results.
     function originOf(entry: var): string {
+        if (!entry || !categories.some(c => c.id === entry.category)) throw new Error("invariant: SettingsAppState.originOf: entry without a known category")
         throw new Error("not implemented")
     }
 
