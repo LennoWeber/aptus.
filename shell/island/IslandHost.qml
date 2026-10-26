@@ -41,16 +41,20 @@ Scope {
 
     // Enums.AlertKind of a notification, told by its app and text: Mail, Download, or plain Notification.
     function classifyNotification(n: var): int {
+        if (!n || !Number.isInteger(n.id)) throw new Error("invariant: IslandHost.classifyNotification: a notification needs an integer id")
         throw new Error("not implemented")
     }
 
     // The fields of IslandState.pushRichAlert's data for a notification (app, icon, picture, body, actions).
     function notificationData(n: var): var {
+        if (!n || !Number.isInteger(n.id)) throw new Error("invariant: IslandHost.notificationData: a notification needs an integer id")
         throw new Error("not implemented")
     }
 
     // The fields of IslandState.pushRichAlert's data for the track that plays (cover, artist and album, app, progress).
     function mediaData(m: var, reason: string): var {
+        if (!m || !m.available) throw new Error("invariant: IslandHost.mediaData: no media player")
+        if (reason !== "track" && reason !== "state" && reason !== "cover") throw new Error("invariant: IslandHost.mediaData: unknown reason")
         throw new Error("not implemented")
     }
 
@@ -75,6 +79,7 @@ Scope {
     // The track alert that is shown (or waits) gets the current cover and app icon.
     // TODO(phase 7, alerts): push the shown track alert again with mediaData(m, "cover") when its id is "track".
     function refreshTrackAlert(): void {
+        if (!islandState) throw new Error("invariant: IslandHost.refreshTrackAlert: no island state")
         throw new Error("not implemented")
     }
 

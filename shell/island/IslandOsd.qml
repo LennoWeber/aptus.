@@ -22,6 +22,7 @@ Item {
 
     // Title for an Enums.OsdKind ("Volume", "Brightness", ...).
     function titleFor(kind: int): string {
+        if (kind < Enums.OsdKind.Volume || kind > Enums.OsdKind.Caffeine) throw new Error("invariant: IslandOsd.titleFor: unknown OSD kind")
         throw new Error("not implemented")
     }
 

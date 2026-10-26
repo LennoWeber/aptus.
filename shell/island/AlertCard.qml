@@ -31,11 +31,13 @@ Item {
 
     // Name of the app in capitals for the header line ("SPOTIFY"), "" when the alert has none.
     function appLabel(): string {
+        if (!alert) throw new Error("invariant: AlertCard.appLabel: no alert")
         throw new Error("not implemented")
     }
 
     // First letter for the badge when there is neither a cover nor an app icon.
     function badgeLetter(): string {
+        if (!alert) throw new Error("invariant: AlertCard.badgeLetter: no alert")
         throw new Error("not implemented")
     }
 

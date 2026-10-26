@@ -42,6 +42,8 @@ Item {
     // TODO(phase 7, alerts): coverStrip = wingMedia and not recording and a cover URL and design is not shade; stripWidth = IslandLook.restHeight or 0, animated.
     property bool coverStrip        // music plays and has a cover: it shows as a strip over the full height
     property real stripWidth        // width the strip takes at the left edge (0 without)
+    onStripWidthChanged: if (stripWidth < 0) throw new Error("invariant: IslandRest: the cover strip cannot have a negative width")
+    onCoverStripChanged: if (coverStrip && !mediaWings) throw new Error("invariant: IslandRest: a cover strip without music wings")
 
     property bool playing: mediaState ? mediaState.available && mediaState.playing : false
     // The wings stay a few seconds after a pause.

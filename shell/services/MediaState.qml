@@ -43,6 +43,7 @@ Scope {
 
     // Icon source for a desktop entry ("spotify"), "" when the theme has none.
     function iconFor(entry: string): string {
+        if (typeof entry !== "string") throw new Error("invariant: MediaState.iconFor: the entry must be a string")
         throw new Error("not implemented")
     }
 

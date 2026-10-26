@@ -151,6 +151,8 @@ PanelWindow {
 
     // Body size (object with w and h) of the card for an alert (IslandState.alert), told by its kind and its content.
     function alertSizeFor(a: var): var {
+        if (!a) throw new Error("invariant: Island.alertSizeFor: no alert")
+        if (a.kind === Enums.AlertKind.Plain) throw new Error("invariant: Island.alertSizeFor: a Plain alert has no card")
         throw new Error("not implemented")
     }
 

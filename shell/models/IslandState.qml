@@ -152,12 +152,18 @@ Scope {
     // Push an alert with a card: kind is Enums.AlertKind, data holds the fields of IslandState.alert beyond id, kind, severity and tileId
     // (text, detail, appName, appIcon, image, body, album, actions, notificationId, progress, playing, holdMs).
     function pushRichAlert(id: string, kind: int, severity: int, tileId: int, data: var): void {
+        if (id === "") throw new Error("invariant: IslandState.pushRichAlert: empty alert id")
+        if (severity < Enums.Severity.Neutral || severity > Enums.Severity.Critical) throw new Error("invariant: IslandState.pushRichAlert: unknown severity")
+        if (data && data.progress !== undefined && (data.progress < -1 || data.progress > 1)) throw new Error("invariant: IslandState.pushRichAlert: progress must be -1 (none) or 0..1")
+        if (data && data.holdMs !== undefined && !(data.holdMs > 0)) throw new Error("invariant: IslandState.pushRichAlert: holdMs must be positive")
+        if (data && data.actions !== undefined && !Array.isArray(data.actions)) throw new Error("invariant: IslandState.pushRichAlert: actions must be a list")
         throw new Error("not implemented")
     }
 
     // The pointer is on the alert card: it stays while paused is true, and goes a moment after the pointer left.
     // TODO(phase 7, alerts): stop the hold while paused; when it is released, a short last hold (at most 1.8 s).
     function pauseAlert(paused: bool): void {
+        if (typeof paused !== "boolean") throw new Error("invariant: IslandState.pauseAlert: paused must be a boolean")
         throw new Error("not implemented")
     }
 
@@ -195,7 +201,10 @@ Scope {
     }
 
     // The indicator stage always has its data; the hover flag only belongs to an open island; the times are positive.
-    onStageChanged: if (stage === Enums.IslandStage.Osd && !osd) throw new Error("invariant: IslandState: Osd stage without osd data")
+    onStageChanged: {
+        if (stage === Enums.IslandStage.Osd && !osd) throw new Error("invariant: IslandState: Osd stage without osd data")
+        if (stage === Enums.IslandStage.Alert && !alert) throw new Error("invariant: IslandState: Alert stage without an alert")
+    }
     onOpenedByHoverChanged: if (openedByHover && stage !== Enums.IslandStage.Open) throw new Error("invariant: IslandState: openedByHover outside the Open stage")
     Component.onCompleted: if (hoverInMs <= 0 || hoverOutMs <= 0 || osdHoldMs <= 0) throw new Error("invariant: IslandState: hover and indicator times must be positive")
 
