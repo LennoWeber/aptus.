@@ -11,6 +11,7 @@ FocusScope {
     id: wall
 
     property int selectedIndex
+    // TODO(phase 7, Island-Galerie): No staggered 520 ms reveal: the grid fades in with 140 ms; reveal can stay as a 0..1 value for the fade.
     property real reveal: active ? 1 : 0      // 0..1, how far the cards have come out of the island
     property bool active       // the view is the one shown
     property int columns            // columns of the grid
@@ -94,6 +95,7 @@ FocusScope {
         }
     }
 
+    // TODO(phase 7, Island-Galerie): Arrows move in the grid (moveSelection(dx, dy)): left, right, up, down; Enter sets and closes, Space sets, Esc closes.
     Keys.onPressed: event => {
         if (event.key === Qt.Key_Left) { step(-1); event.accepted = true }
         else if (event.key === Qt.Key_Right) { step(1); event.accepted = true }
@@ -106,6 +108,8 @@ FocusScope {
         onWheel: event => wall.step(event.angleDelta.y < 0 || event.angleDelta.x < 0 ? 1 : -1)
     }
 
+    // TODO(phase 7, Island-Galerie): The seven slots of the carousel become a header (title, count, folder), a GridView of 16:9 thumbnails (columns, thumbWidth, thumbHeight, visibleRows,
+    // TODO(phase 7, Island-Galerie): async, sourceSize about twice the shown size), a footer (name, "Current" marker, key hint), and an empty state with the folder path.
     Repeater {
         // Seven slots around the middle; the picture of a slot is selectedIndex + offset.
         model: wall.visibleSide * 2 + 1

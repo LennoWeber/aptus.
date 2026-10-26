@@ -118,6 +118,7 @@ FocusScope {
             height: 34
             Label {
                 anchors { left: parent.left; verticalCenter: parent.verticalCenter }
+                // TODO(phase 7, Island-Galerie): Header row: StatusGlyph on the left, title, the value from sectionValue(name) on the right, chevron; same look for Bluetooth and the new Sound row.
                 text: "Wi-Fi  " + (hoverPanel.networkState && hoverPanel.networkState.wifiEnabled ? (hoverPanel.networkState.ssid || "not connected") : "off")
                 role: Enums.TextRole.Bar
                 color: hoverPanel.ink
@@ -146,6 +147,7 @@ FocusScope {
             Label { anchors { right: parent.right; verticalCenter: parent.verticalCenter } text: hoverPanel.expanded === "bluetooth" ? "⌃" : "⌄"; color: hoverPanel.inkSoft }
             MouseArea { anchors.fill: parent; onClicked: hoverPanel.toggleSection("bluetooth") }
         }
+        // TODO(phase 7, Island-Galerie): Under the Bluetooth section: a Sound header row and IslandSound (audioState, shown, closeRequested), then the profile and the shortcuts.
         IslandBluetooth {
             visible: hoverPanel.expanded === "bluetooth"
             width: parent.width

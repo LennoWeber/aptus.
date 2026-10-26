@@ -76,6 +76,7 @@ Singleton {
         command: ["sh", "-c", "find \"$1\" -maxdepth 2 -type f \\( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' -o -iname '*.webp' \\) 2>/dev/null | sort", "sh", root.folder]
         stdout: StdioCollector {
             onStreamFinished: {
+                // TODO(phase 7, Island-Galerie): Set count and loaded here; keep the old list while listing (no clearing), so that the picker shows pictures at once.
                 root.list = text.split("\n").filter(p => p !== "").map(p => ({ path: p, name: p.split("/").pop() }))
             }
         }

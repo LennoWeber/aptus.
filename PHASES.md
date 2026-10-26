@@ -1123,3 +1123,8 @@ Arbeitsregel wie zuvor: nie auf „weiter“ warten, jede Phase protokollieren u
 - Bestehend, nur Signatur: `Island.growMsFor(stageId)` → `growMsFor(stageId, viewId)`; der Körper bleibt, ein fehlendes Argument stört dort nicht (die zwei Aufrufer in den `Behavior` rufen noch mit einem Argument auf).
 - Konstanten: `Island.openGrowMs` 220 ms; in `IslandWallpaper` `maxColumns` 4, `maxRows` 3, `gap` 12, `padding` 16, `headerHeight` 44, `footerHeight` 40 (die alten Karussell-Konstanten bleiben bis Phase 7 stehen).
 - Prüfung: Diff gelesen; nur Signaturen, Platzhalter, Konstanten; keine Struktur geändert, keine Aufrufe eingebaut; nicht gebaut.
+
+**Phase 4 (TODO-Markierungen), erledigt:**
+- 11 Kommentare `TODO(phase 7, Island-Galerie): …` in 4 Dateien, nur Kommentare: `island/Island.qml` (5: feste Wallpaper-Größe entfällt, Home mit Schnelleinstellungen und die Höhe, `growMsFor` mit Ansicht, Übergabe `audioState` und Lage der Hover-Karte, Wallpaper-Ansicht bestimmt ihre Größe), `island/IslandWallpaper.qml` (4: Einblenden ohne Staffelung, Pfeiltasten im Raster, Karussell wird Kopfzeile, Raster, Fußzeile und Leerzustand), `island/IslandHover.qml` (2: Kopfzeilen mit Symbol und Wert, Bereich Ton), `services/Wallpaper.qml` (1: `count`, `loaded`, Liste behalten).
+- Nichts fehlt aus Phase 2 oder 3 (jede TODO-Stelle hat ihr Gegenstück).
+- Prüfung: `git diff` zeigt nur Kommentarzeilen, `git diff --check` leer.
