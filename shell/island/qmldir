@@ -21,3 +21,9 @@ IslandWifi 1.0 IslandWifi.qml
 IslandBluetooth 1.0 IslandBluetooth.qml
 IslandQuickActions 1.0 IslandQuickActions.qml
 IslandSound 1.0 IslandSound.qml
+CardPill 1.0 CardPill.qml
+IslandConnect 1.0 IslandConnect.qml
+IslandCard 1.0 IslandCard.qml
+IslandCardDashboard 1.0 IslandCardDashboard.qml
+IslandCardBento 1.0 IslandCardBento.qml
+IslandCardPaper 1.0 IslandCardPaper.qml

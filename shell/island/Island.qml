@@ -39,6 +39,8 @@ PanelWindow {
     property string workspaceStyle: appSettings ? appSettings.get("bar.workspaceStyle") || "bubbles" : "bubbles"   // bar.workspaceStyle
     property bool showWorkspaces: appSettings ? appSettings.get("island.showWorkspaces") !== false : true
     property bool showStatus: appSettings ? appSettings.get("island.showStatus") !== false : true
+    property string homeStyle: appSettings ? appSettings.get("island.homeStyle") || "dashboard" : "dashboard"   // island.homeStyle: classic, dashboard, bento or paper
+    readonly property bool cardStyle: homeStyle !== "classic"
     property bool showWeather: appSettings ? appSettings.get("island.showWeather") !== false : true
     property string clockFormat: appSettings ? appSettings.get("bar.clockFormat") || "24h" : "24h"
 
@@ -53,8 +55,9 @@ PanelWindow {
     property int view: islandState ? islandState.view : Enums.IslandView.Home
     property bool isOpen: stage === Enums.IslandStage.Open
     onStageChanged: if (stage < Enums.IslandStage.Rest || stage > Enums.IslandStage.Open) throw new Error("invariant: Island: unknown stage")
-    property bool homeWithQuick: isOpen && view === Enums.IslandView.Home   // the opened Home shows the quick settings below the header (every design)
+    property bool homeWithQuick: isOpen && view === Enums.IslandView.Home && !cardStyle   // the classic Home shows the quick settings below the header
     readonly property int openGrowMs: 240   // ms: the body grows to an opened view in this time
+    property bool homeWithCard: isOpen && view === Enums.IslandView.Home && cardStyle
     property bool isAlert: stage === Enums.IslandStage.Alert
     property bool isOsd: stage === Enums.IslandStage.Osd   // the on-screen indicator shows
     onByHoverChanged: if (byHover && !isOpen) throw new Error("invariant: Island: byHover while not open")
@@ -73,8 +76,9 @@ PanelWindow {
 
     // Size of the body for the current stage and view.
     property real restWidth: rest.wantedWidth
-    property real targetWidth: sizeFor(stage, view, home.implicitHeight + (homeWithQuick ? quick.implicitHeight : 0), islandState ? islandState.morph : Enums.MorphTarget.None).w
-    property real targetHeight: sizeFor(stage, view, home.implicitHeight + (homeWithQuick ? quick.implicitHeight : 0), islandState ? islandState.morph : Enums.MorphTarget.None).h
+    readonly property real homeContentHeight: cardStyle ? card.implicitHeight : home.implicitHeight + (homeWithQuick ? quick.implicitHeight : 0)
+    property real targetWidth: sizeFor(stage, view, homeContentHeight, islandState ? islandState.morph : Enums.MorphTarget.None).w
+    property real targetHeight: sizeFor(stage, view, homeContentHeight, islandState ? islandState.morph : Enums.MorphTarget.None).h
 
     // How far the body has grown from the pill to the opened card (0..1), read from its real size, so the content follows
     // the shape: the pill content leaves while the body starts to grow, the card content arrives when it is nearly there.
@@ -97,7 +101,7 @@ PanelWindow {
     readonly property int osdGrowMs: 160      // ms: the body grows to the indicator in this time
     readonly property int hoverGrowMs: 260    // ms: the body grows to the card when the pointer opened it
     readonly property real alertHeight: 38
-    readonly property real homeWidth: design === "pill" ? 480 : 520
+    readonly property real homeWidth: cardStyle ? card.widthFor(homeStyle) : design === "pill" ? 480 : 520
     readonly property var viewSizes: ({
         power: { w: 480, h: 150 },
         screenshot: { w: 440, h: 150 },
@@ -175,7 +179,7 @@ PanelWindow {
     }
 
     readonly property bool openLike: isOpen
-    onOpenLikeChanged: if (!openLike) quick.expanded = ""
+    onOpenLikeChanged: if (!openLike) { quick.expanded = ""; card.expanded = "" }
     readonly property color fg: openLike ? IslandLook.inkOpen : IslandLook.inkRest
     readonly property color fgSoft: Qt.rgba(fg.r, fg.g, fg.b, 0.65)
     readonly property color hairline: Qt.rgba(fg.r, fg.g, fg.b, 0.16)
@@ -266,7 +270,7 @@ PanelWindow {
         IslandQuick {
             id: quick
             anchors { left: parent.left; right: parent.right; top: parent.top; topMargin: home.implicitHeight }
-            opacity: win.homeShown ? win.cardFade : 0
+            opacity: win.homeShown && !win.cardStyle ? win.cardFade : 0
             y: (1 - win.cardFade) * -8
             visible: opacity > 0.01
             appSettings: win.appSettings
@@ -294,7 +298,7 @@ PanelWindow {
         // Opened: one view at a time, each fades in when the body has grown.
         FocusScope {
             anchors.fill: parent
-            focus: win.isOpen && !quick.focus
+            focus: win.isOpen && !quick.focus && !card.focus
             opacity: win.view === Enums.IslandView.Home ? win.cardFade : win.isOpen ? 1 : 0
             visible: opacity > 0.01
             Behavior on opacity { enabled: win.view !== Enums.IslandView.Home; NumberAnimation { duration: Tokens.durFast } }
@@ -303,7 +307,7 @@ PanelWindow {
             IslandHome {
                 id: home
                 anchors { left: parent.left; right: parent.right; top: parent.top }
-                opacity: win.view === Enums.IslandView.Home ? 1 : 0
+                opacity: win.view === Enums.IslandView.Home && !win.cardStyle ? 1 : 0
                 visible: opacity > 0.01
                 Behavior on opacity { NumberAnimation { duration: Tokens.durFast } }
                 appSettings: win.appSettings
@@ -329,6 +333,39 @@ PanelWindow {
                 }
                 onLauncherRequested: win.closeAndThen("launcher")
                 onControlCenterRequested: win.closeAndThen("controlCenter")
+            }
+
+            IslandCard {
+                id: card
+                anchors { left: parent.left; right: parent.right; top: parent.top }
+                style: win.cardStyle ? win.homeStyle : "dashboard"
+                opacity: win.view === Enums.IslandView.Home && win.cardStyle ? 1 : 0
+                visible: opacity > 0.01
+                Behavior on opacity { NumberAnimation { duration: Tokens.durFast } }
+                appSettings: win.appSettings
+                audioState: win.audioState
+                displayState: win.displayState
+                networkState: win.networkState
+                bluetoothState: win.bluetoothState
+                batteryState: win.batteryState
+                nightLightState: win.nightLightState
+                caffeineState: win.caffeineState
+                focusState: win.focusState
+                mediaState: win.mediaState
+                powerProfileState: win.powerProfileState
+                workspaces: win.workspaces
+                workspaceStyle: win.workspaceStyle
+                clockFormat: win.clockFormat
+                inkOn: IslandLook.fillOpen
+                focus: win.homeWithCard && expanded !== ""   // a list with a field (the Wi-Fi password) takes the keyboard
+                ink: win.fg
+                inkSoft: win.fgSoft
+                line: win.hairline
+                fill: win.openLike ? IslandLook.fillOpen : IslandLook.fillRest
+                onControlCenterRequested: win.closeAndThen("controlCenter")
+                onSectionToggled: name => { if (name !== "" && win.islandState) win.islandState.keepOpen(win.modelData.name) }
+                onViewRequested: v => win.openView(v)
+                onCloseRequested: win.islandState.close()
             }
 
             IslandPower {
