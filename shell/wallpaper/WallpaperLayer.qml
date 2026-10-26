@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell
 import Quickshell.Wayland
+import qs.models
 import qs.theme
 import qs.services
 
@@ -20,19 +21,17 @@ PanelWindow {
 
     // The size the picture is decoded at: the screen for Fill, Fit and Stretch, its own size for Center and Tile.
     function sourceSizeFor(fit: int): size {
-        throw new Error("not implemented")
+        if (!(fit >= Enums.WallpaperFit.Fill && fit <= Enums.WallpaperFit.Tile)) throw new Error("invariant: WallpaperLayer.sourceSizeFor: unknown fit")
+        return fit === Enums.WallpaperFit.Center || fit === Enums.WallpaperFit.Tile ? Qt.size(0, 0) : Qt.size(layer.width, layer.height)
     }
 
     Image {
         id: shown
         anchors.fill: parent
-        // TODO(phase 7, themes): Tokens.fillModeFor(Wallpaper.fit); the bars of Fit and the gaps of Center show `color` (Tokens.bg).
-        fillMode: Image.PreserveAspectCrop
+        fillMode: Tokens.fillModeFor(Wallpaper.fit)
         asynchronous: true
-        // TODO(phase 7, themes): sourceSizeFor(Wallpaper.fit) (Center and Tile must not be scaled to the screen); the horizontal/vertical alignment of Center is the middle.
-        sourceSize: Qt.size(layer.width, layer.height)
+        sourceSize: layer.sourceSizeFor(Wallpaper.fit)
         source: layer.url
-        // TODO(phase 7, themes): a change of fit should not flash: keep the old picture until the new one is Ready (two Images, or Behavior on fillMode is not possible).
         opacity: status === Image.Ready ? 1 : 0
         Behavior on opacity { NumberAnimation { duration: Tokens.durSlow } }
     }

@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 """Colour the apps of the dotfiles with the aptus palette.
 
-  aptus-theme-apps [--mode light|dark] [--dry-run] [--only APP,...] [--all]
+  aptus-theme-apps [--theme ID | --mode light|dark] [--dry-run] [--only APP,...] [--all]
+
+A theme is light, dark, one of the colour themes of theme/tokens.json (ocean, forest, dusk, sand, sky) or wallpaper (the palette made by
+aptus-wallpaper-theme). Each has a base, light or dark, that decides what only knows light or dark (gsettings, prefers-color-scheme).
 
 Default apps: kitty, ghostty, gtk, qt, btop, zathura, gsettings. With --only or --all also: starship, fish, nvim,
 yazi, fastfetch, cava, hyprland_look (window borders), hyprlock, zen, thunderbird, spotify (a Spicetify theme).
 
-Reads the palette in theme/tokens.json (day for light, dark for dark) and writes one theme file per app under
+Reads the palette in theme/tokens.json (day for light, dark for dark, themes for the colour themes) and writes one theme file per app under
 ~/.config, filled from the templates in theme/apps. A config that does not mention the theme yet gets one line that
 includes it. An existing file that is replaced is kept once as NAME.before-aptus (not inside linked folders: the
 dotfiles repo is the backup there). Starship, nvim and fastfetch get their own files and are not edited. Nothing is installed or
@@ -15,6 +18,7 @@ their colours again only where they can (Hyprland, kitty, cava). Running it agai
 """
 import argparse
 import contextlib
+import hashlib
 import json
 import os
 import re
@@ -49,6 +53,7 @@ GHOSTTY_THEMES = {"light": "aptus-light", "dark": "aptus-dark"}
 YAZI_FLAVORS = {"light": "aptus-light", "dark": "aptus-dark"}
 XSETTINGSD = os.path.join(CFG, "xsettingsd", "xsettingsd.conf")
 _TOKENS = None
+THEME = None            # the theme of this run (set by main), for the per-app functions that only get (p, mode, dry)
 # Every palette of tokens.json has these keys; colours are always #RRGGBB.
 PALETTE_KEYS = ("bg", "surface", "surfaceAlt", "line", "ink", "inkSoft", "inkFaint", "ok", "warn", "critical",
                 "blue", "magenta", "cyan", "bblue", "bmagenta", "bcyan")
@@ -70,7 +75,6 @@ assert 0 < BORDER_ALPHA_INACTIVE < BORDER_ALPHA_ACTIVE <= 1 and 0 < SHADOW_ALPHA
 assert os.sep not in SPICETIFY_THEME and SPICETIFY_THEME not in ("", ".", ".."), "aptus-theme-apps: Spicetify theme must be a plain folder name"
 
 
-# TODO(phase 7, themes): palette() stays for light and dark; every other caller goes through theme_palette(). main() sets the module-wide THEME so that the per-app functions (p, mode, dry) can ask colors_all for it.
 def palette(mode: str) -> dict:
     assert mode in MODES, f"unknown mode {mode}"
     t = load_tokens()["palette"]
@@ -81,46 +85,60 @@ def palette(mode: str) -> dict:
 
 def theme_ids() -> list:
     """The ids --theme accepts: light, dark, the colour themes of tokens.json and, when its file exists, wallpaper."""
-    raise NotImplementedError
+    t = load_tokens()["palette"]
+    ids = list(BUILTIN_THEMES) + [k for k in t.get("themes", {}) if k != "note"]
+    if os.path.isfile(WALLPAPER_THEME):
+        ids.append("wallpaper")
+    return ids
 
 
 def theme_data(theme: str) -> dict:
     """The raw palette of a theme as in tokens.json (roles, accent roles, base, name, optional accents). For wallpaper it
     is read from WALLPAPER_THEME. Raises ValueError for an unknown theme."""
     assert isinstance(theme, str) and THEME_ID.fullmatch(theme), "theme id must be a lower case word"
-    raise NotImplementedError
+    t = load_tokens()["palette"]
+    if theme in MODES:
+        return dict(t[t["modes"][theme]], base=theme)
+    if theme == "wallpaper":
+        try:
+            with open(WALLPAPER_THEME) as f:
+                d = json.load(f)
+        except (OSError, ValueError) as e:
+            raise ValueError(f"theme wallpaper: cannot read {WALLPAPER_THEME}: {e}")
+        check_theme("wallpaper", d)
+        return d
+    if theme in t.get("themes", {}) and theme != "note":
+        return t["themes"][theme]
+    raise ValueError(f"unknown theme {theme}; known: {', '.join(theme_ids())}")
 
 
 def theme_mode(theme: str) -> str:
     """The base of a theme, "light" or "dark" (light for light, dark for dark)."""
     assert isinstance(theme, str) and theme, "theme id must be a non-empty string"
-    raise NotImplementedError
+    return theme if theme in MODES else theme_data(theme)["base"]
 
 
 def theme_stamp(theme: str) -> str:
-    """What MODE_FILE holds after a run for `theme`: its id, and for wallpaper also a short hash of the generated palette."""
+    """What MODE_FILE holds after a run for `theme`: its id, and for wallpaper also a short hash of the generated palette so that a
+    new picture repaints."""
     assert isinstance(theme, str) and theme, "theme id must be a non-empty string"
-    raise NotImplementedError
-
-
-def check_theme(theme: str, d: dict) -> None:
-    """Raise AssertionError unless the theme is complete: base, all roles as #RRGGBB, bg lighter than ink iff base is light, text contrast >= 4.5."""
-    assert isinstance(d, dict), "a theme is a dict"
-    raise NotImplementedError
-
-
-def palette_for(m: str) -> dict:
-    """The palette written into the per-mode files (Ghostty and yazi have a light and a dark theme file): the neutral one,
-    except for the file of the base of a colour theme, which holds that theme."""
-    assert m in MODES, f"unknown mode {m}"
-    raise NotImplementedError
+    if theme != "wallpaper":
+        return theme
+    with open(WALLPAPER_THEME, "rb") as f:
+        return "wallpaper:" + hashlib.sha1(f.read()).hexdigest()[:12]
 
 
 def theme_palette(theme: str) -> dict:
     """Like palette(mode) for any theme: the roles of the theme plus the syntax hues (its own accents, or those of its base),
     without the keys note, name and base."""
     assert isinstance(theme, str) and theme, "theme id must be a non-empty string"
-    raise NotImplementedError
+    if theme in MODES:
+        return palette(theme)
+    d = theme_data(theme)
+    t = load_tokens()["palette"]
+    p = {k: v for k, v in d.items() if k not in ("note", "name", "base", "tone", "source", "accents")}
+    p.update({k: v for k, v in (d.get("accents") or t["accents"][d["base"]]).items() if k != "note"})
+    return p
 
 
 def _lum(h: str) -> float:
@@ -144,7 +162,6 @@ def contrast_fit(color: str, bg: str, toward: str, ratio: float = 4.5) -> str:
     return toward
 
 
-# TODO(phase 7, themes): ansi/colors_of: brights and syntax roles are per base mode; a theme uses its base. Hues of a dark-base colour theme on its tinted bg need contrast_fit as the light mode has.
 def ansi(p: dict, mode: str) -> list:
     assert mode in MODES, f"unknown mode {mode}"
     b = load_tokens()["palette"]["brights"][mode]
@@ -158,6 +175,20 @@ def ansi(p: dict, mode: str) -> list:
                 fit(p["bblue"]), fit(p["bmagenta"]), fit(p["bcyan"]), p["ink"]]
     return [p["surface"], p["critical"], p["ok"], p["warn"], p["blue"], p["magenta"], p["cyan"], p["inkSoft"],
             p["inkFaint"], b["critical"], b["ok"], b["warn"], p["bblue"], p["bmagenta"], p["bcyan"], p["ink"]]
+
+
+def luminance_sum(h: str) -> int:
+    return sum(int(h[i:i + 2], 16) for i in (1, 3, 5))
+
+
+def check_theme(theme: str, d: dict) -> None:
+    """A theme must be complete and readable: base, all roles as #RRGGBB, bg lighter than ink iff base is light, text contrast >= 4.5."""
+    assert d.get("base") in MODES, f"theme {theme}: base must be light or dark"
+    for k in PALETTE_KEYS[:10] + THEME_EXTRA_KEYS:
+        assert HEX.fullmatch(d.get(k, "")), f"theme {theme}: {k} is not #RRGGBB"
+    assert (luminance_sum(d["bg"]) > luminance_sum(d["ink"])) == (d["base"] == "light"), f"theme {theme}: bg and ink do not match base {d['base']}"
+    for fg in ("ink", "inkSoft"):
+        assert contrast(d[fg], d["bg"]) >= 4.5, f"theme {theme}: {fg} on bg has contrast {contrast(d[fg], d['bg']):.1f}:1, below 4.5"
 
 
 def load_tokens() -> dict:
@@ -178,7 +209,10 @@ def load_tokens() -> dict:
             used = [roles["selection"]["bg"], roles["selection"]["fg"], roles["link"]] + list(roles["syntax"][m].values()) + roles["cavaGradient"]
             assert all(u in known for u in used), f"roles of {m} name an unknown colour"
             assert len(roles["syntax"][m]) == 8 and roles["cavaGradient"], "syntax roles and the cava gradient must be complete"
-        # TODO(phase 7, themes): validate palette.themes: each has base light|dark, PALETTE_KEYS[:10] and THEME_EXTRA_KEYS as #RRGGBB, bg lighter than ink iff base light, text contrast ink/bg and inkSoft/bg >= 4.5; ids match THEME_ID and are not light/dark/auto/wallpaper.
+        themes = {k: v for k, v in pal.get("themes", {}).items() if k != "note"}
+        assert all(THEME_ID.fullmatch(k) and k not in ("light", "dark", "auto", "wallpaper") for k in themes), "theme ids are lower case words other than light, dark, auto and wallpaper"
+        for k, v in themes.items():
+            check_theme(k, v)
         assert pal["dark"]["bg"] == pal["day"]["ink"] and pal["dark"]["ink"] == pal["day"]["bg"], "dark.bg and dark.ink must mirror day"
         _TOKENS = t
     return _TOKENS
@@ -210,13 +244,20 @@ def colors_of(p: dict, mode: str) -> dict:
 def colors_all(p: dict, mode: str, theme: str = None) -> dict:
     """colors_of(p, mode) plus every role of both palettes as light_ROLE and dark_ROLE (templates with both schemes). For a
     theme other than light and dark both sets are the colours of that theme, so the app looks the same whichever scheme it picks."""
-    # TODO(phase 7, themes): for a theme other than light/dark: light_ROLE and dark_ROLE are both colors_of(theme palette, base); the light/dark pair of the mode stays for light and dark.
     c = colors_of(p, mode)
+    theme = theme or THEME
     for m in MODES:
-        for k, v in colors_of(palette(m), m).items():
+        own = colors_of(p, mode) if theme not in (None, *MODES) else colors_of(palette(m), m)
+        for k, v in own.items():
             c[f"{m}_{k}"] = v
     return c
 
+
+def palette_for(m: str) -> dict:
+    """The palette written into the per-mode files (Ghostty and yazi have a light and a dark theme file): the neutral one,
+    except for the file of the base of a colour theme, which holds that theme."""
+    assert m in MODES, f"unknown mode {m}"
+    return theme_palette(THEME) if THEME not in (None, *MODES) and theme_mode(THEME) == m else palette(m)
 
 def hex_bare(color: str) -> str:
     """#RRGGBB as RRGGBB (Spicetify color.ini)."""
@@ -242,7 +283,6 @@ def contrast(a: str, b: str) -> float:
     return (hi + 0.05) / (lo + 0.05)
 
 
-# TODO(phase 7, themes): ghostty() and yazi() write both per-mode files: use palette_for(m) instead of palette(m).
 def check_contrast(colors: dict) -> list:
     """Messages for the pairs below 4.5 (ink on bg, selection_fg on selection_bg, inkSoft on bg); empty when fine."""
     assert all(k in colors for k in ("ink", "bg", "inkSoft", "selection_fg", "selection_bg")), "colors comes from colors_of"
@@ -520,7 +560,7 @@ def kitty(p, mode, dry):
 
 def ghostty(p, mode, dry):
     for m in MODES:
-        write(os.path.join(CFG, "ghostty", "themes", GHOSTTY_THEMES[m]), ghostty_theme(palette(m), m), dry)
+        write(os.path.join(CFG, "ghostty", "themes", GHOSTTY_THEMES[m]), ghostty_theme(palette_for(m), m), dry)
     theme = f"theme = light:{GHOSTTY_THEMES['light']},dark:{GHOSTTY_THEMES['dark']}"
     ensure_line(os.path.join(CFG, "ghostty", "config"), theme, dry, drop=r"^theme\s*=.*\n?")
 
@@ -684,7 +724,7 @@ def nvim(p, mode, dry):
 def yazi(p, mode, dry):
     for m in MODES:
         write(os.path.join(CFG, "yazi", "flavors", YAZI_FLAVORS[m] + ".yazi", "flavor.toml"),
-              render_template("yazi-flavor.toml", colors_of(palette(m), m)), dry)
+              render_template("yazi-flavor.toml", colors_of(palette_for(m), m)), dry)
     path = os.path.join(CFG, "yazi", "theme.toml")
     flavor = f'[flavor]\ndark = "{YAZI_FLAVORS["dark"]}"\nlight = "{YAZI_FLAVORS["light"]}"\n'
     t = open(path).read() if os.path.exists(path) else ""
@@ -828,8 +868,8 @@ APPS = dict(kitty=kitty, ghostty=ghostty, btop=btop, gtk=gtk, qt=qt, zathura=zat
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    # TODO(phase 7, themes): add --theme (choices theme_ids()); --mode stays as an alias for light/dark.
-    ap.add_argument("--mode", choices=list(MODES), default="light")
+    ap.add_argument("--mode", choices=list(MODES), default="light", help="light or dark (the same as --theme light|dark)")
+    ap.add_argument("--theme", help="theme id: light, dark, a colour theme of tokens.json or wallpaper (default: the --mode value)")
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--only", default=",".join(DEFAULT_APPS), help="comma separated apps (default: the terminal and toolkit apps)")
     ap.add_argument("--all", action="store_true", help="every app, including browser, mail, Spotify, prompt, editor and lock screen")
@@ -848,12 +888,18 @@ def main() -> int:
         if os.environ.get(var) and not os.path.isabs(os.environ[var]):
             print(f"{var} must be an absolute path", file=sys.stderr)
             return 2
-    # TODO(phase 7, themes): MODE_FILE holds the theme id; for wallpaper also the generation stamp (source mtime) so a new picture repaints.
-    if args.if_changed and os.path.exists(MODE_FILE) and open(MODE_FILE).read().strip() == args.mode:
+    global THEME
+    THEME = args.theme or args.mode
+    try:
+        mode = theme_mode(THEME)
+        p = theme_palette(THEME)
+    except (ValueError, AssertionError) as e:
+        print(f"aptus-theme-apps: {e}", file=sys.stderr)
+        return 2
+    stamp = theme_stamp(THEME)
+    if args.if_changed and os.path.exists(MODE_FILE) and open(MODE_FILE).read().strip() == stamp:
         return 0
-    # TODO(phase 7, themes): --theme ID (default: the --mode value); mode = theme_mode(theme); p = theme_palette(theme); colors_all(p, mode, theme).
-    p = palette(args.mode)
-    c = colors_all(p, args.mode)
+    c = colors_all(p, mode, THEME)
     for message in check_contrast(c):
         print(f"warning: {message}", file=sys.stderr)
     missing = {r for t in sorted(os.listdir(TEMPLATES)) for r in template_roles(t)} - set(c) - {"starship_path", "fastfetch_config", "shadow_base"}
@@ -863,13 +909,12 @@ def main() -> int:
     with contextlib.redirect_stdout(open(os.devnull, "w") if args.quiet else sys.stdout):
         for a in chosen:
             print(f"{a}:")
-            APPS[a](p, args.mode, args.dry_run)
+            APPS[a](p, mode, args.dry_run)
         reload_apps(chosen, args.dry_run)
     if args.all and not args.dry_run:
         os.makedirs(os.path.dirname(MODE_FILE), exist_ok=True)
         with open(MODE_FILE, "w") as f:
-            # TODO(phase 7, themes): write the theme id (and the stamp).
-            f.write(args.mode + "\n")
+            f.write(stamp + "\n")
     return 0
 
 

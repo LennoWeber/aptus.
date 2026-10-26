@@ -25,8 +25,8 @@ Item {
         anchors.fill: parent
         visible: status !== Image.Null
         source: surface.greeterState && surface.greeterState.wallpaper ? "file://" + surface.greeterState.wallpaper : ""
-        // TODO(phase 7, themes): Tokens.fillModeFor(greeterState.wallpaperFit); Center and Tile must not be scaled to the screen; bars of Fit show the gradient behind.
-        fillMode: Image.PreserveAspectCrop
+        fillMode: Tokens.fillModeFor(surface.greeterState ? surface.greeterState.wallpaperFit : Enums.WallpaperFit.Fill)
+        sourceSize: surface.greeterState && (surface.greeterState.wallpaperFit === Enums.WallpaperFit.Center || surface.greeterState.wallpaperFit === Enums.WallpaperFit.Tile) ? Qt.size(0, 0) : Qt.size(surface.width, surface.height)
         asynchronous: true
         opacity: status === Image.Ready ? 1 : 0
         Behavior on opacity { NumberAnimation { duration: Tokens.durSlow } }
@@ -35,7 +35,6 @@ Item {
         anchors.fill: parent
         visible: surface.greeterState && surface.greeterState.wallpaper !== ""
         color: Tokens.bg
-        // TODO(phase 7, themes): the scrim: keep readable on any picture; the greeter palette stays light (no per-user theme before login).
         opacity: 0.55
     }
 

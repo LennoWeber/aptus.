@@ -15,6 +15,7 @@ import qs.touch
 import qs.session
 import qs.osk
 import qs.wallpaper
+import qs.themepicker
 import qs.dock
 import qs.theme
 
@@ -23,8 +24,6 @@ ShellRoot {
     id: root
 
     AppSettings { id: settingsObj }
-    // TODO(phase 7, themes): ThemeSource.tone = appearance.wallpaperTone; ThemeSource.refresh() when Wallpaper.current or the tone changes and the theme is wallpaper; Tokens.setCustomTheme(ThemeSource.palette)
-    //     on ThemeSource.changed; Wallpaper.fit = Tokens.fitFromName(wallpaper.fit); Wallpaper.loginSync = appearance.loginWallpaper (Bindings).
     // The compositor draws the blur; the setting sets its size and passes (applied now and on every change).
     readonly property int blurSetting: settingsObj.get("appearance.blurRadius") ?? 18
     onBlurSettingChanged: applyBlur()
@@ -61,7 +60,6 @@ ShellRoot {
     AudioState { id: audioObj }
     DisplayState { id: displayObj }
     NightLightState { id: nightLightObj }
-    // TODO(phase 7, themes): ColorModeState gets the picker (previews, Super+T); instantiate ThemePicker { id: themePickerObj; themeState: colorModeObj } next to WallpaperPicker (import qs.themepicker).
     ColorModeState { id: colorModeObj; appSettings: settingsObj; nightLight: nightLightObj }
 
     PowerProfileState { id: powerProfileObj }
@@ -170,12 +168,13 @@ ShellRoot {
 
     Variants {
         model: Quickshell.screens
-        // TODO(phase 7, themes): run start() deferred (Qt.callLater): AppSettings has not loaded yet when this handler runs, so the setting would read as empty (finding of the probe).
-        // TODO(phase 7, themes): colorModeObj.start() must run after ThemeSource has read the last palette (theme wallpaper), so the first frame already has its colours.
         WallpaperLayer {}
     }
 
     WallpaperPicker { id: wallpaperObj }
+    ThemePicker { id: themePickerObj; themeState: colorModeObj }
+    Binding { target: Wallpaper; property: "fit"; value: settingsObj.wallpaperFit }
+    Binding { target: Wallpaper; property: "loginSync"; value: settingsObj.loginWallpaper }
     Binding { target: Wallpaper; property: "directory"; value: settingsObj.get("wallpaper.directory") || "" }
     Connections { target: settingsAppObj; function onWallpaperRequested() { ipcObj.openWallpaper() } }
 
@@ -304,8 +303,8 @@ ShellRoot {
 
     IpcHandlers {
         id: ipcObj
-        // TODO(phase 7, themes): themePicker: themePickerObj
         colorModeState: colorModeObj
+        themePicker: themePickerObj
         launcherState: launcherObj
         settingsState: settingsAppObj
         lockState: lockObj
@@ -353,7 +352,8 @@ ShellRoot {
         Search.settingsState = settingsAppObj
         Search.controls = { network: networkObj, bluetooth: bluetoothObj, nightLight: nightLightObj, caffeine: caffeineObj, focus: focusObj, timer: timerObj, lock: lockObj }
         applyBlur()
-        colorModeObj.start()
+        // AppSettings has not loaded when this handler runs; start after it, or the setting would read as empty
+        Qt.callLater(colorModeObj.start)
         IslandLook.load()
         IslandLook.apply(islandLook)
         IslandLook.design = islandDesign

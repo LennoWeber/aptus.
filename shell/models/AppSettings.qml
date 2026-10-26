@@ -93,11 +93,11 @@ Scope {
     }
 
 
-    // Rename values that older versions saved (island.design "ninja" is now "pill") in the tree read from the user's file.
-    // Returns the tree with the old values replaced.
-    // TODO(phase 7, themes): old files: appearance.colorMode ("light" | "dark" | "auto") becomes appearance.theme when appearance.theme is not set; the keys themeSource, style and bar.tone are dropped by merge().
+    // Rename values that older versions saved (island.design "ninja" is now "pill", appearance.colorMode is now
+    // appearance.theme) in the tree read from the user's file. Returns the tree with the old values replaced.
     function migrateValues(tree: var): var {
         if (tree && tree.island && tree.island.design === "ninja") tree.island.design = "pill"
+        if (tree && tree.appearance && tree.appearance.theme === undefined && ["light", "dark", "auto"].indexOf(tree.appearance.colorMode) >= 0) tree.appearance.theme = tree.appearance.colorMode
         return tree
     }
 
@@ -117,9 +117,11 @@ Scope {
         aiDefaultProviderId = get("ai.defaultProvider")
         aiDockEdge = edge[get("ai.dockEdge")] ?? Enums.DockEdge.Right
         aiDockWidthPx = get("ai.dockWidth")
-        // TODO(phase 7, themes): theme = get("appearance.theme"), wallpaperTone, loginWallpaper (a bool, true by default), wallpaperFit via Tokens.fitFromName? (AppSettings may not import qs.theme: use a lookup table like `edge`); no colorModes table.
-        const colorModes = { light: Enums.ColorMode.Light, dark: Enums.ColorMode.Dark, auto: Enums.ColorMode.Auto }
-        colorMode = colorModes[get("appearance.colorMode")] ?? Enums.ColorMode.Light
+        const fits = { fill: Enums.WallpaperFit.Fill, fit: Enums.WallpaperFit.Fit, stretch: Enums.WallpaperFit.Stretch, center: Enums.WallpaperFit.Center, tile: Enums.WallpaperFit.Tile }
+        theme = get("appearance.theme") ?? "light"
+        wallpaperTone = get("appearance.wallpaperTone") ?? "auto"
+        loginWallpaper = get("appearance.loginWallpaper") !== false
+        wallpaperFit = fits[get("wallpaper.fit")] ?? Enums.WallpaperFit.Fill
         lockShowNotificationContent = get("lock.showNotificationContent")
         lockAfterMin = get("system.lockAfterMin")
         screenOffAfterMin = get("system.screenOffAfterMin")

@@ -22,8 +22,7 @@ Item {
     signal actionRequested()
 
     // Lists and the location have a tall editor under the title; everything else sits to the right of it.
-    // TODO(phase 7, themes): the kind "theme" is wide: a row of ThemeSwatch below the title (add to the list and to sourceComponent below).
-    readonly property bool wide: !!entry && (entry.kind === "list" || entry.kind === "location" || entry.kind === "providerList" || entry.kind === "hotkeyList" || entry.kind === "tileList" || entry.kind === "keyMap")
+    readonly property bool wide: !!entry && (entry.kind === "list" || entry.kind === "location" || entry.kind === "providerList" || entry.kind === "hotkeyList" || entry.kind === "tileList" || entry.kind === "keyMap" || entry.kind === "theme")
 
     implicitHeight: wide ? textColumn.implicitHeight + wideEditor.implicitHeight + 44 : Math.max(64, textColumn.implicitHeight + 28)
 
@@ -73,8 +72,7 @@ Item {
         id: wideEditor
         visible: row.wide
         anchors { left: parent.left; leftMargin: 4; right: parent.right; top: textColumn.bottom; topMargin: 14 }
-        // TODO(phase 7, themes): case kind === "theme": a Component with a Flow of ThemeSwatch over Tokens.themeList (the entry's options filter and order them; "auto" gets a swatch of its own, half light half dark), a click calls row.valueEdited(id).
-        sourceComponent: row.entry && row.entry.kind === "list" ? engineEditor : row.entry && row.entry.kind === "location" ? locationEditor : row.entry && row.entry.kind === "providerList" ? providerEditor : row.entry && row.entry.kind === "hotkeyList" ? hotkeyList : row.entry && row.entry.kind === "tileList" ? tileEditor : row.entry && row.entry.kind === "keyMap" ? modeKeyEditor : null
+        sourceComponent: row.entry && row.entry.kind === "list" ? engineEditor : row.entry && row.entry.kind === "location" ? locationEditor : row.entry && row.entry.kind === "providerList" ? providerEditor : row.entry && row.entry.kind === "hotkeyList" ? hotkeyList : row.entry && row.entry.kind === "tileList" ? tileEditor : row.entry && row.entry.kind === "keyMap" ? modeKeyEditor : row.entry && row.entry.kind === "theme" ? themeEditor : null
     }
     Component {
         id: engineEditor
@@ -87,6 +85,10 @@ Item {
     Component {
         id: modeKeyEditor
         ModeKeyEditor { keys: row.draftValue || ({}); onChanged: value => row.valueEdited(value) }
+    }
+    Component {
+        id: themeEditor
+        ThemeEditor { value: String(row.draftValue); options: row.entry.options || []; onChanged: id => row.valueEdited(id) }
     }
     Component {
         id: hotkeyList

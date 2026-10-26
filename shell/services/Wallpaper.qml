@@ -15,8 +15,11 @@ Singleton {
     // last handed to the login helper together with the fit, "" when none or after a failure.
     property bool loginSync: true
     property string loginSynced
+    onFitChanged: syncLogin()
+    onLoginSyncChanged: syncLogin()
+    onLoginSyncedChanged: if (loginSyncedLoaded) syncedView.setText(loginSynced)
     property bool loginSyncedLoaded            // the remembered key was read, so a change of it is written back
-    property string loginKeyPending            // "path|fit" of the login helper run in flight
+    property string loginKeyPending            // "path|fit" of the run in flight, "" for a manual call
     property bool loginQueued                  // a sync was asked for while one was running
     readonly property string syncedFile: (Quickshell.env("XDG_STATE_HOME") || (Quickshell.env("HOME") + "/.local/state")) + "/aptus/login-wallpaper"
 
@@ -43,16 +46,18 @@ Singleton {
         if (!loginSupported) throw new Error("invariant: Wallpaper.setLoginWallpaper: the login helper is not installed")
         if (path !== "" && path[0] !== "/") throw new Error("invariant: Wallpaper.setLoginWallpaper: path must be absolute")
         loginStatus = "working"
-        // TODO(phase 7, themes): append "--fit" and fitName(fit) when path is not empty. The manual call from the picker may ask for a password; syncLogin() must not.
-        loginRun.command = ["pkexec", loginHelper, path === "" ? "--clear" : path]
+        loginKeyPending = path === "" ? "" : path + "|" + fitName(fit)
+        // The manual call (loginStatus "working") may ask for the admin password; syncLogin() never does.
+        loginRun.command = path === "" ? ["pkexec", loginHelper, "--clear"] : ["pkexec", loginHelper, path, "--fit", fitName(fit)]
         loginRun.running = true
     }
 
     function setWallpaper(path: string): void {
         if (path !== "" && path[0] !== "/") throw new Error("invariant: Wallpaper.setWallpaper: path must be absolute")
-        // TODO(phase 7, themes): after storing: ThemeSource.refresh() (only matters when the theme is wallpaper) and syncLogin().
         current = path
         stateView.setText(path)
+        ThemeSource.refresh()
+        syncLogin()
     }
 
     FileView {
@@ -60,24 +65,28 @@ Singleton {
         path: root.stateFile
         blockLoading: true
         printErrors: false
-        // TODO(phase 7, themes): ThemeSource.read() for the remembered picture after the state file is read.
         Component.onCompleted: root.current = text().trim()
     }
 
-    // The picture and fit that were last handed to the login helper (loginSynced).
+    // The picture and fit that were last handed to the login helper.
     FileView {
         id: syncedView
         path: root.syncedFile
         blockLoading: true
         printErrors: false
+        Component.onCompleted: {
+            root.loginSynced = text().trim()
+            root.loginSyncedLoaded = true
+        }
     }
 
+    Component.onCompleted: helperCheck.running = true
+
     Process {
-        // TODO(phase 7, themes): run helperCheck at start (Component.onCompleted), not only in scan(), so the login sync knows whether the helper exists; read the remembered loginSynced from syncedView; set loginSyncedLoaded.
         id: helperCheck
         command: ["test", "-x", root.loginHelper]
         // qmllint disable signal-handler-parameters
-        onExited: code => root.loginSupported = code === 0
+        onExited: code => { root.loginSupported = code === 0; root.syncLogin() }
         // qmllint enable signal-handler-parameters
     }
 
@@ -85,8 +94,7 @@ Singleton {
         id: loginRun
         // 126 means the password prompt was dismissed: no error to show.
         // qmllint disable signal-handler-parameters
-        // TODO(phase 7, themes): on exit of an automatic sync set loginSynced (code 0) or log the failure; the manual call keeps loginStatus.
-        onExited: code => root.loginStatus = code === 0 ? "done" : code === 126 ? "" : "failed"
+        onExited: code => root.onLoginExited(code)
         // qmllint enable signal-handler-parameters
     }
 
@@ -107,18 +115,45 @@ Singleton {
     function syncLogin(): void {
         if (!(fit >= Enums.WallpaperFit.Fill && fit <= Enums.WallpaperFit.Tile)) throw new Error("invariant: Wallpaper.syncLogin: unknown fit")
         if (current !== "" && current[0] !== "/") throw new Error("invariant: Wallpaper.syncLogin: the picture path must be absolute")
-        throw new Error("not implemented")
-    }
-
-    // The name of an Enums.WallpaperFit as the setting and the login config spell it.
-    function fitName(fit: int): string {
-        if (!(fit >= Enums.WallpaperFit.Fill && fit <= Enums.WallpaperFit.Tile)) throw new Error("invariant: Wallpaper.fitName: unknown fit")
-        throw new Error("not implemented")
+        if (!loginSync || !loginSupported || !loginSyncedLoaded || current === "") return
+        const key = current + "|" + fitName(fit)
+        if (key === loginSynced) return
+        if (loginRun.running) {
+            loginQueued = true
+            return
+        }
+        loginKeyPending = key
+        // pkcheck without interaction succeeds only when the polkit rule lets the active session through without a password
+        // (install.sh --greeter); otherwise exit 77 and nothing is shown.
+        loginRun.command = ["sh", "-c", "pkcheck --action-id org.aptus.greeter-wallpaper --process $$ >/dev/null 2>&1 || exit 77; exec pkexec \"$1\" \"$2\" --fit \"$3\"",
+            "sh", loginHelper, current, fitName(fit)]
+        loginRun.running = true
     }
 
     // The login helper finished: a manual call reports in loginStatus, an automatic one remembers what it handed over.
     function onLoginExited(code: int): void {
         if (!Number.isInteger(code)) throw new Error("invariant: Wallpaper.onLoginExited: exit code must be an integer")
-        throw new Error("not implemented")
+        if (loginStatus === "working") {
+            // 126 means the password prompt was dismissed: no error to show.
+            loginStatus = code === 0 ? "done" : code === 126 ? "" : "failed"
+            if (code === 0) loginSynced = loginKeyPending
+        } else if (code === 0) {
+            loginSynced = loginKeyPending
+        } else if (code === 77) {
+            console.info("aptus: login screen picture not synced: the polkit rule asks for a password (run install.sh --greeter again)")
+        } else {
+            console.warn("aptus: login screen picture not synced (login helper exited with " + code + ")")
+        }
+        loginKeyPending = ""
+        if (loginQueued) {
+            loginQueued = false
+            syncLogin()
+        }
+    }
+
+    // The name of an Enums.WallpaperFit as the setting and the login config spell it.
+    function fitName(fit: int): string {
+        if (!(fit >= Enums.WallpaperFit.Fill && fit <= Enums.WallpaperFit.Tile)) throw new Error("invariant: Wallpaper.fitName: unknown fit")
+        return ["fill", "fit", "stretch", "center", "tile"][fit]
     }
 }

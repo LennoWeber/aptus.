@@ -146,28 +146,24 @@ Scope {
             else root.settingsState.openWindow("")
         }
 
-        // The theme picker (Super+T): open it, or move on to the next theme while it is open. (Body still toggles light/dark until phase 7.)
+        // The theme picker (Super+T): open it, or move on to the next theme while it is open.
         function themeModeToggle(): void {
-            // TODO(phase 7, themes): root.themePicker.toggle() (opens, or moves on while open).
-            root.colorModeState.toggle()
+            root.themePicker.toggle()
         }
 
         // Set the theme by its id (light, dark, auto, ocean, forest, dusk, sand, sky, wallpaper); anything else is logged and ignored.
         function themeModeSet(name: string): void {
-            // TODO(phase 7, themes): accept every value of appearance.theme (colorModeState.isValid(name)) and call setTheme(name); drop modeFromName/setMode.
-            const m = root.colorModeState.modeFromName(name)
-            if (m < 0) {
-                console.warn("aptus: theme-mode-set: unknown mode '" + name + "' (light, dark or auto)")
+            if (!root.colorModeState.isValid(name)) {
+                console.warn("aptus: theme-mode-set: unknown theme '" + name + "' (" + root.colorModeState.choices().concat(["auto"]).join(", ") + ")")
                 return
             }
-            root.colorModeState.setMode(m)
+            root.colorModeState.setTheme(name)
         }
 
         // Move the theme on by `step` places (1 next, -1 previous) without the picker: `aptus msg theme-next 1`.
         function themeNext(step: int): void {
-        // TODO(phase 7, themes): colorModeState.next(step) (no picker, no preview).
             if (!Number.isInteger(step) || step === 0) throw new Error("invariant: IpcHandlers.themeNext: step is a non-zero integer")
-            throw new Error("not implemented")
+            root.colorModeState.next(step)
         }
 
         // Keep the screen as it is, or let it follow the sensor again.

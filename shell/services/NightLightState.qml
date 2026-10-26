@@ -20,9 +20,8 @@ Scope {
 
     // The palette follows slowly: a change takes a few seconds, never a flash.
     Behavior on blend { NumberAnimation { duration: 4000; easing.type: Easing.InOutSine } }
-    // TODO(phase 7, themes): Tokens.darkAmount is gone; pass Tokens.themeFade (the colours follow the fade, the night light only tints).
     // The blend moves over 4 s and Tokens.themeFade over 300 ms; both end in applyPalette, each with the other's current value.
-    onBlendChanged: Tokens.applyPalette(Math.max(0, Math.min(1, blend)), Tokens.darkAmount)
+    onBlendChanged: Tokens.applyPalette(Math.max(0, Math.min(1, blend)), Tokens.themeFade)
 
     // Scheduled mode checks once a minute.
     Timer {

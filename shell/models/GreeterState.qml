@@ -44,8 +44,10 @@ QtObject {
     }
 
     function applyConfig(cfg: var): void {
-        // TODO(phase 7, themes): wallpaperFit from cfg.wallpaperFit through a local name table (qs.theme imports qs.models, so GreeterState must not import qs.theme).
         wallpaper = cfg.wallpaper || ""
+        // qs.theme imports qs.models, so the name is turned into the enum here and not by Tokens.fitFromName
+        const fits = { fill: Enums.WallpaperFit.Fill, fit: Enums.WallpaperFit.Fit, stretch: Enums.WallpaperFit.Stretch, center: Enums.WallpaperFit.Center, tile: Enums.WallpaperFit.Tile }
+        wallpaperFit = fits[cfg.wallpaperFit] ?? Enums.WallpaperFit.Fill
         showClock = cfg.showClock !== false
         showPowerButtons = cfg.showPowerButtons !== false
         rememberLastUser = cfg.rememberLastUser !== false

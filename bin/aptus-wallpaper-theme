@@ -11,7 +11,9 @@ together with the picture's path, size and modification time (`source`), and the
 same picture and tone does nothing. The shell and aptus-theme-apps read that file. Exit code 0 on success, 1 when the picture
 cannot be read, 2 for wrong arguments."""
 import argparse
+import colorsys
 import json
+import math
 import os
 import sys
 
@@ -21,14 +23,18 @@ TONES = ("auto", "light", "dark")
 SAMPLE_SIZE = 64                  # the picture is scaled to fit SAMPLE_SIZE x SAMPLE_SIZE before it is read
 DARK_BELOW_LIGHTNESS = 0.45       # mean lightness (0..1) under which tone auto picks dark
 GREY_BELOW_SATURATION = 0.10      # weighted saturation under which the picture counts as grey
+MIN_COLOUR_WEIGHT = 0.02          # mean colour weight of a pixel under which the picture counts as grey (near-black and near-white ones weigh little)
 FALLBACK_HUE = 215                # degrees, the tone of a grey picture
 MIN_CONTRAST_TEXT = 4.5           # ink on bg, accent on bg (WCAG AA for text)
 
 
-# TODO(phase 7, themes): Pillow 13 deprecates Image.getdata(); use get_flattened_data() when it exists. Thresholds: grey below MIN_COLOUR_WEIGHT 0.02 mean colour weight, accent saturation 0.40 to 0.65, dark below mean lightness 0.45 (values found in the probe).
 def read_pixels(path: str) -> list:
     """The picture scaled down, as a list of (r, g, b) with 0..255 values. Raises OSError when it cannot be read."""
-    raise NotImplementedError
+    from PIL import Image
+    with Image.open(path) as im:
+        im = im.convert("RGB")
+        im.thumbnail((SAMPLE_SIZE, SAMPLE_SIZE))
+        return list(im.get_flattened_data() if hasattr(im, "get_flattened_data") else im.getdata())
 
 
 def dominant_tone(pixels: list) -> tuple:
@@ -36,38 +42,103 @@ def dominant_tone(pixels: list) -> tuple:
     saturation times its lightness weight (so a big flat grey or a black edge does not win). Grey pictures give
     (FALLBACK_HUE, low saturation)."""
     assert isinstance(pixels, list), "pixels is a list of (r, g, b)"
-    raise NotImplementedError
+    bins = 36
+    hist = [0.0] * bins
+    weighted = []
+    for r, g, b in pixels:
+        h, l, s = colorsys.rgb_to_hls(r / 255, g / 255, b / 255)
+        # colourful, mid-light pixels count; near-black, near-white and grey ones hardly do
+        w = (s ** 1.5) * max(0.0, 1 - abs(2 * l - 1) ** 2)
+        if w <= 0:
+            continue
+        weighted.append((h * 360, s, w))
+        hist[int(h * bins) % bins] += w
+    total = sum(w for _, _, w in weighted)
+    if not pixels or total / len(pixels) < MIN_COLOUR_WEIGHT:
+        return (FALLBACK_HUE, 0.12)
+    # smooth the histogram over neighbouring bins, take the best, then the circular mean around it
+    smooth = [hist[i - 1] + 2 * hist[i] + hist[(i + 1) % bins] for i in range(bins)]
+    best = smooth.index(max(smooth)) * (360 / bins) + (180 / bins)
+    near = [(h, s, w) for h, s, w in weighted if abs((h - best + 180) % 360 - 180) <= 30]
+    wsum = sum(w for _, _, w in near)
+    x = sum(math.cos(math.radians(h)) * w for h, _, w in near) / wsum
+    y = sum(math.sin(math.radians(h)) * w for h, _, w in near) / wsum
+    hue = math.degrees(math.atan2(y, x)) % 360
+    sat = sum(s * w for _, s, w in near) / wsum
+    if sat < GREY_BELOW_SATURATION:
+        return (FALLBACK_HUE, 0.12)
+    return (hue, sat)
 
 
 def mean_lightness(pixels: list) -> float:
     """Mean HSL lightness of the pixels, 0..1."""
-    raise NotImplementedError
+    if not pixels:
+        return 0.5
+    return sum(colorsys.rgb_to_hls(r / 255, g / 255, b / 255)[1] for r, g, b in pixels) / len(pixels)
 
 
 def hsl_hex(h: float, s: float, l: float) -> str:
     """#RRGGBB for hue 0..360, saturation 0..1, lightness 0..1."""
     assert 0 <= s <= 1 and 0 <= l <= 1, "saturation and lightness are 0..1"
-    raise NotImplementedError
+    r, g, b = colorsys.hls_to_rgb((h % 360) / 360, max(0.0, min(1.0, l)), max(0.0, min(1.0, s)))
+    return "#%02X%02X%02X" % (round(r * 255), round(g * 255), round(b * 255))
 
 
 def contrast(a: str, b: str) -> float:
     """WCAG contrast ratio of two #RRGGBB colours."""
-    raise NotImplementedError
+    def lum(h):
+        ch = [int(h.lstrip("#")[i:i + 2], 16) / 255 for i in (0, 2, 4)]
+        ch = [c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4 for c in ch]
+        return 0.2126 * ch[0] + 0.7152 * ch[1] + 0.0722 * ch[2]
+    hi, lo = sorted((lum(a), lum(b)), reverse=True)
+    return (hi + 0.05) / (lo + 0.05)
 
 
 def fit_contrast(color: str, bg: str, toward: str, ratio: float = MIN_CONTRAST_TEXT) -> str:
     """Mix `color` toward `toward` in small steps until it has `ratio`:1 contrast on bg (the last step is `toward`)."""
     assert ratio >= 1, "a contrast ratio is at least 1"
-    raise NotImplementedError
+    c = [int(color.lstrip("#")[i:i + 2], 16) for i in (0, 2, 4)]
+    t = [int(toward.lstrip("#")[i:i + 2], 16) for i in (0, 2, 4)]
+    for step in range(21):
+        k = step / 20
+        out = "#%02X%02X%02X" % tuple(round(a + (b - a) * k) for a, b in zip(c, t))
+        if contrast(out, bg) >= ratio:
+            return out
+    return toward
 
 
 def build_palette(hue: float, saturation: float, base: str) -> dict:
     """The theme for a tone and a base ("light" or "dark"): all roles as #RRGGBB, plus "name": "Wallpaper" and "base".
     Neutrals carry the hue with low saturation, the accent carries it with the picture's saturation (kept between a calm
     minimum and maximum), ok/warn/critical are fixed hues fitted to the background."""
-    assert base in ("light", "dark"), "base is light or dark"
     assert 0 <= saturation <= 1, "saturation is 0..1"
-    raise NotImplementedError
+    assert base in ("light", "dark"), "base must be light or dark"
+    # neutrals carry the hue lightly, more when the picture is colourful
+    ns = 0.14 + 0.18 * min(1.0, saturation / 0.6)
+    accent_s = max(0.40, min(0.65, saturation))
+    if base == "dark":
+        p = {"bg": hsl_hex(hue, ns, 0.085), "surface": hsl_hex(hue, ns, 0.125), "surfaceAlt": hsl_hex(hue, ns, 0.17),
+             "line": hsl_hex(hue, ns * 0.9, 0.25), "ink": hsl_hex(hue, ns * 0.6, 0.93),
+             "inkSoft": hsl_hex(hue, ns * 0.5, 0.72), "inkFaint": hsl_hex(hue, ns * 0.4, 0.52)}
+        signals = {"ok": "#6FBF9A", "warn": "#E0B35A", "critical": "#E0786C"}
+        accent = hsl_hex(hue, accent_s, 0.66)
+        toward = "#FFFFFF"
+    else:
+        p = {"bg": hsl_hex(hue, ns, 0.94), "surface": hsl_hex(hue, ns, 0.975), "surfaceAlt": hsl_hex(hue, ns, 0.895),
+             "line": hsl_hex(hue, ns * 0.9, 0.80), "ink": hsl_hex(hue, ns * 1.2, 0.13),
+             "inkSoft": hsl_hex(hue, ns * 0.9, 0.36), "inkFaint": hsl_hex(hue, ns * 0.7, 0.55)}
+        signals = {"ok": "#1F6B4F", "warn": "#9A6516", "critical": "#B3382C"}
+        accent = hsl_hex(hue, accent_s, 0.40)
+        toward = "#000000"
+    p["accent"] = fit_contrast(accent, p["bg"], toward)
+    for name, color in signals.items():
+        p[name] = fit_contrast(color, p["bg"], toward)
+    # text on the accent: the darker or the lighter of bg and white, whichever reads better
+    p["accentInk"] = max((p["bg"], "#FFFFFF" if base == "light" else p["bg"]), key=lambda c: contrast(c, p["accent"]))
+    p["on"] = p["accent"]
+    p["name"] = "Wallpaper"
+    p["base"] = base
+    return p
 
 
 def make_theme(path: str, tone: str) -> dict:
@@ -75,25 +146,66 @@ def make_theme(path: str, tone: str) -> dict:
     "tone" (as asked) and "source": { "path", "size", "mtime" } for the cache check."""
     assert tone in TONES, "tone is auto, light or dark"
     assert os.path.isabs(path), "the picture path must be absolute"
-    raise NotImplementedError
+    pixels = read_pixels(path)
+    hue, sat = dominant_tone(pixels)
+    if tone == "auto":
+        base = "dark" if mean_lightness(pixels) < DARK_BELOW_LIGHTNESS else "light"
+    else:
+        base = tone
+    theme = build_palette(hue, sat, base)
+    st = os.stat(path)
+    theme["tone"] = tone
+    theme["source"] = {"path": os.path.abspath(path), "size": st.st_size, "mtime": int(st.st_mtime)}
+    return theme
 
 
 def is_current(out: str, path: str, tone: str) -> bool:
     """Whether the file `out` already holds the theme for this picture (path, size, mtime) and tone."""
     assert tone in TONES, "tone is auto, light or dark"
-    raise NotImplementedError
+    try:
+        with open(out) as f:
+            have = json.load(f)
+        st = os.stat(path)
+    except (OSError, ValueError):
+        return False
+    return have.get("tone") == tone and have.get("source") == {"path": os.path.abspath(path), "size": st.st_size, "mtime": int(st.st_mtime)}
 
 
 def write_atomic(out: str, theme: dict) -> None:
     """Write the theme as JSON to `out` (creates the folder), via a temporary file and a rename."""
     assert os.path.isabs(out), "the output path must be absolute"
     assert theme.get("base") in ("light", "dark"), "a theme needs a base"
-    raise NotImplementedError
+    os.makedirs(os.path.dirname(os.path.abspath(out)), exist_ok=True)
+    tmp = out + ".tmp"
+    with open(tmp, "w") as f:
+        json.dump(theme, f, indent=2)
+        f.write("\n")
+    os.replace(tmp, out)
 
 
-# TODO(phase 7, themes): print the theme as JSON to stdout on success (also when the file is current): the shell reads the result from there.
 def main(argv: list) -> int:
-    raise NotImplementedError
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("picture")
+    ap.add_argument("--tone", choices=TONES, default="auto")
+    ap.add_argument("--out", default=DEFAULT_OUT)
+    ap.add_argument("--force", action="store_true", help="make the theme even if the file is already current")
+    args = ap.parse_args(argv)
+    if not os.path.isabs(args.out):
+        print("--out must be an absolute path", file=sys.stderr)
+        return 2
+    if not args.force and is_current(args.out, args.picture, args.tone):
+        with open(args.out) as f:
+            sys.stdout.write(f.read())
+        return 0
+    try:
+        theme = make_theme(args.picture, args.tone)
+    except (OSError, ValueError, ImportError) as e:
+        print(f"aptus-wallpaper-theme: cannot read {args.picture}: {e}", file=sys.stderr)
+        return 1
+    write_atomic(args.out, theme)
+    json.dump(theme, sys.stdout, indent=2)
+    sys.stdout.write("\n")
+    return 0
 
 
 if __name__ == "__main__":

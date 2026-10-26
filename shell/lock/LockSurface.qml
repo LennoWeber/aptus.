@@ -31,9 +31,8 @@ Item {
         anchors.fill: parent
         visible: Wallpaper.current !== ""
         source: Wallpaper.current ? "file://" + Wallpaper.current : ""
-        sourceSize: Qt.size(parent.width, parent.height)
-        // TODO(phase 7, themes): Tokens.fillModeFor(Wallpaper.fit) as on the desktop; sourceSize like WallpaperLayer.
-        fillMode: Image.PreserveAspectCrop
+        sourceSize: Wallpaper.fit === Enums.WallpaperFit.Center || Wallpaper.fit === Enums.WallpaperFit.Tile ? Qt.size(0, 0) : Qt.size(parent.width, parent.height)
+        fillMode: Tokens.fillModeFor(Wallpaper.fit)
         asynchronous: true
         opacity: status === Image.Ready ? 1 : 0
         Behavior on opacity { NumberAnimation { duration: Tokens.durSlow } }

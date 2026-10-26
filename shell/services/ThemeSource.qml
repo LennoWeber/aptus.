@@ -24,12 +24,17 @@ Singleton {
 
     Process {
         id: generator
+        stdout: StdioCollector { id: generatorOutput }
         stderr: StdioCollector { id: generatorErrors }
+        // qmllint disable signal-handler-parameters
+        onExited: code => root.onGenerated(code)
+        // qmllint enable signal-handler-parameters
     }
 
     FileView {
         id: paletteFile
         path: root.file
+        blockLoading: true
         printErrors: false
     }
 
@@ -38,22 +43,63 @@ Singleton {
     // or an unreadable picture fails; the previous palette stays.
     function generate(path: string, tone: string): void {
         if (["auto", "light", "dark"].indexOf(tone) < 0) throw new Error("invariant: ThemeSource.generate: tone is auto, light or dark")
-        throw new Error("not implemented")
+        if (!path || path[0] !== "/") {
+            status = "failed"
+            error = "no wallpaper"
+            return
+        }
+        if (generator.running) {
+            queued = { path: path, tone: tone }
+            return
+        }
+        status = "working"
+        error = ""
+        source = path
+        generator.command = [helper, path, "--tone", tone, "--out", file]
+        generator.running = true
     }
 
     // Make the palette for Wallpaper.current with the setting appearance.wallpaperTone; does nothing when it is already made for that picture and tone.
     function refresh(): void {
-        throw new Error("not implemented")
+        if (!active) return
+        generate(Wallpaper.current, tone)
     }
 
     // Read `file` into `palette` (start-up: the palette of the last run), when it belongs to Wallpaper.current.
     function read(): void {
-        throw new Error("not implemented")
+        try {
+            const text = paletteFile.text()
+            if (!text) return
+            palette = JSON.parse(text)
+            source = palette.source ? palette.source.path : ""
+            status = "ready"
+        } catch (e) {
+            console.warn("aptus: wallpaper theme: cannot read " + file + ": " + e)
+        }
     }
 
     // The generator finished: on code 0 read the file and emit changed(), else status "failed" with the first line of its stderr.
     function onGenerated(code: int): void {
         if (!Number.isInteger(code)) throw new Error("invariant: ThemeSource.onGenerated: exit code must be an integer")
-        throw new Error("not implemented")
+        if (code === 0) {
+            try {
+                palette = JSON.parse(generatorOutput.text)
+                status = "ready"
+                error = ""
+                changed()
+            } catch (e) {
+                status = "failed"
+                error = "unreadable result"
+            }
+        } else {
+            status = "failed"
+            error = generatorErrors.text.trim().split("\n")[0] || ("exit code " + code)
+            console.warn("aptus: wallpaper theme: " + error)
+        }
+        if (queued) {
+            const next = queued
+            queued = null
+            if (next.path !== source || next.tone !== tone || code !== 0) generate(next.path, next.tone)
+        }
     }
 }

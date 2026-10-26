@@ -51,8 +51,19 @@ Start with `aptus`. Send commands to the running shell with `aptus msg <command>
 
 ## Colours for the apps
 
-<!-- TODO(phase 7, themes): rewrite this section: eight themes (light, dark, ocean, forest, dusk, sand, sky, wallpaper) plus auto, Super+T opens the picker, setting appearance.theme, wallpaper fit and login screen picture, aptus-theme-apps --theme, aptus-wallpaper-theme. -->
-Light or dark: **Super+T** switches and remembers it. The setting is `appearance.colorMode` (`light`, `dark`, `auto`; `auto` is dark while the night light runs), also in the settings app. The shell fades over 300 ms and repaints all apps in the background (`aptus-theme-apps --mode <light|dark> --all --quiet`). `aptus msg theme-mode-set dark` sets it from a script.
+Themes: **Super+T** opens a small picker with eight themes, and pressing it again (or the arrow keys) moves on; the shell shows each at once, **Enter** keeps it (the apps follow then), **Esc** goes back. The setting is `appearance.theme`, also in the settings app:
+
+| Theme | Look |
+|---|---|
+| `light`, `dark` | the neutral palettes (default `light`) |
+| `ocean`, `forest`, `dusk` | dark, tinted slate blue, fir green, indigo, each with one accent |
+| `sand`, `sky` | light, warm cream with terracotta, cool ice blue with royal blue |
+| `wallpaper` | made from the colours of the current wallpaper (`appearance.wallpaperTone`: `auto` follows its brightness, or `light`, `dark`) |
+| `auto` | light, or dark while the night light runs |
+
+The shell fades over 300 ms and repaints all apps in the background (`aptus-theme-apps --theme <id> --all --quiet`). `aptus msg theme-mode-set ocean` sets a theme from a script, `aptus msg theme-next 1` steps through them. The wallpaper theme is made by `bin/aptus-wallpaper-theme PICTURE` (Pillow) into `~/.local/state/aptus/wallpaper-theme.json`.
+
+Wallpaper: `wallpaper.fit` is `fill` (default, covers and crops), `fit` (whole picture, bars in the theme colour), `stretch`, `center` (original size) or `tile`; it applies to the desktop, the lock screen and the login screen. With the aptus login screen installed (`./install.sh --greeter`), the login screen shows your desktop wallpaper and keeps it in step by itself (`appearance.loginWallpaper`, default on). The polkit rule that allows this without a password is installed with the greeter; run the installer again after updating if the login picture does not follow.
 
 `aptus-theme-apps` paints the programs around the shell with the same palette (`theme/tokens.json`, light or dark, templates in `theme/apps`):
 
