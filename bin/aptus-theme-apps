@@ -18,6 +18,23 @@ import sys
 ROOT = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 HOME = os.path.expanduser("~")
 CFG = os.environ.get("XDG_CONFIG_HOME", os.path.join(HOME, ".config"))
+STATE = os.environ.get("XDG_STATE_HOME", os.path.join(HOME, ".local", "state"))
+# Fixed templates with {{role}} holes for the colours (one file per app part), filled by render_template.
+TEMPLATES = os.path.join(ROOT, "theme", "apps")
+# Colour files the shell and Hyprland read: aptus-look.lua loads HYPR_COLORS, hyprlock.conf sources HYPRLOCK_COLORS.
+HYPR_COLORS = os.path.join(STATE, "aptus", "hyprland-colors.lua")
+HYPRLOCK_COLORS = os.path.join(CFG, "hypr", "hyprlock-colors.conf")
+# Window border and shadow are the ink with these alphas (the values aptus-look.lua used before).
+BORDER_ALPHA_ACTIVE = 0.25
+BORDER_ALPHA_INACTIVE = 0.09
+SHADOW_ALPHA = 0.13
+# Firefox-style profiles (Zen, Thunderbird): a folder with prefs.js below one of these roots is a profile.
+ZEN_ROOT = os.path.join(CFG, "zen")
+THUNDERBIRD_ROOTS = [os.path.join(HOME, ".thunderbird"), os.path.join(CFG, "thunderbird"),
+                     os.path.join(HOME, ".var", "app", "org.mozilla.Thunderbird", ".thunderbird")]
+# Spicetify keeps themes in SPICETIFY_DIR/NAME/{color.ini,user.css}; the theme is written only if that folder's parent exists.
+SPICETIFY_DIR = os.path.join(CFG, "spicetify", "Themes")
+SPICETIFY_THEME = "aptus"
 
 # Accent colours for the terminal palette: the shell itself has no accent, so these are quiet and fixed.
 ACCENTS = {
@@ -45,6 +62,70 @@ def ansi(p: dict, mode: str) -> list:
                 p["inkFaint"], "#C8493B", "#2F8A66", "#C98A2A", p["bblue"], p["bmagenta"], p["bcyan"], p["bg"]]
     return [p["surface"], p["critical"], p["ok"], p["warn"], p["blue"], p["magenta"], p["cyan"], p["inkSoft"],
             p["inkFaint"], "#F09284", "#8AD3B0", "#EFC574", p["bblue"], p["bmagenta"], p["bcyan"], p["ink"]]
+
+
+def load_tokens() -> dict:
+    """The whole theme/tokens.json (read once, then kept)."""
+    raise NotImplementedError("not implemented")
+
+
+def colors_of(p: dict, mode: str) -> dict:
+    """The flat role names for templates: every palette colour (bg, ink, ...), the accents (blue, ...), brights as
+    bright_ok/bright_warn/bright_critical, selection_bg, selection_fg, link, syntax_NAME and cava_0, cava_1, ..."""
+    raise NotImplementedError("not implemented")
+
+
+def hex_bare(color: str) -> str:
+    """#RRGGBB as RRGGBB (Spicetify color.ini)."""
+    raise NotImplementedError("not implemented")
+
+
+def hex_rgba(color: str, alpha: float) -> str:
+    """#RRGGBB and an alpha from 0 to 1 as RRGGBBAA; callers wrap it as rgba(RRGGBBAA) for Hyprland and hyprlock."""
+    raise NotImplementedError("not implemented")
+
+
+def contrast(a: str, b: str) -> float:
+    """WCAG contrast ratio of two #RRGGBB colours."""
+    raise NotImplementedError("not implemented")
+
+
+def check_contrast(colors: dict) -> list:
+    """Messages for the pairs below 4.5 (ink on bg, selection_fg on selection_bg, inkSoft on bg); empty when fine."""
+    raise NotImplementedError("not implemented")
+
+
+def render_template(name: str, colors: dict, extra: dict = None) -> str:
+    """Read theme/apps/NAME and replace every {{role}} with its colour from colors (and extra); {{role|bare}} drops
+    the #, {{role|rgba:0.25}} gives RRGGBB plus alpha. A role without a colour is an error."""
+    raise NotImplementedError("not implemented")
+
+
+def template_roles(name: str) -> set:
+    """The role names a template uses (to check them against colors_of before writing anything)."""
+    raise NotImplementedError("not implemented")
+
+
+def profile_dirs(roots: list) -> list:
+    """The profile folders (with prefs.js, not storage folders) below ROOTS; reads only, creates nothing."""
+    raise NotImplementedError("not implemented")
+
+
+def enable_chrome_css(profile: str, dry: bool) -> None:
+    """Make PROFILE load chrome/userChrome.css and userContent.css: the chrome folder and a user.js line for
+    toolkit.legacyUserProfileCustomizations.stylesheets (the file is created if missing)."""
+    raise NotImplementedError("not implemented")
+
+
+def ensure_block(path: str, marker: str, text: str, dry: bool) -> None:
+    """Put TEXT between '# >>> MARKER' and '# <<< MARKER' lines in a config of the user (replace the block, or add it
+    at the end), keeping a .before-aptus copy once; for apps with no include (starship, cava, fastfetch, yazi)."""
+    raise NotImplementedError("not implemented")
+
+
+def reload_apps(chosen: list, dry: bool) -> None:
+    """Tell running programs to read their colours again (Hyprland reload, cava, nvim, kitty), where they can."""
+    raise NotImplementedError("not implemented")
 
 
 def write(path: str, text: str, dry: bool, keep: bool = True) -> None:
@@ -221,6 +302,61 @@ def gsettings(p, mode, dry):
         else:
             subprocess.run(["gsettings", "set", "org.gnome.desktop.interface", key, val], check=False)
     print("  set gsettings color-scheme, gtk-theme, icon-theme")
+
+
+def starship(p, mode, dry):
+    """~/.config/starship.toml: palette aptus and flat segments, as a block (ensure_block)."""
+    raise NotImplementedError("not implemented")
+
+
+def fish(p, mode, dry):
+    """fish colours (theme file) and the prompt colours that starship does not set."""
+    raise NotImplementedError("not implemented")
+
+
+def nvim(p, mode, dry):
+    """Neovim colorscheme aptus (colors/aptus.lua) for the mode, from the syntax roles."""
+    raise NotImplementedError("not implemented")
+
+
+def yazi(p, mode, dry):
+    """Yazi flavor aptus for the mode."""
+    raise NotImplementedError("not implemented")
+
+
+def fastfetch(p, mode, dry):
+    """Fastfetch key and separator colours."""
+    raise NotImplementedError("not implemented")
+
+
+def cava(p, mode, dry):
+    """Cava colour block with the gradient of the roles."""
+    raise NotImplementedError("not implemented")
+
+
+def hyprland_look(p, mode, dry):
+    """HYPR_COLORS: active and inactive border, shadow (the ink with the BORDER and SHADOW alphas)."""
+    raise NotImplementedError("not implemented")
+
+
+def hyprlock(p, mode, dry):
+    """HYPRLOCK_COLORS with $aptus_* variables, and the source line in hyprlock.conf."""
+    raise NotImplementedError("not implemented")
+
+
+def zen(p, mode, dry):
+    """userChrome.css and userContent.css in every Zen profile."""
+    raise NotImplementedError("not implemented")
+
+
+def thunderbird(p, mode, dry):
+    """userChrome.css and userContent.css in every Thunderbird profile (nothing if there is none yet)."""
+    raise NotImplementedError("not implemented")
+
+
+def spotify(p, mode, dry):
+    """Spicetify theme SPICETIFY_THEME (color.ini and user.css); applying it is left to the user."""
+    raise NotImplementedError("not implemented")
 
 
 APPS = dict(kitty=kitty, ghostty=ghostty, btop=btop, gtk=gtk, qt=qt, zathura=zathura, gsettings=gsettings)
