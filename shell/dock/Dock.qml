@@ -18,7 +18,13 @@ PanelWindow {
 
     property string look: "glass"    // glass | solid | minimal (dock.look)
     property bool magnify              // zoom under the pointer (dock.magnify)
-    property real pointerX: -1         // pointer position along the dock, -1 when away
+    property real pointerX: -1e9       // pointer position from the middle of the dock, -1e9 when away
+    property bool ready                // false for the first moment, so the dock can slide in
+    property real maxZoom              // largest zoom factor (1 without dock.magnify)
+    property real cellRest             // width of one cell at rest
+    property real dividerWidth         // width of the divider between kept and open-only apps
+    property int dividerIndex          // index of the first open-only app after kept ones, -1 if none
+    property real restWidth            // width of all cells at rest, divider included
     property string launching          // key of the app that was just started, for the bounce
 
     // TODO(phase 7): bind look to dock.look, magnify to dock.magnify; default autoHide is now false (the schema default), make the fallback agree.

@@ -10,6 +10,7 @@ Column {
     property var apps: []              // saved desktop entry ids, in dock order
     property bool picking              // the list of installed apps is open
     property string filter             // text typed in the picker
+    property var catalog               // the desktop entries; names and icons are looked up through it so they follow its loading
     signal changed(var apps)           // the whole new list
 
     // Installed, launchable apps as { id, name, icon }, sorted by name, without the ones already in the dock.

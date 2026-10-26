@@ -12,6 +12,8 @@ Item {
     property int iconSize: 44
     property real zoom: 1             // 1 = rest size; grows near the pointer
     property bool bouncing            // the app was just started
+    property real size                // icon edge now: rest size times zoom
+    property real hop                 // lift while the app starts
     readonly property bool running: info ? info.windows.length > 0 : false
     readonly property bool front: info ? info.windows.some(w => w.activated) : false
     readonly property string name: info && info.entry ? info.entry.name : (info ? info.key : "")
