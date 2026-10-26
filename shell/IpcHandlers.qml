@@ -24,8 +24,7 @@ Scope {
     property var powerMenu      // PowerMenu
     property var deviceMode     // DeviceModeState
     property var wallpaperPicker  // WallpaperPicker
-    // TODO(phase 7, Island): rename to islandState (IslandState); the island functions below read it.
-    property var notchState     // NotchState
+    property var islandState    // IslandState
 
     function toggleRotationLock(): void {
         deviceMode.setRotationLocked(!deviceMode.rotationLocked)
@@ -48,24 +47,27 @@ Scope {
         controlCenter.openTileById(tileId)
     }
 
-    // Name of the screen with the focused monitor (the first screen when none is focused).
     function focusedScreenName(): string {
-        throw new Error("not implemented")
+        const mon = Hyprland.focusedMonitor
+        return mon ? mon.name : (Quickshell.screens.length > 0 ? Quickshell.screens[0].name : "")
     }
 
-    // Enums.IslandView for a name used on the command line: home, power, screenshot, clipboard, emoji, wallpaper (unknown = home).
+    // Enums.IslandView for a name used on the command line (home, power, screenshot, clipboard, emoji, wallpaper).
     function viewByName(viewName: string): int {
-        throw new Error("not implemented")
+        const views = { home: Enums.IslandView.Home, power: Enums.IslandView.Power, screenshot: Enums.IslandView.Screenshot,
+            clipboard: Enums.IslandView.Clipboard, emoji: Enums.IslandView.Emoji, wallpaper: Enums.IslandView.Wallpaper }
+        return viewName in views ? views[viewName] : Enums.IslandView.Home
     }
 
     // The power menu: the island's Power view while the island is shown, else the full-screen menu.
     function openPower(): void {
-        throw new Error("not implemented")
+        if (islandState && islandState.enabled) islandState.toggle(focusedScreenName(), Enums.IslandView.Power)
+        else powerMenu.toggle()
     }
 
-    // The wallpaper picker: the island's Wallpaper view while the island is shown, else the picker window.
     function openWallpaper(): void {
-        throw new Error("not implemented")
+        if (islandState && islandState.enabled) islandState.toggle(focusedScreenName(), Enums.IslandView.Wallpaper)
+        else wallpaperPicker.toggle()
     }
 
     function openNotifications(): void {
@@ -89,9 +91,8 @@ Scope {
                 if (root.shellState.stage === Enums.Stage.Detail && root.shellState.activeTile === Enums.TileId.Notifications) root.shellState.closeAll()
                 else root.openNotifications()
             }
-            // TODO(phase 7, Island): with the island shown, "session" toggles the island's Power view and "wallpaper" its Wallpaper view.
-            else if (name === "session") root.powerMenu.toggle()
-            else if (name === "wallpaper") root.wallpaperPicker.toggle()
+            else if (name === "session") root.openPower()
+            else if (name === "wallpaper") root.openWallpaper()
             else console.warn("aptus: panel '" + name + "' is not available yet")
         }
 
@@ -108,9 +109,8 @@ Scope {
                 else root.openControlCenter()
             }
             else if (name === "notification-center") root.openNotifications()
-            // TODO(phase 7, Island): same routing as in panelToggle (open, never close).
-            else if (name === "session") { if (!root.powerMenu.shown) root.powerMenu.toggle() }
-            else if (name === "wallpaper") root.wallpaperPicker.show()
+            else if (name === "session") { if (!(root.islandState && root.islandState.enabled) && root.powerMenu.shown) return; root.openPower() }
+            else if (name === "wallpaper") { if (root.islandState && root.islandState.enabled) root.islandState.open(root.focusedScreenName(), Enums.IslandView.Wallpaper); else root.wallpaperPicker.show() }
             else console.warn("aptus: panel '" + name + "' is not available yet")
         }
 
@@ -122,18 +122,16 @@ Scope {
             root.launcherState.toggle(modes[modeName])
         }
 
-        // TODO(phase 7, Island): bodies of islandToggle and islandOpen: use islandState (toggle/open with the focused screen and the view named by `view`: home, power, screenshot, clipboard, emoji, wallpaper; empty = home).
-        // The notch of the focused screen: open, or close when it is open. Does nothing while the bar is shown.
+        // The island of the focused screen: open it at a view (home, power, screenshot, clipboard, emoji, wallpaper), or close
+        // it when it shows that view already. Does nothing while the bar is shown.
         function islandToggle(view: string): void {
-            if (!root.notchState || !root.notchState.enabled) return
-            const mon = Hyprland.focusedMonitor
-            root.notchState.toggle(mon ? mon.name : (Quickshell.screens.length > 0 ? Quickshell.screens[0].name : ""))
+            if (!root.islandState || !root.islandState.enabled) return
+            root.islandState.toggle(root.focusedScreenName(), root.viewByName(view))
         }
 
         function islandOpen(view: string): void {
-            if (!root.notchState || !root.notchState.enabled) return
-            const mon = Hyprland.focusedMonitor
-            root.notchState.open(mon ? mon.name : (Quickshell.screens.length > 0 ? Quickshell.screens[0].name : ""))
+            if (!root.islandState || !root.islandState.enabled) return
+            root.islandState.open(root.focusedScreenName(), root.viewByName(view))
         }
 
         // Open the settings app at one entry, e.g. `settingsFocus weather.locationName`.

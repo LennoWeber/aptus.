@@ -197,8 +197,7 @@ PanelWindow {
         width: cc.boardWidth
         height: cc.boardHeight
         x: (parent.width - width) / 2
-        // TODO(phase 7, Island): Tokens.topInset + 24 instead of barHeight + 24.
-        y: Math.max(Tokens.barHeight + 24, (parent.height - height) * 0.38) + 10 * (1 - cc.blurAmount)
+        y: Math.max(Tokens.topInset + 24, (parent.height - height) * 0.38) + 10 * (1 - cc.blurAmount)
         opacity: cc.blurAmount
 
         Repeater {

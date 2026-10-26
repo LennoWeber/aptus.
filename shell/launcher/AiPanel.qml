@@ -67,8 +67,7 @@ PanelWindow {
     implicitWidth: win.panelWidth + 16
     implicitHeight: win.edge === Enums.DockEdge.Bottom ? 460 : 0
     // qmllint disable unqualified unresolved-type
-    // TODO(phase 7, Island): start below Tokens.topInset, not below barHeight.
-    margins { top: Tokens.barHeight }
+    margins { top: Tokens.topInset }
     // qmllint enable unqualified unresolved-type
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.namespace: "aptus-ai"

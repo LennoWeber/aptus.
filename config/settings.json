@@ -27,6 +27,7 @@
     "pinned": ["org.gnome.Nautilus", "firefox", "org.gnome.Ptyxis", "org.gnome.Settings"]
   },
   "island": {
+    "design": "capsule",
     "look": "paper",
     "hoverOpen": true,
     "showWorkspaces": true,

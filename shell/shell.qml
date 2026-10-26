@@ -16,7 +16,7 @@ import qs.session
 import qs.osk
 import qs.wallpaper
 import qs.dock
-// TODO(phase 7, Island): import qs.theme here (IslandLook), for the topInset binding and the look.
+import qs.theme
 
 // Entry point of the aptus shell.
 ShellRoot {
@@ -43,7 +43,8 @@ ShellRoot {
         target: shellStateObj
         function onStageChanged() { if (shellStateObj.stage === Enums.Stage.Closed && root.barRevealed) barHideTimer.restart() }
     }
-    // TODO(phase 7, Island): set Tokens.topInset: the bar's height, or the island's rest height plus its look's gap while the island is shown (and island.reserveSpace is on).
+    // Windows start below the bar, or below the island (its rest height plus the gap its look keeps from the edge).
+    Binding { target: Tokens; property: "topInset"; value: root.showBar ? Tokens.barHeight : IslandLook.restHeight + IslandLook.gap }
     ShellState { id: shellStateObj }
     LauncherState { id: launcherObj; shellState: shellStateObj }
     BrowserState {
@@ -80,31 +81,27 @@ ShellRoot {
         enabled: settingsObj.get("bar.contextZoneEnabled") !== false
     }
 
-    // The island look from the settings (island.look).
-    // TODO(phase 7, Island): bind to settingsObj.get("island.look") || "paper"; onIslandLookChanged calls IslandLook.apply(islandLook).
-    property string islandLook
-
-    // TODO(phase 7, Island): replace this whole notch block by the island: IslandState (settings island.alerts, island.alertSeconds, island.mediaWings, island.hoverOpen),
-    //     a Loader of island/IslandHost.qml that hands over the states (incl. lockState, displayState, weatherState), bar.style "island" instead of "notch".
-    // The top of the screen: the bar, or the notch (setting bar.style). The bar is also the fallback when the
-    // notch fails to load, so the shell never ends up without one.
-    readonly property bool notchWanted: settingsObj.get("bar.style") === "notch"
-    readonly property bool showBar: !notchWanted || notchLoader.status === Loader.Error
-    NotchState {
-        id: notchObj
-        enabled: root.notchWanted && notchLoader.status === Loader.Ready
-        alertsEnabled: settingsObj.get("notch.alerts") !== false
-        alertHoldMs: (settingsObj.get("notch.alertSeconds") || 4) * 1000
-        mediaWingsEnabled: settingsObj.get("notch.mediaWings") !== false
+    // The top of the screen: the bar, or the island (setting bar.style). The bar is also the fallback when the
+    // island fails to load, so the shell never ends up without one.
+    readonly property bool islandWanted: settingsObj.get("bar.style") === "island"
+    readonly property bool showBar: !islandWanted || islandLoader.status === Loader.Error
+    IslandState {
+        id: islandObj
+        enabled: root.islandWanted && islandLoader.status === Loader.Ready
+        alertsEnabled: settingsObj.get("island.alerts") !== false
+        alertHoldMs: (settingsObj.get("island.alertSeconds") || 4) * 1000
+        mediaWingsEnabled: settingsObj.get("island.mediaWings") !== false
+        hoverEnabled: settingsObj.get("island.hoverOpen") !== false
     }
     Loader {
-        id: notchLoader
-        active: root.notchWanted
-        source: "notch/NotchHost.qml"
+        id: islandLoader
+        active: root.islandWanted
+        source: "island/IslandHost.qml"
         onLoaded: {
             item.shellState = shellStateObj
             item.appSettings = settingsObj
-            item.notchState = notchObj
+            item.islandState = islandObj
+            item.lockState = lockObj
             item.audioState = audioObj
             item.networkState = networkObj
             item.bluetoothState = bluetoothObj
@@ -115,16 +112,26 @@ ShellRoot {
             item.mediaState = mediaObj
             item.timerState = timerObj
             item.captureState = captureObj
+            item.displayState = displayObj
+            item.weatherState = weatherObj
             item.dropdownRequested.connect((id, anchor, scr, offset) => dropdownHost.openAt(id, anchor, scr, offset))
             item.tileRequested.connect(id => ipcObj.openTile(id))
             item.controlCenterRequested.connect(() => ipcObj.openControlCenter())
             item.launcherRequested.connect(() => launcherObj.toggle(Enums.LauncherMode.Apps))
         }
-        onStatusChanged: if (status === Loader.Error) console.warn("aptus: the notch failed to load, the bar stays")
+        onStatusChanged: if (status === Loader.Error) console.warn("aptus: the island failed to load, the bar stays")
     }
-    Binding { target: notchLoader.item; property: "workspaces"; value: Compositor.workspaceList; when: notchLoader.status === Loader.Ready }
-    Binding { target: notchLoader.item; property: "windowTitle"; value: Compositor.activeTitle; when: notchLoader.status === Loader.Ready }
-    Binding { target: notchLoader.item; property: "slidOut"; value: root.barAutoHidden && !root.barRevealed; when: notchLoader.status === Loader.Ready }
+    Binding { target: islandLoader.item; property: "workspaces"; value: Compositor.workspaceList; when: islandLoader.status === Loader.Ready }
+    Binding { target: islandLoader.item; property: "windowTitle"; value: Compositor.activeTitle; when: islandLoader.status === Loader.Ready }
+    Binding { target: islandLoader.item; property: "slidOut"; value: root.barAutoHidden && !root.barRevealed; when: islandLoader.status === Loader.Ready }
+
+    // The island's look (setting island.look), resolved against the colours of Tokens.
+    readonly property string islandLook: settingsObj.get("island.look") || "paper"
+    onIslandLookChanged: IslandLook.apply(islandLook)
+
+    // The island's design (setting island.design): capsule, ninja, ticker or shade.
+    readonly property string islandDesign: settingsObj.get("island.design") || "capsule"
+    onIslandDesignChanged: IslandLook.design = islandDesign
 
     // The dock (setting dock.enabled).
     Variants {
@@ -164,8 +171,7 @@ ShellRoot {
 
     WallpaperPicker { id: wallpaperObj }
     Binding { target: Wallpaper; property: "directory"; value: settingsObj.get("wallpaper.directory") || "" }
-    // TODO(phase 7, Island): with the island shown, "wallpaper requested" opens the island's Wallpaper view instead of the picker.
-    Connections { target: settingsAppObj; function onWallpaperRequested() { wallpaperObj.show() } }
+    Connections { target: settingsAppObj; function onWallpaperRequested() { ipcObj.openWallpaper() } }
 
     // Swipe from the top or left edge (touch only).
     Variants {
@@ -198,8 +204,7 @@ ShellRoot {
             return
         }
         if (actionId === "controlcenter.open") ipcObj.openControlCenter()
-        // TODO(phase 7, Island): with the island shown, "session.open" opens its Power view instead of the full-screen menu.
-        else if (actionId === "session.open") powerMenuObj.toggle()
+        else if (actionId === "session.open") ipcObj.openPower()
         else if (actionId.indexOf("launcher.open:") === 0) {
             const modes = { apps: Enums.LauncherMode.Apps, web: Enums.LauncherMode.Web, settings: Enums.LauncherMode.Settings,
                 ai: Enums.LauncherMode.Ai, clipboard: Enums.LauncherMode.Clipboard }
@@ -249,8 +254,7 @@ ShellRoot {
         rotationLocked: deviceObj.rotationLocked
         onRotationLockRequested: ipcObj.toggleRotationLock()
         onTabletRequested: deviceObj.toggleManualTablet()
-        // TODO(phase 7, Island): with the island shown, open its Power view instead of the full-screen menu.
-        onPowerRequested: { shellStateObj.closeAll(); powerMenuObj.toggle() }
+        onPowerRequested: { shellStateObj.closeAll(); ipcObj.openPower() }
         shellState: shellStateObj
         audioState: audioObj
         displayState: displayObj
@@ -306,8 +310,7 @@ ShellRoot {
         displayState: displayObj
         osd: osdObj
         shellState: shellStateObj
-        // TODO(phase 7, Island): hand over islandState (and the lock/power targets of the Power view) instead of notchState.
-        notchState: notchObj
+        islandState: islandObj
     }
 
     LockState { id: lockObj; keyboardMode: settingsObj.lockKeyboardMode || "auto"; showNotificationContent: settingsObj.lockShowNotificationContent }
@@ -342,6 +345,8 @@ ShellRoot {
         Search.settingsState = settingsAppObj
         Search.controls = { network: networkObj, bluetooth: bluetoothObj, nightLight: nightLightObj, caffeine: caffeineObj, focus: focusObj, timer: timerObj, lock: lockObj }
         applyBlur()
-        // TODO(phase 7, Island): IslandLook.load() once, and IslandLook.apply(settingsObj.get("island.look")) now and whenever the look setting or the Tokens colours change.
+        IslandLook.load()
+        IslandLook.apply(islandLook)
+        IslandLook.design = islandDesign
     }
 }

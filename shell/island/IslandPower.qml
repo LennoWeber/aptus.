@@ -1,3 +1,4 @@
+pragma ComponentBehavior: Bound
 import QtQuick
 import qs.models
 import qs.theme
@@ -11,15 +12,12 @@ FocusScope {
     property var lockState  // LockState
     property string armed   // id of the action waiting for its second tap
     property int selectedIndex
-    property var actions    // { id, label, glyph }
+    property var actions: defaultActions    // { id, label, glyph }
     property color ink
     property color inkSoft
     property color line
 
     signal closeRequested()
-
-    // The second tap has to come within a few seconds.
-    Timer { id: armTimer; interval: 4000 }
 
     readonly property var defaultActions: [
         { id: "lock", label: "Lock", glyph: "lock" },
@@ -28,21 +26,95 @@ FocusScope {
         { id: "shutdown", label: "Shut down", glyph: "power" }
     ]
 
+    Timer { id: armTimer; interval: 4000; onTriggered: power.armed = "" }
+
     // Run an action; restart and shut down need a second tap within a few seconds.
     function run(actionId: string): void {
-        throw new Error("not implemented")
+        if ((actionId === "restart" || actionId === "shutdown") && armed !== actionId) {
+            armed = actionId
+            armTimer.restart()
+            return
+        }
+        closeRequested()
+        if (actionId === "lock") lockState.lock()
+        else if (actionId === "logout") Session.logout()
+        else if (actionId === "restart") Session.restart()
+        else if (actionId === "shutdown") Session.shutdown()
     }
 
     function moveSelection(delta: int): void {
-        throw new Error("not implemented")
+        selectedIndex = (selectedIndex + delta + actions.length) % actions.length
+        armed = ""
     }
 
     function activateSelected(): void {
-        throw new Error("not implemented")
+        run(actions[selectedIndex].id)
     }
 
     // Reset the armed action and the selection when the view is shown.
     function reset(): void {
-        throw new Error("not implemented")
+        armed = ""
+        selectedIndex = 0
+    }
+
+    Keys.onPressed: event => {
+        if (event.key === Qt.Key_Left) { moveSelection(-1); event.accepted = true }
+        else if (event.key === Qt.Key_Right || event.key === Qt.Key_Tab) { moveSelection(1); event.accepted = true }
+        else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) { activateSelected(); event.accepted = true }
+        else if (event.key >= Qt.Key_1 && event.key <= Qt.Key_4) { selectedIndex = event.key - Qt.Key_1; activateSelected(); event.accepted = true }
+    }
+
+    Row {
+        anchors.centerIn: parent
+        spacing: 10
+
+        Repeater {
+            model: power.actions
+            delegate: Item {
+                id: cell
+                required property var modelData
+                required property int index
+                readonly property bool isArmed: power.armed === modelData.id
+                readonly property bool isSelected: power.selectedIndex === index
+                width: 104
+                height: 118
+
+                Rectangle {
+                    anchors.fill: parent
+                    radius: 14
+                    color: power.ink
+                    opacity: tap.pressed ? 0.16 : (tap.containsMouse || cell.isSelected) ? 0.09 : 0.04
+                    Behavior on opacity { NumberAnimation { duration: Tokens.durFast } }
+                }
+                Rectangle {
+                    anchors.fill: parent
+                    radius: 14
+                    color: "transparent"
+                    border.width: cell.isArmed ? 1.5 : cell.isSelected ? 1 : 0
+                    border.color: cell.isArmed ? Tokens.critical : power.ink
+                }
+                StatusGlyph {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    y: 30
+                    kind: cell.modelData.glyph
+                    width: 28
+                    height: 28
+                    color: cell.isArmed ? Tokens.critical : power.ink
+                }
+                Label {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    y: 76
+                    text: cell.isArmed ? "Tap again" : cell.modelData.label
+                    color: cell.isArmed ? Tokens.critical : power.ink
+                    font.weight: Font.Medium
+                }
+                MouseArea {
+                    id: tap
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    onClicked: { power.selectedIndex = cell.index; power.run(cell.modelData.id) }
+                }
+            }
+        }
     }
 }

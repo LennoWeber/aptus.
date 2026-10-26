@@ -15,6 +15,35 @@ Item {
     property real accentOpacity
     default property alias content: holder.data
 
+    clip: !floating
+
+    Behavior on fill { ColorAnimation { duration: Tokens.durSlow } }
+    Behavior on stroke { ColorAnimation { duration: Tokens.durSlow } }
+
+    Rectangle {
+        x: 0
+        y: shape.floating ? 0 : -shape.cornerRadius
+        width: shape.width
+        height: shape.height + (shape.floating ? 0 : shape.cornerRadius)
+        radius: shape.cornerRadius
+        color: shape.fill
+        border.width: shape.strokeWidth
+        border.color: shape.stroke
+    }
+
+    // The signal line: the one place the island shows colour by itself, and only while something is serious.
+    Rectangle {
+        visible: IslandLook.accentLine
+        anchors { bottom: parent.bottom; horizontalCenter: parent.horizontalCenter }
+        width: Math.max(0, parent.width - 2 * shape.cornerRadius)
+        height: 2
+        radius: 1
+        color: shape.accent
+        opacity: shape.accentOpacity
+        Behavior on color { ColorAnimation { duration: Tokens.durFast } }
+        Behavior on opacity { NumberAnimation { duration: Tokens.durFast } }
+    }
+
     Item {
         id: holder
         anchors.fill: parent

@@ -56,8 +56,7 @@ PanelWindow {
     visible: isOpen || appear > 0.001
     anchors { top: true; bottom: true; left: true; right: true }
     // qmllint disable unqualified unresolved-type
-    // TODO(phase 7, Island): start below Tokens.topInset (the island's rest height plus its gap), not below barHeight.
-    margins { top: Tokens.barHeight }
+    margins { top: Tokens.topInset }
     // qmllint enable unqualified unresolved-type
     color: "transparent"
     exclusionMode: ExclusionMode.Ignore

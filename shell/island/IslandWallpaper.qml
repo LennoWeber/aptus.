@@ -1,3 +1,4 @@
+pragma ComponentBehavior: Bound
 import QtQuick
 import qs.models
 import qs.theme
@@ -10,7 +11,7 @@ FocusScope {
     id: wall
 
     property int selectedIndex
-    property real reveal       // 0..1, how far the cards have come out of the island
+    property real reveal: active ? 1 : 0      // 0..1, how far the cards have come out of the island
     property bool active       // the view is the one shown
     property color ink
     property color inkSoft
@@ -22,24 +23,128 @@ FocusScope {
     readonly property int visibleSide: 3
     readonly property int cardWidth: 200
     readonly property int cardHeight: 112
+    readonly property var pictures: Wallpaper.list
+
+    Behavior on reveal { NumberAnimation { duration: 520; easing.type: Easing.BezierSpline; easing.bezierCurve: [0.2, 0, 0, 1, 1, 1] } }
 
     // Move the middle card by delta pictures.
     function step(delta: int): void {
-        throw new Error("not implemented")
+        if (pictures.length === 0) return
+        selectedIndex = Math.max(0, Math.min(pictures.length - 1, selectedIndex + delta))
     }
 
     // Set the middle picture as wallpaper.
     function activateSelected(): void {
-        throw new Error("not implemented")
+        if (pictures.length === 0) return
+        Wallpaper.setWallpaper(pictures[selectedIndex].path)
     }
 
     // Scan the folder and start the reveal when the view is shown.
     function show(): void {
-        throw new Error("not implemented")
+        Wallpaper.scan()
+        const i = pictures.findIndex(p => p.path === Wallpaper.current)
+        selectedIndex = Math.max(0, i)
+        forceActiveFocus()
     }
 
     // Take the cards back when the view is left.
     function hide(): void {
-        throw new Error("not implemented")
+    }
+
+    Connections {
+        target: Wallpaper
+        function onListChanged() {
+            const i = wall.pictures.findIndex(p => p.path === Wallpaper.current)
+            wall.selectedIndex = Math.max(0, i)
+        }
+    }
+
+    Keys.onPressed: event => {
+        if (event.key === Qt.Key_Left) { step(-1); event.accepted = true }
+        else if (event.key === Qt.Key_Right) { step(1); event.accepted = true }
+        else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) { activateSelected(); closeRequested(); event.accepted = true }
+        else if (event.key === Qt.Key_Space) { activateSelected(); event.accepted = true }
+    }
+
+    WheelHandler {
+        acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+        onWheel: event => wall.step(event.angleDelta.y < 0 || event.angleDelta.x < 0 ? 1 : -1)
+    }
+
+    Repeater {
+        // Seven slots around the middle; the picture of a slot is selectedIndex + offset.
+        model: wall.visibleSide * 2 + 1
+        delegate: Item {
+            id: slot
+            required property int index
+            readonly property int offset: index - wall.visibleSide
+            readonly property int pictureIndex: wall.selectedIndex + offset
+            readonly property bool valid: pictureIndex >= 0 && pictureIndex < wall.pictures.length
+            // The cards leave the island from the middle, the near ones first.
+            readonly property real p: Math.max(0, Math.min(1, (wall.reveal - Math.abs(offset) * 0.09) / (1 - wall.visibleSide * 0.09)))
+            readonly property bool isMiddle: offset === 0
+            visible: valid && p > 0.01
+            width: wall.cardWidth
+            height: wall.cardHeight
+            x: wall.width / 2 - width / 2 + offset * (wall.cardWidth + 16) * p
+            y: 18 + (1 - p) * -40
+            scale: (isMiddle ? 1.12 : 0.9) * (0.35 + 0.65 * p)
+            opacity: p * (1 - Math.abs(offset) * 0.16)
+            z: 10 - Math.abs(offset)
+            Behavior on x { NumberAnimation { duration: 240; easing.type: Easing.BezierSpline; easing.bezierCurve: [0.2, 0, 0, 1, 1, 1] } }
+            Behavior on scale { NumberAnimation { duration: 240; easing.type: Easing.BezierSpline; easing.bezierCurve: [0.2, 0, 0, 1, 1, 1] } }
+
+            Rectangle {
+                anchors.fill: parent
+                radius: 14
+                color: wall.line
+                clip: true
+                border.width: slot.isMiddle ? 2 : 1
+                border.color: slot.isMiddle ? wall.ink : wall.line
+                Image {
+                    anchors.fill: parent
+                    anchors.margins: 0
+                    source: slot.valid ? "file://" + wall.pictures[slot.pictureIndex].path : ""
+                    sourceSize.width: 400
+                    sourceSize.height: 225
+                    fillMode: Image.PreserveAspectCrop
+                    asynchronous: true
+                    cache: true
+                }
+                // current wallpaper: a small ink dot
+                Rectangle {
+                    visible: slot.valid && wall.pictures[slot.pictureIndex].path === Wallpaper.current
+                    anchors { right: parent.right; top: parent.top; margins: 8 }
+                    width: 10
+                    height: 10
+                    radius: 5
+                    color: Tokens.ok
+                    border.width: 2
+                    border.color: Tokens.surface
+                }
+            }
+            MouseArea {
+                anchors.fill: parent
+                onClicked: {
+                    if (slot.isMiddle) wall.activateSelected()
+                    else wall.selectedIndex = slot.pictureIndex
+                }
+            }
+        }
+    }
+
+    Label {
+        visible: wall.pictures.length > 0
+        anchors { horizontalCenter: parent.horizontalCenter; bottom: parent.bottom; bottomMargin: 14 }
+        text: wall.pictures.length > 0 && wall.selectedIndex < wall.pictures.length ? wall.pictures[wall.selectedIndex].name : ""
+        role: Enums.TextRole.Bar
+        color: wall.inkSoft
+        opacity: wall.reveal
+    }
+    Label {
+        visible: wall.pictures.length === 0
+        anchors.centerIn: parent
+        text: "No pictures in " + Wallpaper.folder
+        color: wall.inkSoft
     }
 }

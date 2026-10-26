@@ -28,8 +28,7 @@ PanelWindow {
     }
     // qmllint disable unqualified unresolved-type
     margins {
-        // TODO(phase 7, Island): Tokens.topInset + 8 instead of barHeight + 8.
-        top: Tokens.barHeight + 8
+        top: Tokens.topInset + 8
         right: 12
         left: 12
     }
