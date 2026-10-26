@@ -16,3 +16,6 @@ IslandWallpaper 1.0 IslandWallpaper.qml
 LevelBars 1.0 LevelBars.qml
 IslandSlider 1.0 IslandSlider.qml
 IslandToggle 1.0 IslandToggle.qml
+IslandWifi 1.0 IslandWifi.qml
+IslandBluetooth 1.0 IslandBluetooth.qml
+IslandQuickActions 1.0 IslandQuickActions.qml

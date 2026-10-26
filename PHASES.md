@@ -1016,3 +1016,10 @@ Arbeitsregel wie beim vierten Ablauf: nie auf „weiter“ warten, jede Phase pr
 
 ### Protokoll Island-Blasen
 **Phase 1 (Plan), erledigt:** Code gelesen (`IslandState`, `Island`, `IslandHost`, `IslandHover`, `IslandRest`, `WorkspaceStrip`, `NetworkState`, `NetworkDropdown`, `BluetoothState`). Ursache der trägen Reaktion ist messbar angelegt: 280 ms Hover-Verzögerung plus 260 ms Wachstum, Inhalt erst danach. Kein Code, kein Review in dieser Phase.
+
+**Phase 2 (Strukturen), erledigt:**
+- Neu (nur Properties und Signale, keine Logik): `components/WorkspaceBubbles.qml`, `island/IslandWifi.qml`, `island/IslandBluetooth.qml`, `island/IslandQuickActions.qml`, je mit Eintrag im `qmldir`.
+- Erweitert: `IslandState` (`hoverInMs`, `hoverOutMs`, Signal `pinned`), `IslandHover` (`powerProfileState`, `expanded`, Signale `viewRequested`, `sectionToggled`), `Island` (`powerProfileState`, `hoverGrowMs`), `IslandHost` (`powerProfileState`), Kommentar an `WorkspaceStrip.style` (2 = Blasen).
+- Daten: Option `bubbles` im Schema, Standard `bar.workspaceStyle` jetzt `bubbles` (die Leiste kennt den Wert noch nicht und zeigt bis Phase 7 Nummern, weil `Bar.qml` alles außer `dots` als Nummern liest).
+- Abweichung vom Plan: Werte (90/220 ms, 180 ms, Blasengrößen, Zeilenzahl) stehen hier nicht, sondern kommen als Konstanten in Phase 3. Plan nannte `IslandWifi.shown` und `passwordFor` als Properties, beides vorhanden.
+- Prüfung: Diff gelesen; keine Funktion, kein Pfeil-Ausdruck, kein Timer, keine Verdrahtung in den neuen Dateien (grep leer); JSON validiert; nicht gebaut.

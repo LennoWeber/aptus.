@@ -1,0 +1,20 @@
+import QtQuick
+import qs.models
+import qs.theme
+import qs.components
+
+// The Bluetooth section of the hover card: the known and nearby devices, a tap connects or disconnects.
+// Discovery runs only while the section is shown.
+FocusScope {
+    id: bluetooth
+
+    property var bluetoothState
+    property bool shown                 // true while the section is open: discovery only then
+    property int maxRows
+    property color ink
+    property color inkSoft
+    property color line
+    property color fill
+
+    signal closeRequested()
+}

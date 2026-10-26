@@ -19,6 +19,8 @@ Item {
     property var caffeineState
     property var focusState
     property var mediaState
+    property var powerProfileState
+    property string expanded         // the open section: "", "wifi" or "bluetooth"; at most one
     property color ink
     property color inkSoft
     property color line
@@ -26,6 +28,8 @@ Item {
 
     signal tileRequested(int tileId)
     signal controlCenterRequested()
+    signal viewRequested(int view)      // Enums.IslandView: a shortcut opens a view of the island
+    signal sectionToggled(string name)  // a section was opened or closed (the island pins itself for the keyboard)
 
     implicitHeight: column.implicitHeight + 20
 

@@ -28,6 +28,7 @@ PanelWindow {
     property var captureState
     property var displayState
     property var weatherState
+    property var powerProfileState
     property var workspaces
     property string windowTitle
     property bool slidOut
@@ -78,6 +79,7 @@ PanelWindow {
     signal launcherRequested()
 
     // Sizes of the body (px) for each stage and view; Home and Hover take the height of their content.
+    property int hoverGrowMs                 // ms: the body grows to the hover card in this time (the other sizes take Tokens.durSlow)
     readonly property real alertWidth: 380
     readonly property real alertHeight: 38
     readonly property real hoverWidth: design === "shade" ? 440 : 380

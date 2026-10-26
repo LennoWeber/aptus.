@@ -37,7 +37,7 @@
     { "id": "bar.clockFormat", "category": "bar", "title": "Clock format", "kind": "choice", "path": "bar.clockFormat", "options": ["24h", "12h"], "advanced": false, "keywords": ["time"] },
     { "id": "bar.showSeconds", "category": "bar", "title": "Show seconds", "kind": "toggle", "path": "bar.showSeconds", "advanced": false, "keywords": ["clock"] },
     { "id": "bar.showDate", "category": "bar", "title": "Show date", "kind": "toggle", "path": "bar.showDate", "advanced": false, "keywords": ["clock", "date"] },
-    { "id": "bar.workspaceStyle", "category": "bar", "title": "Workspace style", "kind": "choice", "path": "bar.workspaceStyle", "options": ["numbers", "dots"], "advanced": false, "keywords": ["workspaces"] },
+    { "id": "bar.workspaceStyle", "category": "bar", "title": "Workspace style", "kind": "choice", "path": "bar.workspaceStyle", "options": ["numbers", "dots", "bubbles"], "advanced": false, "keywords": ["workspaces"] },
     { "id": "bar.showBatteryPercent", "category": "bar", "title": "Show battery percentage", "kind": "toggle", "path": "bar.showBatteryPercent", "advanced": false, "keywords": ["battery"] },
     { "id": "bar.contextZoneEnabled", "category": "bar", "title": "Context zone", "description": "Shows the window title, music, timers and alerts in the middle of the bar.", "kind": "toggle", "path": "bar.contextZoneEnabled", "advanced": false, "keywords": ["title", "center"] },
     { "id": "dock.enabled", "category": "bar", "title": "Dock", "description": "A dock at the bottom edge with pinned apps and open windows. Works with the bar and with the notch. Right-click or long-press an app to pin it.", "kind": "toggle", "path": "dock.enabled", "advanced": false, "keywords": ["dock", "apps", "taskbar"] },

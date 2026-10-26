@@ -29,9 +29,14 @@ Scope {
 
     property string pendingHoverScreen: ""
 
+    // How long the pointer rests on the island before the hover card shows, and how long it must be away before the card goes.
+    property int hoverInMs
+    property int hoverOutMs
+
     signal alertShown(var alert)
     signal opened(string screenName, int view)
     signal closed()
+    signal pinned(string screenName)     // the hover card became the opened island (keyboard focus for the password field)
 
     // Open the island on a screen, showing view (Enums.IslandView). Does nothing while the bar is shown.
     function open(screenName: string, view: int): void {

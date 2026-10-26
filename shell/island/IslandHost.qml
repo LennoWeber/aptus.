@@ -24,6 +24,7 @@ Scope {
     property var captureState
     property var displayState
     property var weatherState
+    property var powerProfileState
     property var workspaces         // from Compositor.workspaceList
     property string windowTitle     // from Compositor.activeTitle
     property bool slidOut           // tablet mode: the island leaves like the bar does

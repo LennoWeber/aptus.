@@ -16,7 +16,7 @@
     "clockFormat": "24h",
     "showSeconds": false,
     "showDate": true,
-    "workspaceStyle": "numbers",
+    "workspaceStyle": "bubbles",
     "showBatteryPercent": true,
     "contextZoneEnabled": true
   },
