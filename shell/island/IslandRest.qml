@@ -38,6 +38,10 @@ Item {
     property color ink
     property color inkSoft
     property bool monoClock
+    property real cornerRadius      // of the body, the cover strip follows it
+    // TODO(phase 7, alerts): coverStrip = wingMedia and not recording and a cover URL and design is not shade; stripWidth = IslandLook.restHeight or 0, animated.
+    property bool coverStrip        // music plays and has a cover: it shows as a strip over the full height
+    property real stripWidth        // width the strip takes at the left edge (0 without)
 
     property bool playing: mediaState ? mediaState.available && mediaState.playing : false
     // The wings stay a few seconds after a pause.
@@ -55,6 +59,7 @@ Item {
         default: return 560
         }
     }
+    // TODO(phase 7, alerts): pill width: add 2 * stripWidth so the clock stays centred.
     readonly property real pillSide: Math.max(pillLeft.implicitWidth, pillRight.implicitWidth)
 
     signal workspaceClicked(int workspaceId)
@@ -115,6 +120,11 @@ Item {
             fillMode: Image.PreserveAspectCrop
             asynchronous: true
         }
+    }
+
+    // The cover as a strip from the top to the bottom of the island, at its left edge.
+    // TODO(phase 7, alerts): the strip: fixed size IslandLook.restHeight, the picture masked to the body corners (one Rectangle with per-corner radii, layer + MultiEffect), a gradient into the body colour at its right, fades in with coverStrip.
+    component CoverStrip: Item {
     }
 
     component RecDot: Rectangle {
@@ -187,9 +197,11 @@ Item {
         anchors.fill: parent
 
         Row {
+            // TODO(phase 7, alerts): capsule: CoverStrip as first child, content starts at 12 + stripWidth.
             anchors { left: parent.left; leftMargin: 12; verticalCenter: parent.verticalCenter }
             spacing: 8
             WorkspaceNumbers { visible: rest.showWorkspaces; anchors.verticalCenter: parent.verticalCenter }
+            // TODO(phase 7, alerts): hidden while the strip shows (coverStrip).
             Cover { visible: rest.wingMedia && !rest.recording; anchors.verticalCenter: parent.verticalCenter }
             RecDot { visible: rest.recording || (!rest.wingMedia && rest.timerRunning); anchors.verticalCenter: parent.verticalCenter }
             Label {
@@ -257,6 +269,7 @@ Item {
         // Workspace pips: the active one is a long pill.
         Row {
             id: pillLeft
+            // TODO(phase 7, alerts): pill: CoverStrip as first child, content starts at 18 + stripWidth.
             anchors { left: parent.left; leftMargin: 18; verticalCenter: parent.verticalCenter }
             spacing: 5
             Repeater {
@@ -297,6 +310,7 @@ Item {
             id: pillRight
             anchors { right: parent.right; rightMargin: 18; verticalCenter: parent.verticalCenter }
             spacing: 8
+            // TODO(phase 7, alerts): hidden while the strip shows (coverStrip).
             Cover { visible: rest.wingMedia && !rest.recording; anchors.verticalCenter: parent.verticalCenter }
             LevelBars { visible: rest.wingMedia && !rest.recording; anchors.verticalCenter: parent.verticalCenter; running: rest.playing; color: rest.ink }
             RecDot { visible: rest.recording || (!rest.wingMedia && rest.timerRunning); anchors.verticalCenter: parent.verticalCenter }
@@ -342,6 +356,7 @@ Item {
         }
 
         Row {
+            // TODO(phase 7, alerts): ticker: CoverStrip as first child, content starts at 12 + stripWidth.
             anchors { left: parent.left; leftMargin: 12; verticalCenter: parent.verticalCenter }
             visible: rest.showWorkspaces
             WorkspaceNumbers { }

@@ -7,10 +7,21 @@ import qs.components
 Item {
     id: alertView
 
-    property var alert        // { text, detail, severity }
+    property var alert        // see IslandState.alert
+    property var mediaState
     property color ink
     property color inkSoft
+    property color line
+    property color accent
+    property real cardWidth            // width of the card (px)
+    property bool isCard               // the alert is not Plain: the card shows
+    // TODO(phase 7, alerts): isCard = alert is not Plain; cardHeight = the card's implicitHeight (Island sizes the body from it).
+    property real cardHeight           // what the card wants, Island reads it to size the body
+
     signal clicked()
+    signal dismissed()
+    signal actionInvoked(string actionId)
+    signal hoverChanged(bool hovered)
 
     // TODO(phase 7, alerts): show AlertCard for every kind but Plain; Plain keeps this row.
     Row {

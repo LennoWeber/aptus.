@@ -72,6 +72,12 @@ Scope {
         islandState.pushAlert("playback", m.playing ? "Playing" : "Paused", m.title, Enums.Severity.Neutral, Enums.TileId.Media)
     }
 
+    // The track alert that is shown (or waits) gets the current cover and app icon.
+    // TODO(phase 7, alerts): push the shown track alert again with mediaData(m, "cover") when its id is "track".
+    function refreshTrackAlert(): void {
+        throw new Error("not implemented")
+    }
+
     // The launcher or the control center takes the stage (ShellState): tell IslandState where to morph to.
     function followShellState(): void {
         const s = shellState
@@ -128,6 +134,7 @@ Scope {
         }
     }
 
+    // TODO(phase 7, alerts): Connections for artUrl and appIcon of the media state: refreshTrackAlert (the cover arrives after the title).
     Variants {
         model: Quickshell.screens
 

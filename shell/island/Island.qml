@@ -59,6 +59,9 @@ PanelWindow {
     readonly property int openGrowMs: 240   // ms: the body grows to an opened view in this time
     property bool homeWithCard: isOpen && view === Enums.IslandView.Home && cardStyle
     property bool isAlert: stage === Enums.IslandStage.Alert
+    // TODO(phase 7, alerts): cardAlert = isAlert and the alert is not Plain; alertAccent = the severity colour, else fg.
+    property bool cardAlert              // the shown alert has a card (not Plain): the body grows to it
+    property color alertAccent           // colour of a card's progress, state text and symbol
     property bool isOsd: stage === Enums.IslandStage.Osd   // the on-screen indicator shows
     onByHoverChanged: if (byHover && !isOpen) throw new Error("invariant: Island: byHover while not open")
     property bool byHover: isOpen && islandState && islandState.openedByHover   // opened by the pointer: no focus grab, no keyboard yet
@@ -207,7 +210,6 @@ PanelWindow {
         fill: win.openLike ? IslandLook.fillOpen : win.design === "shade" && !win.isAlert ? IslandLook.inkRest : IslandLook.fillRest
         stroke: win.openLike ? IslandLook.strokeOpen : IslandLook.strokeRest
         strokeWidth: win.openLike ? IslandLook.strokeWidthOpen : IslandLook.strokeWidthRest
-        // TODO(phase 7, alerts): the signal line stays only for Warn and Critical; a card shows its accent inside.
         accent: win.isAlert && win.islandState && win.islandState.alert && win.islandState.alert.severity !== Enums.Severity.Neutral ? Tokens.colorFor(win.islandState.alert.severity) : win.hairline
         accentOpacity: win.isAlert ? 1 : 0.5
         opacity: 1 - win.morphProgress
@@ -222,6 +224,7 @@ PanelWindow {
             anchors.fill: parent
             opacity: !win.isAlert && !win.isOsd && win.design !== "shade" ? win.restFade : 0
             visible: opacity > 0.01
+            // TODO(phase 7, alerts): pass cornerRadius: body.cornerRadius to the rest view (the cover strip takes the body's corners).
             design: win.design
             mediaState: win.mediaState
             timerState: win.timerState
@@ -266,6 +269,7 @@ PanelWindow {
         }
 
         // TODO(phase 7, alerts): pass mediaState and the accent, route the dismiss and action signals (Notifications.invoke), keep the tile click.
+        // TODO(phase 7, alerts): pause the hold while the pointer is on the card (islandState.pauseAlert); the card shows a moment after the body started to grow.
         IslandAlert {
             anchors.fill: parent
             opacity: win.isAlert ? 1 : 0

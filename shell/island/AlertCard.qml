@@ -19,6 +19,15 @@ Item {
     property bool hasImage               // the alert has a cover or a picture
     property bool hasProgress            // the alert has a progress bar (a download, a track)
     property bool hasActions             // the alert has action buttons
+    property bool isMedia                // a track
+    property bool playing                // a track plays (live from the player, else from the alert)
+    property real progressValue          // 0..1, -1 = none (a track follows the player)
+    property real badgeSize              // side of the badge or cover (px)
+    property real textX                  // where the text column starts
+    property real sideWidth              // room on the right for the player buttons or the dismiss button
+    property string stateText            // "Now playing", "New mail", "Download complete" ...
+    property string detailText           // artist and album, or the text
+    property string glyphKind            // StatusGlyph kind for the badge when there is no cover and no app icon
 
     // Name of the app in capitals for the header line ("SPOTIFY"), "" when the alert has none.
     function appLabel(): string {
@@ -34,4 +43,5 @@ Item {
     signal dismissed()
     signal activated()
     signal actionInvoked(string actionId)
+    signal hoverChanged(bool hovered)   // the pointer is on the card (the alert stays while it is)
 }

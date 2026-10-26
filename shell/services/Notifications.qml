@@ -6,7 +6,7 @@ import qs.models
 
 // Notification server and history. Only ONE shell may own the D-Bus name org.freedesktop.Notifications;
 // shell-switch stops the other shell first and checks the name after the start.
-// Items are plain objects: { id, appName, summary, body, icon, image, urgency, severity, timestamp, actions, read }.
+// Items are plain objects: { id, appName, summary, body, icon, desktopEntry, image, urgency, severity, timestamp, actions, read }.
 Singleton {
     id: root
 

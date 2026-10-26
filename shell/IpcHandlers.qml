@@ -206,7 +206,6 @@ Scope {
         // Hardware keys. The shell shows the OSD and does the change (instant feedback).
         function brightnessUp(): void {
             root.displayState.changeBrightness(0.05)
-            // TODO(phase 7, alerts): pass the device name as fifth argument (audioState.outputName / inputName, display name).
             root.osd.flash(Enums.OsdKind.Brightness, root.displayState.brightness, false, "")
         }
         function brightnessDown(): void {

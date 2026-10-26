@@ -5,7 +5,7 @@ import qs.theme
 Canvas {
     id: glyph
 
-    property string kind: "volume"   // wifi | bluetooth | volume | mic | moon | play | pause | next | prev | cup | back | open | sliders | rotate | tablet | lock | logout | restart | power | focus | shield | hotspot | capture | sun | cloud | partly | rain | snow | storm | fog
+    property string kind: "volume"   // wifi | bluetooth | volume | mic | moon | play | pause | next | prev | cup | back | open | sliders | rotate | tablet | lock | logout | restart | power | focus | shield | hotspot | capture | mail | download | bell | timer | battery | sun | cloud | partly | rain | snow | storm | fog
     property real level: 1           // volume: 0..1, drives the number of waves
     property bool muted
     property color color: Tokens.ink
@@ -206,6 +206,7 @@ Canvas {
             ctx.arc(8, 8.5, 5, -Math.PI * 0.32, Math.PI * 1.32, false)
             ctx.moveTo(8, 2); ctx.lineTo(8, 8)
             ctx.stroke()
+        // TODO(phase 7, alerts): draw the kinds mail, download, bell, timer and battery (16 px grid, 1.5 px stroke like the others).
         } else if (kind === "moon") {
             // A crescent from two arcs, drawn on a 24 px grid and scaled down.
             const rad = d => d * Math.PI / 180

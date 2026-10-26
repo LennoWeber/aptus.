@@ -155,6 +155,12 @@ Scope {
         throw new Error("not implemented")
     }
 
+    // The pointer is on the alert card: it stays while paused is true, and goes a moment after the pointer left.
+    // TODO(phase 7, alerts): stop the hold while paused; when it is released, a short last hold (at most 1.8 s).
+    function pauseAlert(paused: bool): void {
+        throw new Error("not implemented")
+    }
+
     function dismissAlert(): void {
         hold.stop()
         if (queue.length > 0) {
@@ -168,7 +174,6 @@ Scope {
     }
 
     // Show an alert on the pill (an alert is: id, text, detail, severity, tileId, holdMs).
-    // TODO(phase 7, alerts): the hold time of a card alert comes from the alert (holdMs), a card with actions stays longer.
     function show(a: var): void {
         alert = a
         if (stage !== Enums.IslandStage.Open && stage !== Enums.IslandStage.Osd) {
