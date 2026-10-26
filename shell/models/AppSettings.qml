@@ -92,6 +92,12 @@ Scope {
     }
 
 
+    // Rename values that older versions saved (island.design "ninja" is now "pill") in the tree read from the user's file.
+    // Returns the tree with the old values replaced.
+    function migrateValues(tree: var): var {
+        throw new Error("not implemented")
+    }
+
     // Copy the typed properties from the settings tree. Called after load() and every set().
     function refreshViews(): void {
         const mode = { apps: Enums.LauncherMode.Apps, web: Enums.LauncherMode.Web, settings: Enums.LauncherMode.Settings, ai: Enums.LauncherMode.Ai, clipboard: Enums.LauncherMode.Clipboard }

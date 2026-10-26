@@ -3,6 +3,18 @@
 -- so a settings change can rewrite and reload it.
 -- Monitor, input and touch settings stay in the user's own file.
 
+-- Window transparency and blur (values for the window look; applied below once the look is wired in).
+local windowLook = {
+	activeOpacity = 0.92,
+	inactiveOpacity = 0.85,
+	blurSize = 10,
+	blurPasses = 4,
+	blurBrightness = 0.9,
+	blurContrast = 0.9,
+	blurVibrancy = 0.2,
+	blurNoise = 0.02,
+}
+
 hl.config({
 	general = {
 		gaps_in = 4,

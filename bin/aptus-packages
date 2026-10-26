@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+# List and check the packages aptus needs, and print the install command. It never installs anything.
+#
+#   aptus-packages list [GROUP...]      print the package names of the groups (default: required session backup)
+#   aptus-packages missing [GROUP...]   print the ones rpm does not know
+#   aptus-packages command [GROUP...]   print the sudo dnf command for the missing ones
+#   aptus-packages check                report what is installed and what is missing, per group
+
+set -u
+
+ROOT="$(dirname "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")")"
+LIST_FILE="$ROOT/packages/aptus-dnf.txt"
+DEFAULT_GROUPS=(required session backup)
+
+# print the package names of the given groups from LIST_FILE.
+list_packages() {
+    echo "aptus-packages: list_packages not implemented" >&2
+    return 1
+}
+
+# the names from list_packages that rpm -q does not find.
+missing_packages() {
+    echo "aptus-packages: missing_packages not implemented" >&2
+    return 1
+}
+
+# print "sudo dnf install -y ..." for the missing packages, or say that nothing is missing.
+install_command() {
+    echo "aptus-packages: install_command not implemented" >&2
+    return 1
+}
+
+# per group, the installed and the missing packages.
+check_all() {
+    echo "aptus-packages: check_all not implemented" >&2
+    return 1
+}
+
+# dispatch the sub-commands (list, missing, command, check) and the usage text.
+main() {
+    echo "aptus-packages: not implemented" >&2
+    return 1
+}
+
+main "$@"
