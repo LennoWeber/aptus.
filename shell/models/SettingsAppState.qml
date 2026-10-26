@@ -84,6 +84,21 @@ Scope {
         })
     }
 
+    // Categories grouped for the sidebar, in schema order: [{ group, categories: [category] }].
+    function categoryGroups(): var {
+        throw new Error("not implemented")
+    }
+
+    // The category that is open, or undefined.
+    function activeCategory(): var {
+        throw new Error("not implemented")
+    }
+
+    // "Category › Section" of an entry, shown with search results.
+    function originOf(entry: var): string {
+        throw new Error("not implemented")
+    }
+
     // Search in title, description and keywords.
     function matches(entry: var, text: string): bool {
         const q = text.toLowerCase()

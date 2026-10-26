@@ -11,4 +11,29 @@ Column {
     property bool picking              // the list of installed apps is open
     property string filter             // text typed in the picker
     signal changed(var apps)           // the whole new list
+
+    // Installed, launchable apps as { id, name, icon }, sorted by name, without the ones already in the dock.
+    function installedApps(): var {
+        throw new Error("not implemented")
+    }
+
+    function nameOf(id: string): string {
+        throw new Error("not implemented")
+    }
+
+    function iconOf(id: string): string {
+        throw new Error("not implemented")
+    }
+
+    function shift(index: int, delta: int): void {
+        throw new Error("not implemented")
+    }
+
+    function removeAt(index: int): void {
+        throw new Error("not implemented")
+    }
+
+    function addApp(id: string): void {
+        throw new Error("not implemented")
+    }
 }

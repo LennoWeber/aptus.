@@ -60,6 +60,21 @@ PanelWindow {
         return list
     }
 
+    // Zoom factor (1 .. 1.6) of an icon whose centre is at `centerX` along the dock, from the pointer distance.
+    function zoomAt(centerX: real): real {
+        throw new Error("not implemented")
+    }
+
+    // True if a thin divider belongs before entries[index]: the first app that is not kept in the dock.
+    function dividerBefore(index: int): bool {
+        throw new Error("not implemented")
+    }
+
+    // Remember that `it` was started, so its icon bounces until a window shows up or a moment has passed.
+    function markLaunching(it: var): void {
+        throw new Error("not implemented")
+    }
+
     function activate(it: var): void {
         if (it.windows.length === 0) {
             if (it.entry) it.entry.execute()

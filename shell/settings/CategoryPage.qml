@@ -21,6 +21,11 @@ Item {
         return (entry.options || []).map(o => ({ id: o, label: o }))
     }
 
+    // True if shown[index] opens a new section (a different section than the entry before it).
+    function startsSection(index: int): bool {
+        throw new Error("not implemented")
+    }
+
     Flickable {
         id: flick
         anchors.fill: parent
