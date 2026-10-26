@@ -78,6 +78,11 @@ PanelWindow {
         throw new Error("not implemented")
     }
 
+    // Centre of entries[index] from the middle of the dock when nothing is zoomed.
+    function restCentre(index: int): real {
+        throw new Error("not implemented")
+    }
+
     // Remember that `it` was started, so its icon bounces until a window shows up or a moment has passed.
     function markLaunching(it: var): void {
         throw new Error("not implemented")
