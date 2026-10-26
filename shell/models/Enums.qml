@@ -72,4 +72,7 @@ QtObject {
 
     // Colour of the top bar (settings bar.tone: "offwhite" | "tinted").
     enum BarTone { OffWhite, Tinted }
+
+    // The three stages of the notch: a small pill at rest, one line of news, the opened sheet.
+    enum NotchStage { Rest, Alert, Open }
 }

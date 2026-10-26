@@ -10,6 +10,7 @@ Item {
 
     property var workspaces: []  // list of { id, name, active, urgent, occupied }
     property int style: 0        // 0 numbers, 1 dots
+    property int itemHeight: Tokens.barHeight  // the bar's height; the notch's sheet uses 40 for touch
     signal workspaceClicked(int workspaceId)
 
     readonly property int cellWidth: 24

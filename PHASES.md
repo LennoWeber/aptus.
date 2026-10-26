@@ -818,3 +818,14 @@ Alle Bausteine 1 bis 9 aus dem Handoff sind gebaut. Alltagsgebrauch auf dem Lapt
 Entwurf (nur Warm-Palette, Off-white verworfen): Leiste mit Claude-Usage-Ring, Launcher mit gleitender Modus-Anzeige und gestaffelten Zeilen, Control Center mit gestaffeltem Auftritt, Hover-Anheben, Ink-Kacheln für Schalter und Öffnen-Pfeil, Detailansichten (Network, Calendar, Media, AI usage) füllen die ganze Fläche ohne leere Bereiche.
 - **Abschnitt R1 (Control Center, gebaut, nicht auf dem Laptop getestet, kein qmllint in der Cloud-Umgebung):** `Tile.qml` (Auftritt mit Stagger `Tokens.staggerMs`, Hover-Anheben `Tokens.tileLift` = 3 px, Druck-Skalierung, Ink-Füllung bei `active`, Öffnen-Pfeil bei Hover), `StatusGlyph` neue Form `open`, Caffeine/Focus auf Ink mit grünem Punkt, `DetailFrame` (Zurück-Pille, größerer Radius), `radiusTile` 18.
 - **Offen:** R2 Leiste mit Usage-Icon und Dropdown, R3 Launcher (Pille, Stagger, Öffnen), R4 Detailansichten auf voller Fläche (Network, Calendar, Media, AI usage; `detailWidth/Height` in `ControlCenter.qml` erst dann vergrößern).
+
+## Notch und Dock: Stand (22. Okt., Branch `notch`)
+- Auf Lennos Wunsch (aptus-Palette, Dock mit angehefteten und laufenden Apps, zwei getrennte Schalter) in einem Zug gebaut, ohne Probe-Phase. **Auf dem Laptop noch nicht getestet** (hier gibt es kein Quickshell und kein qmllint).
+- Notch: `shell/notch/*`, Zustand `models/NotchState.qml`, Laden über Loader in `shell.qml` (Leiste bleibt Rückfall bei Ladefehler). Einstellungen `bar.style`, `notch.*`. IPC `notchToggle`, `notchOpen`.
+- Dock: `shell/dock/*`, Einstellungen `dock.enabled` (aus), `dock.autoHide`, `dock.iconSize`, `dock.pinned` (Rechtsklick/langes Drücken auf eine App).
+- Offen: Lint auf dem Laptop, Dropdown-Position aus dem Notch-Sheet, Mehrmonitor, Doppelanzeige von Benachrichtigung (Popup + Notch), Look-B-Feinschliff, Hover-Öffnen.
+
+## Merge von `notch` und `redesign/warm-ui` in `main` (26. Okt.)
+- Beide Branches in `main` gemerged. Konflikte in `Enums.qml`, `settings-schema.json` und `PHASES.md`: jeweils beide Seiten behalten.
+- `DropdownHost.openAt`: Default-Parameter (`offsetX: real = 0`) aus dem Notch-Branch läuft in diesem Quickshell nicht ("Type annotations are not supported"); Wert wird jetzt im Körper mit `(offsetX || 0)` abgefangen.
+- Geprüft: Shell startet ohne Fehler und Warnungen. **Nicht geprüft:** `qmllint` ist auf diesem Rechner nicht installiert (`aptus-lint.sh` meldet deshalb nichts); Notch und Dock am Gerät noch nicht ausprobiert.

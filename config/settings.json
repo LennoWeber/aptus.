@@ -10,6 +10,7 @@
     "style": "watercolor"
   },
   "bar": {
+    "style": "bar",
     "height": 28,
     "tone": "offwhite",
     "clockFormat": "24h",
@@ -18,6 +19,20 @@
     "workspaceStyle": "numbers",
     "showBatteryPercent": true,
     "contextZoneEnabled": true
+  },
+  "dock": {
+    "enabled": false,
+    "autoHide": true,
+    "iconSize": 44,
+    "pinned": ["org.gnome.Nautilus", "firefox", "org.gnome.Ptyxis", "org.gnome.Settings"]
+  },
+  "notch": {
+    "look": "light",
+    "mediaWings": true,
+    "alerts": true,
+    "alertSeconds": 4,
+    "hoverOpen": false,
+    "reserveSpace": true
   },
   "launcher": {
     "defaultMode": "apps",

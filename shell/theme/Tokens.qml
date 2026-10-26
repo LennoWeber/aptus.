@@ -10,6 +10,9 @@ Singleton {
     id: root
     // bar
     readonly property int barHeight: 28
+    // Height of the strip at the top edge that windows must not cover and that dropdowns, panels and popups start
+    // below: the bar's height, or the notch's reserve. Set from shell.qml; barHeight stays the bar's own size.
+    property int topInset: barHeight
 
     // raw data of theme/tokens.json and the current day/night blend (0 day .. 1 night)
     property var palette             // { day: {...}, night: {...} }
