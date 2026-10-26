@@ -6,9 +6,6 @@ QtObject {
     // The three stages of the shell UI: dropdown -> control center -> detail.
     enum Stage { Closed, Dropdown, ControlCenter, Detail }
 
-    // Colour mode of shell and apps (setting appearance.colorMode): Auto is dark while the night light runs.
-    enum ColorMode { Light, Dark, Auto }
-
     // Modes of the launcher pill.
     enum LauncherMode { Apps, Web, Settings, Ai, Clipboard }
 
@@ -68,16 +65,10 @@ QtObject {
     // Screen edges (edge swipes).
     enum Edge { Top, Left, Right, Bottom }
 
-    // Where the shell colours come from (settings appearance.themeSource: "standard" | "fixed" | "wallpaper").
-    // Standard is the neutral palette of theme/tokens.json, Fixed the built-in colours of the chosen style,
-    // FromWallpaper the colours read from the picture. ("Neutral" is taken by Severity.)
-    enum ThemeSource { Standard, Fixed, FromWallpaper }
-
-    // How colours are softened (settings appearance.style: "watercolor" | "oil").
-    enum ThemeStyle { Watercolor, Oil }
-
-    // Colour of the top bar (settings bar.tone: "offwhite" | "tinted").
-    enum BarTone { OffWhite, Tinted }
+    // How the wallpaper is placed on the screen (setting wallpaper.fit: "fill" | "fit" | "stretch" | "center" | "tile").
+    // Fill covers the screen and crops, Fit shows the whole picture with bars in the theme colour, Stretch ignores the
+    // aspect ratio, Center keeps the picture's size, Tile repeats it.
+    enum WallpaperFit { Fill, Fit, Stretch, Center, Tile }
 
     // The stages of the island: a small pill at rest, one line of news, the on-screen indicator, the opened
     // island (its content is Enums.IslandView).

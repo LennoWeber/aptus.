@@ -1,19 +1,19 @@
 {
   "wallpaper": {
-    "directory": ""
+    "directory": "",
+    "fit": "fill"
   },
   "appearance": {
-    "colorMode": "light",
+    "theme": "light",
+    "wallpaperTone": "auto",
+    "loginWallpaper": true,
     "paletteFollowsNightLight": true,
     "blurRadius": 18,
-    "animationSpeed": "normal",
-    "themeSource": "standard",
-    "style": "watercolor"
+    "animationSpeed": "normal"
   },
   "bar": {
     "style": "bar",
     "height": 28,
-    "tone": "offwhite",
     "clockFormat": "24h",
     "showSeconds": false,
     "showDate": true,

@@ -1,6 +1,7 @@
 {
   "note": "System-wide settings for the aptus greeter. Lives in /etc/aptus/greeter.json because the greeter runs before any user session and cannot read a user's config.",
   "wallpaper": "",
+  "wallpaperFit": "fill",
   "blurRadius": 18,
   "showClock": true,
   "rememberLastUser": true,

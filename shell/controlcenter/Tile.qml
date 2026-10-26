@@ -31,7 +31,6 @@ Rectangle {
         NumberAnimation { target: tile; property: "appear"; to: 1; duration: Tokens.durSlow; easing.type: Easing.BezierSpline; easing.bezierCurve: [0.2, 0, 0, 1, 1, 1] }
     }
 
-    // TODO(phase 7, Bild-Theming): with a style the fill is one of Tokens.wash1..wash4 by tile position (for example (column + row) % 4); Standard keeps surface.
     color: active ? Tokens.ink : Tokens.surface
     Behavior on color { ColorAnimation { duration: Tokens.durFast } }
     radius: Tokens.radiusTile

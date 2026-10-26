@@ -16,6 +16,7 @@ QtObject {
     property var sessions: []           // { id, name, command }
     property string selectedSession
     property string wallpaper
+    property int wallpaperFit: Enums.WallpaperFit.Fill   // "wallpaperFit" of the config: fill | fit | stretch | center | tile
     property bool showClock: true
     property bool showPowerButtons: true
     property bool rememberLastUser: true
@@ -44,6 +45,9 @@ QtObject {
 
     function applyConfig(cfg: var): void {
         wallpaper = cfg.wallpaper || ""
+        // qs.theme imports qs.models, so the name is turned into the enum here and not by Tokens.fitFromName
+        const fits = { fill: Enums.WallpaperFit.Fill, fit: Enums.WallpaperFit.Fit, stretch: Enums.WallpaperFit.Stretch, center: Enums.WallpaperFit.Center, tile: Enums.WallpaperFit.Tile }
+        wallpaperFit = fits[cfg.wallpaperFit] ?? Enums.WallpaperFit.Fill
         showClock = cfg.showClock !== false
         showPowerButtons = cfg.showPowerButtons !== false
         rememberLastUser = cfg.rememberLastUser !== false

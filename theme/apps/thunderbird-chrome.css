@@ -50,8 +50,23 @@
   --layout-background-2: var(--aptus-alt) !important;
   --layout-color-1: var(--aptus-ink) !important;
   --layout-border-0: var(--aptus-line) !important;
-  --selected-item-color: var(--aptus-sel-fg) !important;
+  /* Thunderbird mixes --selected-item-color into row tints, so it is the accent (ink), the text on it is the ground */
+  --selected-item-color: var(--aptus-ink) !important;
+  --selected-item-text-color: var(--aptus-bg) !important;
   --selected-item-background-color: var(--aptus-sel-bg) !important;
+  /* left bar: the current space is a filled ink button */
+  --spaces-button-active-bg-color: var(--aptus-ink) !important;
+  --spaces-button-active-text-color: var(--aptus-bg) !important;
+  /* folder pane and lists: focused selection filled with ink, unfocused selection a visible band */
+  --listbox-focused-selected-bg: var(--aptus-ink) !important;
+  --listbox-focused-selected-color: var(--aptus-bg) !important;
+  --listbox-selected-bg: var(--aptus-line) !important;
+  --listbox-selected-color: var(--aptus-ink) !important;
+  --listbox-hover: var(--aptus-alt) !important;
+  --tree-card-background-selected: color-mix(in srgb, var(--aptus-ink) 14%, var(--aptus-surface)) !important;
+  --tree-card-background-selected-current: color-mix(in srgb, var(--aptus-ink) 22%, var(--aptus-surface)) !important;
+  --tree-card-background-current: color-mix(in srgb, var(--aptus-ink) 8%, var(--aptus-surface)) !important;
+  --tree-card-border-selected: var(--aptus-soft) !important;
   --focus-outline-color: var(--aptus-soft) !important;
 }
 

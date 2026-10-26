@@ -88,7 +88,7 @@ PanelWindow {
                 : Wallpaper.loginStatus === "done" ? "Login screen updated"
                 : Wallpaper.loginStatus === "failed" ? "Failed, try again"
                 : Wallpaper.current === "" ? "Remove login picture" : "Use for login screen"
-            onClicked: Wallpaper.setLoginWallpaper(Wallpaper.current)
+            onClicked: Wallpaper.setLoginWallpaper(Wallpaper.current, Wallpaper.fit)
         }
         Label {
             anchors { right: loginButton.visible ? loginButton.left : parent.right; rightMargin: loginButton.visible ? 16 : 24; verticalCenter: title.verticalCenter }

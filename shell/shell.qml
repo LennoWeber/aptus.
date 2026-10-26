@@ -15,6 +15,7 @@ import qs.touch
 import qs.session
 import qs.osk
 import qs.wallpaper
+import qs.themepicker
 import qs.dock
 import qs.theme
 
@@ -23,8 +24,6 @@ ShellRoot {
     id: root
 
     AppSettings { id: settingsObj }
-    // TODO(phase 7, Bild-Theming): when the theme settings, the wallpaper or Wallpaper.colors change: set Tokens.themeSource, themeStyle and barTone from
-    //     settingsObj, then call Tokens.refreshTheme(Wallpaper.colors.entries). Tokens cannot import the services itself.
     // The compositor draws the blur; the setting sets its size and passes (applied now and on every change).
     readonly property int blurSetting: settingsObj.get("appearance.blurRadius") ?? 18
     onBlurSettingChanged: applyBlur()
@@ -173,6 +172,9 @@ ShellRoot {
     }
 
     WallpaperPicker { id: wallpaperObj }
+    ThemePicker { id: themePickerObj; themeState: colorModeObj }
+    Binding { target: Wallpaper; property: "fit"; value: settingsObj.wallpaperFit }
+    Binding { target: Wallpaper; property: "loginSync"; value: settingsObj.loginWallpaper }
     Binding { target: Wallpaper; property: "directory"; value: settingsObj.get("wallpaper.directory") || "" }
     Connections { target: settingsAppObj; function onWallpaperRequested() { ipcObj.openWallpaper() } }
 
@@ -303,6 +305,7 @@ ShellRoot {
     IpcHandlers {
         id: ipcObj
         colorModeState: colorModeObj
+        themePicker: themePickerObj
         launcherState: launcherObj
         settingsState: settingsAppObj
         lockState: lockObj
@@ -350,7 +353,8 @@ ShellRoot {
         Search.settingsState = settingsAppObj
         Search.controls = { network: networkObj, bluetooth: bluetoothObj, nightLight: nightLightObj, caffeine: caffeineObj, focus: focusObj, timer: timerObj, lock: lockObj }
         applyBlur()
-        colorModeObj.start()
+        // AppSettings has not loaded when this handler runs; start after it, or the setting would read as empty
+        Qt.callLater(colorModeObj.start)
         IslandLook.load()
         IslandLook.apply(islandLook)
         IslandLook.design = islandDesign

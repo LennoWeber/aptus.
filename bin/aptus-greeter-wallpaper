@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Set the picture of the aptus login screen. Runs as root through pkexec (installed to /usr/local/bin by install.sh --greeter).
 
-    aptus-greeter-wallpaper PATH     copy the picture to /usr/local/share/aptus and point greeter.json at it
-    aptus-greeter-wallpaper --clear  remove the picture
+    aptus-greeter-wallpaper PATH [--fit FIT]   copy the picture to /usr/local/share/aptus and point greeter.json at it
+                                               (FIT: fill, fit, stretch, center or tile; default: leave the config's fit as it is)
+    aptus-greeter-wallpaper --clear            remove the picture
 
 The caller is not trusted: PATH is read with the caller's own rights (never as root), must be a jpg, png or webp
 and at most 32 MB. Nothing else is written."""
@@ -16,6 +17,7 @@ SHARE = "/usr/local/share/aptus"
 CONFIG = "/etc/aptus/greeter.json"
 MAX_BYTES = 32 * 1024 * 1024
 TARGET_PREFIX = "wallpaper"
+FITS = ("fill", "fit", "stretch", "center", "tile")
 
 
 def fail(message):
@@ -47,22 +49,46 @@ def remove_old():
             os.remove(os.path.join(SHARE, name))
 
 
-def set_config(wallpaper):
+def parse_args(argv):
+    """(path, clear, fit) from the command line: path is None with --clear, fit is None when --fit is not given.
+    Anything else ends the program with the usage message."""
+    assert isinstance(argv, list), "argv is a list"
+    usage = "usage: aptus-greeter-wallpaper PATH [--fit FIT] | --clear"
+    args = list(argv)
+    fit = None
+    if "--fit" in args:
+        i = args.index("--fit")
+        if i + 1 >= len(args) or args[i + 1] not in FITS:
+            fail("--fit needs one of " + ", ".join(FITS))
+        fit = args[i + 1]
+        del args[i:i + 2]
+    if len(args) != 1:
+        fail(usage)
+    if args[0] == "--clear":
+        if fit is not None:
+            fail(usage)
+        return None, True, None
+    return args[0], False, fit
+
+
+def set_config(wallpaper, fit=None):
+    assert fit is None or fit in FITS, "fit is one of " + ", ".join(FITS)
     with open(CONFIG, encoding="utf-8") as f:
         config = json.load(f)
     config["wallpaper"] = wallpaper
+    if fit is not None:
+        config["wallpaperFit"] = fit
     write_atomic(CONFIG, (json.dumps(config, indent=2) + "\n").encode(), 0o644)
 
 
 def main():
     if os.geteuid() != 0:
         fail("must run as root (use pkexec)")
-    if len(sys.argv) != 2:
-        fail("usage: aptus-greeter-wallpaper PATH | --clear")
+    path, clear, fit = parse_args(sys.argv[1:])
     if not os.path.isdir(SHARE) or not os.path.isfile(CONFIG):
         fail("the aptus greeter is not installed (install.sh --greeter)")
 
-    if sys.argv[1] == "--clear":
+    if clear:
         remove_old()
         set_config("")
         return
@@ -74,10 +100,10 @@ def main():
     gid = pwd.getpwuid(uid).pw_gid
     read = subprocess.run(
         ["setpriv", "--reuid", str(uid), "--regid", str(gid), "--clear-groups",
-         "head", "-c", str(MAX_BYTES + 1), "--", sys.argv[1]],
+         "head", "-c", str(MAX_BYTES + 1), "--", path],
         capture_output=True)
     if read.returncode != 0:
-        fail("cannot read " + sys.argv[1])
+        fail("cannot read " + path)
     data = read.stdout
     if len(data) > MAX_BYTES:
         fail("picture is larger than 32 MB")
@@ -88,7 +114,7 @@ def main():
     remove_old()
     target = os.path.join(SHARE, TARGET_PREFIX + ext)
     write_atomic(target, data, 0o644)
-    set_config(target)
+    set_config(target, fit)
 
 
 main()

@@ -38,10 +38,10 @@ Scope {
     property string aiDefaultProviderId
     property int aiDockEdge            // Enums.DockEdge
     property int aiDockWidthPx
-    property int themeSource           // Enums.ThemeSource, appearance.themeSource, "standard" by default
-    property int themeStyle            // Enums.ThemeStyle, appearance.style, "watercolor" by default
-    property int barTone               // Enums.BarTone, bar.tone, "offwhite" by default
-    property int colorMode             // Enums.ColorMode, appearance.colorMode, "light" by default
+    property string theme              // appearance.theme: light | dark | auto | ocean | forest | dusk | sand | sky | wallpaper, "light" by default
+    property string wallpaperTone      // appearance.wallpaperTone: auto | light | dark, how the wallpaper theme chooses light or dark
+    property bool loginWallpaper       // appearance.loginWallpaper: the login screen shows the desktop wallpaper
+    property int wallpaperFit          // Enums.WallpaperFit, wallpaper.fit, "fill" by default
     property bool lockShowNotificationContent
     property int lockAfterMin          // system.lockAfterMin, 5
     property int screenOffAfterMin     // system.screenOffAfterMin, 10, always after the lock
@@ -93,10 +93,11 @@ Scope {
     }
 
 
-    // Rename values that older versions saved (island.design "ninja" is now "pill") in the tree read from the user's file.
-    // Returns the tree with the old values replaced.
+    // Rename values that older versions saved (island.design "ninja" is now "pill", appearance.colorMode is now
+    // appearance.theme) in the tree read from the user's file. Returns the tree with the old values replaced.
     function migrateValues(tree: var): var {
         if (tree && tree.island && tree.island.design === "ninja") tree.island.design = "pill"
+        if (tree && tree.appearance && tree.appearance.theme === undefined && ["light", "dark", "auto"].indexOf(tree.appearance.colorMode) >= 0) tree.appearance.theme = tree.appearance.colorMode
         return tree
     }
 
@@ -116,10 +117,11 @@ Scope {
         aiDefaultProviderId = get("ai.defaultProvider")
         aiDockEdge = edge[get("ai.dockEdge")] ?? Enums.DockEdge.Right
         aiDockWidthPx = get("ai.dockWidth")
-        // TODO(phase 7, Bild-Theming): load appearance.themeSource, appearance.style and bar.tone into themeSource, themeStyle, barTone (lookup tables like `edge`).
-        //     the shell root passes them on to Tokens and calls refreshTheme(entries).
-        const colorModes = { light: Enums.ColorMode.Light, dark: Enums.ColorMode.Dark, auto: Enums.ColorMode.Auto }
-        colorMode = colorModes[get("appearance.colorMode")] ?? Enums.ColorMode.Light
+        const fits = { fill: Enums.WallpaperFit.Fill, fit: Enums.WallpaperFit.Fit, stretch: Enums.WallpaperFit.Stretch, center: Enums.WallpaperFit.Center, tile: Enums.WallpaperFit.Tile }
+        theme = get("appearance.theme") ?? "light"
+        wallpaperTone = get("appearance.wallpaperTone") ?? "auto"
+        loginWallpaper = get("appearance.loginWallpaper") !== false
+        wallpaperFit = fits[get("wallpaper.fit")] ?? Enums.WallpaperFit.Fill
         lockShowNotificationContent = get("lock.showNotificationContent")
         lockAfterMin = get("system.lockAfterMin")
         screenOffAfterMin = get("system.screenOffAfterMin")

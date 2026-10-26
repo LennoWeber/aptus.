@@ -23,7 +23,7 @@ Item {
         height: parent.height
         width: Math.max(parent.height, parent.width * Math.max(0, Math.min(1, bar.value)))
         radius: height / 2
-        color: bar.severity === Enums.Severity.Neutral ? Tokens.ink : Tokens.colorFor(bar.severity)
+        color: bar.severity === Enums.Severity.Neutral ? Tokens.accent : Tokens.colorFor(bar.severity)
         Behavior on width { NumberAnimation { duration: Tokens.durSlow; easing.type: Easing.BezierSpline; easing.bezierCurve: [0.2, 0, 0, 1, 1, 1] } }
     }
 }

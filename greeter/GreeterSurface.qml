@@ -25,7 +25,8 @@ Item {
         anchors.fill: parent
         visible: status !== Image.Null
         source: surface.greeterState && surface.greeterState.wallpaper ? "file://" + surface.greeterState.wallpaper : ""
-        fillMode: Image.PreserveAspectCrop
+        fillMode: Tokens.fillModeFor(surface.greeterState ? surface.greeterState.wallpaperFit : Enums.WallpaperFit.Fill)
+        sourceSize: surface.greeterState && (surface.greeterState.wallpaperFit === Enums.WallpaperFit.Center || surface.greeterState.wallpaperFit === Enums.WallpaperFit.Tile) ? Qt.size(0, 0) : Qt.size(surface.width, surface.height)
         asynchronous: true
         opacity: status === Image.Ready ? 1 : 0
         Behavior on opacity { NumberAnimation { duration: Tokens.durSlow } }
@@ -33,7 +34,6 @@ Item {
     Rectangle {
         anchors.fill: parent
         visible: surface.greeterState && surface.greeterState.wallpaper !== ""
-        // TODO(phase 7, Bild-Theming): the greeter has no user settings (/etc/aptus/greeter.json). Decide: Standard, or the style with its fallbackColors; never the wallpaper colours before login.
         color: Tokens.bg
         opacity: 0.55
     }

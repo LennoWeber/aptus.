@@ -71,13 +71,27 @@ Scope {
     }
     function valueOf(entry: var): var { return entry.id in draftValues ? draftValues[entry.id] : appliedOf(entry) }
     function isDefault(entry: var): bool { return JSON.stringify(valueOf(entry)) === JSON.stringify(defaultOf(entry)) }
-    function editable(entry: var): bool { return ["toggle", "choice", "slider", "number", "text", "list", "location", "tileList", "keyMap"].indexOf(entry.kind) >= 0 }
+    function editable(entry: var): bool { return ["toggle", "choice", "slider", "number", "text", "list", "location", "tileList", "keyMap", "theme"].indexOf(entry.kind) >= 0 }
+
+    // Whether an entry is shown given its `visibleWhen` ({ path, equals } or { path, notEquals } against the setting in effect).
+    function entryVisible(entry: var): bool {
+        if (!entry) throw new Error("invariant: SettingsAppState.entryVisible: no entry")
+        if (entry.visibleWhen && !(typeof entry.visibleWhen.path === "string" && ("equals" in entry.visibleWhen) !== ("notEquals" in entry.visibleWhen))) throw new Error("invariant: SettingsAppState.entryVisible: visibleWhen needs a path and exactly one of equals, notEquals")
+        const when = entry.visibleWhen
+        if (!when) return true
+        // the value as the form shows it: a draft of the entry that owns the path, else the value in effect
+        const owner = entries.find(e => e.path === when.path)
+        const value = owner && owner.id in draftValues ? draftValues[owner.id] : appSettings.get(when.path)
+        if ("equals" in when) return value === when.equals
+        if ("notEquals" in when) return value !== when.notEquals
+        return true
+    }
 
     // Entries of the current page or search, hiding advanced ones unless asked for.
     function visibleEntries(): var {
         const q = query.trim().toLowerCase()
         return entries.filter(e => {
-            // TODO(phase 7, Bild-Theming): honour `visibleWhen` of an entry ({ path, notEquals }), so appearance.style and bar.tone are hidden while appearance.themeSource is standard.
+            if (!entryVisible(e)) return false
             if (e.advanced && !showAdvanced) return false
             if (q === "") return e.category === activeCategoryId
             return matches(e, q)

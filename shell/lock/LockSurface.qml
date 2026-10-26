@@ -31,8 +31,8 @@ Item {
         anchors.fill: parent
         visible: Wallpaper.current !== ""
         source: Wallpaper.current ? "file://" + Wallpaper.current : ""
-        sourceSize: Qt.size(parent.width, parent.height)
-        fillMode: Image.PreserveAspectCrop
+        sourceSize: Wallpaper.fit === Enums.WallpaperFit.Center || Wallpaper.fit === Enums.WallpaperFit.Tile ? Qt.size(0, 0) : Qt.size(parent.width, parent.height)
+        fillMode: Tokens.fillModeFor(Wallpaper.fit)
         asynchronous: true
         opacity: status === Image.Ready ? 1 : 0
         Behavior on opacity { NumberAnimation { duration: Tokens.durSlow } }
@@ -41,7 +41,6 @@ Item {
     Rectangle {
         anchors.fill: parent
         visible: Wallpaper.current !== ""
-        // TODO(phase 7, Bild-Theming): the veil over the wallpaper uses Tokens.glass; Tokens.grain on the large surface. The lockscreen follows the user's style.
         color: Tokens.bg
         opacity: 0.45
     }

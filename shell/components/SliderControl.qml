@@ -17,7 +17,7 @@ Item {
     implicitWidth: 200
     implicitHeight: 36  // a large touch area around a thin track
 
-    // Thin track, the filled part in ink, a round handle the finger can find.
+    // Thin track, the filled part in the accent (ink in light and dark), a round handle the finger can find.
     Rectangle {
         id: track
         x: 9
@@ -31,7 +31,7 @@ Item {
             width: slider.ratio * parent.width
             height: parent.height
             radius: 2
-            color: Tokens.ink
+            color: Tokens.accent
         }
     }
 
@@ -43,7 +43,7 @@ Item {
         x: track.x + slider.ratio * track.width - 9
         color: Tokens.surface
         border.width: 1.5
-        border.color: Tokens.ink
+        border.color: Tokens.accent
         scale: area.pressed ? 1.12 : 1
         Behavior on scale { NumberAnimation { duration: Tokens.durFast } }
     }

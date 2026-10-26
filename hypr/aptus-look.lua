@@ -35,7 +35,7 @@ hl.config({
 		-- one hairline, the ink with alpha (dark on light, light on dark), no colour accent
 		border_size = 1,
 		col = {
-			-- TODO(phase 7, Bild-Theming): borders and shadow use the Standard ink. Decide whether they follow the style ink (generated) or stay.
+			-- appColors comes from aptus-theme-apps and follows the chosen theme; the fallback is the neutral ink
 			active_border = appColors.activeBorder or "rgba(1c212740)",
 			inactive_border = appColors.inactiveBorder or "rgba(1c212718)",
 		},

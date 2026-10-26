@@ -4,29 +4,33 @@ import Quickshell.Io
 import qs.models
 import qs.theme
 
-// Light or dark for the shell and the apps (setting appearance.colorMode: light | dark | auto).
-// `mode` is the chosen value, `dark` what is in effect (auto is dark while the night light runs); Tokens.darkAmount
-// follows `dark` (0 or 1) with Tokens.colorModeMs. After a change the apps are repainted by
-// `aptus-theme-apps --mode <light|dark> --all` in the background; the shell itself changes first.
+// The theme of the shell and the apps (setting appearance.theme). `chosen` is the setting, `resolved` the theme in effect
+// (auto is light, or dark while the night light runs; wallpaper needs ThemeSource.palette); Tokens fades to it in
+// Tokens.colorModeMs. After a change the apps are repainted by `aptus-theme-apps --theme <resolved> --all` in the
+// background; the shell itself changes first.
 Scope {
     id: root
 
-    property var appSettings    // AppSettings: reads and writes appearance.colorMode
+    property var appSettings    // AppSettings: reads and writes appearance.theme
     property var nightLight     // NightLightState: decides `auto`
 
-    property int mode: Enums.ColorMode.Light
-    property bool dark: false
+    property string chosen: "light"            // appearance.theme as set: light | dark | auto | ocean | forest | dusk | sand | sky | wallpaper
+    property string resolved: "light"          // the theme in effect: `chosen`, or light/dark for auto, or the previous one while the wallpaper theme is not ready
+    property string previewId: ""              // the theme the picker shows right now, "" when none (the shell shows it, the apps do not)
+    property bool dark: false                  // the base of the theme showing is dark
     property bool applying: false
     property bool pending: false               // a repaint was asked for while one was running
     property string applyError: ""
     property int debounceMs: 250               // several presses repaint the apps once
 
-    property bool firstRun: true               // the first repaint (start-up) only paints when the apps are not in this mode yet
+    property bool firstRun: true               // the first repaint (start-up) only paints when the apps are not in this theme yet
 
     Process {
         id: themeApps
         stderr: StdioCollector { id: appsErrors }
-        onExited: (code, status) => root.onAppsExited(code)
+        // qmllint disable signal-handler-parameters
+        onExited: code => root.onAppsExited(code)
+        // qmllint enable signal-handler-parameters
     }
 
     Timer {
@@ -38,7 +42,7 @@ Scope {
     Connections {
         target: root.appSettings
         function onValueChanged(path: string): void {
-            if (path === "" || path === "appearance.colorMode") root.onSettingChanged(path)
+            if (path === "" || path === "appearance.theme" || path === "appearance.wallpaperTone") root.onSettingChanged(path)
         }
     }
 
@@ -47,42 +51,75 @@ Scope {
         function onEnabledChanged(): void { root.onNightLightChanged() }
     }
 
-    // The mode of the setting as an Enums.ColorMode; -1 for a name that is not light, dark or auto.
-    function modeFromName(name: string): int {
-        const modes = { light: Enums.ColorMode.Light, dark: Enums.ColorMode.Dark, auto: Enums.ColorMode.Auto }
-        return modes[name] ?? -1
+    Connections {
+        target: ThemeSource
+        function onChanged(): void { root.onWallpaperThemeChanged() }
     }
 
-    // The setting value of an Enums.ColorMode: "light", "dark" or "auto".
-    function nameFromMode(m: int): string {
-        if (!(m >= Enums.ColorMode.Light && m <= Enums.ColorMode.Auto)) throw new Error("invariant: ColorModeState.nameFromMode: unknown mode")
-        return ["light", "dark", "auto"][m]
+    // Whether `id` is a value of appearance.theme: light, dark, auto, wallpaper or one of the themes of tokens.json.
+    function isValid(id: string): bool {
+        return id === "auto" || Tokens.themeIds().indexOf(id) >= 0
     }
 
-    // Whether the mode `m` is dark right now (Auto follows nightLight.enabled).
-    function resolve(m: int): bool {
-        if (!(m >= Enums.ColorMode.Light && m <= Enums.ColorMode.Auto)) throw new Error("invariant: ColorModeState.resolve: unknown mode")
+    // The values the picker steps through, in its order: Tokens.themeIds() (light, dark, the colour themes, wallpaper).
+    function choices(): var {
+        return Tokens.themeIds()
+    }
+
+    // The theme in effect for the setting value `chosen`: itself, light or dark for auto (dark while nightLight.enabled), and for
+    // wallpaper the id "wallpaper" once ThemeSource.palette is there, else the theme that was showing.
+    function resolve(chosen: string): string {
+        if (!isValid(chosen)) throw new Error("invariant: ColorModeState.resolve: unknown theme " + chosen)
         if (!nightLight) throw new Error("invariant: ColorModeState.resolve: nightLight not set")
-        return m === Enums.ColorMode.Dark || (m === Enums.ColorMode.Auto && nightLight.enabled === true)
+        if (chosen === "auto") return nightLight.enabled === true ? "dark" : "light"
+        if (chosen === "wallpaper") return Tokens.themeColors("wallpaper") ? "wallpaper" : resolved
+        return chosen
+    }
+
+    // The setting's value, or light when it is not a theme (a hand-edited file).
+    function settingTheme(): string {
+        if (!appSettings) throw new Error("invariant: ColorModeState.settingTheme: appSettings not set")
+        const id = appSettings.theme
+        if (isValid(id)) return id
+        console.warn("aptus: appearance.theme '" + id + "' is not a theme, using light")
+        return "light"
     }
 
     // Start-up: read the setting, set the shell to it without a fade, repaint the apps only if the state differs.
     function start(): void {
         if (!appSettings || !nightLight) throw new Error("invariant: ColorModeState.start: appSettings and nightLight must be set")
-        mode = appSettings.colorMode
-        dark = resolve(mode)
-        Tokens.colorModeFade = false
+        if (!Tokens.palette) {
+            console.warn("aptus: theme: tokens not loaded, the shell keeps its built-in colours")
+            return
+        }
+        chosen = settingTheme()
+        followWallpaperTheme()
+        ThemeSource.read()
+        if (ThemeSource.palette) Tokens.setCustomTheme(ThemeSource.palette)
+        resolved = resolve(chosen)
+        dark = Tokens.isDarkTheme(resolved)
         applyShell()
-        Tokens.colorModeFade = true
         repaintApps()
+        if (chosen === "wallpaper") ThemeSource.refresh()
+    }
+
+    // The wallpaper theme is made only while it is the theme chosen (or previewed).
+    function followWallpaperTheme(): void {
+        if (!appSettings) throw new Error("invariant: ColorModeState.followWallpaperTheme: appSettings not set")
+        ThemeSource.active = chosen === "wallpaper" || previewId === "wallpaper"
+        ThemeSource.tone = appSettings.wallpaperTone
     }
 
     // Take the setting and the night light into account: when what is in effect changes, move the shell and repaint the apps.
     function update(): void {
-        mode = appSettings.colorMode
-        const now = resolve(mode)
-        if (now === dark) return
-        dark = now
+        chosen = settingTheme()
+        previewId = ""
+        followWallpaperTheme()
+        if (chosen === "wallpaper") ThemeSource.refresh()
+        const now = resolve(chosen)
+        if (now === resolved) return
+        resolved = now
+        dark = Tokens.isDarkTheme(resolved)
         applyShell()
         debounce.restart()
     }
@@ -94,43 +131,94 @@ Scope {
 
     // The night light switched on or off: matters only in Auto.
     function onNightLightChanged(): void {
-        if (mode === Enums.ColorMode.Auto) update()
+        if (chosen === "auto") update()
     }
 
-    // Choose a mode: write the setting; valueChanged then switches the shell and repaints the apps.
-    function setMode(m: int): void {
-        if (!(m >= Enums.ColorMode.Light && m <= Enums.ColorMode.Auto)) throw new Error("invariant: ColorModeState.setMode: unknown mode")
-        if (!appSettings) throw new Error("invariant: ColorModeState.setMode: appSettings not set")
-        appSettings.set("appearance.colorMode", nameFromMode(m))
+    // Choose a theme (a value of appearance.theme): write the setting; valueChanged then switches the shell and repaints the apps.
+    function setTheme(id: string): void {
+        if (!isValid(id)) throw new Error("invariant: ColorModeState.setTheme: unknown theme " + id)
+        if (!appSettings) throw new Error("invariant: ColorModeState.setTheme: appSettings not set")
+        appSettings.set("appearance.theme", id)
         appSettings.writeUserConfig()     // so the choice survives a restart
     }
 
-    // Light <-> dark by hand (Super+T); Auto becomes the opposite of what is in effect.
-    function toggle(): void {
-        setMode(dark ? Enums.ColorMode.Light : Enums.ColorMode.Dark)
+    // Choose the theme `step` places after (or before, negative) the one in effect; wraps around. Used by Super+T in the picker.
+    function next(step: int): void {
+        if (!Number.isInteger(step) || step === 0) throw new Error("invariant: ColorModeState.next: step is a non-zero integer")
+        const list = choices()
+        const from = list.indexOf(previewId || resolved)
+        setTheme(list[((from < 0 ? 0 : from) + step % list.length + list.length) % list.length])
     }
 
-    // Move Tokens to the resolved mode.
-    function applyShell(): void {
-        if (!Tokens.palette) {
-            console.warn("aptus: colour mode: tokens not loaded, the shell keeps its built-in colours")
+    // Show the theme `id` in the shell only (the picker's preview); the apps and the setting stay as they are.
+    function preview(id: string): void {
+        if (!appSettings) throw new Error("invariant: ColorModeState.preview: appSettings not set")
+        if (!isValid(id) || id === "auto") throw new Error("invariant: ColorModeState.preview: not a theme " + id)
+        previewId = id
+        if (id === "wallpaper") {
+            followWallpaperTheme()
+            ThemeSource.refresh()
+        }
+        if (!Tokens.themeColors(id)) return        // the wallpaper theme is not made yet; it fades in when it is
+        Tokens.setTheme(id, true)
+        dark = Tokens.isDarkTheme(id)
+    }
+
+    // End the preview: back to the theme in effect (resolved).
+    function cancelPreview(): void {
+        if (previewId === "") return
+        previewId = ""
+        followWallpaperTheme()
+        Tokens.setTheme(resolved, true)
+        dark = Tokens.isDarkTheme(resolved)
+    }
+
+    // Keep the previewed theme: same as setTheme(previewId), then the preview ends.
+    function commitPreview(): void {
+        if (!appSettings) throw new Error("invariant: ColorModeState.commitPreview: appSettings not set")
+        const id = previewId
+        if (id === "") return
+        setTheme(id)
+        previewId = ""
+    }
+
+    // ThemeSource has a new palette (the wallpaper changed): when the wallpaper theme is chosen, fade to it and repaint the apps.
+    function onWallpaperThemeChanged(): void {
+        if (!ThemeSource.palette) throw new Error("invariant: ColorModeState.onWallpaperThemeChanged: ThemeSource has no palette")
+        Tokens.setCustomTheme(ThemeSource.palette)
+        if (previewId === "wallpaper") {
+            Tokens.setTheme("wallpaper", true)
+            dark = Tokens.isDarkTheme("wallpaper")
             return
         }
-        Tokens.darkAmount = dark ? 1 : 0
+        if (chosen !== "wallpaper") return
+        resolved = resolve(chosen)
+        dark = Tokens.isDarkTheme(resolved)
+        applyShell()
+        debounce.restart()
     }
 
-    // The command line of the repaint for the mode in effect: aptus-theme-apps --mode <light|dark> --all --quiet.
-    function appsCommand(isDark: bool): var {
-        return [Tokens.rootDir + "/bin/aptus-theme-apps", "--mode", isDark ? "dark" : "light", "--all", "--quiet"]
+    // Move Tokens to the resolved theme (no fade at start-up).
+    function applyShell(): void {
+        if (!Tokens.palette) {
+            console.warn("aptus: theme: tokens not loaded, the shell keeps its built-in colours")
+            return
+        }
+        Tokens.setTheme(resolved, !firstRun)
     }
 
-    // Run aptus-theme-apps for the resolved mode in the background (one run at a time, the last request wins).
+    // The command line of the repaint for a theme in effect: aptus-theme-apps --theme <id> --all --quiet.
+    function appsCommand(theme: string): var {
+        return [Tokens.rootDir + "/bin/aptus-theme-apps", "--theme", theme, "--all", "--quiet"]
+    }
+
+    // Run aptus-theme-apps for the resolved theme in the background (one run at a time, the last request wins).
     function repaintApps(): void {
         if (themeApps.running) {
             pending = true
             return
         }
-        const command = appsCommand(dark)
+        const command = appsCommand(resolved)
         if (firstRun) command.push("--if-changed")
         firstRun = false
         applying = true
