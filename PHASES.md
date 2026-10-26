@@ -6,7 +6,7 @@ Zweiter Phasenablauf (neue Funktion „Notch“, ab 22. Okt.): **Phase 1 (Plan) 
 
 Dritter Phasenablauf (neue Funktion „Bild-Theming“, 22. Okt.): **Phase 1 bis 5 erledigt, wartet auf „weiter“ für Phase 6**, siehe Abschnitt „Bild-Theming“ weiter unten.
 
-Vierter Phasenablauf (neue Funktion „Island“, 26. Okt., ersetzt den Notch): **Phase 1 (Plan) geschrieben, wartet auf „weiter“ für Phase 1b (zehn Look-Entwürfe)**, siehe Abschnitt „Island“ ganz unten.
+Vierter Phasenablauf (neue Funktion „Island“, 26. Okt., ersetzt den Notch): **läuft ohne Pausen durch (Lenno: nie auf „weiter“ warten, alles protokollieren, jede Phase selbst prüfen)**, Stand siehe „Protokoll Island“ ganz unten.
 
 ## Ziel
 
@@ -902,3 +902,30 @@ Inventar (nur gelesen, Stand 26. Okt.):
 
 ### Nächster Schritt
 Lennos „weiter“ → Phase 1b: zehn Look-Entwürfe (Mockup). Entscheidung dazu: soll ich vorher `qt6-qtdeclarative-devel` installieren (für `qmllint`)?
+
+### Protokoll Island (laufend, jede Phase mit Prüfergebnis)
+
+**Arbeitsregel ab 26. Okt. (Lenno):** nie auf „weiter“ warten, alle Schritte protokollieren, jede Phase selbst auf Korrektheit und Vollständigkeit prüfen und selbstständig weitermachen. Review ohne Sub-Agent (HANDOFF.md: nur auf Verlangen): Diff der Phase noch einmal bewusst aus Sicht eines Fremden gelesen. Pushen und Löschen außerhalb des Repos erst nach Rückfrage.
+
+**Phase 1b (Look-Entwürfe), erledigt:**
+- Statt eines HTML-Mockups gibt es **zehn echte Looks** als Voreinstellungen (`island.look`), die in Settings → Bar sofort umschaltbar sind. Lenno wählt dort am Gerät. Screenshots aller zehn kommen in Phase 7 nach `docs/screenshots/island-<look>.png`.
+- Alle Looks halten die aptus-Regeln ein: deckend, kein Glas, Haarlinie statt Schatten, Farbe nur als Signal, 140/260 ms, Kurve `[0.2, 0, 0, 1]`. Sie unterscheiden sich in Fläche, Kontur, Rundung, Abstand zum Rand und Schrift.
+
+| id | Name | Fläche (Ruhe / Offen) | Kontur | Radius Ruhe / Offen | Abstand oben | Besonderheit |
+|---|---|---|---|---|---|---|
+| `paper` | Paper (Standard) | surface / surface | Haarlinie `line` | 14 / 22 | 0, bündig | wie die Leiste |
+| `ink` | Ink | ink / surface | keine (Ruhe), `line` (offen) | 14 / 22 | 0 | dunkle Pille wird helle Fläche |
+| `bone` | Bone | surfaceAlt / surfaceAlt | keine | 16 / 24 | 0 | weich, ohne Linie |
+| `outline` | Outline | bg / bg | `ink` 1,5 px | 14 / 22 | 0 | grafisch, Kontur trägt den Look |
+| `float` | Float | surface / surface | Haarlinie | 999 / 26 | 6 px | frei schwebende Kapsel |
+| `tab` | Tab | surface / surface | Haarlinie | 8 / 12 | 0 | schmal, eckig, technisch |
+| `slate` | Slate | ink / ink | keine | 14 / 22 | 0 | durchgehend dunkel |
+| `wash` | Wash | wash1 / wash1 | wash2 | 16 / 24 | 0 | Farbe aus dem Hintergrundbild (sonst surfaceAlt) |
+| `signal` | Signal | surface / surface | Haarlinie | 14 / 22 | 0 | 2-px-Linie unten, Farbe nur bei Meldung (ok, warn, kritisch) |
+| `mono` | Mono | bg / bg | Haarlinie | 4 / 8 | 0 | Mono-Schrift, Terminal-Anmutung |
+
+**Weitere Entscheidungen zu den Funktionen:**
+- Die bestehenden Notch-Teile (Rest, Meldung, Musik, Sheet, Dock-unabhängig) werden nicht von Grund auf neu erfunden, sondern aus der Git-Historie wieder verwendet, wo sie passen. Der Ordner `shell/notch/` und `NotchState` werden in Phase 2 gelöscht.
+- Emoji hat in aptus keine Datenquelle: `config/emoji.json` wird aus der Unicode-Datenbank (Python `unicodedata`) erzeugt (Phase 3, Konstanten).
+- Übergang zu Launcher und Control Center: die Insel beobachtet `ShellState` (`stage`, `activeOverlay`) und verformt sich in die Fläche des Ziels, bevor sie ausblendet; beim Schließen kehrt sie zurück. Launcher und Control Center selbst bleiben unverändert.
+- Power-Menü: bei `bar.style = island` öffnet `panelToggle session` und `panelOpen session` die Insel-Ansicht statt des Vollbild-Menüs. Mit Leiste bleibt das alte Menü.
