@@ -1279,3 +1279,5 @@ Ablauf wie in [[feedback_phasen_ohne_weiter]]: nicht auf „weiter“ warten, se
 
 ### Protokoll Ablauf 8
 - **Phase 1 (Plan), erledigt.** Shell-Ninja-Rest gelöscht (siehe Befund).
+- **Phase 2 (Strukturen), erledigt:** `Enums.IslandStage { Rest, Alert, Osd, Open }`; `IslandState`: `hoverEnabled`, `pendingHoverScreen`, `openedByHover`, `hoverInMs 90`, `hoverOutMs 260`, `osd`, `osdHoldMs 1400`, Signal `osdShown`, Timer-Objekte `hoverIn`, `hoverOut`, `osdHold` (nur Intervall, ohne Handler); neuer leerer Typ `IslandOsd` (Properties `osd`, `ink`, `inkSoft`, `line`, `qmldir`); `Osd.islandState`; `WorkspaceBubbles`: `oval`, `ovalWidth 24`, `ovalHeight 10`; Schema: Stil `ovals`, Setting `island.hoverOpen`; Standardwerte: `workspaceStyle = ovals`, `island.hoverOpen = true`.
+  - **Prüfung (Selbst-Review am Diff):** nur Properties, Signal, Timer-Objekte, Enum-Wert, neuer leerer Typ, Schema und Daten; keine Funktion, keine Bindung an Verhalten. JSON validiert. Nicht gebaut.

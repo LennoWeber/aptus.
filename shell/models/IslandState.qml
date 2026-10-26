@@ -7,16 +7,27 @@ import Quickshell
 Scope {
     id: root
 
-    // Settings (island.alerts, island.alertSeconds, island.mediaWings).
+    // Settings (island.alerts, island.alertSeconds, island.mediaWings, island.hoverOpen).
     property bool enabled                // the island is the shown top element
     property bool alertsEnabled: true
     property int alertHoldMs: 4000
     property bool mediaWingsEnabled: true
+    property bool hoverEnabled: true
 
     // Stage and view.
     property int stage: Enums.IslandStage.Rest
     property int view: Enums.IslandView.Home
     property string openScreen: ""       // name of the screen whose island is open, "" when none
+
+    // Hover: the pointer resting on the island opens Home; leaving closes it again unless the card was used.
+    property string pendingHoverScreen: ""
+    property bool openedByHover          // the open island was opened by the pointer and nothing was clicked in it yet
+    property int hoverInMs: 90           // how long the pointer rests on the island before it opens
+    property int hoverOutMs: 260         // how long it must be away before it closes
+
+    // The on-screen indicator (volume, brightness, ...): shown as a stage of the island.
+    property var osd: null               // { kind (Enums.OsdKind), level (0..1), muted, label } or null
+    property int osdHoldMs: 1400
 
     // Alerts.
     property var alert: null             // { id, text, detail, severity, tileId, holdMs } or null
@@ -27,6 +38,7 @@ Scope {
     property int morph: Enums.MorphTarget.None
 
     signal alertShown(var alert)
+    signal osdShown(var osd)
     signal opened(string screenName, int view)
     signal closed()
 
@@ -107,6 +119,9 @@ Scope {
     }
 
     Timer { id: hold; onTriggered: root.dismissAlert() }
+    Timer { id: hoverIn; interval: root.hoverInMs }
+    Timer { id: hoverOut; interval: root.hoverOutMs }
+    Timer { id: osdHold; interval: root.osdHoldMs }
 
     onEnabledChanged: if (!enabled) { hold.stop(); alert = null; queue = []; openScreen = ""; view = Enums.IslandView.Home; stage = Enums.IslandStage.Rest; morph = Enums.MorphTarget.None }
 }

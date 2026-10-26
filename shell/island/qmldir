@@ -4,6 +4,7 @@ Island 1.0 Island.qml
 IslandBody 1.0 IslandBody.qml
 IslandRest 1.0 IslandRest.qml
 IslandAlert 1.0 IslandAlert.qml
+IslandOsd 1.0 IslandOsd.qml
 IslandMedia 1.0 IslandMedia.qml
 IslandButton 1.0 IslandButton.qml
 IslandHome 1.0 IslandHome.qml

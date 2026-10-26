@@ -18,6 +18,9 @@ Item {
     property int ringSize: 8
     property int dotSize: 10
     property int activeSize: 16
+    property bool oval                // the active workspace is a stretched oval instead of a larger bubble (style ovals)
+    property int ovalWidth: 24        // width of the active oval
+    property int ovalHeight: 10       // height of every oval-style dot
 
     signal workspaceClicked(int workspaceId)
 

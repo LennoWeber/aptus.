@@ -16,6 +16,7 @@ PanelWindow {
     property real level  // 0..1
     property bool muted
     property string label  // text instead of the bar (caffeine, rotation)
+    property var islandState             // when the island is the top element, the indicator shows there and this window stays hidden
     property bool shown
     property real fade: shown ? 1 : 0
 

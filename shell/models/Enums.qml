@@ -73,9 +73,9 @@ QtObject {
     // Colour of the top bar (settings bar.tone: "offwhite" | "tinted").
     enum BarTone { OffWhite, Tinted }
 
-    // The stages of the island: a small pill at rest, one line of news, the opened
+    // The stages of the island: a small pill at rest, one line of news, the on-screen indicator, the opened
     // island (its content is Enums.IslandView).
-    enum IslandStage { Rest, Alert, Open }
+    enum IslandStage { Rest, Alert, Osd, Open }
 
     // What the opened island shows (Home is the overview with music, workspaces and status icons).
     enum IslandView { Home, Power, Screenshot, Clipboard, Emoji, Wallpaper }
