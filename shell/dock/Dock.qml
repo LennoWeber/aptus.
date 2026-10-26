@@ -16,6 +16,11 @@ PanelWindow {
     required property var modelData
     property var appSettings  // AppSettings
 
+    property string look: "glass"    // glass | solid | minimal (dock.look)
+    property bool magnify              // zoom under the pointer (dock.magnify)
+    property real pointerX: -1         // pointer position along the dock, -1 when away
+    property string launching          // key of the app that was just started, for the bounce
+
     readonly property bool autoHide: appSettings ? appSettings.get("dock.autoHide") !== false : true
     readonly property int iconSize: appSettings ? appSettings.get("dock.iconSize") || 44 : 44
     readonly property var pinned: appSettings ? appSettings.get("dock.pinned") || [] : []

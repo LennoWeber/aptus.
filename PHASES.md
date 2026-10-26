@@ -1474,3 +1474,6 @@ Stand: **Phase 1 geschrieben; Phasen 2 bis 7 laufen ohne Pause** ([[feedback_pha
 
 ### Protokoll Ablauf 13
 - **Phase 1 (Plan), erledigt.**
+- **Phase 2 (Strukturen), erledigt:** Schema neu geordnet (69 Einträge, jede Kategorie mit `group` und `description`, jeder Eintrag mit `section`); `bar` heißt „Top bar“, neu `island` und `dock`; neue Einträge `dock.look`, `dock.magnify`, `dock.pinned` (Typ `dockApps`); Titel geklärt (`ai.dockEdge` → „Panel side“, `bar.style` → „Top of the screen shows“). `config/settings.json`: Dock-Standard `look: glass`, `magnify: true`, `autoHide: false`, `iconSize: 48`, `pinned` mit installierten Apps. Leere Komponenten `SectionHeader`, `DockAppsEditor` (+ `qmldir`); Eigenschaften `SettingRow.origin`, `Dock.look/magnify/pointerX/launching`, `DockItem.zoom/bouncing`.
+  - **Prüfung (selbst):** Skript: IDs eindeutig, jede Kategorie nicht leer, jeder Eintrag mit gültiger `category` und `section`, jeder `path` hat einen Standardwert. Eintrags-IDs unverändert, also bleiben gespeicherte Werte und Launcher-Treffer gültig. Nichts anderes im Code nutzt Kategorie-IDs außer `Search.qml` (liest sie aus dem Schema).
+  - **Offen für spätere Phasen:** `SettingsAppState.editable` kennt `dockApps` nicht (Phase 3/7); Gruppierung der Sidebar und Abschnitte der Seite sind noch nicht dargestellt.

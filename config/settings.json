@@ -23,9 +23,11 @@
   },
   "dock": {
     "enabled": false,
-    "autoHide": true,
-    "iconSize": 44,
-    "pinned": ["org.gnome.Nautilus", "firefox", "org.gnome.Ptyxis", "org.gnome.Settings"]
+    "look": "glass",
+    "autoHide": false,
+    "magnify": true,
+    "iconSize": 48,
+    "pinned": ["kitty", "org.kde.dolphin", "zen-browser", "net.thunderbird.Thunderbird", "com.spotify.Client", "steam", "systemsettings"]
   },
   "island": {
     "design": "capsule",

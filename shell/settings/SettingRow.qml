@@ -17,6 +17,7 @@ Item {
     property bool highlighted
     property var choices: []        // choice entries: list of { id, label }
     property string actionLabel: "Run"
+    property string origin          // search results: "Category › Section", empty on a category page
     signal valueEdited(var value)
     signal resetRequested()
     signal actionRequested()
