@@ -198,11 +198,12 @@ Item {
                 role: Enums.TextRole.Bar
                 color: rest.inkSoft
                 elide: Text.ElideRight
-                width: Math.min(implicitWidth, 170)
+                width: Math.max(0, Math.min(implicitWidth, 170, capsuleClock.x - 12 - x - 14))   // never reaches the clock
             }
         }
 
         Row {
+            id: capsuleClock
             anchors.centerIn: parent
             spacing: 8
             Label {

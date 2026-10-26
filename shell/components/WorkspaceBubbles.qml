@@ -39,17 +39,42 @@ Item {
         return entry.active ? activeSize : (entry.occupied || entry.urgent) ? dotSize : ringSize
     }
 
-    // Width of the shape of one workspace entry: the oval width for the active one, else its diameter (style ovals).
+    // Width of the dot of one workspace entry: its diameter (style ovals: all dots are as round as they are high).
     function widthFor(entry: var): int {
         if (!entry) throw new Error("invariant: WorkspaceBubbles.widthFor: no workspace entry")
         if (!oval) return sizeFor(entry)
-        return entry.active ? ovalWidth : ovalHeight
+        return ovalHeight   // the dots are round; the active oval is the sliding shape above them
     }
 
     // Colour of the bubble: urgent is the one signal colour, the rest is ink with weight.
     function toneFor(entry: var): color {
         if (!entry) throw new Error("invariant: WorkspaceBubbles.toneFor: no workspace entry")
         return entry.urgent ? Tokens.warn : ink
+    }
+
+    // Style ovals: the active workspace is one oval that slides to the new cell. Its leading edge runs ahead of the
+    // trailing one, so it stretches while it moves and settles into the new cell.
+    readonly property int activeIndex: {
+        const list = workspaces || []
+        for (let i = 0; i < list.length; i++) if (list[i].active) return i
+        return -1
+    }
+    readonly property real targetLeft: activeIndex * cellWidth + (cellWidth - ovalWidth) / 2
+    readonly property real targetRight: targetLeft + ovalWidth
+    property real leftEdge: targetLeft
+    property real rightEdge: targetRight
+    Behavior on leftEdge { NumberAnimation { duration: bubbles.targetLeft < bubbles.leftEdge ? 140 : 280; easing.type: Easing.OutCubic } }
+    Behavior on rightEdge { NumberAnimation { duration: bubbles.targetRight > bubbles.rightEdge ? 140 : 280; easing.type: Easing.OutCubic } }
+
+    Rectangle {
+        visible: bubbles.oval && bubbles.activeIndex >= 0
+        x: bubbles.leftEdge
+        anchors.verticalCenter: parent.verticalCenter
+        width: bubbles.rightEdge - bubbles.leftEdge
+        height: bubbles.ovalHeight
+        radius: height / 2
+        color: bubbles.ink
+        z: 1
     }
 
     Repeater {
@@ -70,6 +95,8 @@ Item {
                 width: bubbles.widthFor(cell.modelData)
                 height: bubbles.oval ? bubbles.ovalHeight : width
                 radius: height / 2
+                opacity: bubbles.oval && cell.modelData.active ? 0 : 1
+                Behavior on opacity { NumberAnimation { duration: Tokens.durFast } }
                 color: cell.filled ? Qt.rgba(cell.tone.r, cell.tone.g, cell.tone.b, cell.modelData.active ? 1 : 0.55) : "transparent"
                 border.width: cell.filled ? 0 : 1.5
                 border.color: Qt.rgba(bubbles.ink.r, bubbles.ink.g, bubbles.ink.b, 0.5)

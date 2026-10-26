@@ -54,7 +54,7 @@ PanelWindow {
     property bool isOpen: stage === Enums.IslandStage.Open
     onStageChanged: if (stage < Enums.IslandStage.Rest || stage > Enums.IslandStage.Open) throw new Error("invariant: Island: unknown stage")
     property bool homeWithQuick: isOpen && view === Enums.IslandView.Home   // the opened Home shows the quick settings below the header (every design)
-    readonly property int openGrowMs: 200   // ms: the body grows to an opened view in this time
+    readonly property int openGrowMs: 240   // ms: the body grows to an opened view in this time
     property bool isAlert: stage === Enums.IslandStage.Alert
     property bool isOsd: stage === Enums.IslandStage.Osd   // the on-screen indicator shows
     onByHoverChanged: if (byHover && !isOpen) throw new Error("invariant: Island: byHover while not open")
@@ -76,6 +76,15 @@ PanelWindow {
     property real targetWidth: sizeFor(stage, view, home.implicitHeight + (homeWithQuick ? quick.implicitHeight : 0), islandState ? islandState.morph : Enums.MorphTarget.None).w
     property real targetHeight: sizeFor(stage, view, home.implicitHeight + (homeWithQuick ? quick.implicitHeight : 0), islandState ? islandState.morph : Enums.MorphTarget.None).h
 
+    // How far the body has grown from the pill to the opened card (0..1), read from its real size, so the content follows
+    // the shape: the pill content leaves while the body starts to grow, the card content arrives when it is nearly there.
+    property real openHeight: 400
+    onTargetHeightChanged: if (isOpen) openHeight = targetHeight
+    readonly property real progress: Math.max(0, Math.min(1, (body.height - IslandLook.restHeight) / Math.max(1, openHeight - IslandLook.restHeight)))
+    readonly property real cardFade: Math.max(0, Math.min(1, (progress - 0.5) / 0.4))
+    readonly property real restFade: Math.max(0, Math.min(1, 1 - progress * 3.5))
+    readonly property bool homeShown: view === Enums.IslandView.Home && (isOpen || progress > 0.02)
+
     signal dropdownRequested(int dropdownId, var anchorItem, var targetScreen, real offsetX)
     signal tileRequested(int tileId)
     signal controlCenterRequested()
@@ -86,7 +95,7 @@ PanelWindow {
     readonly property real osdWidth: 320      // the on-screen indicator
     readonly property real osdHeight: 46
     readonly property int osdGrowMs: 160      // ms: the body grows to the indicator in this time
-    readonly property int hoverGrowMs: 180    // ms: the body grows to the card when the pointer opened it
+    readonly property int hoverGrowMs: 260    // ms: the body grows to the card when the pointer opened it
     readonly property real alertHeight: 38
     readonly property real homeWidth: design === "pill" ? 480 : 520
     readonly property var viewSizes: ({
@@ -185,17 +194,16 @@ PanelWindow {
         accent: win.isAlert && win.islandState && win.islandState.alert && win.islandState.alert.severity !== Enums.Severity.Neutral ? Tokens.colorFor(win.islandState.alert.severity) : win.hairline
         accentOpacity: win.isAlert ? 1 : 0.5
         opacity: 1 - win.morphProgress
-        Behavior on width { NumberAnimation { duration: win.growMsFor(win.stage, win.view); easing.type: Easing.BezierSpline; easing.bezierCurve: [0.2, 0, 0, 1, 1, 1] } }
-        Behavior on height { NumberAnimation { duration: win.growMsFor(win.stage, win.view); easing.type: Easing.BezierSpline; easing.bezierCurve: [0.2, 0, 0, 1, 1, 1] } }
+        Behavior on width { NumberAnimation { duration: win.growMsFor(win.stage, win.view); easing.type: Easing.BezierSpline; easing.bezierCurve: [0.22, 1, 0.36, 1, 1, 1] } }
+        Behavior on height { NumberAnimation { duration: win.growMsFor(win.stage, win.view); easing.type: Easing.BezierSpline; easing.bezierCurve: [0.22, 1, 0.36, 1, 1, 1] } }
         Behavior on cornerRadius { NumberAnimation { duration: win.growMsFor(win.stage, win.view) } }
 
         // Rest: a tap opens.
         IslandRest {
             id: rest
             anchors.fill: parent
-            opacity: !win.openLike && !win.isAlert && !win.isOsd && win.design !== "shade" ? 1 : 0
+            opacity: !win.isAlert && !win.isOsd && win.design !== "shade" ? win.restFade : 0
             visible: opacity > 0.01
-            Behavior on opacity { NumberAnimation { duration: Tokens.durFast } }
             design: win.design
             mediaState: win.mediaState
             timerState: win.timerState
@@ -258,9 +266,9 @@ PanelWindow {
         IslandQuick {
             id: quick
             anchors { left: parent.left; right: parent.right; top: parent.top; topMargin: home.implicitHeight }
-            opacity: win.homeWithQuick ? 1 : 0
+            opacity: win.homeShown ? win.cardFade : 0
+            y: (1 - win.cardFade) * -8
             visible: opacity > 0.01
-            Behavior on opacity { NumberAnimation { duration: Tokens.durFast } }
             appSettings: win.appSettings
             audioState: win.audioState
             displayState: win.displayState
@@ -287,9 +295,9 @@ PanelWindow {
         FocusScope {
             anchors.fill: parent
             focus: win.isOpen && !quick.focus
-            opacity: win.isOpen ? 1 : 0
+            opacity: win.view === Enums.IslandView.Home ? win.cardFade : win.isOpen ? 1 : 0
             visible: opacity > 0.01
-            Behavior on opacity { NumberAnimation { duration: Tokens.durFast } }
+            Behavior on opacity { enabled: win.view !== Enums.IslandView.Home; NumberAnimation { duration: Tokens.durFast } }
             Keys.onEscapePressed: win.islandState.close()
 
             IslandHome {

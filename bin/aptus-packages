@@ -5,11 +5,15 @@
 #   aptus-packages missing [GROUP...]   print the ones rpm does not know
 #   aptus-packages command [GROUP...]   print the sudo dnf command for the missing ones
 #   aptus-packages check                report what is installed and what is missing, per group
+#   aptus-packages apps [list|missing|command|check] [GROUP...]
+#                                       the same for the apps of the dotfiles (packages/aptus-apps.txt); the group
+#                                       flatpak is installed with flatpak, the others with dnf
 
 set -u
 
 ROOT="$(dirname "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")")"
 LIST_FILE="$ROOT/packages/aptus-dnf.txt"
+APPS_FILE="$ROOT/packages/aptus-apps.txt"
 DEFAULT_GROUPS=(required session backup)
 
 # Print the package names of the given groups (default groups when none) from LIST_FILE, one per line.
@@ -57,6 +61,49 @@ check_all() {
     done
 }
 
+# All group names of a list file, in order.
+group_names() {
+    awk '/^##[ \t]+/ { print $2 }' "$1"
+}
+
+# apps: the apps file with the same sub-commands. Flatpak ids go to flatpak, the rest to dnf.
+apps() {
+    local sub="${1:-check}" LIST_FILE="$APPS_FILE" group
+    [ "$#" -gt 0 ] && shift
+    local groups=("$@")
+    [ "${#groups[@]}" -gt 0 ] || mapfile -t groups < <(group_names "$APPS_FILE")
+    local dnf_groups=() g
+    for g in "${groups[@]}"; do [ "$g" = flatpak ] || dnf_groups+=("$g"); done
+    case "$sub" in
+        list) list_packages "${groups[@]}" ;;
+        missing)
+            [ "${#dnf_groups[@]}" -gt 0 ] && missing_packages "${dnf_groups[@]}"
+            ;;
+        command)
+            [ "${#dnf_groups[@]}" -gt 0 ] && install_command "${dnf_groups[@]}"
+            if printf '%s\n' "${groups[@]}" | grep -qx flatpak; then
+                local ids=()
+                mapfile -t ids < <(list_packages flatpak)
+                echo "flatpak install -y flathub ${ids[*]}"
+            fi
+            ;;
+        check)
+            for g in "${groups[@]}"; do
+                if [ "$g" = flatpak ]; then
+                    local miss="" id
+                    for id in $(list_packages flatpak); do flatpak info "$id" >/dev/null 2>&1 || miss="$miss $id"; done
+                    if [ -z "$miss" ]; then echo "$g: all installed"; else echo "$g: missing$miss"; fi
+                    continue
+                fi
+                local m
+                m="$(missing_packages "$g" | tr '\n' ' ')"
+                if [ -z "$m" ]; then echo "$g: all installed"; else echo "$g: missing $m"; fi
+            done
+            ;;
+        *) echo "aptus-packages apps: unknown sub-command $sub" >&2; return 2 ;;
+    esac
+}
+
 main() {
     local cmd="${1:-check}"
     [ "$#" -gt 0 ] && shift
@@ -65,6 +112,7 @@ main() {
         missing) missing_packages "$@" ;;
         command) install_command "$@" ;;
         check) check_all ;;
+        apps) apps "$@" ;;
         *) sed -n '2,8p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; return 2 ;;
     esac
 }

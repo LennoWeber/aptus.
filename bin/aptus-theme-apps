@@ -1,0 +1,247 @@
+#!/usr/bin/env python3
+"""Colour the apps of the dotfiles with the aptus palette.
+
+  aptus-theme-apps [--mode light|dark] [--dry-run] [--only kitty,ghostty,gtk,qt,btop,zathura,gsettings]
+
+Reads the palette in theme/tokens.json (day) and writes one theme file per app under ~/.config. A config that
+does not mention the theme yet gets one line that includes it. An existing file that is replaced is kept once
+as NAME.before-aptus. Nothing is installed. Running it again rewrites the same files.
+"""
+import argparse
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+
+ROOT = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+HOME = os.path.expanduser("~")
+CFG = os.environ.get("XDG_CONFIG_HOME", os.path.join(HOME, ".config"))
+
+# Accent colours for the terminal palette: the shell itself has no accent, so these are quiet and fixed.
+ACCENTS = {
+    "light": dict(blue="#2B6CA3", magenta="#8B4C8F", cyan="#247B80", bblue="#3F82BA", bmagenta="#A062A5", bcyan="#34929A"),
+    "dark": dict(blue="#7FB2E0", magenta="#C79BD0", cyan="#6FC7CC", bblue="#9CC6EA", bmagenta="#D8B3E0", bcyan="#8ED7DB"),
+}
+SIGNAL_DARK = dict(ok="#6FBF9A", warn="#E0B35A", critical="#E0786C")
+
+
+def palette(mode: str) -> dict:
+    with open(os.path.join(ROOT, "theme", "tokens.json")) as f:
+        day = json.load(f)["palette"]["day"]
+    if mode == "light":
+        p = dict(day)
+    else:
+        p = dict(bg=day["ink"], surface="#252B32", surfaceAlt="#2E353D", line="#3A424B", ink=day["bg"],
+                 inkSoft="#B4B9C0", inkFaint="#7C838C", **SIGNAL_DARK)
+    p.update(ACCENTS[mode])
+    return p
+
+
+def ansi(p: dict, mode: str) -> list:
+    if mode == "light":
+        return [p["ink"], p["critical"], p["ok"], p["warn"], p["blue"], p["magenta"], p["cyan"], p["surfaceAlt"],
+                p["inkFaint"], "#C8493B", "#2F8A66", "#C98A2A", p["bblue"], p["bmagenta"], p["bcyan"], p["bg"]]
+    return [p["surface"], p["critical"], p["ok"], p["warn"], p["blue"], p["magenta"], p["cyan"], p["inkSoft"],
+            p["inkFaint"], "#F09284", "#8AD3B0", "#EFC574", p["bblue"], p["bmagenta"], p["bcyan"], p["ink"]]
+
+
+def write(path: str, text: str, dry: bool, keep: bool = True) -> None:
+    if dry:
+        print(f"  [dry-run] write {path}")
+        return
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    if keep and os.path.exists(path) and not os.path.exists(path + ".before-aptus"):
+        with open(path) as f:
+            old = f.read()
+        if "aptus-theme-apps" not in old:
+            shutil.copy2(path, path + ".before-aptus")
+    with open(path, "w") as f:
+        f.write(text)
+    print(f"  wrote {path}")
+
+
+def ensure_line(path: str, line: str, dry: bool, drop: str = "") -> None:
+    """Add LINE at the end of an existing config, once; lines matching DROP (a regex) are removed first."""
+    if not os.path.exists(path):
+        return
+    with open(path) as f:
+        text = f.read()
+    new = re.sub(drop, "", text, flags=re.M) if drop else text
+    if line not in new:
+        new = new.rstrip("\n") + "\n\n" + line + "\n"
+    if new == text:
+        return
+    if dry:
+        print(f"  [dry-run] add to {path}: {line}")
+        return
+    if not os.path.exists(path + ".before-aptus"):
+        shutil.copy2(path, path + ".before-aptus")
+    with open(path, "w") as f:
+        f.write(new)
+    print(f"  updated {path}")
+
+
+HEADER = "aptus-theme-apps: generated from theme/tokens.json, do not edit (run aptus-theme-apps again)"
+
+
+def kitty(p, mode, dry):
+    a = ansi(p, mode)
+    lines = [f"# {HEADER}", f"foreground {p['ink']}", f"background {p['bg']}", f"selection_foreground {p['bg']}",
+             f"selection_background {p['ink']}", f"cursor {p['ink']}", f"cursor_text_color {p['bg']}",
+             f"url_color {p['blue']}", f"active_border_color {p['inkSoft']}", f"inactive_border_color {p['line']}",
+             f"active_tab_foreground {p['bg']}", f"active_tab_background {p['ink']}",
+             f"inactive_tab_foreground {p['inkSoft']}", f"inactive_tab_background {p['surfaceAlt']}",
+             f"tab_bar_background {p['bg']}"]
+    lines += [f"color{i} {c}" for i, c in enumerate(a)]
+    write(os.path.join(CFG, "kitty", "themes", "aptus.conf"), "\n".join(lines) + "\n", dry)
+    # include it after the other theme includes so it wins; the generated Noctalia block stays but is overridden
+    ensure_line(os.path.join(CFG, "kitty", "kitty.conf"), "include themes/aptus.conf", dry)
+
+
+def ghostty(p, mode, dry):
+    a = ansi(p, mode)
+    lines = [f"# {HEADER}", f"background = {p['bg']}", f"foreground = {p['ink']}", f"cursor-color = {p['ink']}",
+             f"cursor-text = {p['bg']}", f"selection-background = {p['ink']}", f"selection-foreground = {p['bg']}"]
+    lines += [f"palette = {i}={c}" for i, c in enumerate(a)]
+    write(os.path.join(CFG, "ghostty", "themes", "aptus"), "\n".join(lines) + "\n", dry)
+    ensure_line(os.path.join(CFG, "ghostty", "config"), "theme = aptus", dry, drop=r"^theme\s*=.*\n?")
+
+
+def btop(p, mode, dry):
+    names = dict(main_bg=p["bg"], main_fg=p["ink"], title=p["ink"], hi_fg=p["blue"], selected_bg=p["ink"],
+                 selected_fg=p["bg"], inactive_fg=p["inkFaint"], graph_text=p["inkSoft"], meter_bg=p["line"],
+                 proc_misc=p["cyan"], cpu_box=p["line"], mem_box=p["line"], net_box=p["line"], proc_box=p["line"],
+                 div_line=p["line"], temp_start=p["ok"], temp_mid=p["warn"], temp_end=p["critical"],
+                 cpu_start=p["ok"], cpu_mid=p["warn"], cpu_end=p["critical"], free_start=p["ok"], free_mid=p["ok"],
+                 free_end=p["ok"], cached_start=p["blue"], cached_mid=p["blue"], cached_end=p["blue"],
+                 available_start=p["cyan"], available_mid=p["cyan"], available_end=p["cyan"],
+                 used_start=p["warn"], used_mid=p["warn"], used_end=p["critical"],
+                 download_start=p["blue"], download_mid=p["blue"], download_end=p["cyan"],
+                 upload_start=p["magenta"], upload_mid=p["magenta"], upload_end=p["bmagenta"])
+    text = f"# {HEADER}\n" + "".join(f'theme[{k}]="{v}"\n' for k, v in names.items())
+    write(os.path.join(CFG, "btop", "themes", "aptus.theme"), text, dry)
+    path = os.path.join(CFG, "btop", "btop.conf")
+    if os.path.exists(path):
+        with open(path) as f:
+            t = f.read()
+        n = re.sub(r'^color_theme\s*=.*$', 'color_theme = "aptus"', t, flags=re.M)
+        if n != t and not dry:
+            if not os.path.exists(path + ".before-aptus"):
+                shutil.copy2(path, path + ".before-aptus")
+            with open(path, "w") as f:
+                f.write(n)
+            print(f"  updated {path}")
+
+
+def gtk(p, mode, dry):
+    css = f"""/* {HEADER} */
+@define-color accent_bg_color {p['ink']};
+@define-color accent_fg_color {p['bg']};
+@define-color accent_color {p['ink']};
+@define-color window_bg_color {p['bg']};
+@define-color window_fg_color {p['ink']};
+@define-color view_bg_color {p['surface']};
+@define-color view_fg_color {p['ink']};
+@define-color headerbar_bg_color {p['bg']};
+@define-color headerbar_fg_color {p['ink']};
+@define-color headerbar_border_color {p['line']};
+@define-color sidebar_bg_color {p['surfaceAlt']};
+@define-color sidebar_fg_color {p['ink']};
+@define-color card_bg_color {p['surface']};
+@define-color card_fg_color {p['ink']};
+@define-color popover_bg_color {p['surface']};
+@define-color popover_fg_color {p['ink']};
+@define-color dialog_bg_color {p['surface']};
+@define-color dialog_fg_color {p['ink']};
+@define-color success_color {p['ok']};
+@define-color warning_color {p['warn']};
+@define-color error_color {p['critical']};
+@define-color destructive_bg_color {p['critical']};
+@define-color borders {p['line']};
+@define-color theme_bg_color {p['bg']};
+@define-color theme_fg_color {p['ink']};
+@define-color theme_base_color {p['surface']};
+@define-color theme_text_color {p['ink']};
+@define-color theme_selected_bg_color {p['ink']};
+@define-color theme_selected_fg_color {p['bg']};
+"""
+    for v in ("gtk-3.0", "gtk-4.0"):
+        d = os.path.join(CFG, v)
+        write(os.path.join(d, "aptus-colors.css"), css, dry)
+        write(os.path.join(d, "gtk.css"), f'/* {HEADER} */\n@import url("aptus-colors.css");\n', dry)
+
+
+def qt(p, mode, dry):
+    def pal(fg, btn, base, win, hi, hifg, dis):
+        order = [fg, btn, p["surface"], p["surfaceAlt"], p["line"], p["inkFaint"], fg, p["bg"], fg, base, win, "#000000",
+                 hi, hifg, p["blue"], p["magenta"], p["surfaceAlt"], "#000000", p["surface"], fg, dis, hi]
+        return ", ".join("#ff" + c.lstrip("#") for c in order)
+    active = pal(p["ink"], p["surfaceAlt"], p["surface"], p["bg"], p["ink"], p["bg"], p["inkFaint"])
+    disabled = pal(p["inkFaint"], p["surfaceAlt"], p["surface"], p["bg"], p["line"], p["inkFaint"], p["inkFaint"])
+    text = f"# {HEADER}\n[ColorScheme]\nactive_colors={active}\ninactive_colors={active}\ndisabled_colors={disabled}\n"
+    for v in ("qt5ct", "qt6ct"):
+        path = os.path.join(CFG, v, "colors", "aptus.conf")
+        write(path, text, dry)
+        conf = os.path.join(CFG, v, f"{v}.conf")
+        if os.path.exists(conf):
+            with open(conf) as f:
+                t = f.read()
+            n = re.sub(r'^color_scheme_path=.*$', f"color_scheme_path={path}", t, flags=re.M)
+            n = re.sub(r'^style=.*$', "style=Fusion", n, flags=re.M)
+            n = re.sub(r'^icon_theme=.*$', "icon_theme=Papirus" + ("-Dark" if mode == "dark" else ""), n, flags=re.M)
+            if n != t and not dry:
+                if not os.path.exists(conf + ".before-aptus"):
+                    shutil.copy2(conf, conf + ".before-aptus")
+                with open(conf, "w") as f:
+                    f.write(n)
+                print(f"  updated {conf}")
+
+
+def zathura(p, mode, dry):
+    path = os.path.join(CFG, "zathura", "zathurarc")
+    text = f"# {HEADER}\nset default-bg \"{p['bg']}\"\nset default-fg \"{p['ink']}\"\nset statusbar-bg \"{p['surfaceAlt']}\"\n" \
+           f"set statusbar-fg \"{p['ink']}\"\nset inputbar-bg \"{p['bg']}\"\nset inputbar-fg \"{p['ink']}\"\n" \
+           f"set highlight-color \"{p['warn']}\"\nset highlight-active-color \"{p['ok']}\"\nset recolor \"false\"\n"
+    if os.path.isdir(os.path.join(CFG, "zathura")):
+        write(os.path.join(CFG, "zathura", "aptus"), text, dry)
+        ensure_line(path, "include aptus", dry)
+
+
+def gsettings(p, mode, dry):
+    pairs = [("color-scheme", "prefer-dark" if mode == "dark" else "prefer-light"),
+             ("gtk-theme", "adw-gtk3-dark" if mode == "dark" else "adw-gtk3"),
+             ("icon-theme", "Papirus-Dark" if mode == "dark" else "Papirus")]
+    if shutil.which("gsettings") is None:
+        return
+    for key, val in pairs:
+        if dry:
+            print(f"  [dry-run] gsettings set org.gnome.desktop.interface {key} {val}")
+        else:
+            subprocess.run(["gsettings", "set", "org.gnome.desktop.interface", key, val], check=False)
+    print("  set gsettings color-scheme, gtk-theme, icon-theme")
+
+
+APPS = dict(kitty=kitty, ghostty=ghostty, btop=btop, gtk=gtk, qt=qt, zathura=zathura, gsettings=gsettings)
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--mode", choices=["light", "dark"], default="light")
+    ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--only", default=",".join(APPS))
+    args = ap.parse_args()
+    chosen = [a for a in args.only.split(",") if a]
+    for a in chosen:
+        if a not in APPS:
+            print(f"unknown app {a}; known: {', '.join(APPS)}", file=sys.stderr)
+            return 2
+    p = palette(args.mode)
+    for a in chosen:
+        print(f"{a}:")
+        APPS[a](p, args.mode, args.dry_run)
+    return 0
+
+
+sys.exit(main())
