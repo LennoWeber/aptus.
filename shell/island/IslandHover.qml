@@ -20,7 +20,8 @@ FocusScope {
     property var focusState
     property var mediaState
     property var powerProfileState
-    property string expanded         // the open section: "", "wifi" or "bluetooth"; at most one
+    property var audioState
+    property string expanded         // the open section: "", "wifi", "bluetooth" or "sound"; at most one
     property color ink
     property color inkSoft
     property color line

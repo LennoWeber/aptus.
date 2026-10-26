@@ -16,6 +16,8 @@ Singleton {
     readonly property string folder: directory || (Quickshell.env("HOME") + "/Pictures/Wallpapers")
     property string current             // absolute path, empty = none
     property var list: []               // { path, name }
+    property int count                  // list.length
+    property bool loaded                // the folder was listed at least once
     readonly property string stateFile: (Quickshell.env("XDG_STATE_HOME") || (Quickshell.env("HOME") + "/.local/state")) + "/aptus/wallpaper"
 
     function scan(): void {

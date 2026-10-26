@@ -53,6 +53,8 @@ PanelWindow {
     }
     property int view: islandState ? islandState.view : Enums.IslandView.Home
     property bool isOpen: stage === Enums.IslandStage.Open
+    property bool homeWithQuick     // the opened Home shows the quick settings below the header (every design)
+    property int openGrowMs         // ms: the body grows to an opened view in this time
     property bool isHover: stage === Enums.IslandStage.Hover
     property bool isAlert: stage === Enums.IslandStage.Alert
     onIsPinnedChanged: if (isPinned && !isHover) throw new Error("invariant: Island: pinned without the hover card")

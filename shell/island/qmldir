@@ -19,3 +19,4 @@ IslandToggle 1.0 IslandToggle.qml
 IslandWifi 1.0 IslandWifi.qml
 IslandBluetooth 1.0 IslandBluetooth.qml
 IslandQuickActions 1.0 IslandQuickActions.qml
+IslandSound 1.0 IslandSound.qml

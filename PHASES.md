@@ -1112,3 +1112,8 @@ Arbeitsregel wie zuvor: nie auf „weiter“ warten, jede Phase protokollieren u
 
 ### Protokoll Island-Galerie
 **Phase 1 (Plan), erledigt:** Ursache des unveränderten Hovers gefunden und behoben (Link auf `main`). Picker, Home und Hover am Gerät fotografiert und gelesen. Kein Code, kein Review in dieser Phase.
+
+**Phase 2 (Strukturen), erledigt:**
+- Neu: `island/IslandSound.qml` (nur Properties und Signal, Eintrag im `qmldir`).
+- Erweitert: `IslandWallpaper` (`columns`, `thumbWidth`, `thumbHeight`, `visibleRows`, `contentWidth`, `contentHeight`, `folderLabel`), `IslandHover` (`audioState`, Kommentar: Bereich `sound` erlaubt), `Island` (`homeWithQuick`, `openGrowMs`), `Wallpaper` (`count`, `loaded`).
+- Prüfung: Diff gelesen; nur Properties und eine leere Hülle, keine Funktion, keine Bindung, keine Konstante (Werte kommen in Phase 3); nicht gebaut.

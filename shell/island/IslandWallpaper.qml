@@ -13,6 +13,13 @@ FocusScope {
     property int selectedIndex
     property real reveal: active ? 1 : 0      // 0..1, how far the cards have come out of the island
     property bool active       // the view is the one shown
+    property int columns            // columns of the grid
+    property int thumbWidth         // size of one picture in the grid
+    property int thumbHeight
+    property int visibleRows        // rows shown at once, the grid scrolls beyond that
+    property real contentWidth      // size this view wants (Island.sizeFor reads it)
+    property real contentHeight
+    property string folderLabel     // the folder shown in the header, with ~ for home
     property color ink
     property color inkSoft
     property color line
