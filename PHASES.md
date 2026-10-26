@@ -6,6 +6,8 @@ Zweiter Phasenablauf (neue Funktion „Notch“, ab 22. Okt.): **Phase 1 (Plan) 
 
 Dritter Phasenablauf (neue Funktion „Bild-Theming“, 22. Okt.): **Phase 1 bis 5 erledigt, wartet auf „weiter“ für Phase 6**, siehe Abschnitt „Bild-Theming“ weiter unten.
 
+Zwölfter Ablauf (Themes, 27. Okt.): **läuft ohne Pausen**, Stand siehe „Protokoll Ablauf 12“ ganz unten.
+
 Vierter Phasenablauf (neue Funktion „Island“, 26. Okt., ersetzt den Notch): **läuft ohne Pausen durch (Lenno: nie auf „weiter“ warten, alles protokollieren, jede Phase selbst prüfen)**, Stand siehe „Protokoll Island“ ganz unten.
 
 ## Ziel
@@ -1428,3 +1430,60 @@ Spotify braucht Neustart; Thunderbird hat noch kein Profil; fastfetch bindet das
   - **Test:** Harness-Shell mit Fake-HOME und Symlinks auf `models/theme/services`: Umschalten, Auto + Nachtlicht, Repaint (Zustandsdatei `color-mode`), `paletteAt` für Hell unverändert (`#f4f3ef`/`#1c2127`), Dunkel (`#1c2127`/`#f4f3ef`), Nachtlicht in Dunkel schwächer.
   - **Review Phase 7, behoben:** Super+T schrieb die Einstellung nicht auf die Platte (`writeUserConfig` ergänzt); `spicetify` mit Zeitüberschreitung/Fehler beendet das Skript nicht mehr; `start()` bricht ohne Tokens-Datei nicht mehr ab (Warnung statt Fehler); fastfetch löscht die alte `themes/aptus.jsonc` nur noch, wenn sie unsere Kopfzeile trägt und kein Link ist.
   - **Bekannt, nicht geändert:** Auto beim nächtlichen Login kann einmal Hell→Dunkel wechseln (Nachtlicht wird erst kurz nach dem Start erkannt); xsettingsd/ghostty/yazi schreiben durch Links ins Dotfiles-Repo; `MODE_FILE` gilt auch, wenn ein einzelnes Programm (z. B. Spicetify) fehlte; hängt `Process` beim Start, bleibt `applying` wahr; `Qt.lighter(ok)` in den zwei Kacheln, `LevelBars` mit Standard `black` und feste Kalenderfarben (Identitätsfarben, in beiden Modi lesbar) wurden nicht am Gerät geprüft.
+
+## Ablauf 12: Fünf Farb-Themes, Theme-Auswahl mit Mod+T, Hintergrund-Anpassung, Farben vom Bild, Hintergrund im Greeter
+
+Stand 27. Okt. 2026 (Branch `themes` im Worktree `~/Code/Projekte/aptus-themes`, von `color-mode`): **Phase 1 geschrieben; Phasen 2 bis 7 laufen ohne Pause** ([[feedback_phasen_ohne_weiter]]). Der Worktree schützt die laufende Shell: Quickshell lädt Dateien bei Änderung neu, unfertige Phasen dürfen die Shell des Nutzers nicht erreichen.
+
+### Ziel (Lenno)
+1. Zusätzlich zu Hell und Dunkel **fünf farbige Schemas**; modern und professionell, nicht „Hacker“.
+2. **Mod+T** wählt zwischen den Themes.
+3. In den Settings einstellen, **wie das Hintergrundbild angezeigt wird** (fit, fill, stretch, …).
+4. Eine Einstellung: **Farben automatisch vom aktuellen Hintergrundbild**.
+5. Der **Greeter zeigt das Hintergrundbild des Desktops**.
+
+### Ist-Stand (geprüft)
+- Hell/Dunkel (Ablauf 11) liegt auf `color-mode`, **nicht in `main`**; die laufende Shell läuft auf diesem Stand. Mod+T ist in `~/.config/hypr/hyprland.lua` schon an `shell-switch msg theme-mode-toggle` gebunden (→ IPC `themeModeToggle`); Hyprland braucht keine Änderung.
+- `Tokens.qml`: Paletten `day`/`night`/`dark` aus `theme/tokens.json`, Überblendung `darkAmount` (0 hell … 1 dunkel), Nachtlicht-Tönung `blend` obendrauf. Der Greeter kopiert `shell/theme` (nur `Enums` und `GreeterState` als Modelle): `Tokens` darf keine neuen Importe bekommen.
+- `bin/aptus-theme-apps`: `--mode light|dark`, Palette über `palette(mode)`, Vorlagen mit `{{light_ROLE}}`/`{{dark_ROLE}}` für Zen, Thunderbird, Spicetify (Browser wählt per `prefers-color-scheme`).
+- Von der Bild-Theming-Idee (Ablauf 3, Phase 5 stehen geblieben) liegen nur Platzhalter im Code (`ThemeSource`, `Tokens.styleColors/refreshTheme/…`, `appearance.themeSource/style`, `bar.tone`, `visibleWhen`-TODO). Nichts davon ist verdrahtet; die Aufgabe „Farben vom Bild“ ersetzt sie (Entscheidung unten).
+- Hintergrund: `WallpaperLayer.qml` zeichnet das Bild selbst, fest `PreserveAspectCrop`. Das Greeter-Bild gibt es schon (`/etc/aptus/greeter.json`, `aptus-greeter-wallpaper` per `pkexec`, Policy `auth_admin`): es wird nur von Hand über die Wallpaper-Auswahl gesetzt und nie automatisch mit dem Desktop abgeglichen; die Polkit-Regel verlangt jedes Mal ein Passwort.
+- Einstellungs-Typ `choice` zeigt Pillen in einer Zeile (für 9 Themes zu breit); `visibleWhen` wird nicht ausgewertet.
+
+### Entscheidungen (selbst getroffen, Lenno kann sie ändern)
+1. **Ein Thema = eine vollständige Palette** (dieselben Rollen wie `day`/`dark` + `accent`, `onAccent`, `on`) plus `base` (`light` | `dark`). `base` steuert alles, was nur hell/dunkel kennt (gsettings, `prefers-color-scheme`, Icon-Variante, `adw-gtk3`). Hell und Dunkel bleiben die zwei neutralen Themes.
+2. **Fünf Themes, drei dunkel und zwei hell**, jeweils getönte Neutrale mit **einem** Akzent, kein Neon, keine Verläufe:
+   - **Ocean** (dunkel): Schiefer-Blau, Akzent Himmelblau `#4DA3E8`.
+   - **Forest** (dunkel): Tannengrün, Akzent Moosgrün `#A3C46B` (gelbgrün, damit „ok“ grün/türkis eindeutig bleibt).
+   - **Dusk** (dunkel): Indigo-Violett, Akzent Flieder `#A294F9`.
+   - **Sand** (hell): warmes Creme, Akzent Terrakotta `#B4532A`.
+   - **Sky** (hell): kühles Eisblau, Akzent Königsblau `#1F6FD1`.
+   Signalfarben (ok, warn, critical) bleiben in allen Themes erkennbar und werden pro Basis auf Kontrast ≥ 4,5:1 geprüft.
+3. **Neue Rolle `accent`** (+ `onAccent`, `on`): in Hell und Dunkel sehen Schieber, Wechselschalter, Messbalken und aktive Workspace-Blase **exakt wie heute** aus (accent = ink, on = ok); nur in den Farb-Themes tragen sie den Akzent. So bleibt „Farbe nur als Signal“ im Standard erhalten.
+4. **Eine Einstellung statt zwei**: `appearance.theme` = `light | dark | auto | ocean | forest | dusk | sand | sky | wallpaper` löst `appearance.colorMode` ab. `auto` = dunkel, solange das Nachtlicht läuft. Alte Werte werden beim Laden übernommen (`colorMode` → `theme`). Nachtlicht-Tönung bleibt obendrauf (in dunklen Themes schwächer).
+5. **Mod+T öffnet eine Auswahl** (kleine Karte oben, eigenes Layer-Fenster, funktioniert mit Leiste und Island): Pfeile oder erneutes Mod+T wechseln, die Shell zeigt die Vorschau sofort, Enter oder Klick übernimmt (dann ziehen die Apps nach), Esc stellt zurück. Wirkt wie ein Wechsel sofort, Apps werden erst bei Übernahme gefärbt.
+6. **Farben vom Bild („wallpaper“)**: neues Skript `bin/aptus-wallpaper-theme` (Python + Pillow) liest das Bild klein ein, nimmt die vorherrschende Farbtönung (nach Sättigung und Helligkeit gewichtet), baut daraus eine komplette Palette im selben Format und schreibt `~/.local/state/aptus/wallpaper-theme.json`. Hell oder dunkel folgt der Helligkeit des Bildes (`appearance.wallpaperTone`: `auto | light | dark`). Graue Bilder bekommen einen ruhigen blaugrauen Ton. Shell und `aptus-theme-apps` lesen dieselbe Datei. Ändert sich das Bild, wird neu berechnet und weich übergeblendet.
+7. **Bildanpassung** `wallpaper.fit`: `fill` (Standard, wie heute), `fit` (ganz sichtbar, Ränder in Theme-Farbe), `stretch`, `center` (Originalgröße), `tile`. Gilt für Desktop und Greeter.
+8. **Greeter**: das Desktop-Bild wird **automatisch** abgeglichen (Einstellung `appearance.loginWallpaper`, Standard an): bei jeder Bildänderung und beim Start, wenn das Greeter-Bild abweicht, ruft die Shell den vorhandenen Root-Helfer auf. Der Helfer bekommt `--fit` und schreibt `wallpaperFit` in `/etc/aptus/greeter.json`; die Polkit-Regel erlaubt dafür der aktiven lokalen Sitzung **ohne Passwort** (der Helfer liest das Bild weiterhin mit den Rechten des Aufrufers und prüft Typ und Größe). Das Einspielen der neuen Regel braucht `sudo` (`./install.sh --greeter`), siehe Risiken. Die Greeter-Oberfläche bleibt hell (eigene Palette), das Bild folgt der Anpassung.
+9. **Altes Bild-Theming (Ablauf 3) wird aufgegeben**: Platzhalter `ThemeSource` (alt), `Tokens.refreshTheme/styleColors/applyStyle/nightShift/hexToHsl/hslToHex/shiftHue`, `Enums.ThemeSource/ThemeStyle/BarTone`, `appearance.themeSource/style`, `bar.tone`, `WallpaperColors` und `themeStyles/themeExtraction` in `tokens.json` entfallen; sie waren nie verdrahtet.
+
+### Betroffene Dateien (Plan)
+- `theme/tokens.json`: `palette.themes` (fünf Themes), Rollen `accent`/`onAccent`/`on` in `day`/`dark`; alte `themeStyles`/`themeExtraction` entfernt.
+- `shell/theme/Tokens.qml`: Überblendung zwischen zwei Paletten (`themeFade`) statt `darkAmount`; `accent`, `onAccent`, `on`; `setTheme(id)`, `setCustomTheme(palette)`, `themeIds`; alte Platzhalter entfernt.
+- `shell/services/ColorModeState.qml` (Theme-Auflösung `auto`/`wallpaper`, Vorschau, Weitergabe an `aptus-theme-apps --theme`), neu `shell/services/ThemeSource.qml` (ersetzt den alten Platzhalter: ruft `aptus-wallpaper-theme`, liest die Datei), `shell/services/Wallpaper.qml` (`fit`, Greeter-Abgleich), `shell/wallpaper/WallpaperLayer.qml` (Anpassung), neu `shell/theme/ThemePicker.qml` + `ThemeSwatch.qml`, `shell/IpcHandlers.qml` (`themeModeToggle` öffnet die Auswahl, `themeSet`, `themeNext`), `shell/shell.qml`, `shell/models/AppSettings.qml`, `shell/models/Enums.qml`, `shell/models/SettingsAppState.qml` (`visibleWhen`), `shell/settings/SettingRow.qml` (Typ `theme` mit Mustern), `config/settings-schema.json`, `config/settings.json`, `config/hotkeys.json`.
+- Komponenten mit Akzent: `SliderControl`, `ToggleSwitch`, `MeterBar`, `WorkspaceBubbles` (und die Island-Teile, die `Tokens.ink` als „aktiv“ nutzen, wenn sie dieselbe Rolle haben).
+- `bin/aptus-theme-apps` (`--theme`, Themes aus `tokens.json` und der Bild-Datei), neu `bin/aptus-wallpaper-theme`, `bin/aptus-greeter-wallpaper` (`--fit`), `config/polkit/org.aptus.greeter-wallpaper.policy`, `config/greeter.json`, `greeter/GreeterSurface.qml`, `shell/models/GreeterState.qml`, `bin/aptus-greeter-build`, `install.sh`, README.
+
+### Risiken
+- **Greeter ohne Passwort**: die neue Polkit-Regel braucht einmal `sudo` (nicht von mir ausführbar ohne Rückfrage). Bis dahin fragt der automatische Abgleich bei jedem Bildwechsel nach dem Admin-Passwort; deshalb ist der Abgleich nur aktiv, wenn die Regel „yes“ für aktive Sitzungen enthält (die Shell prüft das nicht, sondern der Helferaufruf scheitert still und wird geloggt).
+- **Weiche Übergänge**: Überblendung zwischen beliebigen zwei Paletten, auch während sie läuft (Momentaufnahme als Ausgangspunkt); keine Bindungsschleife mit dem Nachtlicht.
+- **Kontrast** der neuen Themes in der Shell und in den Apps (Skript meldet Warnungen, Prüfung in Phase 6/7).
+- **Greeter-Kopie** von `Tokens`: darf nur `Enums` importieren; Greeter-Build in Phase 7 testen.
+- **Bild-Palette**: Pillow muss installiert sein (ist es); fehlt es oder das Bild, bleibt das vorherige Theme, nur Log.
+- **Test**: Shell nur im Worktree und kurz starten (Screenshots), danach die ursprüngliche Shell des Nutzers wieder herstellen.
+
+### Phasen dieses Ablaufs
+1 Plan · 2 Strukturen · 3 Signaturen · 4 TODOs · 5 Probe (Python-Seite lauffähig, QML-Seite per Harness) · 6 Invarianten · 7 Implementierung, jede mit Selbst-Review am Diff (kein Sub-Agent, siehe Memory).
+
+### Protokoll Ablauf 12
+- **Phase 1 (Plan), erledigt.**
