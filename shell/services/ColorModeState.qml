@@ -102,6 +102,7 @@ Scope {
         if (!(m >= Enums.ColorMode.Light && m <= Enums.ColorMode.Auto)) throw new Error("invariant: ColorModeState.setMode: unknown mode")
         if (!appSettings) throw new Error("invariant: ColorModeState.setMode: appSettings not set")
         appSettings.set("appearance.colorMode", nameFromMode(m))
+        appSettings.writeUserConfig()     // so the choice survives a restart
     }
 
     // Light <-> dark by hand (Super+T); Auto becomes the opposite of what is in effect.
@@ -111,7 +112,10 @@ Scope {
 
     // Move Tokens to the resolved mode.
     function applyShell(): void {
-        if (!Tokens.palette) throw new Error("invariant: ColorModeState.applyShell: tokens not loaded")
+        if (!Tokens.palette) {
+            console.warn("aptus: colour mode: tokens not loaded, the shell keeps its built-in colours")
+            return
+        }
         Tokens.darkAmount = dark ? 1 : 0
     }
 
