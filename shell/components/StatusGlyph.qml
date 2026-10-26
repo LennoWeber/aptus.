@@ -206,7 +206,33 @@ Canvas {
             ctx.arc(8, 8.5, 5, -Math.PI * 0.32, Math.PI * 1.32, false)
             ctx.moveTo(8, 2); ctx.lineTo(8, 8)
             ctx.stroke()
-        // TODO(phase 7, alerts): draw the kinds mail, download, bell, timer and battery (16 px grid, 1.5 px stroke like the others).
+        } else if (kind === "mail") {
+            ctx.beginPath()
+            ctx.moveTo(2.5, 3.5); ctx.lineTo(13.5, 3.5); ctx.lineTo(13.5, 12.5); ctx.lineTo(2.5, 12.5); ctx.closePath()
+            ctx.moveTo(2.5, 4.5); ctx.lineTo(8, 9); ctx.lineTo(13.5, 4.5)
+            ctx.stroke()
+        } else if (kind === "download") {
+            ctx.beginPath()
+            ctx.moveTo(8, 2); ctx.lineTo(8, 10); ctx.moveTo(4.8, 7); ctx.lineTo(8, 10.2); ctx.lineTo(11.2, 7)
+            ctx.moveTo(2.5, 11.5); ctx.lineTo(2.5, 13.5); ctx.lineTo(13.5, 13.5); ctx.lineTo(13.5, 11.5)
+            ctx.stroke()
+        } else if (kind === "bell") {
+            ctx.beginPath()
+            ctx.moveTo(3.5, 11.5); ctx.lineTo(12.5, 11.5)
+            ctx.moveTo(4.5, 11.5); ctx.lineTo(4.5, 7); ctx.arc(8, 7, 3.5, Math.PI, 2 * Math.PI, false); ctx.lineTo(11.5, 11.5)
+            ctx.moveTo(6.6, 13.6); ctx.lineTo(9.4, 13.6)
+            ctx.stroke()
+        } else if (kind === "timer") {
+            ctx.beginPath(); ctx.arc(8, 9, 5.2, 0, 2 * Math.PI); ctx.stroke()
+            ctx.beginPath()
+            ctx.moveTo(8, 9); ctx.lineTo(8, 6); ctx.moveTo(6.2, 2); ctx.lineTo(9.8, 2)
+            ctx.stroke()
+        } else if (kind === "battery") {
+            ctx.beginPath()
+            ctx.moveTo(2, 5); ctx.lineTo(12, 5); ctx.lineTo(12, 11); ctx.lineTo(2, 11); ctx.closePath()
+            ctx.moveTo(13.5, 7); ctx.lineTo(13.5, 9)
+            ctx.stroke()
+            ctx.fillRect(3.6, 6.6, 3, 2.8)
         } else if (kind === "moon") {
             // A crescent from two arcs, drawn on a 24 px grid and scaled down.
             const rad = d => d * Math.PI / 180

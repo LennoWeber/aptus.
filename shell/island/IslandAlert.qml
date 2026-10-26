@@ -3,7 +3,8 @@ import qs.models
 import qs.theme
 import qs.components
 
-// The alert on the pill: a dot for how serious it is, the text, a line of detail.
+// The alert on the pill: a dot for how serious it is, the text, a line of detail. A card alert (music, mail,
+// download, notification, timer, battery) grows the island and shows an AlertCard instead.
 Item {
     id: alertView
 
@@ -13,18 +14,21 @@ Item {
     property color inkSoft
     property color line
     property color accent
-    property real cardWidth            // width of the card (px)
-    property bool isCard               // the alert is not Plain: the card shows
-    // TODO(phase 7, alerts): isCard = alert is not Plain; cardHeight = the card's implicitHeight (Island sizes the body from it).
-    property real cardHeight           // what the card wants, Island reads it to size the body
+    property real cardWidth: 420
+
+    readonly property bool isCard: alert !== null && alert !== undefined && alert.kind !== Enums.AlertKind.Plain
+    readonly property real cardHeight: card.implicitHeight   // what the card wants, Island reads it to size the body
 
     signal clicked()
     signal dismissed()
     signal actionInvoked(string actionId)
     signal hoverChanged(bool hovered)
 
-    // TODO(phase 7, alerts): show AlertCard for every kind but Plain; Plain keeps this row.
+    // The card is wider than the body while it grows: what leaves the body is cut off.
+    clip: isCard
+
     Row {
+        visible: !alertView.isCard
         anchors.centerIn: parent
         spacing: 8
         width: Math.min(implicitWidth, alertView.width - 28)
@@ -57,6 +61,24 @@ Item {
 
     MouseArea {
         anchors.fill: parent
+        visible: !alertView.isCard
         onClicked: alertView.clicked()
+    }
+
+    AlertCard {
+        id: card
+        visible: alertView.isCard
+        anchors.horizontalCenter: parent.horizontalCenter
+        width: alertView.cardWidth
+        alert: alertView.isCard ? alertView.alert : null
+        mediaState: alertView.mediaState
+        ink: alertView.ink
+        inkSoft: alertView.inkSoft
+        line: alertView.line
+        accent: alertView.accent
+        onActivated: alertView.clicked()
+        onDismissed: alertView.dismissed()
+        onActionInvoked: id => alertView.actionInvoked(id)
+        onHoverChanged: hovered => alertView.hoverChanged(hovered)
     }
 }

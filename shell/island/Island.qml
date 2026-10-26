@@ -59,9 +59,9 @@ PanelWindow {
     readonly property int openGrowMs: 240   // ms: the body grows to an opened view in this time
     property bool homeWithCard: isOpen && view === Enums.IslandView.Home && cardStyle
     property bool isAlert: stage === Enums.IslandStage.Alert
-    // TODO(phase 7, alerts): cardAlert = isAlert and the alert is not Plain; alertAccent = the severity colour, else fg.
-    property bool cardAlert              // the shown alert has a card (not Plain): the body grows to it
-    property color alertAccent           // colour of a card's progress, state text and symbol
+    // The alert has a card (music, mail, download, notification, timer, battery): the body grows to it.
+    readonly property bool cardAlert: isAlert && islandState !== null && islandState.alert !== null && islandState.alert.kind !== Enums.AlertKind.Plain
+    readonly property color alertAccent: islandState && islandState.alert && islandState.alert.severity !== Enums.Severity.Neutral ? Tokens.colorFor(islandState.alert.severity) : fg
     property bool isOsd: stage === Enums.IslandStage.Osd   // the on-screen indicator shows
     onByHoverChanged: if (byHover && !isOpen) throw new Error("invariant: Island: byHover while not open")
     property bool byHover: isOpen && islandState && islandState.openedByHover   // opened by the pointer: no focus grab, no keyboard yet
@@ -124,8 +124,10 @@ PanelWindow {
     function sizeFor(stageId: int, viewId: int, contentHeight: real, morph: int): var {
         if (morph === Enums.MorphTarget.Launcher) return morphSizes.launcher
         if (morph === Enums.MorphTarget.ControlCenter) return morphSizes.controlCenter
-        // TODO(phase 7, alerts): a card alert takes its size from alertSizeFor(islandState.alert); Plain stays alertWidth x alertHeight.
-        if (stageId === Enums.IslandStage.Alert) return { w: alertWidth, h: alertHeight }
+        if (stageId === Enums.IslandStage.Alert) {
+            const a = islandState ? islandState.alert : null
+            return a && a.kind !== Enums.AlertKind.Plain ? alertSizeFor(a) : { w: alertWidth, h: alertHeight }
+        }
         if (stageId === Enums.IslandStage.Osd) return { w: osdWidth, h: osdHeight }
         if (stageId === Enums.IslandStage.Open) {
             switch (viewId) {
@@ -145,15 +147,16 @@ PanelWindow {
         if (stageId < Enums.IslandStage.Rest || stageId > Enums.IslandStage.Open) throw new Error("invariant: Island.growMsFor: unknown stage")
         if (stageId === Enums.IslandStage.Osd) return osdGrowMs
         if (stageId === Enums.IslandStage.Open) return byHover ? hoverGrowMs : openGrowMs
-        // TODO(phase 7, alerts): alertGrowMs for a card alert.
-        return stageId === Enums.IslandStage.Alert ? 220 : Tokens.durSlow
+        return stageId === Enums.IslandStage.Alert ? (cardAlert ? alertGrowMs : 220) : Tokens.durSlow
     }
 
     // Body size (object with w and h) of the card for an alert (IslandState.alert), told by its kind and its content.
     function alertSizeFor(a: var): var {
         if (!a) throw new Error("invariant: Island.alertSizeFor: no alert")
         if (a.kind === Enums.AlertKind.Plain) throw new Error("invariant: Island.alertSizeFor: a Plain alert has no card")
-        throw new Error("not implemented")
+        const wanted = alertView.cardHeight
+        const h = Math.max(a.kind === Enums.AlertKind.Media ? alertMediaHeight : alertCardMinHeight, Math.min(alertCardMaxHeight, wanted))
+        return { w: alertCardWidth, h: h }
     }
 
     // Open the island of this screen at a view.
@@ -208,16 +211,15 @@ PanelWindow {
         width: win.targetWidth
         height: win.targetHeight
         floating: IslandLook.gap > 0
-        cornerRadius: Math.min(win.openLike ? win.radiusOpen : win.radiusRest, Math.min(width, height) / 2)
+        cornerRadius: Math.min(win.openLike ? win.radiusOpen : win.cardAlert ? Math.min(win.radiusOpen, 24) : win.radiusRest, Math.min(width, height) / 2)
         fill: win.openLike ? IslandLook.fillOpen : win.design === "shade" && !win.isAlert ? IslandLook.inkRest : IslandLook.fillRest
         stroke: win.openLike ? IslandLook.strokeOpen : IslandLook.strokeRest
         strokeWidth: win.openLike ? IslandLook.strokeWidthOpen : IslandLook.strokeWidthRest
         accent: win.isAlert && win.islandState && win.islandState.alert && win.islandState.alert.severity !== Enums.Severity.Neutral ? Tokens.colorFor(win.islandState.alert.severity) : win.hairline
         accentOpacity: win.isAlert ? 1 : 0.5
         opacity: 1 - win.morphProgress
-        // TODO(phase 7, alerts): a card alert grows with a little overshoot (OutBack-like bezier); the others keep this curve.
-        Behavior on width { NumberAnimation { duration: win.growMsFor(win.stage, win.view); easing.type: Easing.BezierSpline; easing.bezierCurve: [0.22, 1, 0.36, 1, 1, 1] } }
-        Behavior on height { NumberAnimation { duration: win.growMsFor(win.stage, win.view); easing.type: Easing.BezierSpline; easing.bezierCurve: [0.22, 1, 0.36, 1, 1, 1] } }
+        Behavior on width { NumberAnimation { duration: win.growMsFor(win.stage, win.view); easing.type: Easing.BezierSpline; easing.bezierCurve: win.cardAlert ? [0.34, 1.32, 0.5, 1, 1, 1] : [0.22, 1, 0.36, 1, 1, 1] } }
+        Behavior on height { NumberAnimation { duration: win.growMsFor(win.stage, win.view); easing.type: Easing.BezierSpline; easing.bezierCurve: win.cardAlert ? [0.34, 1.32, 0.5, 1, 1, 1] : [0.22, 1, 0.36, 1, 1, 1] } }
         Behavior on cornerRadius { NumberAnimation { duration: win.growMsFor(win.stage, win.view) } }
 
         // Rest: a tap opens.
@@ -226,8 +228,8 @@ PanelWindow {
             anchors.fill: parent
             opacity: !win.isAlert && !win.isOsd && win.design !== "shade" ? win.restFade : 0
             visible: opacity > 0.01
-            // TODO(phase 7, alerts): pass cornerRadius: body.cornerRadius to the rest view (the cover strip takes the body's corners).
             design: win.design
+            cornerRadius: body.cornerRadius
             mediaState: win.mediaState
             timerState: win.timerState
             captureState: win.captureState
@@ -270,21 +272,38 @@ PanelWindow {
             line: win.hairline
         }
 
-        // TODO(phase 7, alerts): pass mediaState and the accent, route the dismiss and action signals (Notifications.invoke), keep the tile click.
-        // TODO(phase 7, alerts): pause the hold while the pointer is on the card (islandState.pauseAlert); the card shows a moment after the body started to grow.
         IslandAlert {
+            id: alertView
             anchors.fill: parent
             opacity: win.isAlert ? 1 : 0
             visible: opacity > 0.01
-            Behavior on opacity { NumberAnimation { duration: Tokens.durFast } }
+            // A card shows up a moment after the body started to grow, and slides in a little.
+            Behavior on opacity {
+                SequentialAnimation {
+                    PauseAnimation { duration: win.isAlert && win.cardAlert ? 110 : 0 }
+                    NumberAnimation { duration: win.cardAlert ? 220 : Tokens.durFast }
+                }
+            }
+            transform: Translate { y: win.cardAlert ? (1 - alertView.opacity) * 10 : 0 }
             alert: win.islandState ? win.islandState.alert : null
+            mediaState: win.mediaState
+            cardWidth: win.alertCardWidth
             ink: win.fg
             inkSoft: win.fgSoft
+            line: win.hairline
+            accent: win.alertAccent
             onClicked: {
                 const a = win.islandState.alert
                 win.islandState.dismissAlert()
                 if (a && a.tileId) win.tileRequested(a.tileId)
             }
+            onDismissed: win.islandState.dismissAlert()
+            onActionInvoked: id => {
+                const a = win.islandState.alert
+                win.islandState.dismissAlert()
+                if (a && a.notificationId >= 0) Notifications.invoke(a.notificationId, id)
+            }
+            onHoverChanged: hovered => win.islandState.pauseAlert(hovered)
         }
 
         // The quick settings, under the opened Home.

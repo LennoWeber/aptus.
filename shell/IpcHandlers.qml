@@ -216,24 +216,22 @@ Scope {
             if (root.audioState.muted) root.audioState.setMuted(false)
             const v = Math.min(1, root.audioState.volume + 0.05)
             root.audioState.setVolume(v)
-            // TODO(phase 7, alerts): pass the device name as fifth argument (audioState.outputName / inputName, display name).
-            root.osd.flash(Enums.OsdKind.Volume, v, false, "")
+            root.osd.flash(Enums.OsdKind.Volume, v, false, "", root.audioState.outputName)
         }
         function volumeDown(): void {
             const v = Math.max(0, root.audioState.volume - 0.05)
             root.audioState.setVolume(v)
-            root.osd.flash(Enums.OsdKind.Volume, v, root.audioState.muted, "")
+            root.osd.flash(Enums.OsdKind.Volume, v, root.audioState.muted, "", root.audioState.outputName)
         }
         function volumeMute(): void {
             const nowMuted = !root.audioState.muted
             root.audioState.setMuted(nowMuted)
-            root.osd.flash(Enums.OsdKind.Volume, root.audioState.volume, nowMuted, "")
+            root.osd.flash(Enums.OsdKind.Volume, root.audioState.volume, nowMuted, "", root.audioState.outputName)
         }
         function micMute(): void {
             const nowMuted = !root.audioState.inputMuted
             root.audioState.toggleInputMute()
-            // TODO(phase 7, alerts): pass the device name as fifth argument (audioState.outputName / inputName, display name).
-            root.osd.flash(Enums.OsdKind.Microphone, root.audioState.inputVolume, nowMuted, "")
+            root.osd.flash(Enums.OsdKind.Microphone, root.audioState.inputVolume, nowMuted, "", root.audioState.inputName)
         }
         function media(action: string): void {
             if (["prev", "next", "play-pause"].indexOf(action) < 0) throw new Error("invariant: IpcHandlers.media: unknown media action")

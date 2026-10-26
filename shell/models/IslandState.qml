@@ -88,8 +88,7 @@ Scope {
     function showOsd(kind: int, level: real, muted: bool, label: string, detail: string): void {
         if (kind < Enums.OsdKind.Volume || kind > Enums.OsdKind.Caffeine) throw new Error("invariant: IslandState.showOsd: unknown OSD kind")
         if (!enabled || stage === Enums.IslandStage.Open || morph !== Enums.MorphTarget.None) return
-        // TODO(phase 7, alerts): store `detail` (the device line) in the indicator data.
-        osd = { kind: kind, level: Math.max(0, Math.min(1, level)), muted: muted, label: label || "" }
+        osd = { kind: kind, level: Math.max(0, Math.min(1, level)), muted: muted, label: label || "", detail: detail || "" }
         hold.stop()
         hoverIn.stop()
         stage = Enums.IslandStage.Osd
@@ -132,13 +131,30 @@ Scope {
     }
 
     // severity: Enums.Severity. Critical goes first; the rest waits its turn (at most queueDepth, oldest dropped).
-    // TODO(phase 7, alerts): build the alert as Enums.AlertKind.Plain with the new fields (appName, appIcon, image ... empty, progress -1)
-    // // and hand it to the same queue as pushRichAlert.
     function pushAlert(id: string, text: string, detail: string, severity: int, tileId: int): void {
+        pushRichAlert(id, Enums.AlertKind.Plain, severity, tileId, { text: text, detail: detail })
+    }
+
+    // Push an alert with a card: kind is Enums.AlertKind, data holds the fields of IslandState.alert beyond id, kind, severity and tileId
+    // (text, detail, appName, appIcon, image, body, album, actions, notificationId, progress, playing, holdMs).
+    function pushRichAlert(id: string, kind: int, severity: int, tileId: int, data: var): void {
         if (!enabled || !alertsEnabled) return
-        const a = { id: id, text: text, detail: detail, severity: severity, tileId: tileId, holdMs: alertHoldMs }
-        // TODO(phase 7, alerts): an update of the shown alert (progress of a download, the next track) must replace its fields in place, not restart the grow.
-        if (alert && alert.id === id) { alert = a; if (stage === Enums.IslandStage.Alert) hold.restart(); return }
+        if (id === "") throw new Error("invariant: IslandState.pushRichAlert: empty alert id")
+        if (kind < Enums.AlertKind.Plain || kind > Enums.AlertKind.Battery) throw new Error("invariant: IslandState.pushRichAlert: unknown alert kind")
+        if (severity < Enums.Severity.Neutral || severity > Enums.Severity.Critical) throw new Error("invariant: IslandState.pushRichAlert: unknown severity")
+        if (data && data.progress !== undefined && (data.progress < -1 || data.progress > 1)) throw new Error("invariant: IslandState.pushRichAlert: progress must be -1 (none) or 0..1")
+        if (data && data.holdMs !== undefined && !(data.holdMs > 0)) throw new Error("invariant: IslandState.pushRichAlert: holdMs must be positive")
+        if (data && data.actions !== undefined && !Array.isArray(data.actions)) throw new Error("invariant: IslandState.pushRichAlert: actions must be a list")
+        const a = Object.assign({
+            text: "", detail: "", appName: "", appIcon: "", image: "", body: "", album: "",
+            actions: [], notificationId: -1, progress: -1, playing: false, holdMs: alertHoldMs
+        }, data || {}, { id: id, kind: kind, severity: severity, tileId: tileId })
+        // The same alert again (the next track, a download that moves on): its fields change in place, the island does not grow again.
+        if (alert && alert.id === id) {
+            alert = a
+            if (stage === Enums.IslandStage.Alert) { hold.interval = a.holdMs; hold.restart() }
+            return
+        }
         if (!alert) { show(a); return }
         if (severity === Enums.Severity.Critical && alert.severity !== Enums.Severity.Critical) {
             queue = [alert].concat(queue).slice(0, queueDepth)
@@ -149,22 +165,13 @@ Scope {
         if (queue.length > queueDepth) queue = queue.slice(queue.length - queueDepth)
     }
 
-    // Push an alert with a card: kind is Enums.AlertKind, data holds the fields of IslandState.alert beyond id, kind, severity and tileId
-    // (text, detail, appName, appIcon, image, body, album, actions, notificationId, progress, playing, holdMs).
-    function pushRichAlert(id: string, kind: int, severity: int, tileId: int, data: var): void {
-        if (id === "") throw new Error("invariant: IslandState.pushRichAlert: empty alert id")
-        if (severity < Enums.Severity.Neutral || severity > Enums.Severity.Critical) throw new Error("invariant: IslandState.pushRichAlert: unknown severity")
-        if (data && data.progress !== undefined && (data.progress < -1 || data.progress > 1)) throw new Error("invariant: IslandState.pushRichAlert: progress must be -1 (none) or 0..1")
-        if (data && data.holdMs !== undefined && !(data.holdMs > 0)) throw new Error("invariant: IslandState.pushRichAlert: holdMs must be positive")
-        if (data && data.actions !== undefined && !Array.isArray(data.actions)) throw new Error("invariant: IslandState.pushRichAlert: actions must be a list")
-        throw new Error("not implemented")
-    }
-
     // The pointer is on the alert card: it stays while paused is true, and goes a moment after the pointer left.
-    // TODO(phase 7, alerts): stop the hold while paused; when it is released, a short last hold (at most 1.8 s).
     function pauseAlert(paused: bool): void {
         if (typeof paused !== "boolean") throw new Error("invariant: IslandState.pauseAlert: paused must be a boolean")
-        throw new Error("not implemented")
+        if (stage !== Enums.IslandStage.Alert || !alert) return
+        if (paused) { hold.stop(); return }
+        hold.interval = Math.min(alert.holdMs, 1800)
+        hold.restart()
     }
 
     function dismissAlert(): void {

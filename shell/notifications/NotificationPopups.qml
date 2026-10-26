@@ -21,8 +21,7 @@ PanelWindow {
     }
 
     screen: pickScreen(Hyprland.focusedMonitor)
-    // TODO(phase 7, alerts): also false while islandHandles.
-    visible: items.length > 0
+    visible: items.length > 0 && !islandHandles
     anchors {
         top: true
         right: win.position === "top-right"

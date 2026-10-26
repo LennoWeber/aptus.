@@ -19,10 +19,12 @@ Scope {
     property string album: player ? player.trackAlbum : ""
     property string artUrl: player ? player.trackArtUrl : ""
     property string playerName: player ? player.identity : ""
-    // TODO(phase 7, alerts): bind to player.desktopEntry.
-    property string desktopEntry         // desktop entry of the player ("spotify"), "" when it has none
-    // TODO(phase 7, alerts): bind to iconFor(desktopEntry) (fall back to the identity in lower case).
-    property string appIcon              // icon source of the player's app, "" when none is found
+    property string desktopEntry: player && player.desktopEntry ? player.desktopEntry : ""   // desktop entry of the player ("spotify"), "" when it has none
+    // Icon source of the player's app, "" when none is found. The desktop entries load a moment after the start: the binding reads them.
+    property string appIcon: {
+        const loaded = DesktopEntries.applications.values.length
+        return loaded >= 0 ? iconFor(desktopEntry !== "" ? desktopEntry : playerName.toLowerCase()) : ""
+    }
     property real positionSec: 0
     property real lengthSec: player && player.lengthSupported ? player.length : 0
 
@@ -44,7 +46,15 @@ Scope {
     // Icon source for a desktop entry ("spotify"), "" when the theme has none.
     function iconFor(entry: string): string {
         if (typeof entry !== "string") throw new Error("invariant: MediaState.iconFor: the entry must be a string")
-        throw new Error("not implemented")
+        if (entry === "") return ""
+        const direct = Quickshell.iconPath(entry, true)
+        if (direct) return direct
+        // The entry names a desktop file whose icon has another name ("spotify" -> "com.spotify.Client").
+        const lower = entry.toLowerCase()
+        const app = DesktopEntries.heuristicLookup(entry) || Array.from(DesktopEntries.applications.values).find(a => a.id.toLowerCase().indexOf(lower) >= 0)
+        if (!app || !app.icon) return ""
+        if (app.icon.startsWith("/")) return "file://" + app.icon
+        return Quickshell.iconPath(app.icon, true) || ""
     }
 
     function playPause(): void {
