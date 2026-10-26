@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# TODO(phase 7): the usage text below (the --only list, "palette (day)", "Nothing is installed") must describe the new apps, the dark palette and Spicetify.
 """Colour the apps of the dotfiles with the aptus palette.
 
   aptus-theme-apps [--mode light|dark] [--dry-run] [--only kitty,ghostty,gtk,qt,btop,zathura,gsettings]
@@ -36,6 +37,7 @@ THUNDERBIRD_ROOTS = [os.path.join(HOME, ".thunderbird"), os.path.join(CFG, "thun
 SPICETIFY_DIR = os.path.join(CFG, "spicetify", "Themes")
 SPICETIFY_THEME = "aptus"
 
+# TODO(phase 7): ACCENTS and SIGNAL_DARK duplicate theme/tokens.json (palette.accents, palette.dark); read them there and delete both.
 # Accent colours for the terminal palette: the shell itself has no accent, so these are quiet and fixed.
 ACCENTS = {
     "light": dict(blue="#2B6CA3", magenta="#8B4C8F", cyan="#247B80", bblue="#3F82BA", bmagenta="#A062A5", bcyan="#34929A"),
@@ -45,6 +47,7 @@ SIGNAL_DARK = dict(ok="#6FBF9A", warn="#E0B35A", critical="#E0786C")
 
 
 def palette(mode: str) -> dict:
+    # TODO(phase 7): take the palette from load_tokens() through palette.modes (light -> day, dark -> dark), not from day plus literals.
     with open(os.path.join(ROOT, "theme", "tokens.json")) as f:
         day = json.load(f)["palette"]["day"]
     if mode == "light":
@@ -57,6 +60,7 @@ def palette(mode: str) -> dict:
 
 
 def ansi(p: dict, mode: str) -> list:
+    # TODO(phase 7): the bright colours are literals here; use palette.brights of the tokens.
     if mode == "light":
         return [p["ink"], p["critical"], p["ok"], p["warn"], p["blue"], p["magenta"], p["cyan"], p["surfaceAlt"],
                 p["inkFaint"], "#C8493B", "#2F8A66", "#C98A2A", p["bblue"], p["bmagenta"], p["bcyan"], p["bg"]]
@@ -129,6 +133,7 @@ def reload_apps(chosen: list, dry: bool) -> None:
 
 
 def write(path: str, text: str, dry: bool, keep: bool = True) -> None:
+    # TODO(phase 7): write through a temp file and rename (Hyprland reads hyprland-colors.lua); decide what a link into the dotfiles gets (starship.toml, nvim).
     if dry:
         print(f"  [dry-run] write {path}")
         return
@@ -144,6 +149,7 @@ def write(path: str, text: str, dry: bool, keep: bool = True) -> None:
 
 
 def ensure_line(path: str, line: str, dry: bool, drop: str = "") -> None:
+    # TODO(phase 7): hyprlock.conf and fish need a source line after the Noctalia ones and a file that may not exist yet; ensure_block covers blocks.
     """Add LINE at the end of an existing config, once; lines matching DROP (a regex) are removed first."""
     if not os.path.exists(path):
         return
@@ -168,6 +174,7 @@ HEADER = "aptus-theme-apps: generated from theme/tokens.json, do not edit (run a
 
 
 def kitty(p, mode, dry):
+    # TODO(phase 7): selection and url colours come from the roles of the tokens (selection, link), not from literals.
     a = ansi(p, mode)
     lines = [f"# {HEADER}", f"foreground {p['ink']}", f"background {p['bg']}", f"selection_foreground {p['bg']}",
              f"selection_background {p['ink']}", f"cursor {p['ink']}", f"cursor_text_color {p['bg']}",
@@ -182,6 +189,7 @@ def kitty(p, mode, dry):
 
 
 def ghostty(p, mode, dry):
+    # TODO(phase 7): selection colours from the roles of the tokens, like kitty.
     a = ansi(p, mode)
     lines = [f"# {HEADER}", f"background = {p['bg']}", f"foreground = {p['ink']}", f"cursor-color = {p['ink']}",
              f"cursor-text = {p['bg']}", f"selection-background = {p['ink']}", f"selection-foreground = {p['bg']}"]
@@ -191,6 +199,7 @@ def ghostty(p, mode, dry):
 
 
 def btop(p, mode, dry):
+    # TODO(phase 7): hi_fg from the link role; keep the signal colours only for the load gradients.
     names = dict(main_bg=p["bg"], main_fg=p["ink"], title=p["ink"], hi_fg=p["blue"], selected_bg=p["ink"],
                  selected_fg=p["bg"], inactive_fg=p["inkFaint"], graph_text=p["inkSoft"], meter_bg=p["line"],
                  proc_misc=p["cyan"], cpu_box=p["line"], mem_box=p["line"], net_box=p["line"], proc_box=p["line"],
@@ -281,6 +290,7 @@ def qt(p, mode, dry):
 
 
 def zathura(p, mode, dry):
+    # TODO(phase 7): highlight-color and highlight-active-color are signal colours used as decoration; use selection or accent roles.
     path = os.path.join(CFG, "zathura", "zathurarc")
     text = f"# {HEADER}\nset default-bg \"{p['bg']}\"\nset default-fg \"{p['ink']}\"\nset statusbar-bg \"{p['surfaceAlt']}\"\n" \
            f"set statusbar-fg \"{p['ink']}\"\nset inputbar-bg \"{p['bg']}\"\nset inputbar-fg \"{p['ink']}\"\n" \
@@ -359,6 +369,8 @@ def spotify(p, mode, dry):
     raise NotImplementedError("not implemented")
 
 
+# TODO(phase 7): register starship, fish, nvim, yazi, fastfetch, cava, hyprland_look, hyprlock, zen, thunderbird, spotify here and in the docstring
+# line "--only" at the top of the file.
 APPS = dict(kitty=kitty, ghostty=ghostty, btop=btop, gtk=gtk, qt=qt, zathura=zathura, gsettings=gsettings)
 
 
@@ -366,6 +378,7 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--mode", choices=["light", "dark"], default="light")
     ap.add_argument("--dry-run", action="store_true")
+    # TODO(phase 7): the default must stay the old apps; the new ones (Zen, Thunderbird, Spotify, anything inside the dotfiles links) only with --only or --all.
     ap.add_argument("--only", default=",".join(APPS))
     args = ap.parse_args()
     chosen = [a for a in args.only.split(",") if a]
@@ -374,9 +387,11 @@ def main() -> int:
             print(f"unknown app {a}; known: {', '.join(APPS)}", file=sys.stderr)
             return 2
     p = palette(args.mode)
+    # TODO(phase 7): after palette(): print check_contrast(colors_of(p, args.mode)) as warnings, and check template_roles of every template against colors_of before writing anything.
     for a in chosen:
         print(f"{a}:")
         APPS[a](p, args.mode, args.dry_run)
+    # TODO(phase 7): reload_apps(chosen, args.dry_run) after the last app so running programs pick the colours up.
     return 0
 
 

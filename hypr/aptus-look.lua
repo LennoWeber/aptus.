@@ -20,6 +20,7 @@ assert(windowLook.activeOpacity >= 0.7 and windowLook.activeOpacity <= 1, "aptus
 assert(windowLook.inactiveOpacity >= 0.7 and windowLook.inactiveOpacity <= windowLook.activeOpacity, "aptus-look: inactiveOpacity must be 0.7 to activeOpacity")
 assert(windowLook.blurSize >= 1 and windowLook.blurPasses >= 1, "aptus-look: blur needs size and passes of at least 1")
 
+-- TODO(phase 7, App-Theming): pcall(dofile) ~/.local/state/aptus/hyprland-colors.lua here, before hl.config; border colours are ink, so they flip in dark mode.
 hl.config({
 	general = {
 		gaps_in = 4,
@@ -27,6 +28,7 @@ hl.config({
 		-- one hairline, dark on light, no colour accent
 		border_size = 1,
 		col = {
+			-- TODO(phase 7, App-Theming): use the border and shadow colours loaded above (the file needs a fixed format); these literals are the fallback.
 			-- TODO(phase 7, Bild-Theming): borders and shadow use the Standard ink. Decide whether they follow the style ink (generated) or stay.
 			active_border = "rgba(1c212740)",
 			inactive_border = "rgba(1c212718)",
@@ -44,6 +46,7 @@ hl.config({
 			range = 18,
 			render_power = 3,
 			offset = "0 4",
+			-- TODO(phase 7, App-Theming): same file as the borders above.
 			color = "rgba(1c212721)",
 		},
 		-- blur stays on globally and blurs what shows through a transparent window; the shell asks for its own surfaces itself

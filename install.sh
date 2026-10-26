@@ -143,6 +143,7 @@ install_launcher() {
     link_into "$ROOT/bin/aptus-packages" "$BIN_DIR/aptus-packages"
     link_into "$ROOT/bin/aptus-settings-watchdog" "$BIN_DIR/aptus-settings-watchdog"
     link_into "$ROOT/bin/aptus-ai-usage" "$BIN_DIR/aptus-ai-usage"
+    # TODO(phase 7): link bin/aptus-theme-apps here too; it is not on the PATH yet and nothing calls it.
     # The window look is read from the state dir, so a settings change can rewrite it.
     if [ ! -e "$STATE_DIR/hyprland-look.lua" ]; then
         do_it cp "$ROOT/hypr/aptus-look.lua" "$STATE_DIR/hyprland-look.lua"
