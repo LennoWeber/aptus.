@@ -61,9 +61,10 @@
     {"id": "dock.pinned", "category": "dock", "title": "Apps in the dock", "description": "The apps that always stay in the dock. Open apps that are not here appear after them while they run.", "kind": "dockApps", "path": "dock.pinned", "advanced": false, "keywords": ["dock", "apps", "pin", "favourites", "favorites"], "section": "Apps"},
 
     {"id": "dock.autoHide", "category": "dock", "title": "Hide when not in use", "description": "The dock slides away and comes back when the pointer touches the bottom edge.", "kind": "toggle", "path": "dock.autoHide", "advanced": false, "keywords": ["dock", "hide"], "section": "Behaviour"},
+    {"id": "dock.reserveSpace", "category": "dock", "section": "Behaviour", "title": "Keep windows above the dock", "description": "On: windows stop above the dock, as with the bar. Off: the dock floats over windows. Has no effect while the dock hides itself.", "kind": "toggle", "path": "dock.reserveSpace", "advanced": false, "keywords": ["dock", "space", "reserve", "float", "windows", "overlap"]},
     {"id": "dock.magnify", "category": "dock", "title": "Zoom under the pointer", "description": "Icons near the pointer grow a little, like a magnifying glass.", "kind": "toggle", "path": "dock.magnify", "advanced": false, "keywords": ["dock", "zoom", "magnify", "hover"], "section": "Behaviour"},
 
-    {"id": "dock.iconSize", "category": "dock", "title": "Icon size", "kind": "number", "path": "dock.iconSize", "min": 32, "max": 72, "unit": "px", "advanced": true, "keywords": ["dock", "size"], "section": "Size"},
+    {"id": "dock.iconSize", "category": "dock", "section": "Size", "title": "Dock size", "description": "Size of the icons. The dock grows with them.", "kind": "slider", "path": "dock.iconSize", "min": 32, "max": 96, "step": 4, "advanced": false, "keywords": ["dock", "size", "icons", "big", "small"]}
 
     {"id": "controlcenter.tiles", "category": "controlcenter", "title": "Tiles", "description": "Choose which tiles appear and in which order.", "kind": "tileList", "path": "controlCenter.tiles", "advanced": false, "keywords": ["widgets", "tiles", "layout"], "section": "Tiles"},
 
