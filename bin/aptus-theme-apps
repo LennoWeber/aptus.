@@ -33,9 +33,20 @@ SHADOW_ALPHA = 0.13
 ZEN_ROOT = os.path.join(CFG, "zen")
 THUNDERBIRD_ROOTS = [os.path.join(HOME, ".thunderbird"), os.path.join(CFG, "thunderbird"),
                      os.path.join(HOME, ".var", "app", "org.mozilla.Thunderbird", ".thunderbird")]
-# Spicetify keeps themes in SPICETIFY_DIR/NAME/{color.ini,user.css}; the theme is written only if that folder's parent exists.
+# Spicetify keeps themes in SPICETIFY_DIR/NAME/{color.ini,user.css}; the theme is written even if Spicetify is not installed yet.
 SPICETIFY_DIR = os.path.join(CFG, "spicetify", "Themes")
 SPICETIFY_THEME = "aptus"
+# Every palette of tokens.json has these keys; colours are always #RRGGBB.
+PALETTE_KEYS = ("bg", "surface", "surfaceAlt", "line", "ink", "inkSoft", "inkFaint", "ok", "warn", "critical",
+                "blue", "magenta", "cyan", "bblue", "bmagenta", "bcyan")
+MODES = ("light", "dark")
+HEX = re.compile(r"#[0-9A-Fa-f]{6}")
+
+# Invariants of the constants: alphas are real alphas and the active border is stronger than the inactive one, the
+# Spicetify theme name is one folder name. Target paths are checked where they are used, so a broken XDG variable
+# stops only the apps that need it.
+assert 0 < BORDER_ALPHA_INACTIVE < BORDER_ALPHA_ACTIVE <= 1 and 0 < SHADOW_ALPHA <= 1, "aptus-theme-apps: border and shadow alphas out of order"
+assert os.sep not in SPICETIFY_THEME and SPICETIFY_THEME not in ("", ".", ".."), "aptus-theme-apps: Spicetify theme must be a plain folder name"
 
 # TODO(phase 7): ACCENTS and SIGNAL_DARK duplicate theme/tokens.json (palette.accents, palette.dark); read them there and delete both.
 # Accent colours for the terminal palette: the shell itself has no accent, so these are quiet and fixed.
@@ -47,6 +58,7 @@ SIGNAL_DARK = dict(ok="#6FBF9A", warn="#E0B35A", critical="#E0786C")
 
 
 def palette(mode: str) -> dict:
+    assert mode in MODES, f"unknown mode {mode}"
     # TODO(phase 7): take the palette from load_tokens() through palette.modes (light -> day, dark -> dark), not from day plus literals.
     with open(os.path.join(ROOT, "theme", "tokens.json")) as f:
         day = json.load(f)["palette"]["day"]
@@ -60,6 +72,7 @@ def palette(mode: str) -> dict:
 
 
 def ansi(p: dict, mode: str) -> list:
+    assert mode in MODES, f"unknown mode {mode}"
     # TODO(phase 7): the bright colours are literals here; use palette.brights of the tokens.
     if mode == "light":
         return [p["ink"], p["critical"], p["ok"], p["warn"], p["blue"], p["magenta"], p["cyan"], p["surfaceAlt"],
@@ -76,42 +89,56 @@ def load_tokens() -> dict:
 def colors_of(p: dict, mode: str) -> dict:
     """The flat role names for templates: every palette colour (bg, ink, ...), the accents (blue, ...), brights as
     bright_ok/bright_warn/bright_critical, selection_bg, selection_fg, link, syntax_NAME and cava_0, cava_1, ..."""
+    assert mode in MODES, f"unknown mode {mode}"
+    assert all(k in p for k in PALETTE_KEYS), f"palette misses {[k for k in PALETTE_KEYS if k not in p]}"
+    assert all(HEX.fullmatch(p[k]) for k in PALETTE_KEYS), "palette colour is not #RRGGBB"
+    assert (sum(int(p["bg"][i:i + 2], 16) for i in (1, 3, 5)) > sum(int(p["ink"][i:i + 2], 16) for i in (1, 3, 5))) == (mode == "light"), "light mode has a light background, dark mode a dark one"
     raise NotImplementedError("not implemented")
 
 
 def hex_bare(color: str) -> str:
     """#RRGGBB as RRGGBB (Spicetify color.ini)."""
+    assert HEX.fullmatch(color), f"not #RRGGBB: {color}"
     raise NotImplementedError("not implemented")
 
 
 def hex_rgba(color: str, alpha: float) -> str:
     """#RRGGBB and an alpha from 0 to 1 as RRGGBBAA; callers wrap it as rgba(RRGGBBAA) for Hyprland and hyprlock."""
+    assert HEX.fullmatch(color), f"not #RRGGBB: {color}"
+    assert isinstance(alpha, (int, float)) and not isinstance(alpha, bool) and 0 <= alpha <= 1, f"alpha outside 0 to 1: {alpha}"
     raise NotImplementedError("not implemented")
 
 
 def contrast(a: str, b: str) -> float:
     """WCAG contrast ratio of two #RRGGBB colours."""
+    assert HEX.fullmatch(a) and HEX.fullmatch(b), f"not #RRGGBB: {a} {b}"
     raise NotImplementedError("not implemented")
 
 
 def check_contrast(colors: dict) -> list:
     """Messages for the pairs below 4.5 (ink on bg, selection_fg on selection_bg, inkSoft on bg); empty when fine."""
+    assert all(k in colors for k in ("ink", "bg", "inkSoft", "selection_fg", "selection_bg")), "colors comes from colors_of"
     raise NotImplementedError("not implemented")
 
 
 def render_template(name: str, colors: dict, extra: dict = None) -> str:
     """Read theme/apps/NAME and replace every {{role}} with its colour from colors (and extra); {{role|bare}} drops
     the #, {{role|rgba:0.25}} gives RRGGBB plus alpha. A role without a colour is an error."""
+    assert name == os.path.basename(name) and name, f"template name must be a plain file name: {name}"
+    assert os.path.isfile(os.path.join(TEMPLATES, name)), f"no template {name} in {TEMPLATES}"
+    assert colors and not set(extra or {}) & set(colors), "extra must not replace a colour role"
     raise NotImplementedError("not implemented")
 
 
 def template_roles(name: str) -> set:
     """The role names a template uses (to check them against colors_of before writing anything)."""
+    assert name == os.path.basename(name) and name, f"template name must be a plain file name: {name}"
     raise NotImplementedError("not implemented")
 
 
 def profile_dirs(roots: list) -> list:
     """The profile folders (with prefs.js, not storage folders) below ROOTS; reads only, creates nothing."""
+    assert isinstance(roots, list) and all(os.path.isabs(r) for r in roots), "roots are absolute paths"
     raise NotImplementedError("not implemented")
 
 
@@ -119,17 +146,24 @@ def enable_chrome_css(profile: str, dry: bool) -> None:
     """Make PROFILE load chrome/userChrome.css and userContent.css: the chrome folder, a user.js line for
     toolkit.legacyUserProfileCustomizations.stylesheets (the file is created if missing) and empty userChrome.css and
     userContent.css if they do not exist (callers add the @import line with ensure_line)."""
+    assert dry or os.path.isdir(profile), f"no profile folder {profile}"
+    assert "storage" not in profile.split(os.sep) and os.path.basename(profile.rstrip(os.sep)) != "chrome", "profile, not chrome or storage folder"
     raise NotImplementedError("not implemented")
 
 
 def ensure_block(path: str, marker: str, text: str, dry: bool) -> None:
     """Put TEXT between '# >>> MARKER' and '# <<< MARKER' lines in a config of the user (replace the block, or add it
     at the end), keeping a .before-aptus copy once; only for files with # comments (cava)."""
+    assert re.fullmatch(r"[A-Za-z0-9_-]+", marker), f"marker must be one plain word: {marker}"
+    assert f"# >>> {marker}" not in text and f"# <<< {marker}" not in text, "text must not contain its own markers"
+    assert os.path.isabs(path), f"path must be absolute: {path}"
+    assert not os.path.realpath(path).startswith(ROOT + os.sep), "never write a user config into the aptus repository"
     raise NotImplementedError("not implemented")
 
 
 def reload_apps(chosen: list, dry: bool) -> None:
     """Tell running programs to read their colours again (Hyprland reload, cava, nvim, kitty), where they can."""
+    assert isinstance(chosen, list), "chosen is the list of app names"
     raise NotImplementedError("not implemented")
 
 
@@ -317,37 +351,51 @@ def gsettings(p, mode, dry):
 
 def starship(p, mode, dry):
     """CFG/starship/aptus.toml (flat segments, palette aptus); fish selects it with STARSHIP_CONFIG, starship.toml itself is not touched."""
+    assert mode in MODES and all(k in p for k in PALETTE_KEYS), "palette comes from palette(mode)"
+    assert isinstance(dry, bool) and os.path.isabs(CFG) and os.path.isabs(STATE), "XDG folders must be absolute paths"
     raise NotImplementedError("not implemented")
 
 
 def fish(p, mode, dry):
     """CFG/fish/conf.d/aptus.fish: fish_color_* and STARSHIP_CONFIG (template fish.fish; extra key starship_path)."""
+    assert mode in MODES and all(k in p for k in PALETTE_KEYS), "palette comes from palette(mode)"
+    assert isinstance(dry, bool) and os.path.isabs(CFG) and os.path.isabs(STATE), "XDG folders must be absolute paths"
     raise NotImplementedError("not implemented")
 
 
 def nvim(p, mode, dry):
     """Neovim colorscheme aptus in ~/.local/share/nvim/site/colors/aptus.lua (not in ~/.config/nvim, which is a link into the dotfiles)."""
+    assert mode in MODES and all(k in p for k in PALETTE_KEYS), "palette comes from palette(mode)"
+    assert isinstance(dry, bool) and os.path.isabs(CFG) and os.path.isabs(STATE), "XDG folders must be absolute paths"
     raise NotImplementedError("not implemented")
 
 
 def yazi(p, mode, dry):
     """Yazi flavor CFG/yazi/flavors/aptus.yazi and the dark/light names in theme.toml (skipped if that file is a link)."""
+    assert mode in MODES and all(k in p for k in PALETTE_KEYS), "palette comes from palette(mode)"
+    assert isinstance(dry, bool) and os.path.isabs(CFG) and os.path.isabs(STATE), "XDG folders must be absolute paths"
     raise NotImplementedError("not implemented")
 
 
 def fastfetch(p, mode, dry):
     """CFG/fastfetch/themes/aptus.jsonc (same shape as themes/noctalia.jsonc); config.jsonc is a link into the dotfiles and is not touched."""
+    assert mode in MODES and all(k in p for k in PALETTE_KEYS), "palette comes from palette(mode)"
+    assert isinstance(dry, bool) and os.path.isabs(CFG) and os.path.isabs(STATE), "XDG folders must be absolute paths"
     raise NotImplementedError("not implemented")
 
 
 def cava(p, mode, dry):
     """CFG/cava/themes/aptus and a '[color] theme' block in CFG/cava/config (ensure_block, # comments only)."""
+    assert mode in MODES and all(k in p for k in PALETTE_KEYS), "palette comes from palette(mode)"
+    assert isinstance(dry, bool) and os.path.isabs(CFG) and os.path.isabs(STATE), "XDG folders must be absolute paths"
     raise NotImplementedError("not implemented")
 
 
 def hyprland_look(p, mode, dry):
     """HYPR_COLORS, a Lua file that returns { activeBorder, inactiveBorder, shadow } as "rgba(RRGGBBAA)" strings (the ink with
     the BORDER and SHADOW alphas); aptus-look.lua reads it with dofile."""
+    assert mode in MODES and all(k in p for k in PALETTE_KEYS), "palette comes from palette(mode)"
+    assert isinstance(dry, bool) and os.path.isabs(CFG) and os.path.isabs(STATE), "XDG folders must be absolute paths"
     raise NotImplementedError("not implemented")
 
 
@@ -355,21 +403,29 @@ def hyprlock(p, mode, dry):
     """HYPRLOCK_COLORS: $aptus_bg, $aptus_ink, $aptus_line plus the variables the user's hyprlock.conf uses ($text_color,
     $entry_background_color, $entry_border_color, $entry_color, $primary, $error); its source line goes after the last
     existing source line, so the new values win."""
+    assert mode in MODES and all(k in p for k in PALETTE_KEYS), "palette comes from palette(mode)"
+    assert isinstance(dry, bool) and os.path.isabs(CFG) and os.path.isabs(STATE), "XDG folders must be absolute paths"
     raise NotImplementedError("not implemented")
 
 
 def zen(p, mode, dry):
     """userChrome.css and userContent.css in every Zen profile."""
+    assert mode in MODES and all(k in p for k in PALETTE_KEYS), "palette comes from palette(mode)"
+    assert isinstance(dry, bool) and os.path.isabs(CFG) and os.path.isabs(STATE), "XDG folders must be absolute paths"
     raise NotImplementedError("not implemented")
 
 
 def thunderbird(p, mode, dry):
     """userChrome.css and userContent.css in every Thunderbird profile (nothing if there is none yet)."""
+    assert mode in MODES and all(k in p for k in PALETTE_KEYS), "palette comes from palette(mode)"
+    assert isinstance(dry, bool) and os.path.isabs(CFG) and os.path.isabs(STATE), "XDG folders must be absolute paths"
     raise NotImplementedError("not implemented")
 
 
 def spotify(p, mode, dry):
     """Spicetify theme SPICETIFY_THEME (color.ini and user.css), written even if Spicetify is not installed yet; applying it is left to the user."""
+    assert mode in MODES and all(k in p for k in PALETTE_KEYS), "palette comes from palette(mode)"
+    assert isinstance(dry, bool) and os.path.isabs(CFG) and os.path.isabs(STATE), "XDG folders must be absolute paths"
     raise NotImplementedError("not implemented")
 
 
