@@ -1297,3 +1297,42 @@ Ablauf wie in [[feedback_phasen_ohne_weiter]]: nicht auf „weiter“ warten, se
 - Neue Einstellung `island.homeStyle` (dashboard | bento | paper | classic, Standard dashboard): `IslandCard` mit `IslandCardDashboard/Bento/Paper`, `CardPill`, `IslandConnect`.
 - Wi-Fi/Bluetooth in der Karte: Tipp öffnet die Liste unter den Schaltern, Tipp auf eine Zeile verbindet, Schalter in der Kopfzeile schaltet das Funkmodul.
 - Geprüft per Screenshot: alle drei Stile, WLAN-Liste (bento), Bluetooth-Liste (paper, dashboard). Nicht geprüft: Passwortfeld im neuen Layout, echtes Verbinden mit Gerät.
+
+## Ablauf 10: Theming aller Apps (Starship, Spotify, Zen, Thunderbird und der Rest)
+
+Stand 26. Okt. 2026: **Phase 1 erledigt, Lennos Antworten sind eingearbeitet; Phasen 2 bis 7 laufen ohne Pause.**
+
+**Entscheidungen (26. Okt.):** Spotify als Flatpak + Spicetify (Installation erst nach Bestätigung); Hell + Dunkel; zusätzlich fish, nvim, yazi, fastfetch, cava, Hyprland-Rahmen und hyprlock; Browser ist nur Zen (RPM), keine Flatpak-Browser.
+
+### Ziel
+Alle Programme, die Lenno nutzt, sehen aus wie aptus: dieselbe ruhige Palette aus `theme/tokens.json` (Papier-Weiß `#F4F3EF`, Tinte `#1C2127`, Haarlinien, Farbe nur als Signal), kein Neon, kein Glas. Ein Befehl (`aptus-theme-apps`) färbt alles, Hell und Dunkel, und lässt sich wiederholen. Vorbild für Umfang und Bedienkomfort ist die Config von shell-ninja (alles aus einem Guss), nicht ihr Aussehen.
+
+### Ist-Stand (geprüft)
+- `bin/aptus-theme-apps` (Python) färbt schon: kitty, ghostty, btop, gtk 3/4, qt5ct/qt6ct, zathura, gsettings. Muster: `palette(mode)`, je App eine Funktion `(p, mode, dry)`, `write()` sichert Altes einmal als `.before-aptus`, `ensure_line()` hängt eine Include-Zeile an.
+- **Starship:** `~/.config/starship.toml` ist Link nach `~/dotfiles/starship/.config/starship.toml`, `palette = "noctalia"` mit Block `NOCTALIA STARSHIP PALETTE` (Zeilen 151–206), Pfeil-Segmente (Powerline) mit farbigen Flächen. Fertige Varianten liegen in `~/.config/starship/` (arch_purist, caelestia, drift, dusk, hyper, phantom, simple, zen). Das Programm `starship` ist **nicht installiert** (nicht im PATH, kein RPM); `fish/starship_init.fish` ist da.
+- **Zen:** RPM `zen-browser` ist installiert, Profile unter `~/.config/zen/` (`787ws7cs.Default Profile`, `dojtn4mr.Default (release)`), `chrome/zen-themes.css` liegt in einem davon. Früher: Noctalia-Skript `apply-zen-flatpak-theme.sh` hat `@import` in `userChrome.css`/`userContent.css` gesetzt (nur Flatpak-Pfad).
+- **Thunderbird:** RPM installiert (158.0), **noch nie gestartet**: kein Profil unter `~/.thunderbird` oder `~/.config/thunderbird`.
+- **Spotify:** **nicht installiert** (kein Flatpak, kein Binary, kein `~/.config/spotify`). Früher (dotfiles): Flatpak `com.spotify.Client` plus Spicetify mit Skript `fix-spicetify-flatpak-perms.sh` und `spotify-launch.sh`; Spicetify selbst ist nicht installiert.
+- Weitere Programme mit eigener Farbe: fish (`fish_variables`, `functions.fish`), nvim (`lua/matugen.lua`, Link nach `~/dotfiles/nvim`), yazi (`flavors/`, `theme.toml`), fastfetch (`themes/`, `config.jsonc.template`), cava, Alacritty (Terminal-Klasse in Hyprland-Regeln), fuzzel/rofi (vermutlich nicht mehr gebraucht, aptus hat eigenen Launcher), Browser-Flatpaks (Firefox, Chrome, Chromium, LibreWolf, Waterfox: nur auf Wunsch).
+- Hyprland-Fenster: Look-Datei `hypr/aptus-look.lua`; Rahmenfarben müssen zur Palette passen (prüfen in Phase 2).
+- Repos auf GitHub (`LennoWeber/dotfiles`, `winRice`, `aptus.`): nur `dotfiles` enthält altes Theming (Noctalia-Hooks, `apply-starship-palette.sh`, `nvim/lua/config/noctalia-theme.lua`). `winRice` hat nichts zu Spotify/Zen/Thunderbird.
+
+### Entwurf des Aussehens
+- Gemeinsame Rollen für alle Programme: Fläche `bg`/`surface`/`surfaceAlt`, Linie `line`, Text `ink`/`inkSoft`/`inkFaint`, Hervorhebung = **Tinte auf Papier** (invertiert, wie in kitty/gtk schon), Signalfarben nur für ok/warn/critical; Akzentfarben (blau, magenta, cyan) nur in Terminal-Syntax, leise (`ACCENTS` im Skript).
+- **Starship:** keine Pfeil-Farbflächen; flache Segmente mit Haarlinie oder `inkSoft`-Text, Git-Zustand mit Signalfarben, Pfad in `ink`. Palette `aptus` statt `noctalia`, aus den Tokens erzeugt, Hell und Dunkel.
+- **Zen:** `userChrome.css`/`userContent.css` mit Tokens (Tab-Leiste, URL-Feld, Seitenleiste, Hauptansicht Start/Neuer Tab/`about:`), runde Ecken 10 px wie Fenster, Haarlinien.
+- **Thunderbird:** gleiche Technik (`userChrome.css`/`userContent.css`, `toolkit.legacyUserProfileCustomizations.stylesheets`), Profil muss existieren.
+- **Spotify:** Spicetify-Thema `aptus` (Datei `color.ini` + `user.css`), Farben aus Tokens.
+
+### Betroffene Dateien (Plan)
+`bin/aptus-theme-apps` (neue App-Funktionen `starship`, `zen`, `thunderbird`, `spotify`, `fish`, `nvim`, `yazi`, `fastfetch`, `cava`; `APPS`-Tabelle), neu `theme/apps/` (feste Vorlagen: `starship.toml`, `zen-userChrome.css`, `zen-userContent.css`, `thunderbird-userChrome.css`, `thunderbird-userContent.css`, `spicetify/user.css`), `packages/aptus-dnf.txt` (starship, spicetify nur wenn gewollt), `README.md`/`docs`, Settings (`appearance.themeApps` o. ä. nur wenn gewünscht), Hell/Dunkel-Umschaltung von `aptus` ruft `aptus-theme-apps --mode …` auf. Dotfiles (`~/dotfiles/starship`, `~/dotfiles/nvim`) sind Links: Änderungen dort landen im Dotfiles-Repo, nicht in aptus; wird in Phase 2 festgelegt.
+
+### Risiken
+- Zen und Thunderbird ändern ihr CSS-Layout bei Updates; Selektoren brechen. Darum wenige, stabile Variablen (`--toolbar-bgcolor`, `--lwt-*`, `--tab-selected-bgcolor`) und kein Eingriff in Struktur.
+- Spotify: Spicetify braucht Schreibrechte auf die Flatpak-Dateien und muss nach jedem Spotify-Update neu angewendet werden.
+- Ein laufendes Programm übernimmt Farben erst nach Neustart (Zen, Thunderbird, Spotify, Fish-Prompt).
+- Starship-Datei liegt im Dotfiles-Repo (Link); Fremdbefund: darin steht ein Noctalia-Block, der bei Noctalia-Hooks überschrieben würde.
+- Dunkelmodus: Tokens kennen nur „day“ und „night“ (beides hell, Wärme). Dunkle Werte stehen nur im Skript (`palette("dark")`); in Phase 2 in die Tokens ziehen.
+
+### Phasen dieses Ablaufs
+1 Plan · 2 Strukturen · 3 Signaturen · 4 TODOs · 5 Probe · 6 Invarianten · 7 Implementierung; nach Lennos Vorgabe ohne Pausen ([[feedback_phasen_ohne_weiter]]), jede Phase mit Selbst-Review.

@@ -39,47 +39,73 @@ Item {
         width: parent.width
         spacing: 6
 
-        Row {
+        // The power profile: one track with a sliding thumb.
+        Rectangle {
+            id: track
+            readonly property var profiles: actions.powerProfileState ? actions.powerProfileState.availableProfiles : []
+            readonly property int count: Math.max(1, profiles.length)
+            readonly property int currentIndex: actions.powerProfileState ? profiles.indexOf(actions.powerProfileState.profile) : -1
             visible: actions.powerProfileState !== null && actions.powerProfileState !== undefined
             width: parent.width
-            spacing: 6
-            Repeater {
-                model: actions.powerProfileState ? actions.powerProfileState.availableProfiles : []
-                delegate: Rectangle {
-                    id: seg
-                    required property int modelData
-                    readonly property int count: actions.powerProfileState ? actions.powerProfileState.availableProfiles.length : 1
-                    readonly property bool current: actions.powerProfileState && actions.powerProfileState.profile === modelData
-                    width: (column.width - 6 * (count - 1)) / count
-                    height: 30
-                    radius: 10
-                    color: current ? actions.ink : "transparent"
-                    border.width: 1
-                    border.color: current ? actions.ink : actions.line
-                    Behavior on color { ColorAnimation { duration: Tokens.durFast } }
-                    Label { anchors.centerIn: parent; text: actions.profileNames[seg.modelData]; role: Enums.TextRole.Bar; color: seg.current ? actions.fill : actions.ink }
-                    MouseArea { anchors.fill: parent; onClicked: actions.setProfile(seg.modelData) }
+            height: 34
+            radius: 12
+            color: Qt.rgba(actions.ink.r, actions.ink.g, actions.ink.b, 0.06)
+
+            Rectangle {
+                visible: track.currentIndex >= 0
+                x: 3 + Math.max(0, track.currentIndex) * width
+                y: 3
+                width: (track.width - 6) / track.count
+                height: track.height - 6
+                radius: 9
+                color: actions.ink
+                Behavior on x { NumberAnimation { duration: Tokens.durFast; easing.type: Easing.OutCubic } }
+            }
+            Row {
+                x: 3
+                y: 3
+                Repeater {
+                    model: track.profiles
+                    delegate: Item {
+                        id: seg
+                        required property int modelData
+                        readonly property bool current: actions.powerProfileState && actions.powerProfileState.profile === modelData
+                        width: (track.width - 6) / track.count
+                        height: track.height - 6
+                        Label {
+                            anchors.centerIn: parent
+                            text: actions.profileNames[seg.modelData]
+                            role: Enums.TextRole.Bar
+                            font.weight: seg.current ? Font.Medium : Font.Normal
+                            color: seg.current ? actions.fill : actions.inkSoft
+                            Behavior on color { ColorAnimation { duration: Tokens.durFast } }
+                        }
+                        MouseArea { anchors.fill: parent; onClicked: actions.setProfile(seg.modelData) }
+                    }
                 }
             }
         }
 
-        Flow {
+        // The shortcuts: equal tiles across the row, the same corner as the switches above.
+        Row {
             width: parent.width
             spacing: 6
             Repeater {
                 model: actions.shortcuts
-                delegate: Rectangle {
-                    id: pill
+                delegate: Item {
+                    id: tile
                     required property var modelData
-                    width: pillLabel.implicitWidth + 24
-                    height: 30
-                    radius: 15
-                    color: "transparent"
-                    border.width: 1
-                    border.color: actions.line
-                    opacity: pillMouse.pressed ? 0.7 : 1
-                    Label { id: pillLabel; anchors.centerIn: parent; text: pill.modelData.label; role: Enums.TextRole.Bar; color: actions.ink }
-                    MouseArea { id: pillMouse; anchors.fill: parent; onClicked: actions.viewRequested(pill.modelData.view) }
+                    width: (column.width - 6 * (actions.shortcuts.length - 1)) / actions.shortcuts.length
+                    height: 34
+                    Rectangle {
+                        anchors.fill: parent
+                        radius: 12
+                        color: actions.ink
+                        opacity: tileMouse.pressed ? 0.16 : tileMouse.containsMouse ? 0.10 : 0.06
+                        Behavior on opacity { NumberAnimation { duration: Tokens.durFast } }
+                    }
+                    Label { anchors.centerIn: parent; text: tile.modelData.label; role: Enums.TextRole.Bar; font.pixelSize: 11; color: actions.ink }
+                    MouseArea { id: tileMouse; anchors.fill: parent; hoverEnabled: true; onClicked: actions.viewRequested(tile.modelData.view) }
                 }
             }
         }
