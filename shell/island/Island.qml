@@ -171,6 +171,10 @@ PanelWindow {
         else if (action === "controlCenter") controlCenterRequested()
     }
 
+    // With island.glass the fill is see-through and the compositor blurs what is behind it.
+    readonly property bool glass: appSettings ? appSettings.get("island.glass") === true : false
+    function glassOf(c: color): color { return glass ? Qt.rgba(c.r, c.g, c.b, c.a * 0.6) : c }
+
     readonly property bool darkOpen: IslandLook.fillOpen.hslLightness < 0.5
 
     screen: modelData
@@ -180,6 +184,10 @@ PanelWindow {
     exclusiveZone: reserveSpace && !slidOut ? Tokens.topInset : 0
     color: "transparent"
     mask: Region { item: body }
+    // The Wayland blur type is not known to qmllint; same as in the launcher.
+    // qmllint disable unresolved-type unqualified
+    BackgroundEffect.blurRegion: Region { item: win.glass ? body : null; radius: body.cornerRadius }
+    // qmllint enable unresolved-type unqualified
     WlrLayershell.namespace: "aptus-island"
     WlrLayershell.layer: WlrLayer.Top
     WlrLayershell.keyboardFocus: isOpen && !byHover ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
@@ -212,7 +220,7 @@ PanelWindow {
         height: win.targetHeight
         floating: IslandLook.gap > 0
         cornerRadius: Math.min(win.openLike ? win.radiusOpen : win.cardAlert ? Math.min(win.radiusOpen, 24) : win.radiusRest, Math.min(width, height) / 2)
-        fill: win.openLike ? IslandLook.fillOpen : win.design === "shade" && !win.isAlert ? IslandLook.inkRest : IslandLook.fillRest
+        fill: win.glassOf(win.openLike ? IslandLook.fillOpen : win.design === "shade" && !win.isAlert ? IslandLook.inkRest : IslandLook.fillRest)
         stroke: win.openLike ? IslandLook.strokeOpen : IslandLook.strokeRest
         strokeWidth: win.openLike ? IslandLook.strokeWidthOpen : IslandLook.strokeWidthRest
         accent: win.isAlert && win.islandState && win.islandState.alert && win.islandState.alert.severity !== Enums.Severity.Neutral ? Tokens.colorFor(win.islandState.alert.severity) : win.hairline

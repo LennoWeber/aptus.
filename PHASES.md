@@ -1470,6 +1470,44 @@ Stand: **Phase 1 geschrieben; Phasen 2 bis 7 laufen ohne Pause** ([[feedback_pha
 - Ohne `qmllint` (nicht installiert) prüfe ich QML durch Neustart der Shell und `qs log`.
 - Popups ausblenden: Meldungen jenseits der Warteschlange (3) erscheinen nur noch im Verlauf.
 
+## Ablauf 13: Settings übersichtlich gliedern, schöneres Dock (27. Okt. 2026, Branch `settings-dock` von `color-mode`, Worktree `~/Code/Projekte/aptus-dock`)
+
+Stand: **Phase 1 geschrieben; Phasen 2 bis 7 laufen ohne Pause** ([[feedback_phasen_ohne_weiter]], Selbst-Review am Diff, kein Sub-Agent). Eigener Worktree, weil im Hauptordner `island-notify` (Ablauf 12) mit uncommitteten Dateien läuft und die Live-Shell von dort startet. Die Shell wird für Tests nicht angefasst.
+
+### Ziel (Lenno)
+1. Die Settings-App listet viele neue Einstellungen nur untereinander auf. Sie soll **klar gegliedert** sein: sofort erkennbar, wohin etwas gehört.
+2. Das **Dock** soll deutlich schöner werden, mit ein paar **angedockten Apps** ab Werk, und sich **über die Settings ein- und ausschalten** lassen.
+
+### Ist-Stand (geprüft)
+- `config/settings-schema.json`: zehn Kategorien, Kategorie `bar` ("Bar, Island & Dock") hat ~35 Einträge ohne Gruppen (Leiste, Island-Entwurf, Island-Meldungen, Dock, Touch gemischt). `appearance`, `system` (Apps, Strom, Touch, Datenschutz) sind ebenfalls Mischlisten.
+- `CategoryPage` zeigt eine flache Liste; `SettingRow` je Eintrag. Suchtreffer zeigen keine Herkunft.
+- `Sidebar` ist eine flache Liste ohne Gruppen oder Symbole.
+- Dock (`shell/dock/Dock.qml`, `DockItem.qml`): schlichte Fläche (`Tokens.surface`), Icons ohne Zoom, Punkt als Laufanzeige, Kontextmenü. Fenster fest 190 px hoch mit Eingabemaske. Wird in `shell.qml` über `dock.enabled` je Bildschirm erzeugt, schaltet also schon live. Standard: aus, `pinned` mit GNOME-Apps, die auf diesem Rechner fehlen (installiert: kitty, org.kde.dolphin, zen-browser, org.mozilla.firefox, net.thunderbird.Thunderbird, com.spotify.Client, steam, systemsettings, gimp, mpv, libreoffice-writer; kein ghostty).
+- Kein Editor für die angedockten Apps in den Settings (nur Rechtsklick „Keep in dock“).
+- `visibleWhen` ist im Schema benutzt, aber in `visibleEntries` noch ein TODO (gehört zu Branch `themes`) → hier nicht anfassen, um Konflikte zu vermeiden.
+
+### Plan
+**Settings gliedern**
+- Schema: jede Kategorie bekommt `group` (Sidebar-Abschnitt: *Look*, *Desktop*, *Apps*, *System*) und `description` (eine Zeile unter der Überschrift: „Was gehört hierher“). Jeder Eintrag bekommt `section` (Zwischenüberschrift in der Kategorie).
+- Kategorie `bar` wird geteilt: **Top bar** (Leiste, Uhr, Kontextzone), **Island** (Entwurf, Karte, Look, Inhalte, Meldungen), **Dock** (alles zum Dock). Eintrags-IDs bleiben, damit gespeicherte Werte und die Launcher-Suche weiter laufen; nur `category` und `section` ändern sich.
+- `CategoryPage`: Zwischenüberschrift (neue Komponente `SectionHeader`) wenn sich `section` ändert; bei Suche statt dessen Herkunft „Kategorie › Abschnitt“ je Treffer. `Sidebar`: Gruppen-Überschriften. `SettingsWindow`: Beschreibung unter dem Titel.
+- Sortierung der Einträge ergibt sich aus der Schema-Reihenfolge; die Datei wird nach Abschnitten geordnet.
+
+**Dock**
+- Neue Einstellungen: `dock.look` (glass | solid | minimal), `dock.magnify` (Zoom unter dem Zeiger), `dock.iconSize` bleibt; `dock.autoHide` Standard **aus**; `dock.pinned` Standard mit tatsächlich installierten Apps (kitty, Dolphin, Zen, Thunderbird, Spotify, Steam, Systemeinstellungen; fehlende werden übersprungen). Neuer Eintragstyp `dockApps` (Editor in den Settings: Reihenfolge, Entfernen, App aus der Liste installierter Apps hinzufügen).
+- `Dock.qml`: Glasfläche (halbtransparent, `Tokens.glass`, feine Kante und Lichtkante oben, weicher Schatten aus gestapelten Rechtecken), größerer Radius, Trenner zwischen angedockten und nur laufenden Apps, Zoom (Fischauge) mit weicher Animation, Starthüpfer beim Öffnen einer App, ruhigerer Tooltip, Einblenden beim Einschalten.
+- `DockItem.qml`: Zoom-Faktor als Eigenschaft, Starthüpfer, Laufpunkt/Frontstrich bleiben (Farbe nur `Tokens.ink`).
+
+### Betroffene Dateien
+`config/settings-schema.json`, `config/settings.json`, `shell/models/SettingsAppState.qml` (`editable`, Gruppierung), `shell/settings/{CategoryPage,Sidebar,SettingsWindow,SettingRow,qmldir}.qml`, neu `shell/settings/SectionHeader.qml`, `shell/settings/DockAppsEditor.qml`, `shell/dock/{Dock,DockItem}.qml`, README (Abschnitt Dock/Settings).
+
+### Risiken
+- Kategorie `bar` teilen: `settings.open <kategorie>`-Aufrufe und Launcher-Treffer nutzen `entry.category`; IDs von Kategorien in Code suchen (`openWindow("bar")`) und nachziehen.
+- Branch `themes` ändert dasselbe Schema (`visibleWhen`, neue Einträge) → beim Merge Konflikte im Schema möglich; neue Einträge dort bekommen später `section` nachgetragen.
+- Dock-Maske: Fenster 190 px hoch, Zoom darf nicht höher wachsen als die Maske (Icon 72 × 1.6 + Tooltip < 190 → Höhe bei Bedarf anheben).
+- Ohne `qmllint`/ohne Neustart der Live-Shell nur eingeschränkt prüfbar: Tests mit eigener Quickshell-Instanz oder Harness (Phase 5/7).
+- `DesktopEntries.byId` kennt Flatpak-Apps (Spotify) nur, wenn der Eintrag in den XDG-Pfaden liegt; sonst überspringt das Dock sie still.
+
 ### Phasen dieses Ablaufs
 1 Plan · 2 Strukturen · 3 Signaturen · 4 TODOs · 5 Probe · 6 Invarianten · 7 Implementierung, jede mit Selbst-Review am Diff.
 
@@ -1589,3 +1627,32 @@ Stand 27. Okt. 2026 (Branch `themes` im Worktree `~/Code/Projekte/aptus-themes`,
 - Nicht geprueft: ThemePicker (Layer-Shell) und Einstellungs-Editor in einer echten Sitzung, `pkexec`-Pfad des Greeter-Sync, echte Greeter-Anzeige. Die laufende Shell wurde bewusst nicht angefasst.
 - Zwischenfall: ein Test in Phase 5 hat mit nicht leerem PATH echte gsettings (color-scheme, gtk-theme, icon-theme) auf hell gesetzt und Signale an kitty/nvim/btop/cava geschickt; ein Test in Phase 7 hat `~/.local/state/aptus/wallpaper-theme.json` ueberschrieben (Cache, entfernt).
 - Offen: einmal `sudo ./install.sh --greeter` (neue polkit-Regel und Helper); Merge in `color-mode` (dort 2 uncommittete Dateien).
+
+### Protokoll Ablauf 13
+- **Phase 1 (Plan), erledigt.**
+- **Phase 2 (Strukturen), erledigt:** Schema neu geordnet (69 Einträge, jede Kategorie mit `group` und `description`, jeder Eintrag mit `section`); `bar` heißt „Top bar“, neu `island` und `dock`; neue Einträge `dock.look`, `dock.magnify`, `dock.pinned` (Typ `dockApps`); Titel geklärt (`ai.dockEdge` → „Panel side“, `bar.style` → „Top of the screen shows“). `config/settings.json`: Dock-Standard `look: glass`, `magnify: true`, `autoHide: false`, `iconSize: 48`, `pinned` mit installierten Apps. Leere Komponenten `SectionHeader`, `DockAppsEditor` (+ `qmldir`); Eigenschaften `SettingRow.origin`, `Dock.look/magnify/pointerX/launching`, `DockItem.zoom/bouncing`.
+  - **Prüfung (selbst):** Skript: IDs eindeutig, jede Kategorie nicht leer, jeder Eintrag mit gültiger `category` und `section`, jeder `path` hat einen Standardwert. Eintrags-IDs unverändert, also bleiben gespeicherte Werte und Launcher-Treffer gültig. Nichts anderes im Code nutzt Kategorie-IDs außer `Search.qml` (liest sie aus dem Schema).
+  - **Offen für spätere Phasen:** `SettingsAppState.editable` kennt `dockApps` nicht (Phase 3/7); Gruppierung der Sidebar und Abschnitte der Seite sind noch nicht dargestellt.
+- **Phase 3 (Signaturen), erledigt:** Neu mit Platzhalter (`throw new Error("not implemented")`): `SettingsAppState.categoryGroups/activeCategory/originOf`, `CategoryPage.startsSection`, `Dock.zoomAt/dividerBefore/markLaunching`, `DockAppsEditor.installedApps/nameOf/iconOf/shift/removeAt/addApp`.
+  - **Prüfung (selbst):** `git diff` hat nur hinzugefügte Zeilen (60), keine Löschungen, keine Aufrufe, keine Strukturänderung; bestehende Körper unberührt.
+- **Phase 4 (TODO-Markierungen), erledigt:** 22 Markierungen `TODO(phase 7): …` in `SettingsAppState` (editable), `SettingsWindow` (Gruppen, Beschreibung), `Sidebar`, `CategoryPage` (Abschnitte, Herkunft), `SettingRow` (wide, Editor, Herkunft), `Search` (Untertitel), `Dock` (Eigenschaften binden, Fensterhöhe, Zeiger, Look, Zoom, Trenner, Starthüpfer), `DockItem` (Größe nach Zoom, Hüpfer).
+  - **Prüfung (selbst):** `git diff -U0` ohne die Markierungszeilen ist leer; Einrückung der Kommentare an den Zeilen darunter ausgerichtet (erst falsch, dann behoben).
+- **Nachtrag Anforderung (Lenno, mitten im Ablauf):** (a) Einstellung, dass das Dock **unten Platz einnimmt wie die Leiste** (Fenster stoppen darüber): `dock.reserveSpace`, Standard aus, wirkt nicht bei `autoHide`; (b) die **Größe einstellbar**: `dock.iconSize` ist jetzt ein sichtbarer Schieber 32..96 „Dock size“. In Phase 2 (Schema, Standardwert) und Phase 4 (TODOs für `exclusiveZone` und Fensterhöhe) nachgetragen. Dabei war das Schema kurz kaputtes JSON (fehlendes Komma, Commit `c6c23fe`), behoben in `1762ec1`.
+- **Phase 5 (Probe, verworfen), erledigt:** Alles in der Test-Shell (Fake-HOME, Symlinks auf `shell/*`, eigene `shell.qml` mit Settings-Fenster und Dock) auf dem echten Bildschirm gestartet, mit `grim` geprüft; Patch liegt im Scratchpad (`probe.patch`), Worktree danach zurückgesetzt.
+  - **Ergebnis:** Sidebar mit Gruppen, Seitenbeschreibung, Abschnitte, Herkunft in der Suche („Dock › Apps“), Dock-Editor mit Symbolen, Glas-Dock mit Trenner, Laufpunkten, Name-Tooltip und Zoom unter dem Zeiger laufen; `qmllint` 0 Fehler.
+  - **Lücken:** (1) `DockAppsEditor` zeigte „not installed“, weil Namen/Symbole vor dem Laden von `DesktopEntries` einmal bewertet wurden → Eigenschaft `catalog` (Phase 2) + TODO; (2) Dock braucht `ready`, `maxZoom`, `cellRest`, `dividerWidth`, `dividerIndex`, `restWidth`, `pointerX`-Standard −1e9 (Phase 2), `restCentre()` (Phase 3), Blur-TODO; `DockItem.size/hop` (Phase 2); (3) Beschreibungs-Label mit `height: implicitHeight` machte eine Bindungsschleife → eigener `Item` (TODO); (4) ungenutzte Imports. Alles in Phasen 2 bis 4 nachgezogen (`fd50290`, `09539cc`, `c6c23fe`).
+  - **Nicht gelöst, nur notiert:** Symbol von „Systemeinstellungen“ fehlt in der Test-Shell (Symbolname nicht im Thema, Fake-HOME); im Editor bleibt die Zeile ohne Symbol, im Dock greift der Buchstaben-Ersatz.
+- **Phase 6 (Invarianten), erledigt:** Prüfungen vor den Platzhaltern: Schema geladen/Kategorien mit `id` und `title`, `originOf` nur für Einträge mit bekannter Kategorie, `startsSection`/`dividerBefore`/`restCentre` Index im Bereich, `zoomAt` Zahl endlich, `markLaunching` Eintrag mit Schlüssel, Editor: `shift` Schritt ±1 und Index im Bereich, `removeAt` Index, `addApp`/`nameOf`/`iconOf` nicht leer und kein Doppel.
+  - **Regeln für Phase 7:** (1) `reserveSpace` zählt nur, wenn `autoHide` aus ist; (2) Zoom ist 1, solange der Zeiger weg ist oder `magnify` aus; (3) Fensterhöhe ≥ gezoomtes Symbol + 120; (4) die Dock-App-Liste wird nur über `changed` geschrieben, nie am Ort verändert; (5) Fehler in Dock/Editor ändern nie andere Einstellungen.
+  - **Prüfung (selbst):** Diff enthält nur `if (...) throw` vor den Platzhaltern.
+- **Phase 7 (Implementierung), erledigt:** Probe-Patch auf den Stand von Phase 6 gespielt (`SettingsAppState.categoryGroups/activeCategory/originOf` + `editable` mit `dockApps`, Sidebar mit Gruppen, Seitenbeschreibung, `SectionHeader`, `CategoryPage` mit Abschnitten und Herkunft, `SettingRow` mit `origin` und `DockAppsEditor`, Launcher-Untertitel mit Herkunft, Dock: Glas/Solid/Minimal, Blur, Schatten, Zoom, Trenner, Starthüpfer, Einblenden, `DockItem` mit `size`/`hop`), dazu neu: `dock.reserveSpace` (`exclusionMode: Normal`, `exclusiveZone` = Dock-Höhe, nur ohne `autoHide`), Fensterhöhe folgt der Größe (`round(iconSize * maxZoom) + 120`), README. Alle 22 TODO-Markierungen sind weg.
+  - **Test:** Test-Shell (wie Phase 5): Dock mit Größe 80, Look `solid`, `reserveSpace` an → `hyprctl monitors` zeigt unten 122 px reserviert; Dock-Seite und Suche per `grim` gesehen; Log ohne Warnungen; `qmllint` 0 Fehler, 32 Warnungen (alle schon vorher vorhanden, keine in den geänderten Dateien).
+  - **Gefunden/behoben in Phase 7:** `config/settings.json` hatte `dock.reserveSpace` nicht (Suchtest `"reserveSpace" in …` traf `island.reserveSpace`) → Standard ergänzt; ohne `exclusionMode: Normal` hätte der Compositor nichts reserviert (nicht einzeln geprüft, mit beidem getestet).
+  - **Abweichungen von Phase 6:** `activeCategory()` wirft nicht, solange das Schema noch lädt (Bindung läuft vor dem Laden); `startsSection` gibt bei ungültigem Index `false` zurück (Delegate kann kurz veraltet sein); `nameOf/iconOf` ohne Leer-Prüfung (liefern bei leerer Kennung nur Text).
+  - **Offen / Hinweise:** (1) Live-Shell läuft unverändert aus dem Hauptordner (Ablauf 12); dieser Branch `settings-dock` ist nicht gemerged und nicht gepusht, Test am Gerät steht aus. (2) `Dock`-Zoom: Zeigerposition wird auf die Ruhe-Anordnung abgebildet, bei starkem Zoom leichte Abweichung. (3) Symbol von „Systemeinstellungen“ fehlt im Editor (siehe Phase 5). (4) Branch `themes` ändert dasselbe Schema → beim Merge Konflikte erwartet; neue Einträge dort brauchen `section`. (5) Klicks in der Test-Shell nicht prüfbar (Hinzufügen/Entfernen/Hoch/Runter nur gelesen, nicht geklickt).
+
+### Nachtrag nach Phase 7: Glas für Leiste und Island (Lenno)
+Zu klein für den Phasenablauf (zwei Schalter, drei Dateien), deshalb direkt umgesetzt, ein Commit.
+- `bar.glass` (Abschnitt „Bar look“) und `island.glass` (Abschnitt „Design“), beide Standard aus. Leiste: Fensterfarbe `Tokens.bg` mit Alpha 0.62 + `BackgroundEffect.blurRegion` über die ganze Fläche. Island: `fill` mal 0.6 Alpha (`glassOf`) + Blur auf dem Körper mit seinem Eckenradius; gilt für alle Looks und Entwürfe.
+- **Geprüft:** `qmllint` weiter 0 Fehler, 32 Warnungen (wie vorher); Leiste in der Test-Shell auf dem zweiten Bildschirm: durchsichtig, Hintergrund sichtbar. **Island nicht gesehen** (braucht `IslandHost` mit allen Zuständen, nicht in der Test-Shell); nur der Code ist geprüft. Lesbarkeit der Island-Schrift auf hellem Hintergrund ist offen (Alpha 0.6 ist ein Schätzwert).
+- Konfliktgefahr beim Merge: `Island.qml` wird auch in Ablauf 12 (`island-notify`) geändert.

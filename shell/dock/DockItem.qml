@@ -4,45 +4,41 @@ import qs.models
 import qs.theme
 import qs.components
 
-// One app in the dock: icon, a dot for "running", a longer dot for "in front".
+// One app in the dock: icon, a dot for "running", a longer dot for "in front". The icon grows with `zoom` and
+// stands on the bottom of the cell, so it rises out of the dock; the cell grows sideways with it.
 Item {
     id: cell
 
     property var info             // { key, entry, pinned, windows }
     property int iconSize: 44
+    property real zoom: 1             // 1 = rest size; grows near the pointer
+    property bool bouncing            // the app was just started
     readonly property bool running: info ? info.windows.length > 0 : false
     readonly property bool front: info ? info.windows.some(w => w.activated) : false
     readonly property string name: info && info.entry ? info.entry.name : (info ? info.key : "")
     readonly property bool hovered: mouse.containsMouse
+    // Rest size, times the zoom, and a little extra on hover when nothing zooms.
+    readonly property real size: iconSize * zoom * (mouse.containsMouse && zoom < 1.01 ? 1.08 : 1) * (mouse.pressed ? 0.94 : 1)
+    property real hop: 0              // lift while the app starts
     signal activated()
     signal menuRequested()
 
-    width: iconSize + 14
+    width: size + 14
     height: iconSize + 18
 
-    Rectangle {
-        anchors { horizontalCenter: parent.horizontalCenter; top: parent.top; topMargin: 2 }
-        width: (cell.iconSize + 8) * (0.9 + 0.1 * opacity / 0.14)
-        height: width
-        radius: 12
-        color: Tokens.ink
-        opacity: mouse.pressed ? 0.14 : mouse.containsMouse ? 0.08 : 0
-        Behavior on opacity { NumberAnimation { duration: Tokens.durFast; easing.type: Easing.BezierSpline; easing.bezierCurve: [0.2, 0, 0, 1, 1, 1] } }
-    }
+    Behavior on zoom { NumberAnimation { duration: 70 } }
 
     Item {
         id: icon
-        anchors { horizontalCenter: parent.horizontalCenter; top: parent.top; topMargin: 6 }
-        width: cell.iconSize
-        height: cell.iconSize
-        scale: mouse.pressed ? 0.92 : mouse.containsMouse ? 1.08 : 1
-        Behavior on scale { NumberAnimation { duration: Tokens.durFast; easing.type: Easing.BezierSpline; easing.bezierCurve: [0.2, 0, 0, 1, 1, 1] } }
+        anchors { horizontalCenter: parent.horizontalCenter; bottom: parent.bottom; bottomMargin: 12 + cell.hop }
+        width: cell.size
+        height: cell.size
 
         Image {
             id: img
             anchors.fill: parent
             source: cell.info && cell.info.entry && cell.info.entry.icon ? Quickshell.iconPath(cell.info.entry.icon, true) : ""
-            sourceSize: Qt.size(cell.iconSize * 2, cell.iconSize * 2)
+            sourceSize: Qt.size(cell.iconSize * 2.4, cell.iconSize * 2.4)
             fillMode: Image.PreserveAspectFit
             asynchronous: true
             visible: status === Image.Ready
@@ -51,7 +47,7 @@ Item {
         Rectangle {
             anchors.fill: parent
             visible: img.status !== Image.Ready
-            radius: 10
+            radius: width * 0.22
             color: Tokens.surfaceAlt
             border.width: 1
             border.color: Tokens.line
@@ -61,6 +57,16 @@ Item {
                 role: Enums.TextRole.Title
             }
         }
+    }
+
+    // Two hops, then rest, while the app starts.
+    SequentialAnimation {
+        running: cell.bouncing
+        loops: Animation.Infinite
+        onRunningChanged: if (!running) cell.hop = 0
+        NumberAnimation { target: cell; property: "hop"; to: cell.iconSize * 0.4; duration: 260; easing.type: Easing.OutQuad }
+        NumberAnimation { target: cell; property: "hop"; to: 0; duration: 260; easing.type: Easing.InQuad }
+        PauseAnimation { duration: 120 }
     }
 
     Rectangle {

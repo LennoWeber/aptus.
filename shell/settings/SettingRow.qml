@@ -17,12 +17,13 @@ Item {
     property bool highlighted
     property var choices: []        // choice entries: list of { id, label }
     property string actionLabel: "Run"
+    property string origin          // search results: "Category › Section", empty on a category page
     signal valueEdited(var value)
     signal resetRequested()
     signal actionRequested()
 
     // Lists and the location have a tall editor under the title; everything else sits to the right of it.
-    readonly property bool wide: !!entry && (entry.kind === "list" || entry.kind === "location" || entry.kind === "providerList" || entry.kind === "hotkeyList" || entry.kind === "tileList" || entry.kind === "keyMap" || entry.kind === "theme")
+    readonly property bool wide: !!entry && (entry.kind === "list" || entry.kind === "location" || entry.kind === "providerList" || entry.kind === "hotkeyList" || entry.kind === "tileList" || entry.kind === "keyMap" || entry.kind === "theme" || entry.kind === "dockApps")
 
     implicitHeight: wide ? textColumn.implicitHeight + wideEditor.implicitHeight + 44 : Math.max(64, textColumn.implicitHeight + 28)
 
@@ -46,6 +47,12 @@ Item {
         id: textColumn
         anchors { left: parent.left; leftMargin: 4; right: editor.left; rightMargin: 20; verticalCenter: row.wide ? undefined : parent.verticalCenter; top: row.wide ? parent.top : undefined; topMargin: 16 }
         spacing: 3
+        Label {
+            visible: row.origin !== ""
+            text: row.origin
+            role: Enums.TextRole.Bar
+            color: Tokens.inkFaint
+        }
         Row {
             spacing: 8
             Label { text: row.entry ? row.entry.title : ""; font.weight: Font.Medium }
@@ -72,7 +79,7 @@ Item {
         id: wideEditor
         visible: row.wide
         anchors { left: parent.left; leftMargin: 4; right: parent.right; top: textColumn.bottom; topMargin: 14 }
-        sourceComponent: row.entry && row.entry.kind === "list" ? engineEditor : row.entry && row.entry.kind === "location" ? locationEditor : row.entry && row.entry.kind === "providerList" ? providerEditor : row.entry && row.entry.kind === "hotkeyList" ? hotkeyList : row.entry && row.entry.kind === "tileList" ? tileEditor : row.entry && row.entry.kind === "keyMap" ? modeKeyEditor : row.entry && row.entry.kind === "theme" ? themeEditor : null
+        sourceComponent: row.entry && row.entry.kind === "list" ? engineEditor : row.entry && row.entry.kind === "location" ? locationEditor : row.entry && row.entry.kind === "providerList" ? providerEditor : row.entry && row.entry.kind === "hotkeyList" ? hotkeyList : row.entry && row.entry.kind === "tileList" ? tileEditor : row.entry && row.entry.kind === "keyMap" ? modeKeyEditor : row.entry && row.entry.kind === "theme" ? themeEditor : row.entry && row.entry.kind === "dockApps" ? dockEditor : null
     }
     Component {
         id: engineEditor
@@ -81,6 +88,10 @@ Item {
     Component {
         id: tileEditor
         TileListEditor { tiles: row.draftValue; onChanged: value => row.valueEdited(value) }
+    }
+    Component {
+        id: dockEditor
+        DockAppsEditor { apps: row.draftValue || []; onChanged: value => row.valueEdited(value) }
     }
     Component {
         id: modeKeyEditor

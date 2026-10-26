@@ -71,7 +71,7 @@ Scope {
     }
     function valueOf(entry: var): var { return entry.id in draftValues ? draftValues[entry.id] : appliedOf(entry) }
     function isDefault(entry: var): bool { return JSON.stringify(valueOf(entry)) === JSON.stringify(defaultOf(entry)) }
-    function editable(entry: var): bool { return ["toggle", "choice", "slider", "number", "text", "list", "location", "tileList", "keyMap", "theme"].indexOf(entry.kind) >= 0 }
+    function editable(entry: var): bool { return ["toggle", "choice", "slider", "number", "text", "list", "location", "tileList", "keyMap", "theme", "dockApps"].indexOf(entry.kind) >= 0 }
 
     // Whether an entry is shown given its `visibleWhen` ({ path, equals } or { path, notEquals } against the setting in effect).
     function entryVisible(entry: var): bool {
@@ -96,6 +96,33 @@ Scope {
             if (q === "") return e.category === activeCategoryId
             return matches(e, q)
         })
+    }
+
+    // Categories grouped for the sidebar, in schema order: [{ group, categories: [category] }].
+    function categoryGroups(): var {
+        if (categories.some(c => !c.id || !c.title)) throw new Error("invariant: SettingsAppState.categoryGroups: category without id or title")
+        const out = []
+        for (const c of categories) {
+            let g = out.find(x => x.group === (c.group || ""))
+            if (!g) {
+                g = { group: c.group || "", categories: [] }
+                out.push(g)
+            }
+            g.categories.push(c)
+        }
+        return out
+    }
+
+    // The category that is open, or undefined.
+    function activeCategory(): var {
+        return categories.find(c => c.id === activeCategoryId)
+    }
+
+    // "Category › Section" of an entry, shown with search results.
+    function originOf(entry: var): string {
+        if (!entry || !categories.some(c => c.id === entry.category)) throw new Error("invariant: SettingsAppState.originOf: entry without a known category")
+        const c = categories.find(x => x.id === entry.category)
+        return (c ? c.title : "") + (entry.section ? " \u203a " + entry.section : "")
     }
 
     // Search in title, description and keywords.

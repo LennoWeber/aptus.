@@ -1,6 +1,5 @@
 pragma ComponentBehavior: Bound
 import QtQuick
-import qs.models
 import qs.theme
 import qs.components
 import qs.services
@@ -20,6 +19,16 @@ Item {
         if (entry.optionsFrom) return (appSettings.get(entry.optionsFrom) || []).map(o => ({ id: o.id, label: o.name }))
         return (entry.options || []).map(o => ({ id: o, label: o }))
     }
+
+    // True if shown[index] opens a new section (a different section than the entry before it).
+    function startsSection(index: int): bool {
+        const s = page.shown
+        if (index < 0 || index >= s.length) return false
+        return index === 0 || s[index].section !== s[index - 1].section
+    }
+
+    // Sub-headings only on a category page that has more than one section.
+    readonly property bool sectioned: !!appState && appState.query.trim() === "" && new Set(shown.map(e => e.section)).size > 1
 
     Flickable {
         id: flick
@@ -43,23 +52,37 @@ Item {
             }
             Repeater {
                 model: page.shown
-                delegate: SettingRow {
-                    id: item
+                delegate: Column {
+                    id: block
                     required property var modelData
+                    required property int index
                     width: column.width
-                    entry: item.modelData
-                                    draftValue: page.appState.valueOf(item.modelData)
-                    changed: item.modelData.id in page.appState.draftValues
-                    isDefault: page.appState.isDefault(item.modelData)
-                    editable: page.appState.editable(item.modelData)
-                    choices: item.modelData.kind === "choice" ? page.choicesOf(item.modelData) : []
-                    actionLabel: item.modelData.id === "about.export" ? "Export" : item.modelData.id === "about.import" ? "Import" : item.modelData.id === "about.reset" ? "Reset all" : "Open"
-                    highlighted: page.appState.focusedEntryId === item.modelData.id
-                    onValueEdited: value => page.appState.setDraft(item.modelData.id, value)
-                    onResetRequested: page.appState.resetEntry(item.modelData.id)
-                    onActionRequested: page.appState.runAction(item.modelData)
-                    onHighlightedChanged: if (highlighted) page.reveal(item)
-                    Component.onCompleted: if (highlighted) page.reveal(item)
+
+                    SectionHeader {
+                        visible: page.sectioned && page.startsSection(block.index)
+                        width: parent.width
+                        height: visible ? implicitHeight : 0
+                        title: block.modelData.section || ""
+                        first: block.index === 0
+                    }
+                    SettingRow {
+                        id: item
+                        width: block.width
+                        entry: block.modelData
+                        draftValue: page.appState.valueOf(block.modelData)
+                        changed: block.modelData.id in page.appState.draftValues
+                        isDefault: page.appState.isDefault(block.modelData)
+                        editable: page.appState.editable(block.modelData)
+                        origin: page.appState.query.trim() !== "" ? page.appState.originOf(block.modelData) : ""
+                        choices: block.modelData.kind === "choice" ? page.choicesOf(block.modelData) : []
+                        actionLabel: block.modelData.id === "about.export" ? "Export" : block.modelData.id === "about.import" ? "Import" : block.modelData.id === "about.reset" ? "Reset all" : "Open"
+                        highlighted: page.appState.focusedEntryId === block.modelData.id
+                        onValueEdited: value => page.appState.setDraft(block.modelData.id, value)
+                        onResetRequested: page.appState.resetEntry(block.modelData.id)
+                        onActionRequested: page.appState.runAction(block.modelData)
+                        onHighlightedChanged: if (highlighted) page.reveal(item)
+                        Component.onCompleted: if (highlighted) page.reveal(item)
+                    }
                 }
             }
         }
@@ -67,7 +90,7 @@ Item {
 
     // Scroll to an entry and let the highlight fade after a moment.
     function reveal(item: var): void {
-        Qt.callLater(() => { flick.contentY = Math.max(0, Math.min(item.y - 40, flick.contentHeight - flick.height)) })
+        Qt.callLater(() => { flick.contentY = Math.max(0, Math.min(item.mapToItem(column, 0, 0).y - 40, flick.contentHeight - flick.height)) })
         clearHighlight.restart()
     }
     Timer { id: clearHighlight; interval: 1800; onTriggered: page.appState.focusedEntryId = "" }
