@@ -54,7 +54,7 @@ Singleton {
     property color warn: "#B7791F"
     property color critical: "#B3382C"
     property color accent: "#1C2127"          // sliders, meters, the active workspace; in light and dark the same as ink
-    property color onAccent: "#F4F3EF"        // text and icons on the accent
+    property color accentInk: "#F4F3EF"        // text and icons on the accent
     property color on: "#1F6B4F"              // the on state of a switch; in light and dark the "ok" colour
 
     // bar and derived colours; the defaults reproduce the standard palette
@@ -160,7 +160,7 @@ Singleton {
         if (!(blend >= 0 && blend <= 1)) throw new Error("invariant: Tokens.applyPalette: blend outside 0..1")
         if (!(dark >= 0 && dark <= 1)) throw new Error("invariant: Tokens.applyPalette: dark outside 0..1")
         // NightLightState calls this when its blend changes (it moves over seconds, never a flash).
-        // TODO(phase 7, themes): paletteAt mixes fromColors and toColors at `fade`; accent, onAccent and on come from the same mix; applyPalette sets them (and calls applyDerived with darknessAt(fade)).
+        // TODO(phase 7, themes): paletteAt mixes fromColors and toColors at `fade`; accent, accentInk and on come from the same mix; applyPalette sets them (and calls applyDerived with darknessAt(fade)).
         // TODO(phase 7, themes): argument is the fade now; `dark` in the invariant message and the checks above becomes fade.
         const p = paletteAt(blend, dark)
         root.blend = blend
@@ -215,7 +215,7 @@ Singleton {
     }
 
     // The ids of the themes that can be chosen, in the order of the picker: light, dark, ocean, forest, dusk, sand, sky, wallpaper.
-    // "auto" is a setting value, not a theme. "wallpaper" is listed only when customTheme is set.
+    // "auto" is a setting value, not a theme. "wallpaper" is always listed; it has colours once customTheme is set.
     function themeIds(): var {
         throw new Error("not implemented")
     }

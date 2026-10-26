@@ -12,6 +12,8 @@ Singleton {
 
     property string source                 // the picture the palette was made from, empty = none yet
     property string tone: "auto"           // appearance.wallpaperTone: auto | light | dark
+    property bool active                   // the wallpaper theme is chosen or previewed: refresh() makes it
+    property var queued: null              // { path, tone } asked for while a run was going
     property var palette: null             // the generated palette ({ name, base, bg, ..., accent }) or null
     property string status: "idle"         // "idle" | "working" | "ready" | "failed"
     property string error                  // short reason while status is "failed"

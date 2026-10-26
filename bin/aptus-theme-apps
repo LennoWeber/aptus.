@@ -60,8 +60,8 @@ HEX = re.compile(r"#[0-9A-Fa-f]{6}")
 BUILTIN_THEMES = MODES
 WALLPAPER_THEME = os.path.join(STATE, "aptus", "wallpaper-theme.json")
 THEME_ID = re.compile(r"[a-z][a-z0-9-]*")
-# The roles every theme palette has besides PALETTE_KEYS[:10]: accent (sliders and meters), onAccent, on (switch on).
-THEME_EXTRA_KEYS = ("accent", "onAccent", "on")
+# The roles every theme palette has besides PALETTE_KEYS[:10]: accent (sliders and meters), accentInk, on (switch on).
+THEME_EXTRA_KEYS = ("accent", "accentInk", "on")
 
 # Invariants of the constants: alphas are real alphas and the active border is stronger than the inactive one, the
 # Spicetify theme name is one folder name. Target paths are checked where they are used, so a broken XDG variable
@@ -92,6 +92,22 @@ def theme_data(theme: str) -> dict:
 
 def theme_mode(theme: str) -> str:
     """The base of a theme, "light" or "dark" (light for light, dark for dark)."""
+    raise NotImplementedError
+
+
+def theme_stamp(theme: str) -> str:
+    """What MODE_FILE holds after a run for `theme`: its id, and for wallpaper also a short hash of the generated palette."""
+    raise NotImplementedError
+
+
+def check_theme(theme: str, d: dict) -> None:
+    """Raise AssertionError unless the theme is complete: base, all roles as #RRGGBB, bg lighter than ink iff base is light, text contrast >= 4.5."""
+    raise NotImplementedError
+
+
+def palette_for(m: str) -> dict:
+    """The palette written into the per-mode files (Ghostty and yazi have a light and a dark theme file): the neutral one,
+    except for the file of the base of a colour theme, which holds that theme."""
     raise NotImplementedError
 
 
@@ -220,6 +236,7 @@ def contrast(a: str, b: str) -> float:
     return (hi + 0.05) / (lo + 0.05)
 
 
+# TODO(phase 7, themes): ghostty() and yazi() write both per-mode files: use palette_for(m) instead of palette(m).
 def check_contrast(colors: dict) -> list:
     """Messages for the pairs below 4.5 (ink on bg, selection_fg on selection_bg, inkSoft on bg); empty when fine."""
     assert all(k in colors for k in ("ink", "bg", "inkSoft", "selection_fg", "selection_bg")), "colors comes from colors_of"

@@ -15,6 +15,10 @@ Singleton {
     // last handed to the login helper together with the fit, "" when none or after a failure.
     property bool loginSync: true
     property string loginSynced
+    property bool loginSyncedLoaded            // the remembered key was read, so a change of it is written back
+    property string loginKeyPending            // "path|fit" of the login helper run in flight
+    property bool loginQueued                  // a sync was asked for while one was running
+    readonly property string syncedFile: (Quickshell.env("XDG_STATE_HOME") || (Quickshell.env("HOME") + "/.local/state")) + "/aptus/login-wallpaper"
 
     property string directory           // settings wallpaper.directory, empty = ~/Pictures/Wallpapers
     readonly property string folder: directory || (Quickshell.env("HOME") + "/Pictures/Wallpapers")
@@ -60,7 +64,16 @@ Singleton {
         Component.onCompleted: root.current = text().trim()
     }
 
+    // The picture and fit that were last handed to the login helper (loginSynced).
+    FileView {
+        id: syncedView
+        path: root.syncedFile
+        blockLoading: true
+        printErrors: false
+    }
+
     Process {
+        // TODO(phase 7, themes): run helperCheck at start (Component.onCompleted), not only in scan(), so the login sync knows whether the helper exists; read the remembered loginSynced from syncedView; set loginSyncedLoaded.
         id: helperCheck
         command: ["test", "-x", root.loginHelper]
         // qmllint disable signal-handler-parameters
@@ -97,6 +110,11 @@ Singleton {
 
     // The name of an Enums.WallpaperFit as the setting and the login config spell it.
     function fitName(fit: int): string {
+        throw new Error("not implemented")
+    }
+
+    // The login helper finished: a manual call reports in loginStatus, an automatic one remembers what it handed over.
+    function onLoginExited(code: int): void {
         throw new Error("not implemented")
     }
 }

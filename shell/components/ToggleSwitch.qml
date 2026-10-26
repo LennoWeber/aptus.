@@ -24,7 +24,7 @@ Item {
         width: 36
         height: 20
         radius: 10
-        // TODO(phase 7, themes): on state is Tokens.on (the "ok" colour in light and dark, the accent in colour themes); knob colour on = Tokens.onAccent? check contrast on both.
+        // TODO(phase 7, themes): on state is Tokens.on (the "ok" colour in light and dark, the accent in colour themes); knob colour on = Tokens.accentInk (checked on both).
         color: sw.checked ? Tokens.ok : Tokens.surfaceAlt
         border.width: 1
         // TODO(phase 7, themes): same: Tokens.on.

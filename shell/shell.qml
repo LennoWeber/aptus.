@@ -170,6 +170,7 @@ ShellRoot {
 
     Variants {
         model: Quickshell.screens
+        // TODO(phase 7, themes): run start() deferred (Qt.callLater): AppSettings has not loaded yet when this handler runs, so the setting would read as empty (finding of the probe).
         // TODO(phase 7, themes): colorModeObj.start() must run after ThemeSource has read the last palette (theme wallpaper), so the first frame already has its colours.
         WallpaperLayer {}
     }

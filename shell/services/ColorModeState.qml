@@ -188,4 +188,14 @@ Scope {
     function onWallpaperThemeChanged(): void {
         throw new Error("not implemented")
     }
+
+    // The setting appearance.theme, or light (with a warning) when it is not a theme, e.g. a hand-edited file.
+    function settingTheme(): string {
+        throw new Error("not implemented")
+    }
+
+    // Tell ThemeSource whether the wallpaper theme is wanted (chosen or previewed) and which tone it should have.
+    function followWallpaperTheme(): void {
+        throw new Error("not implemented")
+    }
 }

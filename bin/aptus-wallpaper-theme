@@ -5,8 +5,8 @@
 
 Reads the picture scaled down (Pillow), finds the colour tone that stands out in it, and builds a complete palette from that
 tone in the format of palette.themes in theme/tokens.json (roles bg, surface, surfaceAlt, line, ink, inkSoft, inkFaint, ok,
-warn, critical, accent, onAccent, on, plus name and base). Light or dark follows the brightness of the picture with --tone auto.
-A grey picture gets a calm blue-grey tone. The result is written to FILE (default ~/.local/state/aptus/wallpaper-theme.json)
+warn, critical, accent, accentInk, on, plus name and base). Light or dark follows the brightness of the picture with --tone auto.
+A grey picture gets a calm blue-grey tone. The result is printed to stdout and written to FILE (default ~/.local/state/aptus/wallpaper-theme.json)
 together with the picture's path, size and modification time (`source`), and the tone asked for (`tone`), so a second run for the
 same picture and tone does nothing. The shell and aptus-theme-apps read that file. Exit code 0 on success, 1 when the picture
 cannot be read, 2 for wrong arguments."""
@@ -25,6 +25,7 @@ FALLBACK_HUE = 215                # degrees, the tone of a grey picture
 MIN_CONTRAST_TEXT = 4.5           # ink on bg, accent on bg (WCAG AA for text)
 
 
+# TODO(phase 7, themes): Pillow 13 deprecates Image.getdata(); use get_flattened_data() when it exists. Thresholds: grey below MIN_COLOUR_WEIGHT 0.02 mean colour weight, accent saturation 0.40 to 0.65, dark below mean lightness 0.45 (values found in the probe).
 def read_pixels(path: str) -> list:
     """The picture scaled down, as a list of (r, g, b) with 0..255 values. Raises OSError when it cannot be read."""
     raise NotImplementedError
@@ -80,6 +81,7 @@ def write_atomic(out: str, theme: dict) -> None:
     raise NotImplementedError
 
 
+# TODO(phase 7, themes): print the theme as JSON to stdout on success (also when the file is current): the shell reads the result from there.
 def main(argv: list) -> int:
     raise NotImplementedError
 
