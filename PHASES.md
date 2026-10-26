@@ -929,3 +929,12 @@ Lennos „weiter“ → Phase 1b: zehn Look-Entwürfe (Mockup). Entscheidung daz
 - Emoji hat in aptus keine Datenquelle: `config/emoji.json` wird aus der Unicode-Datenbank (Python `unicodedata`) erzeugt (Phase 3, Konstanten).
 - Übergang zu Launcher und Control Center: die Insel beobachtet `ShellState` (`stage`, `activeOverlay`) und verformt sich in die Fläche des Ziels, bevor sie ausblendet; beim Schließen kehrt sie zurück. Launcher und Control Center selbst bleiben unverändert.
 - Power-Menü: bei `bar.style = island` öffnet `panelToggle session` und `panelOpen session` die Insel-Ansicht statt des Vollbild-Menüs. Mit Leiste bleibt das alte Menü.
+
+**Phase 2 (Strukturen), erledigt:**
+- Arbeit läuft ab jetzt im Worktree `~/Code/Projekte/aptus-island` (Branch `island`), damit die laufende Shell (Symlinks auf `~/Code/Projekte/aptus`, Branch `main`) nie halbfertigen Code lädt. Zusammenführen nach Phase 7 und Test.
+- Gelöscht: `shell/notch/*` (außer `LevelBars.qml`, unverändert nach `shell/island/` verschoben), `models/NotchState.qml`, `Enums.NotchStage`, Einstellungen `notch.*` in `settings.json` und `settings-schema.json`.
+- Neu: `Enums.IslandStage { Rest, Alert, Hover, Open }`, `Enums.IslandView { Home, Power, Screenshot, Clipboard, Emoji, Wallpaper }`, `Enums.MorphTarget { None, Launcher, ControlCenter }`; `models/IslandState.qml` (nur Properties und Signale); `theme/IslandLook.qml` (Singleton, nur Properties der gewählten Look-Werte); `shell/island/*` mit 14 Komponenten (nur Properties, Signale, `qmldir`).
+- Einstellungen: `bar.style` (`bar` | `island`), `island.look` (zehn Ids), `island.hoverOpen` (Standard an), `island.mediaWings`, `island.alerts`, `island.alertSeconds`, `island.reserveSpace`.
+- Abweichungen vom Plan: **kein** `Enums.IslandLook` (der Look ist ein String aus `theme/island-looks.json`, so lassen sich Looks ohne Codeänderung ergänzen); `IslandView` hat `Home` statt `None` (der Zustand „offen“ ist `IslandStage.Open`, die Ansicht dann mindestens `Home`).
+- Bewusst nicht angefasst (kommt in Phase 3 bis 7): `shell.qml` und `IpcHandlers.qml` verweisen noch auf Notch-Typen, das Projekt baut absichtlich nicht.
+- Prüfung: Diff gelesen, in den neuen Dateien keine Funktion, keine Bindung, kein Timer, keine Verdrahtung (grep leer). JSON validiert.

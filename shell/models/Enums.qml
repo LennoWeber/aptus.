@@ -73,6 +73,13 @@ QtObject {
     // Colour of the top bar (settings bar.tone: "offwhite" | "tinted").
     enum BarTone { OffWhite, Tinted }
 
-    // The three stages of the notch: a small pill at rest, one line of news, the opened sheet.
-    enum NotchStage { Rest, Alert, Open }
+    // The stages of the island: a small pill at rest, one line of news, the hover panel with quick settings, the opened
+    // island (its content is Enums.IslandView).
+    enum IslandStage { Rest, Alert, Hover, Open }
+
+    // What the opened island shows (Home is the overview with music, workspaces and status icons).
+    enum IslandView { Home, Power, Screenshot, Clipboard, Emoji, Wallpaper }
+
+    // Where the island grows to while the launcher or the control center takes the stage (None = it stays itself).
+    enum MorphTarget { None, Launcher, ControlCenter }
 }

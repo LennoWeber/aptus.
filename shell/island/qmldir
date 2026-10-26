@@ -1,0 +1,16 @@
+module qs.island
+IslandHost 1.0 IslandHost.qml
+Island 1.0 Island.qml
+IslandBody 1.0 IslandBody.qml
+IslandRest 1.0 IslandRest.qml
+IslandAlert 1.0 IslandAlert.qml
+IslandMedia 1.0 IslandMedia.qml
+IslandButton 1.0 IslandButton.qml
+IslandHome 1.0 IslandHome.qml
+IslandHover 1.0 IslandHover.qml
+IslandPower 1.0 IslandPower.qml
+IslandScreenshot 1.0 IslandScreenshot.qml
+IslandClipboard 1.0 IslandClipboard.qml
+IslandEmoji 1.0 IslandEmoji.qml
+IslandWallpaper 1.0 IslandWallpaper.qml
+LevelBars 1.0 LevelBars.qml

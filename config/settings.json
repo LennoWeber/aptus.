@@ -26,12 +26,12 @@
     "iconSize": 44,
     "pinned": ["org.gnome.Nautilus", "firefox", "org.gnome.Ptyxis", "org.gnome.Settings"]
   },
-  "notch": {
-    "look": "light",
+  "island": {
+    "look": "paper",
+    "hoverOpen": true,
     "mediaWings": true,
     "alerts": true,
     "alertSeconds": 4,
-    "hoverOpen": false,
     "reserveSpace": true
   },
   "launcher": {
