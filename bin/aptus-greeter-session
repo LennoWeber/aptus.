@@ -15,4 +15,4 @@ if [ -z "${XDG_RUNTIME_DIR:-}" ] || [ ! -w "$XDG_RUNTIME_DIR" ]; then
     export XDG_RUNTIME_DIR
 fi
 unset WAYLAND_DISPLAY
-exec cage -s -- qs -p "$SHARE/greeter"
+exec cage -s -m last -- qs -p "$SHARE/greeter"
