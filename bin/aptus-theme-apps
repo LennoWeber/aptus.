@@ -1,12 +1,17 @@
 #!/usr/bin/env python3
-# TODO(phase 7): the usage text below (the --only list, "palette (day)", "Nothing is installed") must describe the new apps, the dark palette and Spicetify.
 """Colour the apps of the dotfiles with the aptus palette.
 
-  aptus-theme-apps [--mode light|dark] [--dry-run] [--only kitty,ghostty,gtk,qt,btop,zathura,gsettings]
+  aptus-theme-apps [--mode light|dark] [--dry-run] [--only APP,...] [--all]
 
-Reads the palette in theme/tokens.json (day) and writes one theme file per app under ~/.config. A config that
-does not mention the theme yet gets one line that includes it. An existing file that is replaced is kept once
-as NAME.before-aptus. Nothing is installed. Running it again rewrites the same files.
+Default apps: kitty, ghostty, gtk, qt, btop, zathura, gsettings. With --only or --all also: starship, fish, nvim,
+yazi, fastfetch, cava, hyprland_look (window borders), hyprlock, zen, thunderbird, spotify (a Spicetify theme).
+
+Reads the palette in theme/tokens.json (day for light, dark for dark) and writes one theme file per app under
+~/.config, filled from the templates in theme/apps. A config that does not mention the theme yet gets one line that
+includes it. An existing file that is replaced is kept once as NAME.before-aptus (not inside linked folders: the
+dotfiles repo is the backup there). Starship, nvim and fastfetch get their own files and are not edited. Nothing is installed or
+applied: Spicetify needs `spicetify config current_theme aptus color_scheme Base && spicetify apply` once, and running programs read
+their colours again only where they can (Hyprland, kitty, cava). Running it again rewrites the same files.
 """
 import argparse
 import json
@@ -36,6 +41,7 @@ THUNDERBIRD_ROOTS = [os.path.join(HOME, ".thunderbird"), os.path.join(CFG, "thun
 # Spicetify keeps themes in SPICETIFY_DIR/NAME/{color.ini,user.css}; the theme is written even if Spicetify is not installed yet.
 SPICETIFY_DIR = os.path.join(CFG, "spicetify", "Themes")
 SPICETIFY_THEME = "aptus"
+_TOKENS = None
 # Every palette of tokens.json has these keys; colours are always #RRGGBB.
 PALETTE_KEYS = ("bg", "surface", "surfaceAlt", "line", "ink", "inkSoft", "inkFaint", "ok", "warn", "critical",
                 "blue", "magenta", "cyan", "bblue", "bmagenta", "bcyan")
@@ -48,42 +54,46 @@ HEX = re.compile(r"#[0-9A-Fa-f]{6}")
 assert 0 < BORDER_ALPHA_INACTIVE < BORDER_ALPHA_ACTIVE <= 1 and 0 < SHADOW_ALPHA <= 1, "aptus-theme-apps: border and shadow alphas out of order"
 assert os.sep not in SPICETIFY_THEME and SPICETIFY_THEME not in ("", ".", ".."), "aptus-theme-apps: Spicetify theme must be a plain folder name"
 
-# TODO(phase 7): ACCENTS and SIGNAL_DARK duplicate theme/tokens.json (palette.accents, palette.dark); read them there and delete both.
-# Accent colours for the terminal palette: the shell itself has no accent, so these are quiet and fixed.
-ACCENTS = {
-    "light": dict(blue="#2B6CA3", magenta="#8B4C8F", cyan="#247B80", bblue="#3F82BA", bmagenta="#A062A5", bcyan="#34929A"),
-    "dark": dict(blue="#7FB2E0", magenta="#C79BD0", cyan="#6FC7CC", bblue="#9CC6EA", bmagenta="#D8B3E0", bcyan="#8ED7DB"),
-}
-SIGNAL_DARK = dict(ok="#6FBF9A", warn="#E0B35A", critical="#E0786C")
-
 
 def palette(mode: str) -> dict:
     assert mode in MODES, f"unknown mode {mode}"
-    # TODO(phase 7): take the palette from load_tokens() through palette.modes (light -> day, dark -> dark), not from day plus literals.
-    with open(os.path.join(ROOT, "theme", "tokens.json")) as f:
-        day = json.load(f)["palette"]["day"]
-    if mode == "light":
-        p = dict(day)
-    else:
-        p = dict(bg=day["ink"], surface="#252B32", surfaceAlt="#2E353D", line="#3A424B", ink=day["bg"],
-                 inkSoft="#B4B9C0", inkFaint="#7C838C", **SIGNAL_DARK)
-    p.update(ACCENTS[mode])
+    t = load_tokens()["palette"]
+    p = {k: v for k, v in t[t["modes"][mode]].items() if k != "note"}
+    p.update({k: v for k, v in t["accents"][mode].items() if k != "note"})
     return p
 
 
 def ansi(p: dict, mode: str) -> list:
     assert mode in MODES, f"unknown mode {mode}"
-    # TODO(phase 7): the bright colours are literals here; use palette.brights of the tokens.
+    b = load_tokens()["palette"]["brights"][mode]
     if mode == "light":
         return [p["ink"], p["critical"], p["ok"], p["warn"], p["blue"], p["magenta"], p["cyan"], p["surfaceAlt"],
-                p["inkFaint"], "#C8493B", "#2F8A66", "#C98A2A", p["bblue"], p["bmagenta"], p["bcyan"], p["bg"]]
+                p["inkFaint"], b["critical"], b["ok"], b["warn"], p["bblue"], p["bmagenta"], p["bcyan"], p["bg"]]
     return [p["surface"], p["critical"], p["ok"], p["warn"], p["blue"], p["magenta"], p["cyan"], p["inkSoft"],
-            p["inkFaint"], "#F09284", "#8AD3B0", "#EFC574", p["bblue"], p["bmagenta"], p["bcyan"], p["ink"]]
+            p["inkFaint"], b["critical"], b["ok"], b["warn"], p["bblue"], p["bmagenta"], p["bcyan"], p["ink"]]
 
 
 def load_tokens() -> dict:
     """The whole theme/tokens.json (read once, then kept)."""
-    raise NotImplementedError("not implemented")
+    global _TOKENS
+    if _TOKENS is None:
+        with open(os.path.join(ROOT, "theme", "tokens.json")) as f:
+            t = json.load(f)
+        pal = t["palette"]
+        assert set(pal["modes"]) >= set(MODES) and all(pal["modes"][m] in pal for m in MODES), "palette.modes must name palettes"
+        assert pal["modes"]["light"] != pal["modes"]["dark"] and "night" not in (pal["modes"][m] for m in MODES), "light and dark are two palettes, night is no app mode"
+        for m in MODES:
+            assert all(HEX.fullmatch(pal[pal["modes"][m]].get(k, "")) for k in PALETTE_KEYS[:10]), f"palette of {m} misses a colour"
+            assert all(HEX.fullmatch(pal["accents"][m].get(k, "")) for k in PALETTE_KEYS[10:]), f"accents of {m} miss a colour"
+            assert set(pal["brights"][m]) == {"ok", "warn", "critical"}, f"brights of {m} must be ok, warn and critical"
+            known = set(pal[pal["modes"][m]]) | set(pal["accents"][m])
+            roles = pal["roles"]
+            used = [roles["selection"]["bg"], roles["selection"]["fg"], roles["link"]] + list(roles["syntax"][m].values()) + roles["cavaGradient"]
+            assert all(u in known for u in used), f"roles of {m} name an unknown colour"
+            assert len(roles["syntax"][m]) == 8 and roles["cavaGradient"], "syntax roles and the cava gradient must be complete"
+        assert pal["dark"]["bg"] == pal["day"]["ink"] and pal["dark"]["ink"] == pal["day"]["bg"], "dark.bg and dark.ink must mirror day"
+        _TOKENS = t
+    return _TOKENS
 
 
 def colors_of(p: dict, mode: str) -> dict:
@@ -93,53 +103,98 @@ def colors_of(p: dict, mode: str) -> dict:
     assert all(k in p for k in PALETTE_KEYS), f"palette misses {[k for k in PALETTE_KEYS if k not in p]}"
     assert all(HEX.fullmatch(p[k]) for k in PALETTE_KEYS), "palette colour is not #RRGGBB"
     assert (sum(int(p["bg"][i:i + 2], 16) for i in (1, 3, 5)) > sum(int(p["ink"][i:i + 2], 16) for i in (1, 3, 5))) == (mode == "light"), "light mode has a light background, dark mode a dark one"
-    raise NotImplementedError("not implemented")
+    t = load_tokens()["palette"]
+    c = {k: v for k, v in p.items() if k != "note"}
+    c["mode"] = mode
+    for k, v in t["brights"][mode].items():
+        c["bright_" + k] = v
+    roles = t["roles"]
+    c["selection_bg"] = c[roles["selection"]["bg"]]
+    c["selection_fg"] = c[roles["selection"]["fg"]]
+    c["link"] = c[roles[ "link"]]
+    for k, v in roles["syntax"][mode].items():
+        c["syntax_" + k] = c[v]
+    for i, v in enumerate(roles["cavaGradient"]):
+        c["cava_%d" % i] = c[v]
+    return c
 
 
 def hex_bare(color: str) -> str:
     """#RRGGBB as RRGGBB (Spicetify color.ini)."""
     assert HEX.fullmatch(color), f"not #RRGGBB: {color}"
-    raise NotImplementedError("not implemented")
+    return color.lstrip("#")
 
 
 def hex_rgba(color: str, alpha: float) -> str:
     """#RRGGBB and an alpha from 0 to 1 as RRGGBBAA; callers wrap it as rgba(RRGGBBAA) for Hyprland and hyprlock."""
     assert HEX.fullmatch(color), f"not #RRGGBB: {color}"
     assert isinstance(alpha, (int, float)) and not isinstance(alpha, bool) and 0 <= alpha <= 1, f"alpha outside 0 to 1: {alpha}"
-    raise NotImplementedError("not implemented")
+    return color.lstrip("#") + "%02x" % round(alpha * 255)
 
 
 def contrast(a: str, b: str) -> float:
     """WCAG contrast ratio of two #RRGGBB colours."""
     assert HEX.fullmatch(a) and HEX.fullmatch(b), f"not #RRGGBB: {a} {b}"
-    raise NotImplementedError("not implemented")
+    def lum(h):
+        v = [int(h[i:i + 2], 16) / 255 for i in (1, 3, 5)]
+        v = [x / 12.92 if x <= 0.03928 else ((x + 0.055) / 1.055) ** 2.4 for x in v]
+        return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]
+    hi, lo = sorted((lum(a), lum(b)), reverse=True)
+    return (hi + 0.05) / (lo + 0.05)
 
 
 def check_contrast(colors: dict) -> list:
     """Messages for the pairs below 4.5 (ink on bg, selection_fg on selection_bg, inkSoft on bg); empty when fine."""
     assert all(k in colors for k in ("ink", "bg", "inkSoft", "selection_fg", "selection_bg")), "colors comes from colors_of"
-    raise NotImplementedError("not implemented")
+    pairs = [("ink", "bg"), ("selection_fg", "selection_bg"), ("inkSoft", "bg")]
+    return [f"{a} on {b} has contrast {contrast(colors[a], colors[b]):.1f}" for a, b in pairs
+            if contrast(colors[a], colors[b]) < 4.5]
 
 
 def render_template(name: str, colors: dict, extra: dict = None) -> str:
     """Read theme/apps/NAME and replace every {{role}} with its colour from colors (and extra); {{role|bare}} drops
-    the #, {{role|rgba:0.25}} gives RRGGBB plus alpha. A role without a colour is an error."""
+    the #, {{role|rgba:0.25}} gives RRGGBBAA ({{role|rgba:@name}} takes the alpha from extra). A role without a colour is an error."""
     assert name == os.path.basename(name) and name, f"template name must be a plain file name: {name}"
     assert os.path.isfile(os.path.join(TEMPLATES, name)), f"no template {name} in {TEMPLATES}"
     assert colors and not set(extra or {}) & set(colors), "extra must not replace a colour role"
-    raise NotImplementedError("not implemented")
+    values = dict(colors)
+    values.update(extra or {})
+    with open(os.path.join(TEMPLATES, name)) as f:
+        text = f.read()
+
+    def one(m):
+        role, _, flt = m.group(1).partition("|")
+        if role not in values:
+            raise KeyError(f"{name}: no colour for {{{{{role}}}}}")
+        v = values[role]
+        if flt == "bare":
+            return hex_bare(v)
+        if flt.startswith("rgba:"):
+            a = flt[5:]
+            return hex_rgba(v, float(values[a[1:]]) if a.startswith("@") else float(a))
+        assert not flt, f"{name}: unknown filter {flt}"
+        return v
+    return re.sub(r"\{\{([^}]+)\}\}", one, text)
 
 
 def template_roles(name: str) -> set:
     """The role names a template uses (to check them against colors_of before writing anything)."""
     assert name == os.path.basename(name) and name, f"template name must be a plain file name: {name}"
-    raise NotImplementedError("not implemented")
+    with open(os.path.join(TEMPLATES, name)) as f:
+        return {m.split("|")[0] for m in re.findall(r"\{\{([^}]+)\}\}", f.read())}
 
 
 def profile_dirs(roots: list) -> list:
     """The profile folders (with prefs.js, not storage folders) below ROOTS; reads only, creates nothing."""
     assert isinstance(roots, list) and all(os.path.isabs(r) for r in roots), "roots are absolute paths"
-    raise NotImplementedError("not implemented")
+    found = []
+    for root in roots:
+        for dirpath, dirs, files in os.walk(root):
+            dirs[:] = [d for d in dirs if d not in ("storage", "chrome", "extensions")]
+            if "prefs.js" in files:
+                found.append(dirpath)
+                dirs[:] = []
+    return found
 
 
 def enable_chrome_css(profile: str, dry: bool) -> None:
@@ -148,7 +203,19 @@ def enable_chrome_css(profile: str, dry: bool) -> None:
     userContent.css if they do not exist (callers add the @import line with ensure_line)."""
     assert dry or os.path.isdir(profile), f"no profile folder {profile}"
     assert "storage" not in profile.split(os.sep) and os.path.basename(profile.rstrip(os.sep)) != "chrome", "profile, not chrome or storage folder"
-    raise NotImplementedError("not implemented")
+    if dry:
+        print(f"  [dry-run] enable chrome css in {profile}")
+        return
+    chrome = os.path.join(profile, "chrome")
+    userjs = os.path.join(profile, "user.js")
+    line = 'user_pref("toolkit.legacyUserProfileCustomizations.stylesheets", true);'
+    os.makedirs(chrome, exist_ok=True)
+    old = open(userjs).read() if os.path.exists(userjs) else ""
+    if line not in old:
+        with open(userjs, "w") as f:
+            f.write(old.rstrip("\n") + ("\n" if old else "") + line + "\n")
+    for name in ("userChrome.css", "userContent.css"):
+        open(os.path.join(chrome, name), "a").close()
 
 
 def ensure_block(path: str, marker: str, text: str, dry: bool) -> None:
@@ -158,33 +225,81 @@ def ensure_block(path: str, marker: str, text: str, dry: bool) -> None:
     assert f"# >>> {marker}" not in text and f"# <<< {marker}" not in text, "text must not contain its own markers"
     assert os.path.isabs(path), f"path must be absolute: {path}"
     assert not os.path.realpath(path).startswith(ROOT + os.sep), "never write a user config into the aptus repository"
-    raise NotImplementedError("not implemented")
+    start, end = f"# >>> {marker}", f"# <<< {marker}"
+    block = f"{start}\n{text.rstrip(chr(10))}\n{end}\n"
+    old = open(path).read() if os.path.exists(path) else ""
+    pat = re.compile(re.escape(start) + r".*?" + re.escape(end) + r"\n?", re.S)
+    new = pat.sub(lambda m: block, old) if pat.search(old) else (old.rstrip("\n") + "\n\n" if old else "") + block
+    if new == old:
+        return
+    if dry:
+        print(f"  [dry-run] block {marker} in {path}")
+        return
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    if old.strip() and not linked(path) and not os.path.exists(path + ".before-aptus"):
+        shutil.copy2(path, path + ".before-aptus")
+    with open(path, "w") as f:
+        f.write(new)
+    print(f"  updated {path}")
 
 
 def reload_apps(chosen: list, dry: bool) -> None:
     """Tell running programs to read their colours again (Hyprland reload, cava, nvim, kitty), where they can."""
     assert isinstance(chosen, list), "chosen is the list of app names"
-    raise NotImplementedError("not implemented")
+    if dry:
+        print("  [dry-run] reload running apps")
+        return
+    if "hyprland_look" in chosen and shutil.which("hyprctl"):
+        subprocess.run(["hyprctl", "reload"], check=False, stdout=subprocess.DEVNULL)
+    if shutil.which("pkill"):
+        if "cava" in chosen:
+            subprocess.run(["pkill", "-USR2", "-x", "cava"], check=False)
+        if "kitty" in chosen:
+            subprocess.run(["pkill", "-USR1", "-x", "kitty"], check=False)
+
+
+def linked(path: str) -> bool:
+    """True if PATH or one of its folders is a link (a config kept in the dotfiles repo); the repo is the backup there."""
+    return os.path.realpath(path) != os.path.abspath(path)
+
+
+def ensure_css_import(path: str, line: str, dry: bool) -> None:
+    """Put the @import LINE at the top of the CSS file at PATH (imports are ignored after other rules), once."""
+    old = open(path).read() if os.path.exists(path) else ""
+    if line in old:
+        return
+    keep = [l for l in old.split("\n") if l.startswith(("@charset", "@namespace"))]
+    rest = "\n".join(l for l in old.split("\n") if l not in keep).lstrip("\n")
+    new = "\n".join(keep + [line]) + "\n" + ("\n" + rest if rest else "")
+    if dry:
+        print(f"  [dry-run] add to {path}: {line}")
+        return
+    if old.strip() and not linked(path) and not os.path.exists(path + ".before-aptus"):
+        shutil.copy2(path, path + ".before-aptus")
+    with open(os.path.realpath(path), "w") as f:
+        f.write(new)
+    print(f"  updated {path}")
 
 
 def write(path: str, text: str, dry: bool, keep: bool = True) -> None:
-    # TODO(phase 7): write through a temp file and rename (Hyprland reads hyprland-colors.lua); do not back up empty files (userChrome.css just created).
     if dry:
         print(f"  [dry-run] write {path}")
         return
+    path = os.path.realpath(path) if os.path.islink(path) else path
     os.makedirs(os.path.dirname(path), exist_ok=True)
-    if keep and os.path.exists(path) and not os.path.exists(path + ".before-aptus"):
+    if keep and os.path.exists(path) and not linked(path) and not os.path.exists(path + ".before-aptus"):
         with open(path) as f:
             old = f.read()
-        if "aptus-theme-apps" not in old:
+        if old.strip() and "aptus-theme-apps" not in old:
             shutil.copy2(path, path + ".before-aptus")
-    with open(path, "w") as f:
+    tmp = path + ".aptus-tmp"
+    with open(tmp, "w") as f:
         f.write(text)
+    os.replace(tmp, path)
     print(f"  wrote {path}")
 
 
 def ensure_line(path: str, line: str, dry: bool, drop: str = "") -> None:
-    # TODO(phase 7): hyprlock.conf needs its source line after the last source line, not at the end; ensure_block covers blocks.
     """Add LINE at the end of an existing config, once; lines matching DROP (a regex) are removed first."""
     if not os.path.exists(path):
         return
@@ -198,7 +313,7 @@ def ensure_line(path: str, line: str, dry: bool, drop: str = "") -> None:
     if dry:
         print(f"  [dry-run] add to {path}: {line}")
         return
-    if not os.path.exists(path + ".before-aptus"):
+    if text.strip() and not linked(path) and not os.path.exists(path + ".before-aptus"):
         shutil.copy2(path, path + ".before-aptus")
     with open(path, "w") as f:
         f.write(new)
@@ -209,11 +324,11 @@ HEADER = "aptus-theme-apps: generated from theme/tokens.json, do not edit (run a
 
 
 def kitty(p, mode, dry):
-    # TODO(phase 7): selection and url colours come from the roles of the tokens (selection, link), not from literals.
     a = ansi(p, mode)
-    lines = [f"# {HEADER}", f"foreground {p['ink']}", f"background {p['bg']}", f"selection_foreground {p['bg']}",
-             f"selection_background {p['ink']}", f"cursor {p['ink']}", f"cursor_text_color {p['bg']}",
-             f"url_color {p['blue']}", f"active_border_color {p['inkSoft']}", f"inactive_border_color {p['line']}",
+    c = colors_of(p, mode)
+    lines = [f"# {HEADER}", f"foreground {p['ink']}", f"background {p['bg']}", f"selection_foreground {c['selection_fg']}",
+             f"selection_background {c['selection_bg']}", f"cursor {p['ink']}", f"cursor_text_color {p['bg']}",
+             f"url_color {c['link']}", f"active_border_color {p['inkSoft']}", f"inactive_border_color {p['line']}",
              f"active_tab_foreground {p['bg']}", f"active_tab_background {p['ink']}",
              f"inactive_tab_foreground {p['inkSoft']}", f"inactive_tab_background {p['surfaceAlt']}",
              f"tab_bar_background {p['bg']}"]
@@ -224,18 +339,18 @@ def kitty(p, mode, dry):
 
 
 def ghostty(p, mode, dry):
-    # TODO(phase 7): selection colours from the roles of the tokens, like kitty.
     a = ansi(p, mode)
+    c = colors_of(p, mode)
     lines = [f"# {HEADER}", f"background = {p['bg']}", f"foreground = {p['ink']}", f"cursor-color = {p['ink']}",
-             f"cursor-text = {p['bg']}", f"selection-background = {p['ink']}", f"selection-foreground = {p['bg']}"]
+             f"cursor-text = {p['bg']}", f"selection-background = {c['selection_bg']}", f"selection-foreground = {c['selection_fg']}"]
     lines += [f"palette = {i}={c}" for i, c in enumerate(a)]
     write(os.path.join(CFG, "ghostty", "themes", "aptus"), "\n".join(lines) + "\n", dry)
     ensure_line(os.path.join(CFG, "ghostty", "config"), "theme = aptus", dry, drop=r"^theme\s*=.*\n?")
 
 
 def btop(p, mode, dry):
-    # TODO(phase 7): hi_fg from the link role; keep the signal colours only for the load gradients.
-    names = dict(main_bg=p["bg"], main_fg=p["ink"], title=p["ink"], hi_fg=p["blue"], selected_bg=p["ink"],
+    link = colors_of(p, mode)["link"]
+    names = dict(main_bg=p["bg"], main_fg=p["ink"], title=p["ink"], hi_fg=link, selected_bg=p["ink"],
                  selected_fg=p["bg"], inactive_fg=p["inkFaint"], graph_text=p["inkSoft"], meter_bg=p["line"],
                  proc_misc=p["cyan"], cpu_box=p["line"], mem_box=p["line"], net_box=p["line"], proc_box=p["line"],
                  div_line=p["line"], temp_start=p["ok"], temp_mid=p["warn"], temp_end=p["critical"],
@@ -325,11 +440,11 @@ def qt(p, mode, dry):
 
 
 def zathura(p, mode, dry):
-    # TODO(phase 7): highlight-color and highlight-active-color are signal colours used as decoration; use selection or accent roles.
+    c = colors_of(p, mode)
     path = os.path.join(CFG, "zathura", "zathurarc")
     text = f"# {HEADER}\nset default-bg \"{p['bg']}\"\nset default-fg \"{p['ink']}\"\nset statusbar-bg \"{p['surfaceAlt']}\"\n" \
            f"set statusbar-fg \"{p['ink']}\"\nset inputbar-bg \"{p['bg']}\"\nset inputbar-fg \"{p['ink']}\"\n" \
-           f"set highlight-color \"{p['warn']}\"\nset highlight-active-color \"{p['ok']}\"\nset recolor \"false\"\n"
+           f"set highlight-color \"{c['line']}\"\nset highlight-active-color \"{c['inkFaint']}\"\nset recolor \"false\"\n"
     if os.path.isdir(os.path.join(CFG, "zathura")):
         write(os.path.join(CFG, "zathura", "aptus"), text, dry)
         ensure_line(path, "include aptus", dry)
@@ -353,42 +468,89 @@ def starship(p, mode, dry):
     """CFG/starship/aptus.toml (flat segments, palette aptus); fish selects it with STARSHIP_CONFIG, starship.toml itself is not touched."""
     assert mode in MODES and all(k in p for k in PALETTE_KEYS), "palette comes from palette(mode)"
     assert isinstance(dry, bool) and os.path.isabs(CFG) and os.path.isabs(STATE), "XDG folders must be absolute paths"
-    raise NotImplementedError("not implemented")
+    write(os.path.join(CFG, "starship", "aptus.toml"), render_template("starship.toml", colors_of(p, mode)), dry)
 
 
 def fish(p, mode, dry):
-    """CFG/fish/conf.d/aptus.fish: fish_color_* and STARSHIP_CONFIG (template fish.fish; extra key starship_path)."""
-    assert mode in MODES and all(k in p for k in PALETTE_KEYS), "palette comes from palette(mode)"
-    assert isinstance(dry, bool) and os.path.isabs(CFG) and os.path.isabs(STATE), "XDG folders must be absolute paths"
-    raise NotImplementedError("not implemented")
+    """CFG/fish/conf.d/aptus.fish (fish_color_*, STARSHIP_CONFIG) and the STARSHIP_CONFIG line of config.fish, which runs later."""
+    c = colors_of(p, mode)
+    target = os.path.join(CFG, "starship", "aptus.toml")
+    write(os.path.join(CFG, "fish", "conf.d", "aptus.fish"), render_template("fish.fish", c, {"starship_path": target}), dry)
+    path = os.path.join(CFG, "fish", "config.fish")
+    if not os.path.exists(path):
+        return
+    with open(path) as f:
+        t = f.read()
+    n = re.sub(r'^(\s*set -gx STARSHIP_CONFIG ).*$', lambda m: m.group(1) + f'"{target}"', t, flags=re.M)
+    if n == t:
+        return
+    if dry:
+        print(f"  [dry-run] point STARSHIP_CONFIG in {path} at {target}")
+        return
+    if not linked(path) and not os.path.exists(path + ".before-aptus"):
+        shutil.copy2(path, path + ".before-aptus")
+    with open(os.path.realpath(path), "w") as f:
+        f.write(n)
+    print(f"  updated {path}")
 
 
 def nvim(p, mode, dry):
     """Neovim colorscheme aptus in ~/.local/share/nvim/site/colors/aptus.lua (not in ~/.config/nvim, which is a link into the dotfiles)."""
     assert mode in MODES and all(k in p for k in PALETTE_KEYS), "palette comes from palette(mode)"
     assert isinstance(dry, bool) and os.path.isabs(CFG) and os.path.isabs(STATE), "XDG folders must be absolute paths"
-    raise NotImplementedError("not implemented")
+    path = os.path.join(HOME, ".local", "share", "nvim", "site", "colors", "aptus.lua")
+    write(path, render_template("nvim-colors.lua", colors_of(p, mode)), dry)
 
 
 def yazi(p, mode, dry):
-    """Yazi flavor CFG/yazi/flavors/aptus.yazi and the dark/light names in theme.toml (skipped if that file is a link)."""
-    assert mode in MODES and all(k in p for k in PALETTE_KEYS), "palette comes from palette(mode)"
-    assert isinstance(dry, bool) and os.path.isabs(CFG) and os.path.isabs(STATE), "XDG folders must be absolute paths"
-    raise NotImplementedError("not implemented")
+    c = colors_of(p, mode)
+    write(os.path.join(CFG, "yazi", "flavors", "aptus.yazi", "flavor.toml"), render_template("yazi-flavor.toml", c), dry)
+    path = os.path.join(CFG, "yazi", "theme.toml")
+    flavor = '[flavor]\ndark = "aptus"\nlight = "aptus"\n'
+    t = open(path).read() if os.path.exists(path) else ""
+    if re.search(r"^\[flavor\]", t, flags=re.M):
+        n = re.sub(r"(^\[flavor\][^\[]*)", lambda m: re.sub(r"^(dark|light)\s*=.*$", lambda k: f'{k.group(1)} = "aptus"', m.group(1), flags=re.M), t, flags=re.M)
+    else:
+        n = (t.rstrip("\n") + "\n\n" if t.strip() else "") + flavor
+    if n == t:
+        return
+    if dry:
+        print(f"  [dry-run] select flavor aptus in {path}")
+        return
+    if t.strip() and not linked(path) and not os.path.exists(path + ".before-aptus"):
+        shutil.copy2(path, path + ".before-aptus")
+    with open(os.path.realpath(path), "w") as f:
+        f.write(n)
+    print(f"  updated {path}")
 
 
 def fastfetch(p, mode, dry):
     """CFG/fastfetch/themes/aptus.jsonc (same shape as themes/noctalia.jsonc); config.jsonc is a link into the dotfiles and is not touched."""
     assert mode in MODES and all(k in p for k in PALETTE_KEYS), "palette comes from palette(mode)"
     assert isinstance(dry, bool) and os.path.isabs(CFG) and os.path.isabs(STATE), "XDG folders must be absolute paths"
-    raise NotImplementedError("not implemented")
+    write(os.path.join(CFG, "fastfetch", "themes", "aptus.jsonc"), render_template("fastfetch.jsonc", colors_of(p, mode)), dry)
 
 
 def cava(p, mode, dry):
-    """CFG/cava/themes/aptus and a '[color] theme' block in CFG/cava/config (ensure_block, # comments only)."""
-    assert mode in MODES and all(k in p for k in PALETTE_KEYS), "palette comes from palette(mode)"
-    assert isinstance(dry, bool) and os.path.isabs(CFG) and os.path.isabs(STATE), "XDG folders must be absolute paths"
-    raise NotImplementedError("not implemented")
+    """CFG/cava/themes/aptus and 'theme = aptus' in the [color] section of CFG/cava/config (a block if there is none)."""
+    write(os.path.join(CFG, "cava", "themes", "aptus"), render_template("cava.theme", colors_of(p, mode)), dry)
+    path = os.path.join(CFG, "cava", "config")
+    old = open(path).read() if os.path.exists(path) else ""
+    if not re.search(r"^\[color\]", old, flags=re.M):
+        ensure_block(path, "aptus-theme-apps", "[color]\ntheme = 'aptus'", dry)
+        return
+    new = re.sub(r"^theme\s*=.*\n", "", old, flags=re.M)
+    new = re.sub(r"^\[color\]\n", "[color]\ntheme = 'aptus'\n", new, count=1, flags=re.M)
+    if new == old:
+        return
+    if dry:
+        print(f"  [dry-run] theme aptus in {path}")
+        return
+    if not linked(path) and not os.path.exists(path + ".before-aptus"):
+        shutil.copy2(path, path + ".before-aptus")
+    with open(os.path.realpath(path), "w") as f:
+        f.write(new)
+    print(f"  updated {path}")
 
 
 def hyprland_look(p, mode, dry):
@@ -396,7 +558,9 @@ def hyprland_look(p, mode, dry):
     the BORDER and SHADOW alphas); aptus-look.lua reads it with dofile."""
     assert mode in MODES and all(k in p for k in PALETTE_KEYS), "palette comes from palette(mode)"
     assert isinstance(dry, bool) and os.path.isabs(CFG) and os.path.isabs(STATE), "XDG folders must be absolute paths"
-    raise NotImplementedError("not implemented")
+    alphas = {"border_active": BORDER_ALPHA_ACTIVE, "border_inactive": BORDER_ALPHA_INACTIVE, "shadow": SHADOW_ALPHA}
+    alphas["shadow_base"] = "#000000"
+    write(HYPR_COLORS, render_template("hyprland-colors.lua", colors_of(p, mode), alphas), dry)
 
 
 def hyprlock(p, mode, dry):
@@ -405,53 +569,113 @@ def hyprlock(p, mode, dry):
     existing source line, so the new values win."""
     assert mode in MODES and all(k in p for k in PALETTE_KEYS), "palette comes from palette(mode)"
     assert isinstance(dry, bool) and os.path.isabs(CFG) and os.path.isabs(STATE), "XDG folders must be absolute paths"
-    raise NotImplementedError("not implemented")
+    write(HYPRLOCK_COLORS, render_template("hyprlock-colors.conf", colors_of(p, mode)), dry)
+    path = os.path.join(CFG, "hypr", "hyprlock.conf")
+    if not os.path.exists(path):
+        return
+    line = f"source = {HYPRLOCK_COLORS}"
+    with open(path) as f:
+        text = f.read()
+    if line in text:
+        return
+    if dry:
+        print(f"  [dry-run] add to {path}: {line}")
+        return
+    lines = text.split("\n")
+    last = max((i for i, l in enumerate(lines) if l.startswith("source")), default=-1)
+    lines.insert(last + 1, line)
+    if not linked(path) and not os.path.exists(path + ".before-aptus"):
+        shutil.copy2(path, path + ".before-aptus")
+    with open(path, "w") as f:
+        f.write("\n".join(lines))
+    print(f"  updated {path}")
 
 
 def zen(p, mode, dry):
     """userChrome.css and userContent.css in every Zen profile."""
     assert mode in MODES and all(k in p for k in PALETTE_KEYS), "palette comes from palette(mode)"
     assert isinstance(dry, bool) and os.path.isabs(CFG) and os.path.isabs(STATE), "XDG folders must be absolute paths"
-    raise NotImplementedError("not implemented")
+    c = colors_of(p, mode)
+    profs = profile_dirs([r for r in [ZEN_ROOT] if os.path.isdir(r)])
+    if not profs:
+        print("  no zen profile found (start it once, then run this again)")
+    for prof in profs:
+        enable_chrome_css(prof, dry)
+        chrome = os.path.join(prof, "chrome")
+        write(os.path.join(chrome, "aptus-chrome.css"), render_template("zen-chrome.css", c), dry)
+        write(os.path.join(chrome, "aptus-content.css"), render_template("zen-content.css", c), dry)
+        if not dry:
+            ensure_css_import(os.path.join(chrome, "userChrome.css"), '@import url("aptus-chrome.css");', dry)
+            ensure_css_import(os.path.join(chrome, "userContent.css"), '@import url("aptus-content.css");', dry)
 
 
 def thunderbird(p, mode, dry):
     """userChrome.css and userContent.css in every Thunderbird profile (nothing if there is none yet)."""
     assert mode in MODES and all(k in p for k in PALETTE_KEYS), "palette comes from palette(mode)"
     assert isinstance(dry, bool) and os.path.isabs(CFG) and os.path.isabs(STATE), "XDG folders must be absolute paths"
-    raise NotImplementedError("not implemented")
+    c = colors_of(p, mode)
+    profs = profile_dirs([r for r in THUNDERBIRD_ROOTS if os.path.isdir(r)])
+    if not profs:
+        print("  no thunderbird profile found (start it once, then run this again)")
+    for prof in profs:
+        enable_chrome_css(prof, dry)
+        chrome = os.path.join(prof, "chrome")
+        write(os.path.join(chrome, "aptus-chrome.css"), render_template("thunderbird-chrome.css", c), dry)
+        write(os.path.join(chrome, "aptus-content.css"), render_template("thunderbird-content.css", c), dry)
+        if not dry:
+            ensure_css_import(os.path.join(chrome, "userChrome.css"), '@import url("aptus-chrome.css");', dry)
+            ensure_css_import(os.path.join(chrome, "userContent.css"), '@import url("aptus-content.css");', dry)
 
 
 def spotify(p, mode, dry):
     """Spicetify theme SPICETIFY_THEME (color.ini and user.css), written even if Spicetify is not installed yet; applying it is left to the user."""
     assert mode in MODES and all(k in p for k in PALETTE_KEYS), "palette comes from palette(mode)"
     assert isinstance(dry, bool) and os.path.isabs(CFG) and os.path.isabs(STATE), "XDG folders must be absolute paths"
-    raise NotImplementedError("not implemented")
+    c = colors_of(p, mode)
+    d = os.path.join(SPICETIFY_DIR, SPICETIFY_THEME)
+    write(os.path.join(d, "color.ini"), render_template("spicetify-color.ini", c), dry)
+    write(os.path.join(d, "user.css"), render_template("spicetify-user.css", c), dry)
 
 
-# TODO(phase 7): register starship, fish, nvim, yazi, fastfetch, cava, hyprland_look, hyprlock, zen, thunderbird, spotify here and in the docstring
-# line "--only" at the top of the file.
-APPS = dict(kitty=kitty, ghostty=ghostty, btop=btop, gtk=gtk, qt=qt, zathura=zathura, gsettings=gsettings)
+# The first seven are the old default; the others change files outside the shell (browser, mail, Spotify, prompt, editor,
+# lock screen) and run only with --only or --all.
+DEFAULT_APPS = ["kitty", "ghostty", "btop", "gtk", "qt", "zathura", "gsettings"]
+APPS = dict(kitty=kitty, ghostty=ghostty, btop=btop, gtk=gtk, qt=qt, zathura=zathura, gsettings=gsettings,
+            starship=starship, fish=fish, nvim=nvim, yazi=yazi, fastfetch=fastfetch, cava=cava, hyprland_look=hyprland_look,
+            hyprlock=hyprlock, zen=zen, thunderbird=thunderbird, spotify=spotify)
 
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--mode", choices=["light", "dark"], default="light")
+    ap.add_argument("--mode", choices=list(MODES), default="light")
     ap.add_argument("--dry-run", action="store_true")
-    # TODO(phase 7): the default must stay the old apps; the new ones (Zen, Thunderbird, Spotify, anything inside the dotfiles links) only with --only or --all.
-    ap.add_argument("--only", default=",".join(APPS))
+    ap.add_argument("--only", default=",".join(DEFAULT_APPS), help="comma separated apps (default: the terminal and toolkit apps)")
+    ap.add_argument("--all", action="store_true", help="every app, including browser, mail, Spotify, prompt, editor and lock screen")
     args = ap.parse_args()
-    chosen = [a for a in args.only.split(",") if a]
+    chosen = list(APPS) if args.all else [a for a in args.only.split(",") if a]
+    if not chosen or len(set(chosen)) != len(chosen):
+        print("--only needs at least one app, each once", file=sys.stderr)
+        return 2
     for a in chosen:
         if a not in APPS:
             print(f"unknown app {a}; known: {', '.join(APPS)}", file=sys.stderr)
             return 2
+    for var in ("XDG_CONFIG_HOME", "XDG_STATE_HOME"):
+        if os.environ.get(var) and not os.path.isabs(os.environ[var]):
+            print(f"{var} must be an absolute path", file=sys.stderr)
+            return 2
     p = palette(args.mode)
-    # TODO(phase 7): after palette(): print check_contrast(colors_of(p, args.mode)) as warnings, and check template_roles of every template against colors_of before writing anything.
+    c = colors_of(p, args.mode)
+    for message in check_contrast(c):
+        print(f"warning: {message}", file=sys.stderr)
+    missing = {r for t in sorted(os.listdir(TEMPLATES)) for r in template_roles(t)} - set(c) - {"starship_path", "shadow_base"}
+    if missing:
+        print(f"templates use roles without a colour: {', '.join(sorted(missing))}", file=sys.stderr)
+        return 2
     for a in chosen:
         print(f"{a}:")
         APPS[a](p, args.mode, args.dry_run)
-    # TODO(phase 7): reload_apps(chosen, args.dry_run) after the last app so running programs pick the colours up.
+    reload_apps(chosen, args.dry_run)
     return 0
 
 

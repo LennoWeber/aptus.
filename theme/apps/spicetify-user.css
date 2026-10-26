@@ -1,4 +1,4 @@
-/* aptus-theme-apps: aptus Spicetify theme, quiet and square-cornered like the shell */
+/* aptus-theme-apps: aptus Spicetify theme, quiet, with the radii of the shell */
 :root { --spice-button-radius: 8px; }
 .main-card-card, .main-entityHeader-image, .main-image-image { border-radius: 10px; }
 .Root__top-container { gap: 8px; }

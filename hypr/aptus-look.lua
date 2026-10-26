@@ -20,18 +20,24 @@ assert(windowLook.activeOpacity >= 0.7 and windowLook.activeOpacity <= 1, "aptus
 assert(windowLook.inactiveOpacity >= 0.7 and windowLook.inactiveOpacity <= windowLook.activeOpacity, "aptus-look: inactiveOpacity must be 0.7 to activeOpacity")
 assert(windowLook.blurSize >= 1 and windowLook.blurPasses >= 1, "aptus-look: blur needs size and passes of at least 1")
 
--- TODO(phase 7, App-Theming): pcall(dofile) ~/.local/state/aptus/hyprland-colors.lua here, before hl.config; border colours are ink, so they flip in dark mode.
+-- Border and shadow colours come from aptus-theme-apps (ink with alpha, so they follow light and dark mode); the literals below are the fallback.
+local appColors = {}
+do
+	local home = os.getenv("HOME") or ""
+	local ok, loaded = pcall(dofile, (os.getenv("XDG_STATE_HOME") or (home .. "/.local/state")) .. "/aptus/hyprland-colors.lua")
+	if ok and type(loaded) == "table" then appColors = loaded end
+end
+
 hl.config({
 	general = {
 		gaps_in = 4,
 		gaps_out = 8,
-		-- one hairline, dark on light, no colour accent
+		-- one hairline, the ink with alpha (dark on light, light on dark), no colour accent
 		border_size = 1,
 		col = {
-			-- TODO(phase 7, App-Theming): use the border and shadow colours loaded above (the file needs a fixed format); these literals are the fallback.
 			-- TODO(phase 7, Bild-Theming): borders and shadow use the Standard ink. Decide whether they follow the style ink (generated) or stay.
-			active_border = "rgba(1c212740)",
-			inactive_border = "rgba(1c212718)",
+			active_border = appColors.activeBorder or "rgba(1c212740)",
+			inactive_border = appColors.inactiveBorder or "rgba(1c212718)",
 		},
 	},
 
@@ -46,8 +52,7 @@ hl.config({
 			range = 18,
 			render_power = 3,
 			offset = "0 4",
-			-- TODO(phase 7, App-Theming): same file as the borders above.
-			color = "rgba(1c212721)",
+			color = appColors.shadow or "rgba(1c212721)",
 		},
 		-- blur stays on globally and blurs what shows through a transparent window; the shell asks for its own surfaces itself
 		blur = {

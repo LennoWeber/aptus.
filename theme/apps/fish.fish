@@ -1,5 +1,5 @@
 # aptus-theme-apps: generated from theme/tokens.json, do not edit (run aptus-theme-apps again)
-set -gx STARSHIP_CONFIG {{starship_path}}
+set -gx STARSHIP_CONFIG "{{starship_path}}"
 set -g fish_color_normal {{ink|bare}}
 set -g fish_color_command {{blue|bare}}
 set -g fish_color_keyword {{magenta|bare}}

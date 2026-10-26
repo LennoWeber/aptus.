@@ -49,6 +49,18 @@ the installer copies it to `~/.local/state/aptus/hyprland-look.lua` again whenev
 Start with `aptus`. Send commands to the running shell with `aptus msg <command>`, for example
 `aptus msg panel-toggle control-center`, `aptus msg session lock`, `aptus msg tablet-toggle`.
 
+## Colours for the apps
+
+`aptus-theme-apps` paints the programs around the shell with the same palette (`theme/tokens.json`, light or dark, templates in `theme/apps`):
+
+```
+aptus-theme-apps                    # kitty, ghostty, GTK, Qt, btop, zathura, gsettings (light)
+aptus-theme-apps --mode dark --all  # everything, dark
+aptus-theme-apps --only starship,zen --dry-run
+```
+
+`--all` adds Starship (`~/.config/starship/aptus.toml`, selected by fish through `STARSHIP_CONFIG`), fish, Neovim (`colorscheme aptus`), yazi, fastfetch (`themes/aptus.jsonc`), cava, window borders, hyprlock, Zen and Thunderbird (`userChrome.css`, `userContent.css`; start Thunderbird once so it has a profile) and a Spicetify theme (apply it once with `spicetify config current_theme aptus color_scheme Base && spicetify apply`). Replaced files are kept as `NAME.before-aptus`; nothing is installed.
+
 ## Keys (defaults)
 
 | Key | Action |

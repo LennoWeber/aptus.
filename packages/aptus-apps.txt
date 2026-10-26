@@ -98,6 +98,7 @@ socat
 speedtest-cli
 
 ## themes
+cava                  # audio visualizer (aptus-theme-apps --only cava)
 papirus-icon-theme
 adw-gtk3-theme
 bibata-cursor-theme

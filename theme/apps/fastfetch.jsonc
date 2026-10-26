@@ -1,3 +1,4 @@
+// aptus-theme-apps: generated from theme/tokens.json, do not edit (run aptus-theme-apps again)
 {
   "logo": { "color": { "1": "{{ink}}", "2": "{{inkSoft}}" } },
   "display": {
