@@ -54,13 +54,11 @@ PanelWindow {
     property bool isOpen: stage === Enums.IslandStage.Open
     onStageChanged: if (stage < Enums.IslandStage.Rest || stage > Enums.IslandStage.Open) throw new Error("invariant: Island: unknown stage")
     property bool homeWithQuick: isOpen && view === Enums.IslandView.Home   // the opened Home shows the quick settings below the header (every design)
-    // TODO(phase 7): openGrowMs 200.
-    readonly property int openGrowMs: 220   // ms: the body grows to an opened view in this time
-    // TODO(phase 7): bind isOsd (stage === Osd) and byHover (isOpen && islandState.openedByHover); no focus grab and no keyboard while byHover.
+    readonly property int openGrowMs: 200   // ms: the body grows to an opened view in this time
     property bool isAlert: stage === Enums.IslandStage.Alert
-    property bool isOsd                   // the stage is Osd (the on-screen indicator shows)
+    property bool isOsd: stage === Enums.IslandStage.Osd   // the on-screen indicator shows
     onByHoverChanged: if (byHover && !isOpen) throw new Error("invariant: Island: byHover while not open")
-    property bool byHover                 // the island is open because the pointer opened it (no focus grab, no keyboard yet)
+    property bool byHover: isOpen && islandState && islandState.openedByHover   // opened by the pointer: no focus grab, no keyboard yet
 
     // The design (setting island.design): capsule, pill, ticker or shade. It sets the size at rest and the shape.
     readonly property string design: IslandLook.design
@@ -105,8 +103,8 @@ PanelWindow {
     function sizeFor(stageId: int, viewId: int, contentHeight: real, morph: int): var {
         if (morph === Enums.MorphTarget.Launcher) return morphSizes.launcher
         if (morph === Enums.MorphTarget.ControlCenter) return morphSizes.controlCenter
-        // TODO(phase 7): sizeFor: Osd returns { w: osdWidth, h: osdHeight }.
         if (stageId === Enums.IslandStage.Alert) return { w: alertWidth, h: alertHeight }
+        if (stageId === Enums.IslandStage.Osd) return { w: osdWidth, h: osdHeight }
         if (stageId === Enums.IslandStage.Open) {
             switch (viewId) {
             case Enums.IslandView.Power: return viewSizes.power
@@ -122,9 +120,10 @@ PanelWindow {
 
     // Duration (ms) of the body's growth for a stage and a view (Enums.IslandStage, Enums.IslandView): openGrowMs for an opened view, Tokens.durSlow otherwise.
     function growMsFor(stageId: int, viewId: int): int {
-        // TODO(phase 7): growMsFor: Osd osdGrowMs, Open after a hover hoverGrowMs, Alert 220, else Tokens.durSlow; fix the range test.
         if (stageId < Enums.IslandStage.Rest || stageId > Enums.IslandStage.Open) throw new Error("invariant: Island.growMsFor: unknown stage")
-        return stageId === Enums.IslandStage.Open ? openGrowMs : Tokens.durSlow
+        if (stageId === Enums.IslandStage.Osd) return osdGrowMs
+        if (stageId === Enums.IslandStage.Open) return byHover ? hoverGrowMs : openGrowMs
+        return stageId === Enums.IslandStage.Alert ? 220 : Tokens.durSlow
     }
 
     // Open the island of this screen at a view.
@@ -150,7 +149,7 @@ PanelWindow {
     mask: Region { item: body }
     WlrLayershell.namespace: "aptus-island"
     WlrLayershell.layer: WlrLayer.Top
-    WlrLayershell.keyboardFocus: isOpen ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+    WlrLayershell.keyboardFocus: isOpen && !byHover ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
 
     // Fullscreen windows and caffeine keep the screen awake (policy in Idle); the island holds the inhibitor
     // while it is the top element, as the bar does.
@@ -160,15 +159,13 @@ PanelWindow {
     }
 
     // A click outside closes the opened island.
-    // TODO(phase 7): a click on the body (MouseArea, TapHandler) calls islandState.keepOpen(modelData.name); add a HoverHandler on the body: enter -> hoverEnter, leave -> hoverLeave.
     HyprlandFocusGrab {
         windows: [win]
-        active: win.isOpen
+        active: win.isOpen && !win.byHover
         onCleared: if (win.islandState) win.islandState.close()
     }
 
     readonly property bool openLike: isOpen
-    // TODO(phase 7): also keepOpen when a section opens: wire quick.onSectionToggled to islandState.keepOpen.
     onOpenLikeChanged: if (!openLike) quick.expanded = ""
     readonly property color fg: openLike ? IslandLook.inkOpen : IslandLook.inkRest
     readonly property color fgSoft: Qt.rgba(fg.r, fg.g, fg.b, 0.65)
@@ -190,15 +187,13 @@ PanelWindow {
         opacity: 1 - win.morphProgress
         Behavior on width { NumberAnimation { duration: win.growMsFor(win.stage, win.view); easing.type: Easing.BezierSpline; easing.bezierCurve: [0.2, 0, 0, 1, 1, 1] } }
         Behavior on height { NumberAnimation { duration: win.growMsFor(win.stage, win.view); easing.type: Easing.BezierSpline; easing.bezierCurve: [0.2, 0, 0, 1, 1, 1] } }
-        // TODO(phase 7): same duration as the growth (win.growMsFor), so the corners do not lag.
-        Behavior on cornerRadius { NumberAnimation { duration: Tokens.durSlow } }
+        Behavior on cornerRadius { NumberAnimation { duration: win.growMsFor(win.stage, win.view) } }
 
         // Rest: a tap opens.
         IslandRest {
             id: rest
             anchors.fill: parent
-            // TODO(phase 7): hide the rest content while isOsd too.
-            opacity: !win.openLike && !win.isAlert && win.design !== "shade" ? 1 : 0
+            opacity: !win.openLike && !win.isAlert && !win.isOsd && win.design !== "shade" ? 1 : 0
             visible: opacity > 0.01
             Behavior on opacity { NumberAnimation { duration: Tokens.durFast } }
             design: win.design
@@ -233,7 +228,17 @@ PanelWindow {
             }
         }
 
-        // TODO(phase 7): add the IslandOsd instance here (anchors.fill, opacity win.isOsd, osd: islandState.osd, inks from win.fg); hide the alert while isOsd.
+        IslandOsd {
+            anchors.fill: parent
+            opacity: win.isOsd ? 1 : 0
+            visible: opacity > 0.01
+            Behavior on opacity { NumberAnimation { duration: Tokens.durFast } }
+            osd: win.islandState ? win.islandState.osd : null
+            ink: win.fg
+            inkSoft: win.fgSoft
+            line: win.hairline
+        }
+
         IslandAlert {
             anchors.fill: parent
             opacity: win.isAlert ? 1 : 0
@@ -273,6 +278,7 @@ PanelWindow {
             line: win.hairline
             fill: win.openLike ? IslandLook.fillOpen : IslandLook.fillRest
             onControlCenterRequested: win.closeAndThen("controlCenter")
+            onSectionToggled: name => { if (name !== "" && win.islandState) win.islandState.keepOpen(win.modelData.name) }
             onViewRequested: v => win.openView(v)
             onCloseRequested: win.islandState.close()
         }
@@ -386,6 +392,19 @@ PanelWindow {
             }
         }
 
+
+        // Hover: the pointer resting on the island opens Home; leaving closes it again unless the card was used.
+        HoverHandler {
+            onHoveredChanged: {
+                if (!win.islandState) return
+                if (hovered) win.islandState.hoverEnter(win.modelData.name)
+                else win.islandState.hoverLeave(win.modelData.name)
+            }
+        }
+        // Any tap in the card keeps it open.
+        TapHandler {
+            onTapped: { if (win.islandState) win.islandState.keepOpen(win.modelData.name) }
+        }
     }
 
     // A view is reset when it is shown.

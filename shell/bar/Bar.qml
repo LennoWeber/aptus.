@@ -71,8 +71,7 @@ PanelWindow {
 
         WorkspaceStrip {
             workspaces: bar.workspaces
-            // TODO(phase 7): the bar maps the style "ovals" to the dots style (it has no ovals).
-            style: bar.appSettings && bar.appSettings.get("bar.workspaceStyle") === "dots" ? 1 : bar.appSettings && bar.appSettings.get("bar.workspaceStyle") === "bubbles" ? 2 : 0
+            style: bar.appSettings && (bar.appSettings.get("bar.workspaceStyle") === "dots" || bar.appSettings.get("bar.workspaceStyle") === "ovals") ? 1 : bar.appSettings && bar.appSettings.get("bar.workspaceStyle") === "bubbles" ? 2 : 0
             onWorkspaceClicked: id => Compositor.focusWorkspace(id)
         }
     }

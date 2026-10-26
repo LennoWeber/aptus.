@@ -85,13 +85,13 @@ ShellRoot {
     // island fails to load, so the shell never ends up without one.
     readonly property bool islandWanted: settingsObj.get("bar.style") === "island"
     readonly property bool showBar: !islandWanted || islandLoader.status === Loader.Error
-    // TODO(phase 7): set hoverEnabled from island.hoverOpen (default true).
     IslandState {
         id: islandObj
         enabled: root.islandWanted && islandLoader.status === Loader.Ready
         alertsEnabled: settingsObj.get("island.alerts") !== false
         alertHoldMs: (settingsObj.get("island.alertSeconds") || 4) * 1000
         mediaWingsEnabled: settingsObj.get("island.mediaWings") !== false
+        hoverEnabled: settingsObj.get("island.hoverOpen") !== false
     }
     Loader {
         id: islandLoader
@@ -279,8 +279,7 @@ ShellRoot {
         position: settingsObj.get("notifications.position") || "top-right"
     }
 
-    // TODO(phase 7): give the Osd the island state: islandState: islandObj.
-    Osd { id: osdObj }
+    Osd { id: osdObj; islandState: islandObj }
 
     Connections {
         target: caffeineObj

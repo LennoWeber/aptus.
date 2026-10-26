@@ -50,7 +50,9 @@ Scope {
 
     // Push an alert when playback starts or stops ("Playing" / "Paused" with the title).
     function announcePlayback(): void {
-        throw new Error("not implemented")
+        const m = mediaState
+        if (!m || !m.available || m.title === "") return
+        islandState.pushAlert("playback", m.playing ? "Playing" : "Paused", m.title, Enums.Severity.Neutral, Enums.TileId.Media)
     }
 
     // The launcher or the control center takes the stage (ShellState): tell IslandState where to morph to.
@@ -96,7 +98,7 @@ Scope {
     }
     Connections {
         target: host.mediaState
-        // TODO(phase 7): add onPlayingChanged: call announcePlayback().
+        function onPlayingChanged() { host.announcePlayback() }
         function onTitleChanged() {
             const m = host.mediaState
             const key = m.title + "|" + m.artist

@@ -105,8 +105,8 @@ Item {
             // Workspaces: bubbles, or numbers where the state is carried by weight, never by colour; urgent is the one signal colour.
             WorkspaceBubbles {
                 visible: home.workspaceStyle !== "numbers"
-                // TODO(phase 7): add oval: home.workspaceStyle === "ovals" and cellWidth 28 for ovals.
                 numbered: home.workspaceStyle === "bubbles"
+                oval: home.workspaceStyle === "ovals"
                 anchors { left: parent.left; verticalCenter: parent.verticalCenter }
                 workspaces: home.workspaces
                 ink: home.ink

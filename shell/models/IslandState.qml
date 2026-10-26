@@ -45,9 +45,13 @@ Scope {
     // Open the island on a screen, showing view (Enums.IslandView). Does nothing while the bar is shown.
     function open(screenName: string, view: int): void {
         if (!enabled) return
+        hoverIn.stop()
+        hoverOut.stop()
+        osdHold.stop()
+        openedByHover = false
+        osd = null
         openScreen = screenName
         root.view = view
-        // TODO(phase 7): open(): stop hoverIn/hoverOut/osdHold, clear openedByHover (a click or key opened it), clear osd.
         stage = Enums.IslandStage.Open
         hold.stop()
         opened(screenName, view)
@@ -55,8 +59,10 @@ Scope {
 
     // Back to rest, or to the alert that waits.
     function close(): void {
-        // TODO(phase 7): close(): also stop hoverIn/hoverOut and clear openedByHover.
+        hoverIn.stop()
+        hoverOut.stop()
         if (stage !== Enums.IslandStage.Open) return
+        openedByHover = false
         openScreen = ""
         view = Enums.IslandView.Home
         stage = alert ? Enums.IslandStage.Alert : Enums.IslandStage.Rest
@@ -78,34 +84,54 @@ Scope {
 
     // Show the on-screen indicator on the pill: kind is Enums.OsdKind, level 0..1, label replaces the bar when not empty.
     function showOsd(kind: int, level: real, muted: bool, label: string): void {
-        throw new Error("not implemented")
+        if (kind < Enums.OsdKind.Volume || kind > Enums.OsdKind.Caffeine) throw new Error("invariant: IslandState.showOsd: unknown OSD kind")
+        if (!enabled || stage === Enums.IslandStage.Open || morph !== Enums.MorphTarget.None) return
+        osd = { kind: kind, level: Math.max(0, Math.min(1, level)), muted: muted, label: label || "" }
+        hold.stop()
+        hoverIn.stop()
+        stage = Enums.IslandStage.Osd
+        osdHold.restart()
+        osdShown(osd)
     }
 
     // The indicator ends: back to the alert that waits, else to rest.
     function endOsd(): void {
-        throw new Error("not implemented")
+        osdHold.stop()
+        osd = null
+        if (stage !== Enums.IslandStage.Osd) return
+        stage = alert ? Enums.IslandStage.Alert : Enums.IslandStage.Rest
+        if (alert) {
+            hold.interval = alert.holdMs
+            hold.restart()
+        }
     }
 
     // The pointer rests on the island of that screen: open Home after hoverInMs (only while hoverEnabled and at rest).
     function hoverEnter(screenName: string): void {
-        throw new Error("not implemented")
+        if (!enabled || !hoverEnabled || morph !== Enums.MorphTarget.None) return
+        hoverOut.stop()
+        if (stage !== Enums.IslandStage.Rest) return
+        pendingHoverScreen = screenName
+        hoverIn.restart()
     }
 
     // The pointer left the island of that screen: close after hoverOutMs when it was opened by hover and not used.
     function hoverLeave(screenName: string): void {
-        throw new Error("not implemented")
+        hoverIn.stop()
+        if (stage === Enums.IslandStage.Open && openedByHover && openScreen === screenName) hoverOut.restart()
     }
 
     // The card of that screen was used (a click, a section opened): it stays until Esc or a click elsewhere.
     function keepOpen(screenName: string): void {
-        throw new Error("not implemented")
+        if (stage !== Enums.IslandStage.Open || openScreen !== screenName || !openedByHover) return
+        hoverOut.stop()
+        openedByHover = false
     }
 
     // severity: Enums.Severity. Critical goes first; the rest waits its turn (at most queueDepth, oldest dropped).
     function pushAlert(id: string, text: string, detail: string, severity: int, tileId: int): void {
         if (!enabled || !alertsEnabled) return
         const a = { id: id, text: text, detail: detail, severity: severity, tileId: tileId, holdMs: alertHoldMs }
-        // TODO(phase 7): pushAlert: while stage is Osd keep the alert queued; it shows when the indicator ends (see osdHold).
         if (alert && alert.id === id) { alert = a; if (stage === Enums.IslandStage.Alert) hold.restart(); return }
         if (!alert) { show(a); return }
         if (severity === Enums.Severity.Critical && alert.severity !== Enums.Severity.Critical) {
@@ -125,7 +151,6 @@ Scope {
             show(next)
         } else {
             alert = null
-            // TODO(phase 7): dismissAlert: leave Osd alone, only end the Alert stage.
             if (stage === Enums.IslandStage.Alert) stage = Enums.IslandStage.Rest
         }
     }
@@ -133,8 +158,7 @@ Scope {
     // Show an alert on the pill (an alert is: id, text, detail, severity, tileId, holdMs).
     function show(a: var): void {
         alert = a
-        // TODO(phase 7): show(): do not take the stage while it is Osd or Open.
-        if (stage !== Enums.IslandStage.Open) {
+        if (stage !== Enums.IslandStage.Open && stage !== Enums.IslandStage.Osd) {
             stage = Enums.IslandStage.Alert
             hold.interval = a.holdMs
             hold.restart()
@@ -143,10 +167,13 @@ Scope {
     }
 
     // Enums.MorphTarget: the launcher or the control center takes the stage / gives it back.
-    // TODO(phase 7): setMorph: a morph also ends hover and the indicator.
     function setMorph(target: int): void {
         morph = target
-        if (target !== Enums.MorphTarget.None) close()
+        if (target !== Enums.MorphTarget.None) {
+            hoverIn.stop()
+            if (stage === Enums.IslandStage.Osd) endOsd()
+            close()
+        }
     }
 
     // The indicator stage always has its data; the hover flag only belongs to an open island; the times are positive.
@@ -155,11 +182,17 @@ Scope {
     Component.onCompleted: if (hoverInMs <= 0 || hoverOutMs <= 0 || osdHoldMs <= 0) throw new Error("invariant: IslandState: hover and indicator times must be positive")
 
     Timer { id: hold; onTriggered: root.dismissAlert() }
-    // TODO(phase 7): hoverIn: onTriggered opens Home on pendingHoverScreen with openedByHover = true; hoverOut: onTriggered closes when openedByHover; osdHold: onTriggered ends the Osd stage (to Alert when one waits, else Rest).
-    Timer { id: hoverIn; interval: root.hoverInMs }
-    Timer { id: hoverOut; interval: root.hoverOutMs }
-    Timer { id: osdHold; interval: root.osdHoldMs }
+    // Resting hoverInMs on the island opens Home; leaving it for hoverOutMs closes it again when nothing was clicked.
+    Timer {
+        id: hoverIn
+        interval: root.hoverInMs
+        onTriggered: {
+            root.open(root.pendingHoverScreen, Enums.IslandView.Home)
+            root.openedByHover = true
+        }
+    }
+    Timer { id: hoverOut; interval: root.hoverOutMs; onTriggered: { if (root.openedByHover) root.close() } }
+    Timer { id: osdHold; interval: root.osdHoldMs; onTriggered: root.endOsd() }
 
-    // TODO(phase 7): reset also stops hoverIn/hoverOut/osdHold and clears openedByHover and osd.
-    onEnabledChanged: if (!enabled) { hold.stop(); alert = null; queue = []; openScreen = ""; view = Enums.IslandView.Home; stage = Enums.IslandStage.Rest; morph = Enums.MorphTarget.None }
+    onEnabledChanged: if (!enabled) { hold.stop(); hoverIn.stop(); hoverOut.stop(); osdHold.stop(); openedByHover = false; osd = null; alert = null; queue = []; openScreen = ""; view = Enums.IslandView.Home; stage = Enums.IslandStage.Rest; morph = Enums.MorphTarget.None }
 }

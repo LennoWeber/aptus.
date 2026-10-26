@@ -36,13 +36,14 @@ Item {
     // Diameter of the bubble of one workspace entry (ring, dot or active).
     function sizeFor(entry: var): int {
         if (!entry) throw new Error("invariant: WorkspaceBubbles.sizeFor: no workspace entry")
-        // TODO(phase 7): sizeFor stays the diameter; with oval every dot is ovalHeight high.
         return entry.active ? activeSize : (entry.occupied || entry.urgent) ? dotSize : ringSize
     }
 
     // Width of the shape of one workspace entry: the oval width for the active one, else its diameter (style ovals).
     function widthFor(entry: var): int {
-        throw new Error("not implemented")
+        if (!entry) throw new Error("invariant: WorkspaceBubbles.widthFor: no workspace entry")
+        if (!oval) return sizeFor(entry)
+        return entry.active ? ovalWidth : ovalHeight
     }
 
     // Colour of the bubble: urgent is the one signal colour, the rest is ink with weight.
@@ -66,10 +67,9 @@ Item {
             // Size and weight carry the state; urgent is the one signal colour.
             Rectangle {
                 anchors.centerIn: parent
-                // TODO(phase 7): width: bubbles.widthFor(cell.modelData); height: bubbles.oval ? ovalHeight : width; radius: height / 2; cellWidth must hold ovalWidth (28 for ovals).
-                width: bubbles.sizeFor(cell.modelData)
-                height: width
-                radius: width / 2
+                width: bubbles.widthFor(cell.modelData)
+                height: bubbles.oval ? bubbles.ovalHeight : width
+                radius: height / 2
                 color: cell.filled ? Qt.rgba(cell.tone.r, cell.tone.g, cell.tone.b, cell.modelData.active ? 1 : 0.55) : "transparent"
                 border.width: cell.filled ? 0 : 1.5
                 border.color: Qt.rgba(bubbles.ink.r, bubbles.ink.g, bubbles.ink.b, 0.5)
