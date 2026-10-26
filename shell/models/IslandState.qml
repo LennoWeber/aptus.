@@ -30,4 +30,53 @@ Scope {
     signal alertShown(var alert)
     signal opened(string screenName, int view)
     signal closed()
+
+    // Open the island on a screen, showing view (Enums.IslandView). Does nothing while the bar is shown.
+    function open(screenName: string, view: int): void {
+        throw new Error("not implemented")
+    }
+
+    // Back to rest, or to the alert that waits.
+    function close(): void {
+        throw new Error("not implemented")
+    }
+
+    // Close when this screen's island shows that view, else open it.
+    function toggle(screenName: string, view: int): void {
+        throw new Error("not implemented")
+    }
+
+    // Change the view of the opened island.
+    function showView(view: int): void {
+        throw new Error("not implemented")
+    }
+
+    // The pointer rests on the island of that screen. Only has an effect while hoverEnabled and nothing is open.
+    function hoverEnter(screenName: string): void {
+        throw new Error("not implemented")
+    }
+
+    // The pointer left the island of that screen.
+    function hoverLeave(screenName: string): void {
+        throw new Error("not implemented")
+    }
+
+    // severity: Enums.Severity. Critical goes first; the rest waits its turn (at most queueDepth, oldest dropped).
+    function pushAlert(id: string, text: string, detail: string, severity: int, tileId: int): void {
+        throw new Error("not implemented")
+    }
+
+    function dismissAlert(): void {
+        throw new Error("not implemented")
+    }
+
+    // Show an alert on the pill (an alert is: id, text, detail, severity, tileId, holdMs).
+    function show(a: var): void {
+        throw new Error("not implemented")
+    }
+
+    // Enums.MorphTarget: the launcher or the control center takes the stage / gives it back.
+    function setMorph(target: int): void {
+        throw new Error("not implemented")
+    }
 }

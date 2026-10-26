@@ -58,4 +58,34 @@ PanelWindow {
     signal tileRequested(int tileId)
     signal controlCenterRequested()
     signal launcherRequested()
+
+    // Sizes of the body (px) for each stage and view; Home and Hover take the height of their content.
+    readonly property real alertWidth: 380
+    readonly property real alertHeight: 38
+    readonly property real hoverWidth: 380
+    readonly property real homeWidth: 520
+    readonly property var viewSizes: ({
+        power: { w: 480, h: 150 },
+        screenshot: { w: 440, h: 150 },
+        clipboard: { w: 520, h: 380 },
+        emoji: { w: 480, h: 340 },
+        wallpaper: { w: 900, h: 270 }
+    })
+    // The island grows to this size toward the launcher (its pill) and the control center before it fades out.
+    readonly property var morphSizes: ({ launcher: { w: 640, h: 52 }, controlCenter: { w: 760, h: 150 } })
+
+    // Body size (object with w and h) for a stage and view (Enums.IslandStage, Enums.IslandView); contentHeight is the content height of Home or Hover. While morph is not None the morph size wins.
+    function sizeFor(stageId: int, viewId: int, contentHeight: real, morph: int): var {
+        throw new Error("not implemented")
+    }
+
+    // Open the island of this screen at a view.
+    function openView(viewId: int): void {
+        throw new Error("not implemented")
+    }
+
+    // Close it and tell the host that something else was asked for.
+    function closeAndThen(action: string): void {
+        throw new Error("not implemented")
+    }
 }

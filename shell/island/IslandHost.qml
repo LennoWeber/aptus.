@@ -36,4 +36,14 @@ Scope {
     property int lastPopupId: -1
     property string lastTrackKey: ""
     property bool batteryAnnounced
+
+    // Push an alert for the notification at the top of Notifications.popupItems when it is a new one.
+    function announceNotification(): void {
+        throw new Error("not implemented")
+    }
+
+    // The launcher or the control center takes the stage (ShellState): tell IslandState where to morph to.
+    function followShellState(): void {
+        throw new Error("not implemented")
+    }
 }

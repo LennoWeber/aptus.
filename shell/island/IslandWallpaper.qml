@@ -17,4 +17,29 @@ Item {
     property color line
 
     signal closeRequested()
+
+    // How many cards are shown around the middle one.
+    readonly property int visibleSide: 3
+    readonly property int cardWidth: 200
+    readonly property int cardHeight: 112
+
+    // Move the middle card by delta pictures.
+    function step(delta: int): void {
+        throw new Error("not implemented")
+    }
+
+    // Set the middle picture as wallpaper.
+    function activateSelected(): void {
+        throw new Error("not implemented")
+    }
+
+    // Scan the folder and start the reveal when the view is shown.
+    function show(): void {
+        throw new Error("not implemented")
+    }
+
+    // Take the cards back when the view is left.
+    function hide(): void {
+        throw new Error("not implemented")
+    }
 }

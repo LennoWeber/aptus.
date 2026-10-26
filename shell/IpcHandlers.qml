@@ -100,13 +100,13 @@ Scope {
         }
 
         // The notch of the focused screen: open, or close when it is open. Does nothing while the bar is shown.
-        function notchToggle(): void {
+        function islandToggle(view: string): void {
             if (!root.notchState || !root.notchState.enabled) return
             const mon = Hyprland.focusedMonitor
             root.notchState.toggle(mon ? mon.name : (Quickshell.screens.length > 0 ? Quickshell.screens[0].name : ""))
         }
 
-        function notchOpen(): void {
+        function islandOpen(view: string): void {
             if (!root.notchState || !root.notchState.enabled) return
             const mon = Hyprland.focusedMonitor
             root.notchState.open(mon ? mon.name : (Quickshell.screens.length > 0 ? Quickshell.screens[0].name : ""))

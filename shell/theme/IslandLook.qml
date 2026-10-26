@@ -28,4 +28,26 @@ Singleton {
     property real gap                     // distance from the top edge in px, 0 = flush with the edge
     property bool monoClock               // the time in the mono font
     property bool accentLine              // 2 px signal line at the bottom edge
+
+    readonly property string defaultId: "paper"
+
+    // Read theme/island-looks.json.
+    function load(): void {
+        throw new Error("not implemented")
+    }
+
+    // Make lookId the current look and resolve its values against the colours of Tokens. An unknown id falls back to defaultId.
+    function apply(lookId: string): void {
+        throw new Error("not implemented")
+    }
+
+    // The look names for the settings, in file order: a list of objects with id and name.
+    function names(): var {
+        throw new Error("not implemented")
+    }
+
+    // Colour of Tokens by its name in the looks file (bg, surface, surfaceAlt, line, ink, wash1, wash2).
+    function colorByName(colorName: string): color {
+        throw new Error("not implemented")
+    }
 }

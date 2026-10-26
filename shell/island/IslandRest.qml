@@ -22,4 +22,9 @@ Item {
     property bool wingMedia
     property bool recording
     property bool timerRunning
+
+    // "m:ss" for a time in seconds.
+    function formatSeconds(sec: int): string {
+        throw new Error("not implemented")
+    }
 }

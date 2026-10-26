@@ -18,4 +18,29 @@ Item {
     property color line
 
     signal closeRequested()
+
+    readonly property int columns: 10
+
+    // Read config/emoji.json into `all`.
+    function load(): void {
+        throw new Error("not implemented")
+    }
+
+    // Fill results from `all` for the current query (every word of the query must appear in the name).
+    function refilter(): void {
+        throw new Error("not implemented")
+    }
+
+    function moveSelection(deltaColumns: int, deltaRows: int): void {
+        throw new Error("not implemented")
+    }
+
+    // Copy the selected emoji (wl-copy) and close.
+    function activateSelected(): void {
+        throw new Error("not implemented")
+    }
+
+    function reset(): void {
+        throw new Error("not implemented")
+    }
 }
