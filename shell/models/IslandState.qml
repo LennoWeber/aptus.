@@ -43,6 +43,7 @@ Scope {
         if (!enabled) return
         hoverIn.stop()
         hoverOut.stop()
+        pinned = false
         openScreen = screenName
         root.view = view
         stage = Enums.IslandStage.Open
@@ -55,6 +56,7 @@ Scope {
         if (stage !== Enums.IslandStage.Open && stage !== Enums.IslandStage.Hover) return
         hoverIn.stop()
         hoverOut.stop()
+        pinned = false
         openScreen = ""
         view = Enums.IslandView.Home
         stage = alert ? Enums.IslandStage.Alert : Enums.IslandStage.Rest
@@ -78,7 +80,9 @@ Scope {
     // the stage stays Hover. Does nothing unless the island is in the Hover stage on that screen.
     function pin(screenName: string): void {
         if (!screenName) throw new Error("invariant: IslandState.pin: empty screen name")
-        throw new Error("not implemented")
+        if (stage !== Enums.IslandStage.Hover || openScreen !== screenName || pinned) return
+        hoverOut.stop()
+        pinned = true
     }
 
     // The pointer rests on the island of that screen. Only has an effect while hoverEnabled and nothing is open.
@@ -94,7 +98,7 @@ Scope {
     // The pointer left the island of that screen.
     function hoverLeave(screenName: string): void {
         hoverIn.stop()
-        if (stage === Enums.IslandStage.Hover && openScreen === screenName) hoverOut.restart()
+        if (stage === Enums.IslandStage.Hover && openScreen === screenName && !pinned) hoverOut.restart()
     }
 
     // severity: Enums.Severity. Critical goes first; the rest waits its turn (at most queueDepth, oldest dropped).
@@ -146,11 +150,10 @@ Scope {
     Component.onCompleted: if (hoverInMs <= 0 || hoverOutMs <= 0) throw new Error("invariant: IslandState: hover times must be positive")
 
     Timer { id: hold; onTriggered: root.dismissAlert() }
-    // Resting 280 ms on the island shows the hover panel; leaving it for 320 ms takes it back.
+    // Resting hoverInMs on the island shows the hover panel; leaving it for hoverOutMs takes it back.
     Timer {
         id: hoverIn
-        // TODO(phase 7, Island-Blasen): Use hoverInMs (90 ms), not the 280 ms written here.
-        interval: 280
+        interval: root.hoverInMs
         onTriggered: {
             root.openScreen = root.pendingHoverScreen
             root.view = Enums.IslandView.Home
@@ -158,8 +161,7 @@ Scope {
             hold.stop()
         }
     }
-    // TODO(phase 7, Island-Blasen): Use hoverOutMs (220 ms). hoverLeave must not start it while pinned; open() and close() reset pinned.
-    Timer { id: hoverOut; interval: 320; onTriggered: root.close() }
+    Timer { id: hoverOut; interval: root.hoverOutMs; onTriggered: root.close() }
 
-    onEnabledChanged: if (!enabled) { hold.stop(); hoverIn.stop(); hoverOut.stop(); alert = null; queue = []; openScreen = ""; view = Enums.IslandView.Home; stage = Enums.IslandStage.Rest; morph = Enums.MorphTarget.None }
+    onEnabledChanged: if (!enabled) { pinned = false; hold.stop(); hoverIn.stop(); hoverOut.stop(); alert = null; queue = []; openScreen = ""; view = Enums.IslandView.Home; stage = Enums.IslandStage.Rest; morph = Enums.MorphTarget.None }
 }

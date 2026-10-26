@@ -102,9 +102,20 @@ Item {
             width: parent.width
             height: 40
 
-            // TODO(phase 7, Island-Blasen): Bubbles instead of the numbers when bar.workspaceStyle is "bubbles" (40 px cells for touch).
-            // Workspaces: the state is carried by weight, never by colour; urgent is the one signal colour.
+            // Workspaces: bubbles, or numbers where the state is carried by weight, never by colour; urgent is the one signal colour.
+            WorkspaceBubbles {
+                visible: home.workspaceStyle === "bubbles"
+                anchors { left: parent.left; verticalCenter: parent.verticalCenter }
+                workspaces: home.workspaces
+                ink: home.ink
+                inkSoft: home.inkSoft
+                inkOn: home.inkOn
+                cellHeight: 40
+                cellWidth: 28
+                onWorkspaceClicked: id => Compositor.focusWorkspace(id)
+            }
             Row {
+                visible: home.workspaceStyle !== "bubbles"
                 anchors { left: parent.left; verticalCenter: parent.verticalCenter }
                 Repeater {
                     model: home.workspaces

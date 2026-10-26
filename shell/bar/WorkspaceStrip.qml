@@ -24,7 +24,7 @@ Item {
     implicitHeight: Tokens.barHeight
 
     Repeater {
-        model: strip.workspaces
+        model: strip.style === 2 ? [] : strip.workspaces
         delegate: Item {
             id: cell
             required property var modelData
@@ -38,7 +38,6 @@ Item {
             readonly property color tone: modelData.urgent ? Tokens.warn : modelData.active ? Tokens.ink : modelData.occupied ? Tokens.inkSoft : Tokens.inkFaint
 
             Label {
-                // TODO(phase 7, Island-Blasen): Style 2 (bubbles): show a WorkspaceBubbles row instead of the numbers and the dots; keep the hit cells.
                 visible: strip.style === 0
                 anchors.centerIn: parent
                 text: cell.modelData.name
@@ -66,9 +65,19 @@ Item {
         }
     }
 
+    WorkspaceBubbles {
+        visible: strip.style === 2
+        anchors.fill: parent
+        workspaces: strip.workspaces
+        ink: Tokens.ink
+        inkSoft: Tokens.inkSoft
+        inkOn: Tokens.bg
+        cellHeight: strip.height
+        onWorkspaceClicked: id => strip.workspaceClicked(id)
+    }
+
     // One thin line that slides under the active number.
     Rectangle {
-        // TODO(phase 7, Island-Blasen): The sliding line belongs to the numbers only; check that it stays hidden for style 2.
         visible: strip.style === 0 && strip.activeIndex >= 0
         y: strip.height - 6
         height: 2

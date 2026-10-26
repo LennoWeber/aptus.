@@ -119,8 +119,8 @@ Scope {
             timerState: host.timerState
             captureState: host.captureState
             displayState: host.displayState
-            // TODO(phase 7, Island-Blasen): Pass powerProfileState on to the island, next to weatherState.
             weatherState: host.weatherState
+            powerProfileState: host.powerProfileState
             workspaces: host.workspaces
             windowTitle: host.windowTitle
             slidOut: host.slidOut

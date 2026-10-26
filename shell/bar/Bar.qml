@@ -71,8 +71,7 @@ PanelWindow {
 
         WorkspaceStrip {
             workspaces: bar.workspaces
-            // TODO(phase 7, Island-Blasen): Read "bubbles" as style 2 (now the default of bar.workspaceStyle); at the moment everything but "dots" shows numbers.
-            style: bar.appSettings && bar.appSettings.get("bar.workspaceStyle") === "dots" ? 1 : 0
+            style: bar.appSettings && bar.appSettings.get("bar.workspaceStyle") === "dots" ? 1 : bar.appSettings && bar.appSettings.get("bar.workspaceStyle") === "bubbles" ? 2 : 0
             onWorkspaceClicked: id => Compositor.focusWorkspace(id)
         }
     }

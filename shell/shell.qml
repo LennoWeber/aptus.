@@ -113,8 +113,8 @@ ShellRoot {
             item.timerState = timerObj
             item.captureState = captureObj
             item.displayState = displayObj
-            // TODO(phase 7, Island-Blasen): item.powerProfileState = powerProfileObj, for the quick actions of the hover card.
             item.weatherState = weatherObj
+            item.powerProfileState = powerProfileObj
             item.dropdownRequested.connect((id, anchor, scr, offset) => dropdownHost.openAt(id, anchor, scr, offset))
             item.tileRequested.connect(id => ipcObj.openTile(id))
             item.controlCenterRequested.connect(() => ipcObj.openControlCenter())

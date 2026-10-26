@@ -35,15 +35,15 @@ FocusScope {
     signal viewRequested(int view)      // Enums.IslandView: a shortcut opens a view of the island
     signal sectionToggled(string name)  // a section was opened or closed (the island pins itself for the keyboard)
 
-    // TODO(phase 7, Island-Blasen): The card grows with its content. In the column, under the toggles: a header row "Wi-Fi <name>" and one "Bluetooth <n> connected"
-    // (tap = toggleSection, 34 px high for touch; the toggle labels are too small), each followed by its section, then IslandQuickActions.
-    // Esc: closeRequested.
+    Keys.onEscapePressed: closeRequested()
+
     implicitHeight: column.implicitHeight + 20
 
     // Open the section name ("wifi" or "bluetooth"), or close it when it is open; the other one closes.
     function toggleSection(name: string): void {
         if (name !== "wifi" && name !== "bluetooth") throw new Error("invariant: IslandHover.toggleSection: unknown section")
-        throw new Error("not implemented")
+        expanded = expanded === name ? "" : name
+        sectionToggled(expanded)
     }
 
     Column {
@@ -104,6 +104,59 @@ FocusScope {
                 ink: hoverPanel.ink; fill: hoverPanel.fill; line: hoverPanel.line
                 onClicked: if (hoverPanel.focusState) hoverPanel.focusState.toggle()
             }
+        }
+
+        // Header rows open the sections (34 px high: big enough for touch, which the toggle labels are not).
+        Item {
+            width: parent.width
+            height: 34
+            Label {
+                anchors { left: parent.left; verticalCenter: parent.verticalCenter }
+                text: "Wi-Fi  " + (hoverPanel.networkState && hoverPanel.networkState.wifiEnabled ? (hoverPanel.networkState.ssid || "not connected") : "off")
+                role: Enums.TextRole.Bar
+                color: hoverPanel.ink
+            }
+            Label { anchors { right: parent.right; verticalCenter: parent.verticalCenter } text: hoverPanel.expanded === "wifi" ? "⌃" : "⌄"; color: hoverPanel.inkSoft }
+            MouseArea { anchors.fill: parent; onClicked: hoverPanel.toggleSection("wifi") }
+        }
+        IslandWifi {
+            visible: hoverPanel.expanded === "wifi"
+            width: parent.width
+            height: visible ? implicitHeight : 0
+            networkState: hoverPanel.networkState
+            shown: hoverPanel.expanded === "wifi"
+            ink: hoverPanel.ink; inkSoft: hoverPanel.inkSoft; line: hoverPanel.line; fill: hoverPanel.fill
+            onCloseRequested: hoverPanel.closeRequested()
+        }
+        Item {
+            width: parent.width
+            height: 34
+            Label {
+                anchors { left: parent.left; verticalCenter: parent.verticalCenter }
+                text: "Bluetooth  " + (hoverPanel.bluetoothState && hoverPanel.bluetoothState.powered ? (hoverPanel.bluetoothState.connectedCount + " connected") : "off")
+                role: Enums.TextRole.Bar
+                color: hoverPanel.ink
+            }
+            Label { anchors { right: parent.right; verticalCenter: parent.verticalCenter } text: hoverPanel.expanded === "bluetooth" ? "⌃" : "⌄"; color: hoverPanel.inkSoft }
+            MouseArea { anchors.fill: parent; onClicked: hoverPanel.toggleSection("bluetooth") }
+        }
+        IslandBluetooth {
+            visible: hoverPanel.expanded === "bluetooth"
+            width: parent.width
+            height: visible ? implicitHeight : 0
+            bluetoothState: hoverPanel.bluetoothState
+            shown: hoverPanel.expanded === "bluetooth"
+            ink: hoverPanel.ink; inkSoft: hoverPanel.inkSoft; line: hoverPanel.line; fill: hoverPanel.fill
+            onCloseRequested: hoverPanel.closeRequested()
+        }
+
+        Rectangle { width: parent.width; height: 1; color: hoverPanel.line }
+
+        IslandQuickActions {
+            width: parent.width
+            powerProfileState: hoverPanel.powerProfileState
+            ink: hoverPanel.ink; inkSoft: hoverPanel.inkSoft; line: hoverPanel.line; fill: hoverPanel.fill
+            onViewRequested: v => hoverPanel.viewRequested(v)
         }
 
         Rectangle { visible: hoverPanel.mediaState && hoverPanel.mediaState.available; width: parent.width; height: 1; color: hoverPanel.line }

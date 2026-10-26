@@ -1,3 +1,4 @@
+pragma ComponentBehavior: Bound
 import QtQuick
 import qs.models
 import qs.theme
@@ -19,18 +20,59 @@ Item {
 
     signal workspaceClicked(int workspaceId)
 
+    implicitWidth: (workspaces ? workspaces.length : 0) * cellWidth
+    implicitHeight: cellHeight
+
     // The bubbles grow from ring to dot to active bubble, and the cell holds the largest.
     Component.onCompleted: if (ringSize > dotSize || dotSize > activeSize || activeSize > cellWidth) throw new Error("invariant: WorkspaceBubbles: sizes out of order")
 
     // Diameter of the bubble of one workspace entry (ring, dot or active).
     function sizeFor(entry: var): int {
         if (!entry) throw new Error("invariant: WorkspaceBubbles.sizeFor: no workspace entry")
-        throw new Error("not implemented")
+        return entry.active ? activeSize : (entry.occupied || entry.urgent) ? dotSize : ringSize
     }
 
     // Colour of the bubble: urgent is the one signal colour, the rest is ink with weight.
     function toneFor(entry: var): color {
         if (!entry) throw new Error("invariant: WorkspaceBubbles.toneFor: no workspace entry")
-        throw new Error("not implemented")
+        return entry.urgent ? Tokens.warn : ink
+    }
+
+    Repeater {
+        model: bubbles.workspaces
+        delegate: Item {
+            id: cell
+            required property var modelData
+            required property int index
+            readonly property bool filled: modelData.active || modelData.occupied || modelData.urgent
+            readonly property color tone: bubbles.toneFor(modelData)
+            x: index * bubbles.cellWidth
+            width: bubbles.cellWidth
+            height: bubbles.height
+
+            // Size and weight carry the state; urgent is the one signal colour.
+            Rectangle {
+                anchors.centerIn: parent
+                width: bubbles.sizeFor(cell.modelData)
+                height: width
+                radius: width / 2
+                color: cell.filled ? Qt.rgba(cell.tone.r, cell.tone.g, cell.tone.b, cell.modelData.active ? 1 : 0.55) : "transparent"
+                border.width: cell.filled ? 0 : 1.5
+                border.color: Qt.rgba(bubbles.ink.r, bubbles.ink.g, bubbles.ink.b, 0.5)
+                Behavior on width { NumberAnimation { duration: Tokens.durFast; easing.type: Easing.BezierSpline; easing.bezierCurve: [0.2, 0, 0, 1, 1, 1] } }
+                Behavior on color { ColorAnimation { duration: Tokens.durFast } }
+            }
+            Text {
+                visible: cell.modelData.active
+                anchors.centerIn: parent
+                text: cell.modelData.name
+                font.family: Tokens.fontUi
+                font.pixelSize: cell.modelData.name.length > 1 ? 8 : 10
+                font.weight: Font.DemiBold
+                color: bubbles.inkOn
+                renderType: Text.NativeRendering
+            }
+            MouseArea { anchors.fill: parent; onClicked: bubbles.workspaceClicked(cell.modelData.id) }
+        }
     }
 }

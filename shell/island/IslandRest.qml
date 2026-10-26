@@ -130,8 +130,8 @@ Item {
         }
     }
 
-    // TODO(phase 7, Island-Blasen): With bar.workspaceStyle "bubbles" this row is a WorkspaceBubbles (capsule and ticker); numbers and dots keep this one. Read the style from appSettings in Island.qml.
-    component WorkspaceNumbers: Row {
+    // The workspace numbers (style numbers and dots).
+    component WorkspaceLabels: Row {
         Repeater {
             model: rest.workspaces
             delegate: Item {
@@ -157,6 +157,23 @@ Item {
                 }
                 MouseArea { anchors.fill: parent; onClicked: rest.workspaceClicked(cell.modelData.id) }
             }
+        }
+    }
+
+    // The workspaces: bubbles, or the numbers (bar.workspaceStyle).
+    component WorkspaceNumbers: Item {
+        implicitWidth: rest.workspaceStyle === "bubbles" ? bubbles.implicitWidth : labels.implicitWidth
+        implicitHeight: 28
+        WorkspaceLabels { id: labels; visible: rest.workspaceStyle !== "bubbles" }
+        WorkspaceBubbles {
+            id: bubbles
+            visible: rest.workspaceStyle === "bubbles"
+            workspaces: rest.workspaces
+            ink: rest.ink
+            inkSoft: rest.inkSoft
+            inkOn: rest.inkOn
+            cellHeight: 28
+            onWorkspaceClicked: id => rest.workspaceClicked(id)
         }
     }
 

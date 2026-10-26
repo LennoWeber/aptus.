@@ -37,7 +37,7 @@ PanelWindow {
     property bool hoverOpen: appSettings ? appSettings.get("island.hoverOpen") !== false : true
     property bool reserveSpace: appSettings ? appSettings.get("island.reserveSpace") !== false : true
     property bool mediaWings: appSettings ? appSettings.get("island.mediaWings") !== false : true
-    property string workspaceStyle  // bar.workspaceStyle, as read from appSettings
+    property string workspaceStyle: appSettings ? appSettings.get("bar.workspaceStyle") || "bubbles" : "bubbles"   // bar.workspaceStyle
     property bool showWorkspaces: appSettings ? appSettings.get("island.showWorkspaces") !== false : true
     property bool showStatus: appSettings ? appSettings.get("island.showStatus") !== false : true
     property bool showWeather: appSettings ? appSettings.get("island.showWeather") !== false : true
@@ -56,7 +56,7 @@ PanelWindow {
     property bool isHover: stage === Enums.IslandStage.Hover
     property bool isAlert: stage === Enums.IslandStage.Alert
     onIsPinnedChanged: if (isPinned && !isHover) throw new Error("invariant: Island: pinned without the hover card")
-    property bool isPinned          // the hover card is pinned (islandState.pinned) on this screen
+    property bool isPinned: isHover && islandState && islandState.pinned   // the hover card is pinned on this screen
 
     // The design (setting island.design): capsule, ninja, ticker or shade. It sets the size at rest, the shape, and whether
     // resting the pointer on the island shows the quick settings (capsule, ticker, shade) or opens the home card (ninja).
@@ -120,7 +120,7 @@ PanelWindow {
     // Duration (ms) of the body's growth for a stage (Enums.IslandStage): hoverGrowMs for Hover, Tokens.durSlow otherwise.
     function growMsFor(stageId: int): int {
         if (stageId < Enums.IslandStage.Rest || stageId > Enums.IslandStage.Open) throw new Error("invariant: Island.growMsFor: unknown stage")
-        throw new Error("not implemented")
+        return stageId === Enums.IslandStage.Hover ? hoverGrowMs : Tokens.durSlow
     }
 
     // Open the island of this screen at a view.
@@ -140,13 +140,13 @@ PanelWindow {
     screen: modelData
     anchors.top: true
     implicitWidth: 940
-    implicitHeight: 440
+    implicitHeight: 660   // the hover card with an open section is the tallest body (about 560 px)
     exclusiveZone: reserveSpace && !slidOut ? Tokens.topInset : 0
     color: "transparent"
     mask: Region { item: body }
     WlrLayershell.namespace: "aptus-island"
     WlrLayershell.layer: WlrLayer.Top
-    WlrLayershell.keyboardFocus: isOpen ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+    WlrLayershell.keyboardFocus: isOpen || isPinned ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
 
     // Fullscreen windows and caffeine keep the screen awake (policy in Idle); the island holds the inhibitor
     // while it is the top element, as the bar does.
@@ -158,13 +158,12 @@ PanelWindow {
     // A click outside closes the opened island.
     HyprlandFocusGrab {
         windows: [win]
-        active: win.isOpen
+        active: win.isOpen || win.isPinned
         onCleared: if (win.islandState) win.islandState.close()
     }
 
     readonly property bool openLike: isOpen || isHover
-    // TODO(phase 7, Island-Blasen): isPinned = isHover and islandState.pinned; keyboardFocus and HyprlandFocusGrab.active also for a pinned card (not only isOpen).
-    // TODO(phase 7, Island-Blasen): workspaceStyle from appSettings ("bar.workspaceStyle", default "bubbles"); hand workspaceStyle and inkOn (the island fill) to IslandRest and IslandHome.
+    onOpenLikeChanged: if (!openLike) hoverPanel.expanded = ""
     readonly property color fg: openLike ? IslandLook.inkOpen : IslandLook.inkRest
     readonly property color fgSoft: Qt.rgba(fg.r, fg.g, fg.b, 0.65)
     readonly property color hairline: Qt.rgba(fg.r, fg.g, fg.b, 0.16)
@@ -183,9 +182,8 @@ PanelWindow {
         accent: win.isAlert && win.islandState && win.islandState.alert && win.islandState.alert.severity !== Enums.Severity.Neutral ? Tokens.colorFor(win.islandState.alert.severity) : win.hairline
         accentOpacity: win.isAlert ? 1 : 0.5
         opacity: 1 - win.morphProgress
-        // TODO(phase 7, Island-Blasen): Growing to the hover card takes growMsFor(stage) (180 ms), the other changes Tokens.durSlow; same for the height below.
-        Behavior on width { NumberAnimation { duration: Tokens.durSlow; easing.type: Easing.BezierSpline; easing.bezierCurve: [0.2, 0, 0, 1, 1, 1] } }
-        Behavior on height { NumberAnimation { duration: Tokens.durSlow; easing.type: Easing.BezierSpline; easing.bezierCurve: [0.2, 0, 0, 1, 1, 1] } }
+        Behavior on width { NumberAnimation { duration: win.growMsFor(win.stage); easing.type: Easing.BezierSpline; easing.bezierCurve: [0.2, 0, 0, 1, 1, 1] } }
+        Behavior on height { NumberAnimation { duration: win.growMsFor(win.stage); easing.type: Easing.BezierSpline; easing.bezierCurve: [0.2, 0, 0, 1, 1, 1] } }
         Behavior on cornerRadius { NumberAnimation { duration: Tokens.durSlow } }
 
         // Rest: a tap opens.
@@ -210,6 +208,8 @@ PanelWindow {
             focusState: win.focusState
             weatherState: win.weatherState
             showWorkspaces: win.showWorkspaces
+            workspaceStyle: win.workspaceStyle
+            inkOn: win.openLike ? IslandLook.fillOpen : IslandLook.fillRest
             showStatus: win.showStatus
             showWeather: win.showWeather
             onWorkspaceClicked: id => Compositor.focusWorkspace(id)
@@ -242,8 +242,6 @@ PanelWindow {
 
         // Hover: the quick settings.
         IslandHover {
-            // TODO(phase 7, Island-Blasen): Hand over powerProfileState and focus: win.isPinned; viewRequested opens that view (openView), sectionToggled pins (islandState.pin(modelData.name)), closeRequested closes.
-            // TODO(phase 7, Island-Blasen): Closing the card (hoverLeave, close) must also reset hoverPanel.expanded to "" and stop the Wi-Fi scan.
             id: hoverPanel
             anchors { left: parent.left; right: parent.right; top: parent.top; topMargin: win.hoverIsHome ? home.implicitHeight : 0 }
             // Ninja: the quick settings sit under the home card, so hover and tap show the same card.
@@ -260,11 +258,16 @@ PanelWindow {
             caffeineState: win.caffeineState
             focusState: win.focusState
             mediaState: win.mediaState
+            powerProfileState: win.powerProfileState
+            focus: win.isPinned
             ink: win.fg
             inkSoft: win.fgSoft
             line: win.hairline
             fill: win.openLike ? IslandLook.fillOpen : IslandLook.fillRest
             onControlCenterRequested: win.closeAndThen("controlCenter")
+            onViewRequested: v => win.openView(v)
+            onCloseRequested: win.islandState.close()
+            onSectionToggled: name => { if (name !== "") win.islandState.pin(win.modelData.name) }
         }
 
         // Opened: one view at a time, each fades in when the body has grown.
@@ -292,6 +295,8 @@ PanelWindow {
                 focusState: win.focusState
                 mediaState: win.mediaState
                 workspaces: win.workspaces
+                workspaceStyle: win.workspaceStyle
+                inkOn: IslandLook.fillOpen
                 clockFormat: win.clockFormat
                 ink: win.fg
                 inkSoft: win.fgSoft
