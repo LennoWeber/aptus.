@@ -974,3 +974,45 @@ Lenno fand die zehn Entwürfe (Seite `island-designs.html`) nicht gut genug, wol
 - Test am Gerät (qs aus dem Worktree, eDP-1): jeder Entwurf in Ruhe, Hover, Meldung, Power- und Wallpaper-Ansicht ohne Warnungen im Log; Ninja zusätzlich Morph zum Launcher und zurück. Screenshots im Scratchpad.
 - Nicht geprüft: Mehrmonitor, echter Mauszeiger (Hover lief über die Test-IPC), Umschalten des Entwurfs im laufenden Betrieb über die Settings-App, qmllint (nicht installiert).
 - Offen: shell-ninja-Spuren im Home entfernen (Liste liegt oben, wartet auf Lennos Bestätigung); Push nach `origin`.
+
+## Island: Tempo, Blasen, Netz im Hover (fünfter Phasenablauf, ab 26. Okt., Branch `island-bubbles`)
+
+Arbeitsregel wie beim vierten Ablauf: nie auf „weiter“ warten, jede Phase protokollieren und selbst prüfen (Selbst-Review am Diff, kein Sub-Agent), Pushen und Löschen außerhalb des Repos erst nach Rückfrage. Arbeit im Worktree `~/Code/Projekte/aptus-island` (Branch `island-bubbles`, von `main`), getestet wird dort, gemergt erst nach Lennos Test.
+
+### Ziel (Lenno, 26. Okt.)
+1. Die Insel soll **schneller reagieren** (Hover, Öffnen).
+2. In der Leiste **Blasen statt Nummern** für die Workspaces („das ist cool“).
+3. Beim **Hover öffnet die Insel größer, mit mehr Optionen**, und man kann sich dort **mit dem WLAN verbinden** „usw.“
+
+### Entscheidungen (selbst getroffen, Lenno kann sie ändern)
+- „Bar“ heißt hier beides: die Leiste (`WorkspaceStrip`) und die Ruhe-Ansicht der Insel (capsule, ticker; die Home-Karte). Ninja behält seine Pips (sind schon Blasen). Ein Setting für beide: `bar.workspaceStyle` bekommt den Wert `bubbles`, **neuer Standard** (statt `numbers`). `numbers` und `dots` bleiben wählbar.
+- Blase: leerer Workspace = dünner Ring (8 px), belegter = gefüllter Punkt (10 px), aktiver = größere gefüllte Blase (16 px) mit der Nummer darin, wächst/schrumpft in 140 ms mit der Standardkurve. Dringend = einzige Signalfarbe (`warn`). Zustand sonst nur über Größe und Füllung, nicht über Farbe.
+- „Mehr Optionen“ im Hover = Wi-Fi-Liste, Bluetooth-Geräteliste, Energieprofil, Schnellaktionen (Screenshot, Clipboard, Emoji, Wallpaper, Power öffnen jeweils die Insel-Ansicht). „usw.“ heißt: Bluetooth gleich mit, weil `BluetoothState` alles Nötige schon hat.
+- Passworteingabe braucht Tastaturfokus, den hat das Fenster nur im Zustand `Open`. Daher: Aufklappen eines Bereichs (Wi-Fi, Bluetooth) **heftet** die Hover-Karte an (`IslandState.pin()`: Hover → Open, Ansicht Home). Schließen wie gewohnt per Esc oder Klick daneben.
+- Tempo: (a) Hover-Verzögerung 280 → 90 ms rein, 320 → 220 ms raus (PHASES-Plan nannte 80/200; Flackerschutz bleibt über die Raus-Verzögerung); (b) Körper wächst beim Hover in 180 ms statt 260 ms (Größenänderung; Inhalt blendet sofort mit 140 ms ein, nicht erst am Ende); (c) Hover-Karte, Home und Wi-Fi-Liste sind schon geladen (keine Loader-Verzögerung), Scan startet beim Aufklappen asynchron, die Liste zeigt zuerst den Zwischenspeicher. Messung in Phase 5: Zeit von `hoverEnter` bis Körper bei 90 % der Zielhöhe, vorher/nachher im Log.
+- Hover-Karte wird breiter (380 → 440 px; Shade 440 → 460), Höhe folgt dem Inhalt; ein Bereich ist höchstens einer aufgeklappt (Wi-Fi oder Bluetooth).
+
+### Betroffene Dateien
+- Neu: `shell/components/WorkspaceBubbles.qml` (eine Reihe Blasen, von Leiste und Insel genutzt), `shell/island/IslandWifi.qml` (Netzliste, Verbinden, Passwortzeile), `shell/island/IslandBluetooth.qml` (Geräteliste, Verbinden/Trennen), `shell/island/IslandQuickActions.qml` (Energieprofil + Schnellaktionen), Einträge in den `qmldir`.
+- Geändert: `bar/WorkspaceStrip.qml` (Stil 2 = Blasen), `bar/Bar.qml` (Stil aus Setting), `island/IslandRest.qml` (`WorkspaceNumbers` je nach Stil), `island/IslandHome.qml` (Workspace-Zeile), `island/IslandHover.qml` (Bereiche, Aufklappen), `island/Island.qml` (Größen, Dauer, `pin`, Weitergabe von `PowerProfileState`), `island/IslandHost.qml` (neue Property `powerProfileState`), `models/IslandState.qml` (`pin()`, Zeiten als Properties), `shell.qml` (Übergabe), `config/settings.json` (Standard `bubbles`), `config/settings-schema.json` (Option `bubbles`, Beschreibung), `PHASES.md`.
+- Wiederverwendet: `NetworkState` (networks, scan, stopScan, connectTo, disconnectWifi), `BluetoothState` (devices, connectDevice, disconnectDevice), `PowerProfileState.setProfile`, Passwortzeile nach dem Muster aus `controlcenter/tiles/NetworkTile.qml`, Island-Ansichten über `IslandState.open`.
+
+### Neue Strukturen und Funktionen (Plan)
+- Phase 2 (Strukturen): Property `style` von `WorkspaceStrip` bekommt Wert 2; `IslandState`: `hoverInMs`, `hoverOutMs`, `pinned`-frei (Zustand `Open` genügt), Signal `pinned(string screenName)`; `IslandHover`: `expanded` (string: "", "wifi", "bluetooth"), Property `powerProfileState`, Signale `viewRequested(int view)`; `IslandWifi`: `networkState`, `passwordFor`, `shown`; `IslandBluetooth`: `bluetoothState`, `shown`; `IslandQuickActions`: `powerProfileState`; `Island`: Property `hoverGrowMs`; Setting und Schema.
+- Phase 3 (Signaturen): `IslandState.pin(screenName)`, `IslandHover.toggleSection(name)`, `IslandWifi.connectTo(ssid, password)`, `IslandWifi.setShown(on)` , `IslandBluetooth.toggleDevice(address)`, `IslandQuickActions.setProfile(p)`, `Island.growMsFor(stage)`.
+- Phase 4 (TODOs): `WorkspaceStrip`, `Bar.qml`, `IslandRest` (zwei Stellen), `IslandHome`, `IslandHover` (Karte, Breite), `Island.qml` (Größen, Dauer, Weitergabe), `IslandHost`, `shell.qml`, `IslandState` (Timer), Settings-Dateien.
+
+### Risiken
+1. **Tastaturfokus im Hover:** ohne `pin()` bekommt das Passwortfeld keine Tasten. Prüfen: Fokus kommt nach dem Anheften wirklich im Feld an.
+2. **Flackern bei 90 ms:** schnelles Überfahren der Insel öffnet die Karte kurz. Gegenmittel: Raus-Verzögerung 220 ms, bei Bedarf Wert in Phase 5 anpassen.
+3. **Hover bei offenem Aufklappen:** verlässt der Zeiger die Karte, während man tippt, darf sie nicht schließen. Nach `pin()` ist der Zustand `Open`, dort schließt nur Klick daneben und Esc.
+4. **Scan-Kosten:** Scan nur, solange der Wi-Fi-Bereich offen ist; `stopScan` beim Zuklappen und Schließen.
+5. **Echter Zeiger:** per Skript nicht prüfbar (wie in Phase 5 davor); Hover-Tempo und Tastenfluss testet Lenno am Gerät, ich messe die Animation über Log-Zeitstempel und eine temporäre Test-IPC (wird entfernt).
+6. **Neuer Standard `bubbles`:** ändert das Aussehen der Leiste für alle, die `numbers` nie gesetzt haben. Zurückstellbar in Settings → Bar.
+7. Kein `qmllint` installiert (offener Punkt aus dem vierten Ablauf), Prüfung bleibt Log und Screenshot am Gerät.
+
+### Phasen dieses Ablaufs
+1. Plan (dieser Abschnitt) – erledigt. 2. Strukturen. 3. Signaturen. 4. TODOs. 5. Probe am Gerät, danach zurückgesetzt. 6. Invarianten. 7. Implementierung, Test, Screenshots.
+
+### Protokoll Island-Blasen
+**Phase 1 (Plan), erledigt:** Code gelesen (`IslandState`, `Island`, `IslandHost`, `IslandHover`, `IslandRest`, `WorkspaceStrip`, `NetworkState`, `NetworkDropdown`, `BluetoothState`). Ursache der trägen Reaktion ist messbar angelegt: 280 ms Hover-Verzögerung plus 260 ms Wachstum, Inhalt erst danach. Kein Code, kein Review in dieser Phase.
