@@ -20,6 +20,8 @@ Item {
     property var focusState
     property var mediaState
     property var workspaces
+    property string workspaceStyle  // bar.workspaceStyle: numbers, dots or bubbles
+    property color inkOn            // for the number inside the active bubble
     property string clockFormat
     property color ink
     property color inkSoft

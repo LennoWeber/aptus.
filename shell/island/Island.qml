@@ -37,6 +37,7 @@ PanelWindow {
     property bool hoverOpen: appSettings ? appSettings.get("island.hoverOpen") !== false : true
     property bool reserveSpace: appSettings ? appSettings.get("island.reserveSpace") !== false : true
     property bool mediaWings: appSettings ? appSettings.get("island.mediaWings") !== false : true
+    property string workspaceStyle  // bar.workspaceStyle, as read from appSettings
     property bool showWorkspaces: appSettings ? appSettings.get("island.showWorkspaces") !== false : true
     property bool showStatus: appSettings ? appSettings.get("island.showStatus") !== false : true
     property bool showWeather: appSettings ? appSettings.get("island.showWeather") !== false : true
@@ -54,6 +55,7 @@ PanelWindow {
     property bool isOpen: stage === Enums.IslandStage.Open
     property bool isHover: stage === Enums.IslandStage.Hover
     property bool isAlert: stage === Enums.IslandStage.Alert
+    property bool isPinned          // the hover card is pinned (islandState.pinned) on this screen
 
     // The design (setting island.design): capsule, ninja, ticker or shade. It sets the size at rest, the shape, and whether
     // resting the pointer on the island shows the quick settings (capsule, ticker, shade) or opens the home card (ninja).
@@ -159,6 +161,8 @@ PanelWindow {
     }
 
     readonly property bool openLike: isOpen || isHover
+    // TODO(phase 7, Island-Blasen): isPinned = isHover and islandState.pinned; keyboardFocus and HyprlandFocusGrab.active also for a pinned card (not only isOpen).
+    // TODO(phase 7, Island-Blasen): workspaceStyle from appSettings ("bar.workspaceStyle", default "bubbles"); hand workspaceStyle and inkOn (the island fill) to IslandRest and IslandHome.
     readonly property color fg: openLike ? IslandLook.inkOpen : IslandLook.inkRest
     readonly property color fgSoft: Qt.rgba(fg.r, fg.g, fg.b, 0.65)
     readonly property color hairline: Qt.rgba(fg.r, fg.g, fg.b, 0.16)
@@ -236,7 +240,7 @@ PanelWindow {
 
         // Hover: the quick settings.
         IslandHover {
-            // TODO(phase 7, Island-Blasen): Hand over powerProfileState; viewRequested closes the card into that view (islandState.open), sectionToggled calls islandState.pin(modelData.name).
+            // TODO(phase 7, Island-Blasen): Hand over powerProfileState and focus: win.isPinned; viewRequested opens that view (openView), sectionToggled pins (islandState.pin(modelData.name)), closeRequested closes.
             // TODO(phase 7, Island-Blasen): Closing the card (hoverLeave, close) must also reset hoverPanel.expanded to "" and stop the Wi-Fi scan.
             id: hoverPanel
             anchors { left: parent.left; right: parent.right; top: parent.top; topMargin: win.hoverIsHome ? home.implicitHeight : 0 }

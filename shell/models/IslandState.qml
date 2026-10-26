@@ -28,6 +28,7 @@ Scope {
     property int morph: Enums.MorphTarget.None
 
     property string pendingHoverScreen: ""
+    property bool pinned                 // the hover card stays (keyboard focus for the password field) until Esc or a click elsewhere
 
     // How long the pointer rests on the island before the hover card shows, and how long it must be away before the card goes.
     property int hoverInMs: 90
@@ -36,7 +37,6 @@ Scope {
     signal alertShown(var alert)
     signal opened(string screenName, int view)
     signal closed()
-    signal pinned(string screenName)     // the hover card became the opened island (keyboard focus for the password field)
 
     // Open the island on a screen, showing view (Enums.IslandView). Does nothing while the bar is shown.
     function open(screenName: string, view: int): void {
@@ -74,8 +74,8 @@ Scope {
         root.view = view
     }
 
-    // Turn the hover card of that screen into the opened island (view Home), so that it takes keyboard focus and stays
-    // until Esc or a click elsewhere. Does nothing unless the island is in the Hover stage on that screen.
+    // Pin the hover card of that screen (pinned = true): it takes keyboard focus and stays until Esc or a click elsewhere,
+    // the stage stays Hover. Does nothing unless the island is in the Hover stage on that screen.
     function pin(screenName: string): void {
         throw new Error("not implemented")
     }
@@ -153,7 +153,7 @@ Scope {
             hold.stop()
         }
     }
-    // TODO(phase 7, Island-Blasen): Use hoverOutMs (220 ms); and hoverLeave must not close a pinned (Open) island.
+    // TODO(phase 7, Island-Blasen): Use hoverOutMs (220 ms). hoverLeave must not start it while pinned; open() and close() reset pinned.
     Timer { id: hoverOut; interval: 320; onTriggered: root.close() }
 
     onEnabledChanged: if (!enabled) { hold.stop(); hoverIn.stop(); hoverOut.stop(); alert = null; queue = []; openScreen = ""; view = Enums.IslandView.Home; stage = Enums.IslandStage.Rest; morph = Enums.MorphTarget.None }

@@ -6,7 +6,7 @@ import qs.services
 
 // The hover panel: the quick settings that the bar's dropdowns had, in one card (volume, brightness, switches,
 // music, battery), shown while the pointer rests on the island.
-Item {
+FocusScope {
     id: hoverPanel
 
     property var appSettings
@@ -28,10 +28,13 @@ Item {
 
     signal tileRequested(int tileId)
     signal controlCenterRequested()
+    signal closeRequested()             // Esc on a pinned card
     signal viewRequested(int view)      // Enums.IslandView: a shortcut opens a view of the island
     signal sectionToggled(string name)  // a section was opened or closed (the island pins itself for the keyboard)
 
-    // TODO(phase 7, Island-Blasen): The card grows with its content: the Wi-Fi and Bluetooth sections (IslandWifi, IslandBluetooth) and IslandQuickActions come into the column below.
+    // TODO(phase 7, Island-Blasen): The card grows with its content. In the column, under the toggles: a header row "Wi-Fi <name>" and one "Bluetooth <n> connected"
+    // (tap = toggleSection, 34 px high for touch; the toggle labels are too small), each followed by its section, then IslandQuickActions.
+    // Esc: closeRequested.
     implicitHeight: column.implicitHeight + 20
 
     // Open the section name ("wifi" or "bluetooth"), or close it when it is open; the other one closes.
@@ -68,14 +71,12 @@ Item {
             width: parent.width
             spacing: (width - 5 * 62) / 4
             IslandToggle {
-                // TODO(phase 7, Island-Blasen): A tap on the label (or a chevron) calls toggleSection("wifi"); the switch itself keeps switching Wi-Fi on and off.
                 kind: "wifi"; label: "Wi-Fi"
                 checked: hoverPanel.networkState ? hoverPanel.networkState.wifiEnabled : false
                 ink: hoverPanel.ink; fill: hoverPanel.fill; line: hoverPanel.line
                 onClicked: if (hoverPanel.networkState) hoverPanel.networkState.setWifiEnabled(!hoverPanel.networkState.wifiEnabled)
             }
             IslandToggle {
-                // TODO(phase 7, Island-Blasen): Same for toggleSection("bluetooth").
                 kind: "bluetooth"; label: "Bluetooth"
                 checked: hoverPanel.bluetoothState ? hoverPanel.bluetoothState.powered : false
                 ink: hoverPanel.ink; fill: hoverPanel.fill; line: hoverPanel.line

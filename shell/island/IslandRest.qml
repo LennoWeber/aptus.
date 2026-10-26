@@ -30,6 +30,8 @@ Item {
     property var weatherState
     property bool mediaWings
     property bool showWorkspaces: true
+    property string workspaceStyle  // bar.workspaceStyle: numbers, dots or bubbles
+    property color inkOn            // for the number inside the active bubble
     property bool showStatus: true
     property bool showWeather: true
     property string clockFormat
