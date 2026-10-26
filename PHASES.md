@@ -1161,3 +1161,55 @@ Arbeitsregel wie zuvor: nie auf „weiter“ warten, jede Phase protokollieren u
 - **Getestet (Gerät, eDP-1, echter Zeiger):** Shell lädt ohne Fehler; Picker mit 1, 3 und 33 Bildern per Bildschirmfoto; Picker öffnet und schließt per Hotkey-Weg (`shell-switch msg panel-toggle wallpaper`); Home; Hover mit Bereich Ton (Probe); Ruhe-Ansicht mit `dots`; Auswahlbewegung im Raster per Test-IPC (Probe).
 - **Nicht getestet (keine Tasten und Klicks hier):** Pfeiltasten, Enter und Mausrad im Picker, Tippen auf ein Bild (setzt das Hintergrundbild), Tippen auf WLAN, Bluetooth und Ton-Geräte, Passwortfeld, Touch. HDMI-A-1 wurde mitgeladen, aber nicht fotografiert. `aptus-lint.sh` nicht abgewartet (siehe Phase 7 davor).
 - **Offen:** Lennos Test; Merge von `island-bubbles` nach `main` erst danach, kein Push; danach den Link zurück: `ln -sfn ~/Code/Projekte/aptus/bin/aptus ~/.local/bin/aptus` (er zeigt bis dahin auf den Worktree, damit die Hotkeys die neue Shell erreichen).
+
+## Ablauf 7: aptus wird die Hauptshell (26. Okt. 2026, Branch `main-shell`, aus `island-bubbles`)
+
+### Ziel (Lenno)
+- Island, Light-Stil, Control Center und Launcher bleiben. **Das Hover-Menü über der Leiste fliegt raus** (sieht nicht gut aus).
+- aptus ist die **Hauptshell**. Alle anderen Shells (shell-ninja, L-Shell, personal-shell u. a.) werden **von mir gelöscht**, vor allem shell-ninja. Noctalia bleibt als **Backup**, falls etwas schiefgeht.
+- Aus Lennos Dotfiles-Repos auf GitHub (`dotfiles`, `dotfiles-private`) alles vorbereiten, damit er die nötigen Programme **installieren** kann.
+- Hyprland: Fenster mit **etwas Transparenz und starkem Blur**, alles gut lesbar, trotzdem schick.
+
+### Befund (Phase 1)
+- **Branches:** `island-bubbles` (14 Commits vor `main`) ist nicht gemerged; Lenno hat getestet und findet die Island gut. `main-shell` startet hier. Merge nach `main` und Link `~/.local/bin/aptus` zurück aufs Hauptrepo sind der letzte Schritt (lokal, kein Push).
+- **Hover-Karte:** `shell/island/IslandHover.qml` plus `HoverHandler` in `Island.qml:384`, `IslandState.hoverEnter/hoverLeave`, Timer `hoverIn/hoverOut`, Setting `island.hoverOpen` (Standard an), Stufe `Enums.IslandStage.Hover`. Beim Entwurf `ninja` zeigen Hover und Tippen dieselbe Home-Karte (`hoverIsHome`).
+- **Aktueller Stand der Settings:** `bar.style = island`, `island.design` nicht gesetzt (Standard `capsule`).
+- **Shells im System:** `~/.local/bin/shell-switch` kennt `noctalia aptus shell-ninja l-shell l-shell-qs`; gewählt ist `aptus` (`~/.local/state/shell-switch/choice`). `~/.config/quickshell` → `~/.hyprconf/quickshell` (shell-ninja: `aptus`, `bar`, `island`, `launcher`, `lockscreen`, `settings`, `widgets` …). `~/.hyprconf` ist Shell-ninjas Config, **nicht** unter Git. `~/dotfiles` (Repo `LennoWeber/dotfiles`) hat uncommittete Änderungen an `shell-switch`, `hyprland.lua`, `kitty.conf` und das neue `bin/.local/bin/shell-ninja`.
+- **Repos:** `dotfiles` (öffentlich, Stow-Pakete, Paket `quickshell` = personal-shell, `l-shell`), `dotfiles-private` (Shells, `install.sh`, `packages/dnf.txt` mit 8654 Byte, `packages/flatpak.txt`, `system/rpm-gpg`, Auto-Sync stündlich, gitleaks). `dotfiles-private/install.sh` installiert Pakete aus `dnf.txt` (enthält u. a. `quickshell`, `hyprland`, `noctalia-nightly`, `ghostty`, `cage`, `greetd`, Nerd-Fonts).
+- **Hyprland (`~/dotfiles/hypr/.config/hypr/hyprland.lua`, ist `~/.config/hypr`):** `active_opacity = inactive_opacity = 1.0`; Blur global an (`size 8, passes 3, brightness 0.9, vibrancy 0.2`); Layer-Regel für `^quickshell.*` (aus Shell-ninja) und `^noctalia-…`; keine Namespace-Regel für `aptus-*`. aptus-Fenster heißen `aptus-island`, `-bar`, `-launcher`, `-controlcenter`, `-dock`, `-osd`, `-notifications`, `-dropdown`, `-session`, `-wallpaper-picker`, `-ai`, `-confirm`, `-polkit`, `-osk`, `-edge`.
+- **shell-ninja-Spuren im aptus-Code:** `shell.qml`, `Island.qml`, `IslandRest.qml`, `IslandLook.qml`, `settings-schema.json`, `emoji.json` (Treffer prüfen; vermutlich Entwurf-Name `ninja` und Kommentare). Der Entwurf `ninja` wird zu `pill` umbenannt.
+- **Eigenes Wissen, noch zu prüfen:** welche Programme aptus zur Laufzeit braucht (`install.sh` `REQUIRED_PACKAGES`, Phase-7-TODO: ImageMagick) und welche davon in `dnf.txt` fehlen (Abgleich in Phase 2/3 per Skript, nicht aus dem Kopf).
+
+### Entscheidungen (selbst getroffen, Lenno kann sie ändern)
+1. **Hover-Menü entfernen, nicht nur abschalten:** Hover-Karte, `HoverHandler`, Hover-Timer, Stufe `Hover`, Setting `island.hoverOpen` und `IslandHover` werden gelöscht. Klick und Touch öffnen weiter die Home-Karte (mit Schnelleinstellungen), die Wi-Fi-, Bluetooth-, Ton- und Energie-Bereiche wandern aus `IslandHover` in die Home-Karte, soweit sie nicht schon dort sind. Alternative, falls Lenno die Karte doch behalten will: nur `island.hoverOpen` auf `false`.
+2. **Entwurf `ninja` heißt `pill`.** Eine Migration liest alte Werte (`ninja` → `pill`).
+3. **Andere Shells löschen, mit Sicherung:** vorher ein Archiv `~/shell-backup-<Datum>.tar.gz` der gelöschten Ordner (Lenno kann es später selbst löschen). Gelöscht wird nur, was die Liste in Phase 7 nennt und was wirklich zu einer anderen Shell gehört. `~/.config/quickshell` bleibt als Link auf aptus bzw. fällt weg (Entscheidung beim Prüfen; aptus startet per `qs -p`, siehe `bin/aptus`).
+4. **`shell-switch` auf zwei Shells kürzen:** `aptus` (Standard) und `noctalia` (Backup). Beim Login startet aptus. Schlägt aptus beim Start fehl (kein IPC in 20 s), startet wie bisher die andere. Die Taste `Super+Alt+S` bleibt und zeigt nur diese zwei.
+5. **Hyprland-Look:** `active_opacity 0.92`, `inactive_opacity 0.85`, Blur `size 10, passes 4, brightness 0.9, contrast 0.9, vibrancy 0.2, noise 0.02`, `popups = true`; Terminal und Browser sind gut lesbar bei diesen Werten, Videos/Spiele/Vollbild bekommen per Fensterregel `opaque` (`fullscreen`, `mpv`, `vlc`, Browser mit Video-Titel nicht pauschal). Layer-Regeln für `^aptus-.*`: Blur an, `ignore_alpha 0.3`; die Fläche der aptus-Fenster ist deckend (Stil „Light/deckend“): Blur dort nur, wo sie selbst Transparenz haben (Launcher/Control Center-Hintergrund). Werte nach Test am Gerät feinjustieren. Hyprland 0.56 mit Lua: `hl.window_rule`, `hl.layer_rule`, Test per `hyprctl eval`.
+6. **Paketvorbereitung:** ein Skript `scripts/aptus-packages.sh` im aptus-Repo (bzw. Erweiterung von `install.sh`) und eine Liste `packages/aptus-dnf.txt`; zusätzlich Einträge in `dotfiles-private/packages/dnf.txt` nur wenn fehlend. **Nichts wird installiert** (kein `sudo dnf`), Lenno startet es selbst. **Nichts wird gepusht**, auch nicht in die Dotfiles-Repos; Änderungen dort bleiben lokal, bis Lenno es erlaubt (Auto-Sync der Dotfiles pusht stündlich selbst, das Risiko steht unter „Risiken“).
+
+### Betroffene Dateien (Plan)
+- **aptus-Repo:** `shell/island/IslandHover.qml` (löschen), `shell/island/Island.qml`, `shell/island/IslandHome.qml`, `shell/island/qmldir`, `shell/models/IslandState.qml`, `shell/models/Enums.qml` (Stufe `Hover`), `shell/shell.qml`, `shell/ipc/IpcHandlers.qml` (falls Hover erwähnt), `shell/theme/IslandLook.qml`, `shell/island/IslandRest.qml`, `config/settings-schema.json`, `config/settings.json` (nur Doku), `bin/aptus`, `install.sh`, `README.md`, `CLAUDE.md`/`HANDOFF.md` (Hinweis auf Hauptshell).
+- **Hyprland-Config (`~/dotfiles/hypr/.config/hypr/hyprland.lua`):** `decoration` (Opacity/Blur), neue Window- und Layer-Regeln, `quickshell`-Regel von Shell-ninja ersetzen durch `^aptus-.*`, Kommentare auf Shell-ninja und L-Shell aufräumen, `Super+Alt+S`.
+- **`shell-switch` (`~/dotfiles/bin/.local/bin/shell-switch`, Link in `~/.local/bin`):** `SHELLS`, `label`, `bin_for`, Menü, Kommentarkopf; `shell-ninja`-Skript, `toggle-shell.sh`, `shell-action.sh`, `start-shell.sh` prüfen.
+- **Zu löschen (Phase 7, Liste wird vorher geprüft und hier eingetragen):** `~/.hyprconf` (shell-ninja, einschließlich seiner Wallpaper-, Fastfetch- und Qt-Spuren), `~/.local/bin/shell-ninja`, `~/dotfiles/bin/.local/bin/shell-ninja`, `~/dotfiles/quickshell` (personal-shell), `~/dotfiles/l-shell`, `~/.config/l-shell`, `~/Code/Projekte/L-Shell` (falls vorhanden), `*.before-dotfiles`-Reste, die zu diesen Shells gehören, `shell-ninja.png` und Cache-Dateien; in `dotfiles-private` der Ordner `l-shell` und Verweise im `dotfiles-sync`-Skript. **`~/.config/noctalia` und `~/dotfiles/noctalia` bleiben.**
+
+### Neue Strukturen und Funktionen (Plan)
+- **Struktur:** `Enums.IslandStage` ohne `Hover`; `IslandState` ohne `hoverEnter/hoverLeave`, `pendingHoverScreen`, `hoverIn/hoverOut`; Setting `island.hoverOpen` weg; `island.design` mit Wert `pill` statt `ninja`; Settings-Migration `ninja → pill` (eine Zeile in der Settings-Ladestelle).
+- **Signaturen:** keine neuen in der Shell; `shell-switch`: gekürzte `SHELLS`-Liste; Paket-Skript: `aptus-packages.sh check|list|install-cmd` (gibt den Befehl aus, führt ihn nicht aus).
+- **Hyprland:** reine Konfigdaten (Tabellen für Opacity-Ausnahmen).
+
+### Risiken
+- **Aussperren:** Löschen der Shells darf nie `noctalia` oder `shell-switch` treffen; erst nach Test „aptus startet von null mit `shell-switch start`“ löschen. Backup-Archiv vor dem Löschen.
+- **Auto-Sync:** `dotfiles-sync` pusht stündlich Änderungen an getrackten Dateien in `dotfiles` und alles in `dotfiles-private`: meine Änderungen dort können unbemerkt veröffentlicht werden, auch Löschungen. Vor Phase 7 `systemctl --user stop dotfiles-sync.timer` vorschlagen (nur mit Lennos OK) oder Änderungen dort erst am Ende in einem Zug.
+- **Eigene laufende Sitzung:** `kill $(pgrep -x qs)` trifft die laufende Shell; Hyprland-Test per `hyprctl eval`, nie `hyprctl reload` mit kaputter Lua.
+- **Lesbarkeit:** zu viel Transparenz macht Text schwer lesbar, Blur kostet Akku/GPU auf dem Laptop; deshalb moderate Werte, Ausnahmen für Vollbild/Video, Test per Bildschirmfoto mit hellem und dunklem Hintergrund.
+- **Hover weg:** `ninja`/`pill` nutzte Hover als Öffner; ohne Hover öffnet nur Klick/Touch. Maus-Nutzer verlieren das schnelle Öffnen; Tastenkürzel `island-toggle` bleibt.
+- **Nicht lösbar von hier:** Pakete installieren (`sudo`), Test auf einem zweiten Rechner.
+
+### Phasen dieses Ablaufs
+1. Verstehen/Plan (dieser Abschnitt) · 2. Strukturen · 3. Signaturen · 4. TODOs · 5. Probe (verworfen) · 6. Invarianten · 7. Implementierung inkl. Löschen, Paketliste, Hyprland-Look, Merge nach `main` (kein Push).
+Ablauf wie in [[feedback_phasen_ohne_weiter]]: nicht auf „weiter“ warten, selbst prüfen, protokollieren.
+
+### Protokoll Hauptshell
+- **Phase 1 (Plan), erledigt:** gelesen: PHASES.md, HANDOFF.md, Island-Code, Settings, `shell-switch`, beide Dotfiles-Repos (Struktur, README, `packages/`), Hyprland-Config. Offen für die Weiterarbeit: genaue Löschliste (Phase 7 prüfen), Paketabgleich.
