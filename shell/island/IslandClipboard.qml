@@ -128,7 +128,7 @@ FocusScope {
             }
         }
         Label {
-            visible: clip.results && clip.results.length === 0
+            visible: !!clip.results && clip.results.length === 0
             anchors.centerIn: parent
             text: clip.query === "" ? "Nothing copied yet" : "No match"
             color: clip.inkSoft

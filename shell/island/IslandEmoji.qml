@@ -142,7 +142,7 @@ FocusScope {
             }
         }
         Label {
-            visible: emoji.results && emoji.results.length === 0
+            visible: !!emoji.results && emoji.results.length === 0
             anchors.centerIn: parent
             text: "No match"
             color: emoji.inkSoft
