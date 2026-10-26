@@ -27,7 +27,7 @@ HYPR_COLORS = os.path.join(STATE, "aptus", "hyprland-colors.lua")
 HYPRLOCK_COLORS = os.path.join(CFG, "hypr", "hyprlock-colors.conf")
 # Window border and shadow are the ink with these alphas (the values aptus-look.lua used before).
 BORDER_ALPHA_ACTIVE = 0.25
-BORDER_ALPHA_INACTIVE = 0.09
+BORDER_ALPHA_INACTIVE = 0.094
 SHADOW_ALPHA = 0.13
 # Firefox-style profiles (Zen, Thunderbird): a folder with prefs.js below one of these roots is a profile.
 ZEN_ROOT = os.path.join(CFG, "zen")
@@ -116,14 +116,15 @@ def profile_dirs(roots: list) -> list:
 
 
 def enable_chrome_css(profile: str, dry: bool) -> None:
-    """Make PROFILE load chrome/userChrome.css and userContent.css: the chrome folder and a user.js line for
-    toolkit.legacyUserProfileCustomizations.stylesheets (the file is created if missing)."""
+    """Make PROFILE load chrome/userChrome.css and userContent.css: the chrome folder, a user.js line for
+    toolkit.legacyUserProfileCustomizations.stylesheets (the file is created if missing) and empty userChrome.css and
+    userContent.css if they do not exist (callers add the @import line with ensure_line)."""
     raise NotImplementedError("not implemented")
 
 
 def ensure_block(path: str, marker: str, text: str, dry: bool) -> None:
     """Put TEXT between '# >>> MARKER' and '# <<< MARKER' lines in a config of the user (replace the block, or add it
-    at the end), keeping a .before-aptus copy once; for apps with no include (starship, cava, fastfetch, yazi)."""
+    at the end), keeping a .before-aptus copy once; only for files with # comments (cava)."""
     raise NotImplementedError("not implemented")
 
 
@@ -133,7 +134,7 @@ def reload_apps(chosen: list, dry: bool) -> None:
 
 
 def write(path: str, text: str, dry: bool, keep: bool = True) -> None:
-    # TODO(phase 7): write through a temp file and rename (Hyprland reads hyprland-colors.lua); decide what a link into the dotfiles gets (starship.toml, nvim).
+    # TODO(phase 7): write through a temp file and rename (Hyprland reads hyprland-colors.lua); do not back up empty files (userChrome.css just created).
     if dry:
         print(f"  [dry-run] write {path}")
         return
@@ -149,7 +150,7 @@ def write(path: str, text: str, dry: bool, keep: bool = True) -> None:
 
 
 def ensure_line(path: str, line: str, dry: bool, drop: str = "") -> None:
-    # TODO(phase 7): hyprlock.conf and fish need a source line after the Noctalia ones and a file that may not exist yet; ensure_block covers blocks.
+    # TODO(phase 7): hyprlock.conf needs its source line after the last source line, not at the end; ensure_block covers blocks.
     """Add LINE at the end of an existing config, once; lines matching DROP (a regex) are removed first."""
     if not os.path.exists(path):
         return
@@ -315,42 +316,45 @@ def gsettings(p, mode, dry):
 
 
 def starship(p, mode, dry):
-    """~/.config/starship.toml: palette aptus and flat segments, as a block (ensure_block)."""
+    """CFG/starship/aptus.toml (flat segments, palette aptus); fish selects it with STARSHIP_CONFIG, starship.toml itself is not touched."""
     raise NotImplementedError("not implemented")
 
 
 def fish(p, mode, dry):
-    """fish colours (theme file) and the prompt colours that starship does not set."""
+    """CFG/fish/conf.d/aptus.fish: fish_color_* and STARSHIP_CONFIG (template fish.fish; extra key starship_path)."""
     raise NotImplementedError("not implemented")
 
 
 def nvim(p, mode, dry):
-    """Neovim colorscheme aptus (colors/aptus.lua) for the mode, from the syntax roles."""
+    """Neovim colorscheme aptus in ~/.local/share/nvim/site/colors/aptus.lua (not in ~/.config/nvim, which is a link into the dotfiles)."""
     raise NotImplementedError("not implemented")
 
 
 def yazi(p, mode, dry):
-    """Yazi flavor aptus for the mode."""
+    """Yazi flavor CFG/yazi/flavors/aptus.yazi and the dark/light names in theme.toml (skipped if that file is a link)."""
     raise NotImplementedError("not implemented")
 
 
 def fastfetch(p, mode, dry):
-    """Fastfetch key and separator colours."""
+    """CFG/fastfetch/themes/aptus.jsonc (same shape as themes/noctalia.jsonc); config.jsonc is a link into the dotfiles and is not touched."""
     raise NotImplementedError("not implemented")
 
 
 def cava(p, mode, dry):
-    """Cava colour block with the gradient of the roles."""
+    """CFG/cava/themes/aptus and a '[color] theme' block in CFG/cava/config (ensure_block, # comments only)."""
     raise NotImplementedError("not implemented")
 
 
 def hyprland_look(p, mode, dry):
-    """HYPR_COLORS: active and inactive border, shadow (the ink with the BORDER and SHADOW alphas)."""
+    """HYPR_COLORS, a Lua file that returns { activeBorder, inactiveBorder, shadow } as "rgba(RRGGBBAA)" strings (the ink with
+    the BORDER and SHADOW alphas); aptus-look.lua reads it with dofile."""
     raise NotImplementedError("not implemented")
 
 
 def hyprlock(p, mode, dry):
-    """HYPRLOCK_COLORS with $aptus_* variables, and the source line in hyprlock.conf."""
+    """HYPRLOCK_COLORS: $aptus_bg, $aptus_ink, $aptus_line plus the variables the user's hyprlock.conf uses ($text_color,
+    $entry_background_color, $entry_border_color, $entry_color, $primary, $error); its source line goes after the last
+    existing source line, so the new values win."""
     raise NotImplementedError("not implemented")
 
 
@@ -365,7 +369,7 @@ def thunderbird(p, mode, dry):
 
 
 def spotify(p, mode, dry):
-    """Spicetify theme SPICETIFY_THEME (color.ini and user.css); applying it is left to the user."""
+    """Spicetify theme SPICETIFY_THEME (color.ini and user.css), written even if Spicetify is not installed yet; applying it is left to the user."""
     raise NotImplementedError("not implemented")
 
 

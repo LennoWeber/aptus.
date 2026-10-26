@@ -1,0 +1,41 @@
+/* aptus-theme-apps: generated from theme/tokens.json, do not edit (run aptus-theme-apps again) */
+:root {
+  --aptus-bg: {{bg}};
+  --aptus-surface: {{surface}};
+  --aptus-alt: {{surfaceAlt}};
+  --aptus-line: {{line}};
+  --aptus-ink: {{ink}};
+  --aptus-soft: {{inkSoft}};
+  --aptus-faint: {{inkFaint}};
+  --aptus-sel-bg: {{selection_bg}};
+  --aptus-sel-fg: {{selection_fg}};
+
+  --toolbar-bgcolor: var(--aptus-bg) !important;
+  --toolbar-color: var(--aptus-ink) !important;
+  --toolbar-field-background-color: var(--aptus-surface) !important;
+  --toolbar-field-color: var(--aptus-ink) !important;
+  --toolbar-field-focus-background-color: var(--aptus-surface) !important;
+  --toolbar-field-focus-color: var(--aptus-ink) !important;
+  --toolbar-field-border-color: var(--aptus-line) !important;
+  --arrowpanel-background: var(--aptus-surface) !important;
+  --arrowpanel-color: var(--aptus-ink) !important;
+  --arrowpanel-border-color: var(--aptus-line) !important;
+  --lwt-accent-color: var(--aptus-bg) !important;
+  --lwt-text-color: var(--aptus-ink) !important;
+  --tab-selected-bgcolor: var(--aptus-surface) !important;
+  --tab-selected-textcolor: var(--aptus-ink) !important;
+  --sidebar-background-color: var(--aptus-alt) !important;
+  --sidebar-text-color: var(--aptus-ink) !important;
+  --urlbar-box-bgcolor: var(--aptus-surface) !important;
+  --urlbar-box-text-color: var(--aptus-ink) !important;
+  --layout-background-0: var(--aptus-bg) !important;
+  --layout-background-1: var(--aptus-surface) !important;
+  --layout-background-2: var(--aptus-alt) !important;
+  --layout-color-1: var(--aptus-ink) !important;
+  --layout-border-0: var(--aptus-line) !important;
+  --selected-item-color: var(--aptus-sel-fg) !important;
+  --selected-item-background-color: var(--aptus-sel-bg) !important;
+  --focus-outline-color: var(--aptus-soft) !important;
+}
+
+::selection { background: var(--aptus-sel-bg); color: var(--aptus-sel-fg); }

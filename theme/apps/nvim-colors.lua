@@ -1,0 +1,43 @@
+-- aptus-theme-apps: generated from theme/tokens.json, do not edit (run aptus-theme-apps again)
+vim.cmd("hi clear")
+if vim.fn.exists("syntax_on") == 1 then vim.cmd("syntax reset") end
+vim.g.colors_name = "aptus"
+vim.o.background = "{{mode}}"
+
+local c = { bg = "{{bg}}", surface = "{{surface}}", alt = "{{surfaceAlt}}", line = "{{line}}", ink = "{{ink}}", soft = "{{inkSoft}}", faint = "{{inkFaint}}", ok = "{{ok}}", warn = "{{warn}}", err = "{{critical}}", sel_bg = "{{selection_bg}}", sel_fg = "{{selection_fg}}" }
+local function hi(group, opts) vim.api.nvim_set_hl(0, group, opts) end
+
+hi("Normal", { fg = c.ink, bg = c.bg })
+hi("NormalFloat", { fg = c.ink, bg = c.surface })
+hi("FloatBorder", { fg = c.line, bg = c.surface })
+hi("CursorLine", { bg = c.alt })
+hi("CursorLineNr", { fg = c.ink, bold = true })
+hi("LineNr", { fg = c.faint })
+hi("SignColumn", { bg = c.bg })
+hi("VertSplit", { fg = c.line })
+hi("WinSeparator", { fg = c.line })
+hi("StatusLine", { fg = c.ink, bg = c.alt })
+hi("StatusLineNC", { fg = c.faint, bg = c.alt })
+hi("Visual", { fg = c.sel_fg, bg = c.sel_bg })
+hi("Search", { fg = c.sel_fg, bg = c.sel_bg })
+hi("IncSearch", { fg = c.sel_fg, bg = c.sel_bg, bold = true })
+hi("Pmenu", { fg = c.ink, bg = c.surface })
+hi("PmenuSel", { fg = c.sel_fg, bg = c.sel_bg })
+hi("Comment", { fg = "{{syntax_comment}}", italic = true })
+hi("Keyword", { fg = "{{syntax_keyword}}" })
+hi("Statement", { fg = "{{syntax_keyword}}" })
+hi("Function", { fg = "{{syntax_function}}" })
+hi("String", { fg = "{{syntax_string}}" })
+hi("Type", { fg = "{{syntax_type}}" })
+hi("Number", { fg = "{{syntax_number}}" })
+hi("Constant", { fg = "{{syntax_constant}}" })
+hi("Operator", { fg = "{{syntax_operator}}" })
+hi("Identifier", { fg = c.ink })
+hi("Special", { fg = "{{syntax_constant}}" })
+hi("Error", { fg = c.err })
+hi("DiagnosticError", { fg = c.err })
+hi("DiagnosticWarn", { fg = c.warn })
+hi("DiagnosticOk", { fg = c.ok })
+hi("DiffAdd", { fg = c.ok })
+hi("DiffDelete", { fg = c.err })
+hi("DiffChange", { fg = c.warn })

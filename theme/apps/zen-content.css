@@ -1,0 +1,16 @@
+/* aptus-theme-apps: generated from theme/tokens.json, do not edit (run aptus-theme-apps again) */
+@-moz-document url-prefix("about:") {
+  :root {
+    --in-content-page-background: {{bg}} !important;
+    --in-content-page-color: {{ink}} !important;
+    --in-content-box-background: {{surface}} !important;
+    --in-content-box-border-color: {{line}} !important;
+    --in-content-text-color: {{ink}} !important;
+    --in-content-deemphasized-text: {{inkFaint}} !important;
+    --in-content-primary-button-background: {{selection_bg}} !important;
+    --in-content-primary-button-text-color: {{selection_fg}} !important;
+    --in-content-accent-color: {{link}} !important;
+    --newtab-background-color: {{bg}} !important;
+    --newtab-text-primary-color: {{ink}} !important;
+  }
+}

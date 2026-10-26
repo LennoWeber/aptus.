@@ -1,0 +1,7 @@
+{
+  "logo": { "color": { "1": "{{ink}}", "2": "{{inkSoft}}" } },
+  "display": {
+    "color": { "keys": "{{ink}}", "title": "{{ink}}", "output": "{{inkSoft}}", "separator": "{{inkFaint}}" },
+    "percent": { "color": { "green": "{{ok}}", "yellow": "{{warn}}", "red": "{{critical}}" } }
+  }
+}

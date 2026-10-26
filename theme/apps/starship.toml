@@ -1,0 +1,78 @@
+# aptus-theme-apps: generated from theme/tokens.json, do not edit (run aptus-theme-apps again)
+"$schema" = 'https://starship.rs/config-schema.json'
+palette = "aptus"
+add_newline = true
+
+format = """
+$username$hostname$directory$git_branch$git_status$python$nodejs$rust$golang$cmd_duration
+$character"""
+
+[palettes.aptus]
+bg = "{{bg}}"
+surface = "{{surface}}"
+line = "{{line}}"
+ink = "{{ink}}"
+ink_soft = "{{inkSoft}}"
+ink_faint = "{{inkFaint}}"
+ok = "{{ok}}"
+warn = "{{warn}}"
+critical = "{{critical}}"
+link = "{{link}}"
+
+[character]
+success_symbol = "[❯](ink)"
+error_symbol = "[❯](critical)"
+vimcmd_symbol = "[❮](ink_soft)"
+
+[username]
+format = "[$user]($style)[@](ink_faint)"
+style_user = "ink_soft"
+style_root = "critical"
+show_always = false
+
+[hostname]
+ssh_only = true
+format = "[$hostname]($style) "
+style = "ink_soft"
+
+[directory]
+style = "bold ink"
+format = "[$path]($style)[$read_only]($read_only_style) "
+read_only = " ro"
+read_only_style = "warn"
+truncation_length = 3
+truncation_symbol = "…/"
+
+[git_branch]
+symbol = ""
+style = "ink_soft"
+format = "[$symbol$branch]($style) "
+
+[git_status]
+style = "warn"
+format = '[$all_status$ahead_behind]($style) '
+
+[cmd_duration]
+min_time = 2000
+style = "ink_faint"
+format = "[$duration]($style) "
+
+[python]
+style = "ink_faint"
+format = '[$symbol($version)]($style) '
+symbol = ""
+
+[nodejs]
+style = "ink_faint"
+format = '[$symbol($version)]($style) '
+symbol = ""
+
+[rust]
+style = "ink_faint"
+format = '[$symbol($version)]($style) '
+symbol = ""
+
+[golang]
+style = "ink_faint"
+format = '[$symbol($version)]($style) '
+symbol = ""

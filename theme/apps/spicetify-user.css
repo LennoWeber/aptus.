@@ -1,0 +1,6 @@
+/* aptus-theme-apps: aptus Spicetify theme, quiet and square-cornered like the shell */
+:root { --spice-button-radius: 8px; }
+.main-card-card, .main-entityHeader-image, .main-image-image { border-radius: 10px; }
+.Root__top-container { gap: 8px; }
+.main-nowPlayingBar-nowPlayingBar { border-top: 1px solid var(--spice-highlight-elevated); }
+.main-playButton-PlayButton, .main-playButton-primary { background-color: var(--spice-button) !important; color: var(--spice-main) !important; }

@@ -1,0 +1,9 @@
+/* aptus-theme-apps: generated from theme/tokens.json, do not edit (run aptus-theme-apps again) */
+@-moz-document url-prefix("about:") {
+  :root {
+    --in-content-page-background: {{bg}} !important;
+    --in-content-page-color: {{ink}} !important;
+    --in-content-box-background: {{surface}} !important;
+    --in-content-box-border-color: {{line}} !important;
+  }
+}
