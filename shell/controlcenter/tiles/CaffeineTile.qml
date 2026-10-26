@@ -31,6 +31,7 @@ Item {
         width: 7
         height: 7
         radius: 3.5
+        // TODO(phase 7, colour mode): a lighter green is light on dark in dark mode; pick a colour that reads on both.
         color: Qt.lighter(Tokens.ok, 1.6)
     }
 }

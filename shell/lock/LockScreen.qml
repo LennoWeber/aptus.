@@ -24,6 +24,7 @@ Scope {
 
         WlSessionLockSurface {
             // The solid fallback colour shows for a moment before the first frame.
+            // TODO(phase 7, colour mode): take it from Tokens.bg (dark mode shows a dark flash otherwise).
             color: "#F4F3EF"
             LockSurface {
                 anchors.fill: parent

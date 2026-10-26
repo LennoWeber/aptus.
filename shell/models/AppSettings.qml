@@ -118,6 +118,8 @@ Scope {
         aiDockWidthPx = get("ai.dockWidth")
         // TODO(phase 7, Bild-Theming): load appearance.themeSource, appearance.style and bar.tone into themeSource, themeStyle, barTone (lookup tables like `edge`).
         //     the shell root passes them on to Tokens and calls refreshTheme(entries).
+        // TODO(phase 7, colour mode): restoreValues sends valueChanged(""), ColorModeState reads the setting again.
+        // TODO(phase 7, colour mode): colorMode = mode[get("appearance.colorMode")] ?? Enums.ColorMode.Light (lookup table like `edge`).
         lockShowNotificationContent = get("lock.showNotificationContent")
         lockAfterMin = get("system.lockAfterMin")
         screenOffAfterMin = get("system.screenOffAfterMin")

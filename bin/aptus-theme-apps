@@ -259,6 +259,7 @@ def ghostty_theme(p: dict, mode: str) -> str:
 
 
 def fastfetch_config(c: dict, dry: bool) -> None:
+    # TODO(phase 7, colour mode): delete the old themes/aptus.jsonc when the config is written.
     """FASTFETCH_CONFIG: the user's config.jsonc (read through the dotfiles link) with the display colours of c; nothing is
     written to the dotfiles. fish.fish aliases fastfetch to it."""
     raise NotImplementedError("not implemented")
@@ -282,6 +283,7 @@ def xsettingsd(p, mode, dry):
 
 
 def reload_apps(chosen: list, dry: bool) -> None:
+    # TODO(phase 7, colour mode): send USR1 to nvim (the plugin reloads aptus) and call fish_apply/spicetify_apply where they are not part of an app function.
     """Tell running programs to read their colours again (Hyprland reload, cava, nvim, kitty), where they can."""
     assert isinstance(chosen, list), "chosen is the list of app names"
     if dry:
@@ -377,6 +379,7 @@ def kitty(p, mode, dry):
 
 
 def ghostty(p, mode, dry):
+    # TODO(phase 7, colour mode): write GHOSTTY_THEMES["light"] and ["dark"] with ghostty_theme(palette(m), m) and set `theme = light:aptus-light,dark:aptus-dark`.
     a = ansi(p, mode)
     c = colors_of(p, mode)
     lines = [f"# {HEADER}", f"background = {p['bg']}", f"foreground = {p['ink']}", f"cursor-color = {p['ink']}",
@@ -489,6 +492,7 @@ def zathura(p, mode, dry):
 
 
 def gsettings(p, mode, dry):
+    # TODO(phase 7, colour mode): set the Net/ThemeName of xsettingsd too (xsettingsd(p, mode, dry)), and tell xsettingsd to reload.
     pairs = [("color-scheme", "prefer-dark" if mode == "dark" else "prefer-light"),
              ("gtk-theme", "adw-gtk3-dark" if mode == "dark" else "adw-gtk3"),
              ("icon-theme", "Papirus-Dark" if mode == "dark" else "Papirus")]
@@ -510,6 +514,7 @@ def starship(p, mode, dry):
 
 
 def fish(p, mode, dry):
+    # TODO(phase 7, colour mode): add an alias fastfetch -> FASTFETCH_CONFIG to conf.d/aptus.fish and call fish_apply(c, dry).
     """CFG/fish/conf.d/aptus.fish (fish_color_*, STARSHIP_CONFIG) and the STARSHIP_CONFIG line of config.fish, which runs later."""
     c = colors_of(p, mode)
     target = os.path.join(CFG, "starship", "aptus.toml")
@@ -541,6 +546,7 @@ def nvim(p, mode, dry):
 
 
 def yazi(p, mode, dry):
+    # TODO(phase 7, colour mode): write both flavors YAZI_FLAVORS (palettes of light and dark) and set [flavor] dark and light to them.
     c = colors_of(p, mode)
     write(os.path.join(CFG, "yazi", "flavors", "aptus.yazi", "flavor.toml"), render_template("yazi-flavor.toml", c), dry)
     path = os.path.join(CFG, "yazi", "theme.toml")
@@ -563,6 +569,7 @@ def yazi(p, mode, dry):
 
 
 def fastfetch(p, mode, dry):
+    # TODO(phase 7, colour mode): call fastfetch_config(colors, dry) instead of writing themes/aptus.jsonc.
     """fastfetch_config(c, dry); config.jsonc is a link into the dotfiles and is not touched."""
     assert mode in MODES and all(k in p for k in PALETTE_KEYS), "palette comes from palette(mode)"
     assert isinstance(dry, bool) and os.path.isabs(CFG) and os.path.isabs(STATE), "XDG folders must be absolute paths"
@@ -592,6 +599,7 @@ def cava(p, mode, dry):
 
 
 def hyprland_look(p, mode, dry):
+    # TODO(phase 7, colour mode): the shadow base stays black; if hyprctl reload flickers on a switch, set the border colours with hyprctl keyword instead.
     """HYPR_COLORS, a Lua file that returns { activeBorder, inactiveBorder, shadow } as "rgba(RRGGBBAA)" strings (the ink with
     the BORDER and SHADOW alphas); aptus-look.lua reads it with dofile."""
     assert mode in MODES and all(k in p for k in PALETTE_KEYS), "palette comes from palette(mode)"
@@ -630,6 +638,7 @@ def hyprlock(p, mode, dry):
 
 
 def zen(p, mode, dry):
+    # TODO(phase 7, colour mode): render with colors_all(p, mode): the CSS carries both palettes.
     """userChrome.css and userContent.css in every Zen profile."""
     assert mode in MODES and all(k in p for k in PALETTE_KEYS), "palette comes from palette(mode)"
     assert isinstance(dry, bool) and os.path.isabs(CFG) and os.path.isabs(STATE), "XDG folders must be absolute paths"
@@ -648,6 +657,7 @@ def zen(p, mode, dry):
 
 
 def thunderbird(p, mode, dry):
+    # TODO(phase 7, colour mode): render with colors_all(p, mode): the CSS carries both palettes.
     """userChrome.css and userContent.css in every Thunderbird profile (nothing if there is none yet)."""
     assert mode in MODES and all(k in p for k in PALETTE_KEYS), "palette comes from palette(mode)"
     assert isinstance(dry, bool) and os.path.isabs(CFG) and os.path.isabs(STATE), "XDG folders must be absolute paths"
@@ -666,6 +676,7 @@ def thunderbird(p, mode, dry):
 
 
 def spotify(p, mode, dry):
+    # TODO(phase 7, colour mode): render color.ini with colors_all (sections light and dark); spicetify_apply(mode, dry) sets color_scheme and applies.
     """Spicetify theme SPICETIFY_THEME (color.ini and user.css), written even if Spicetify is not installed yet; applying it is left to the user."""
     assert mode in MODES and all(k in p for k in PALETTE_KEYS), "palette comes from palette(mode)"
     assert isinstance(dry, bool) and os.path.isabs(CFG) and os.path.isabs(STATE), "XDG folders must be absolute paths"
@@ -684,6 +695,8 @@ APPS = dict(kitty=kitty, ghostty=ghostty, btop=btop, gtk=gtk, qt=qt, zathura=zat
 
 
 def main() -> int:
+    # TODO(phase 7, colour mode): add --quiet (no stdout, also the "NAME:" lines); register xsettingsd in APPS and DEFAULT_APPS.
+    # The template check must use colors_all(p, mode); until then it stops every run, because Zen, Thunderbird and Spotify use light_/dark_ roles.
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--mode", choices=list(MODES), default="light")
     ap.add_argument("--dry-run", action="store_true")

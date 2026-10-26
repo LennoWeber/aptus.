@@ -19,6 +19,8 @@ Singleton {
     property real blend: 0
     // Colour mode: 0 = light palette .. 1 = dark palette (ColorModeState drives it); the night light tints on top.
     property real darkAmount: 0
+    // TODO(phase 7, colour mode): Behavior on darkAmount (colorModeMs) and onDarkAmountChanged -> applyPalette(blend, darkAmount); no loop with blend.
+    // TODO(phase 7, colour mode): delete motion.colorModeMs from theme/tokens.json (this constant is the only source), or read it in load().
     readonly property int colorModeMs: 300
     // How much of the night tint stays in dark mode (1 = as strong as in light mode).
     readonly property real nightTintInDark: 0.35
@@ -109,12 +111,14 @@ Singleton {
             return
         }
         // TODO(phase 7, Bild-Theming): read themeStyles and themeExtraction from the file; the shell root then calls refreshTheme(entries). The palette stays the Standard source.
+        // TODO(phase 7, colour mode): start with the colour mode in effect: applyPalette(blend, darkAmount).
         applyPalette(blend)
     }
 
     // Palette between day (0) and night (1) (night light), and `dark` (0 light .. 1 dark, the colour mode) towards the dark
     // palette; the night tint is applied on top, weaker the darker it is (nightTintInDark).
     function paletteAt(blend: real, dark: real): var {
+        // TODO(phase 7, colour mode): mix day with palette.dark by `dark` first, then toward night by blend * (1 - dark * (1 - nightTintInDark)); only "#" values, skip note, modes, brights, roles, accents.
         if (!(blend >= 0 && blend <= 1)) throw new Error("invariant: Tokens.paletteAt: blend outside 0..1")
         if (!palette) throw new Error("invariant: Tokens.paletteAt: tokens not loaded")
         const out = {}
@@ -131,9 +135,11 @@ Singleton {
 
     // Update the colour properties.
     function applyPalette(blend: real, dark: real): void {
+        // TODO(phase 7, colour mode): store `dark` in darkAmount without writing blend back (onDarkAmountChanged calls this function).
         if (!(blend >= 0 && blend <= 1)) throw new Error("invariant: Tokens.applyPalette: blend outside 0..1")
         // TODO(phase 7, night light): NightLightState calls this when its blend changes; move smoothly over minutes, never a flash.
         // TODO(phase 7, Bild-Theming): with a themeSource other than Standard the style owns bg, surface, line and the ink colours; do not overwrite them here.
+        // TODO(phase 7, colour mode): paletteAt(blend, dark) and applyDerived(p, dark); with a style as source and dark above 0 the Standard colours apply.
         const p = paletteAt(blend)
         root.blend = blend
         bg = p.bg
@@ -175,6 +181,7 @@ Singleton {
     // The colour theme from the source selected by themeSource: the neutral palette, the fallback colours of the style, or
     // the colours of the wallpaper. `entries` are the wallpaper colours (WallpaperColors.entries; empty for Fixed or when the
     // picture cannot be read). Tokens does not import the services, so the caller (shell.qml) passes them.
+    // TODO(phase 7, colour mode): with darkAmount above 0 apply the Standard colours, and run again when darkAmount returns to 0 (also nightShift).
     function refreshTheme(entries: var): void {
         throw new Error("not implemented")
     }

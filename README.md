@@ -51,6 +51,8 @@ Start with `aptus`. Send commands to the running shell with `aptus msg <command>
 
 ## Colours for the apps
 
+<!-- TODO(phase 7, colour mode): describe Super+T, appearance.colorMode, --quiet, Spicetify color_scheme light|dark and the Spotify restart; fastfetch uses aptus-config.jsonc. -->
+
 `aptus-theme-apps` paints the programs around the shell with the same palette (`theme/tokens.json`, light or dark, templates in `theme/apps`):
 
 ```

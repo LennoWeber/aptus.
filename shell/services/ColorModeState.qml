@@ -20,14 +20,19 @@ Scope {
     property string applyError: ""
     property int debounceMs: 250               // several presses repaint the apps once
 
+    // TODO(phase 7, colour mode): command = appsCommand(dark), onExited -> onAppsExited(exitCode); failures only logged.
     Process {
         id: themeApps
     }
 
+    // TODO(phase 7, colour mode): onTriggered -> run the repaint (or set pending if one runs).
     Timer {
         id: debounce
         interval: root.debounceMs
     }
+
+    // TODO(phase 7, colour mode): Connections on appSettings.valueChanged(path) -> onSettingChanged, on nightLight.enabledChanged -> onNightLightChanged; settings are loaded before start().
+
 
     // The mode of the setting as an Enums.ColorMode; -1 for a name that is not light, dark or auto.
     function modeFromName(name: string): int {
