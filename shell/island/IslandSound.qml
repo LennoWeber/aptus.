@@ -16,4 +16,9 @@ FocusScope {
     property color fill
 
     signal closeRequested()
+
+    // A tap on a device: it becomes the output.
+    function setOutput(outputId: string): void {
+        throw new Error("not implemented")
+    }
 }

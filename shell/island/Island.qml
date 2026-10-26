@@ -54,7 +54,7 @@ PanelWindow {
     property int view: islandState ? islandState.view : Enums.IslandView.Home
     property bool isOpen: stage === Enums.IslandStage.Open
     property bool homeWithQuick     // the opened Home shows the quick settings below the header (every design)
-    property int openGrowMs         // ms: the body grows to an opened view in this time
+    readonly property int openGrowMs: 220   // ms: the body grows to an opened view in this time
     property bool isHover: stage === Enums.IslandStage.Hover
     property bool isAlert: stage === Enums.IslandStage.Alert
     onIsPinnedChanged: if (isPinned && !isHover) throw new Error("invariant: Island: pinned without the hover card")
@@ -119,8 +119,9 @@ PanelWindow {
         return { w: restWidth, h: IslandLook.restHeight }
     }
 
-    // Duration (ms) of the body's growth for a stage (Enums.IslandStage): hoverGrowMs for Hover, Tokens.durSlow otherwise.
-    function growMsFor(stageId: int): int {
+    // Duration (ms) of the body's growth for a stage and a view (Enums.IslandStage, Enums.IslandView): hoverGrowMs for Hover,
+    // openGrowMs for an opened view, Tokens.durSlow otherwise.
+    function growMsFor(stageId: int, viewId: int): int {
         if (stageId < Enums.IslandStage.Rest || stageId > Enums.IslandStage.Open) throw new Error("invariant: Island.growMsFor: unknown stage")
         return stageId === Enums.IslandStage.Hover ? hoverGrowMs : Tokens.durSlow
     }

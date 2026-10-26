@@ -26,6 +26,14 @@ FocusScope {
 
     signal closeRequested()
 
+    // The gallery: at most maxColumns pictures in a row and maxRows rows in view; the sizes of the parts around the grid.
+    readonly property int maxColumns: 4
+    readonly property int maxRows: 3
+    readonly property int gap: 12
+    readonly property int padding: 16
+    readonly property int headerHeight: 44
+    readonly property int footerHeight: 40
+
     // How many cards are shown around the middle one.
     readonly property int visibleSide: 3
     readonly property int cardWidth: 200
@@ -38,6 +46,26 @@ FocusScope {
     function step(delta: int): void {
         if (pictures.length === 0) return
         selectedIndex = Math.max(0, Math.min(pictures.length - 1, selectedIndex + delta))
+    }
+
+    // Columns of the grid for a number of pictures: one per picture up to maxColumns.
+    function columnsFor(count: int): int {
+        throw new Error("not implemented")
+    }
+
+    // Size { w, h } of one picture for a number of pictures: large for one or two, smaller as there are more.
+    function thumbSizeFor(count: int): var {
+        throw new Error("not implemented")
+    }
+
+    // Move the selection in the grid by dx columns and dy rows, stopping at the edges.
+    function moveSelection(dx: int, dy: int): void {
+        throw new Error("not implemented")
+    }
+
+    // Select the picture at index (a tap or a hover).
+    function setSelected(index: int): void {
+        throw new Error("not implemented")
     }
 
     // Set the middle picture as wallpaper.

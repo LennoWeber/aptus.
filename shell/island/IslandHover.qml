@@ -40,6 +40,11 @@ FocusScope {
 
     implicitHeight: column.implicitHeight + 20
 
+    // Text on the right of the header row of a section (the network, the number of devices, the output).
+    function sectionValue(name: string): string {
+        throw new Error("not implemented")
+    }
+
     // Open the section name ("wifi" or "bluetooth"), or close it when it is open; the other one closes.
     function toggleSection(name: string): void {
         if (name !== "wifi" && name !== "bluetooth") throw new Error("invariant: IslandHover.toggleSection: unknown section")

@@ -1117,3 +1117,9 @@ Arbeitsregel wie zuvor: nie auf „weiter“ warten, jede Phase protokollieren u
 - Neu: `island/IslandSound.qml` (nur Properties und Signal, Eintrag im `qmldir`).
 - Erweitert: `IslandWallpaper` (`columns`, `thumbWidth`, `thumbHeight`, `visibleRows`, `contentWidth`, `contentHeight`, `folderLabel`), `IslandHover` (`audioState`, Kommentar: Bereich `sound` erlaubt), `Island` (`homeWithQuick`, `openGrowMs`), `Wallpaper` (`count`, `loaded`).
 - Prüfung: Diff gelesen; nur Properties und eine leere Hülle, keine Funktion, keine Bindung, keine Konstante (Werte kommen in Phase 3); nicht gebaut.
+
+**Phase 3 (Signaturen), erledigt:**
+- Neue Funktionen mit Platzhalter (`throw new Error("not implemented")`): `IslandWallpaper.columnsFor`, `thumbSizeFor`, `moveSelection`, `setSelected`; `IslandSound.setOutput`; `IslandHover.sectionValue`.
+- Bestehend, nur Signatur: `Island.growMsFor(stageId)` → `growMsFor(stageId, viewId)`; der Körper bleibt, ein fehlendes Argument stört dort nicht (die zwei Aufrufer in den `Behavior` rufen noch mit einem Argument auf).
+- Konstanten: `Island.openGrowMs` 220 ms; in `IslandWallpaper` `maxColumns` 4, `maxRows` 3, `gap` 12, `padding` 16, `headerHeight` 44, `footerHeight` 40 (die alten Karussell-Konstanten bleiben bis Phase 7 stehen).
+- Prüfung: Diff gelesen; nur Signaturen, Platzhalter, Konstanten; keine Struktur geändert, keine Aufrufe eingebaut; nicht gebaut.
