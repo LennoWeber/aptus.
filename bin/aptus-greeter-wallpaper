@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Set the picture of the aptus login screen. Runs as root through pkexec (installed to /usr/local/bin by install.sh --greeter).
 
-    aptus-greeter-wallpaper PATH     copy the picture to /usr/local/share/aptus and point greeter.json at it
-    aptus-greeter-wallpaper --clear  remove the picture
+    aptus-greeter-wallpaper PATH [--fit FIT]   copy the picture to /usr/local/share/aptus and point greeter.json at it
+                                               (FIT: fill, fit, stretch, center or tile; default: leave the config's fit as it is)
+    aptus-greeter-wallpaper --clear            remove the picture
 
 The caller is not trusted: PATH is read with the caller's own rights (never as root), must be a jpg, png or webp
 and at most 32 MB. Nothing else is written."""
@@ -16,6 +17,7 @@ SHARE = "/usr/local/share/aptus"
 CONFIG = "/etc/aptus/greeter.json"
 MAX_BYTES = 32 * 1024 * 1024
 TARGET_PREFIX = "wallpaper"
+FITS = ("fill", "fit", "stretch", "center", "tile")
 
 
 def fail(message):
@@ -47,7 +49,13 @@ def remove_old():
             os.remove(os.path.join(SHARE, name))
 
 
-def set_config(wallpaper):
+def parse_args(argv):
+    """(path, clear, fit) from the command line: path is None with --clear, fit is None when --fit is not given.
+    Anything else ends the program with the usage message."""
+    raise NotImplementedError
+
+
+def set_config(wallpaper, fit=None):
     with open(CONFIG, encoding="utf-8") as f:
         config = json.load(f)
     config["wallpaper"] = wallpaper

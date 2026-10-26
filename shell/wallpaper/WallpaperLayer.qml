@@ -18,6 +18,11 @@ PanelWindow {
 
     readonly property string url: Wallpaper.current ? "file://" + Wallpaper.current : ""
 
+    // The size the picture is decoded at: the screen for Fill, Fit and Stretch, its own size for Center and Tile.
+    function sourceSizeFor(fit: int): size {
+        throw new Error("not implemented")
+    }
+
     Image {
         id: shown
         anchors.fill: parent

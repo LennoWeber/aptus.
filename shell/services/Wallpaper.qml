@@ -34,8 +34,8 @@ Singleton {
     property bool loginSupported
     property string loginStatus         // "", "working", "done", "failed"
 
-    // An empty path removes the login picture.
-    function setLoginWallpaper(path: string): void {
+    // An empty path removes the login picture. `fit` is an Enums.WallpaperFit and goes into the login screen's config.
+    function setLoginWallpaper(path: string, fit: int): void {
         if (!loginSupported) throw new Error("invariant: Wallpaper.setLoginWallpaper: the login helper is not installed")
         if (path !== "" && path[0] !== "/") throw new Error("invariant: Wallpaper.setLoginWallpaper: path must be absolute")
         loginStatus = "working"
@@ -85,5 +85,16 @@ Singleton {
                 root.loaded = true
             }
         }
+    }
+
+    // Hand the current picture and fit to the login helper when loginSync is on, the helper is installed and they differ from
+    // loginSynced. Quiet when the helper refuses (no password prompt is shown for an automatic sync); the reason goes to the log.
+    function syncLogin(): void {
+        throw new Error("not implemented")
+    }
+
+    // The name of an Enums.WallpaperFit as the setting and the login config spell it.
+    function fitName(fit: int): string {
+        throw new Error("not implemented")
     }
 }

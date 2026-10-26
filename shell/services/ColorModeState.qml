@@ -49,20 +49,9 @@ Scope {
         function onEnabledChanged(): void { root.onNightLightChanged() }
     }
 
-    // The mode of the setting as an Enums.ColorMode; -1 for a name that is not light, dark or auto.
-    function modeFromName(name: string): int {
-        const modes = { light: Enums.ColorMode.Light, dark: Enums.ColorMode.Dark, auto: Enums.ColorMode.Auto }
-        return modes[name] ?? -1
-    }
-
-    // The setting value of an Enums.ColorMode: "light", "dark" or "auto".
-    function nameFromMode(m: int): string {
-        if (!(m >= Enums.ColorMode.Light && m <= Enums.ColorMode.Auto)) throw new Error("invariant: ColorModeState.nameFromMode: unknown mode")
-        return ["light", "dark", "auto"][m]
-    }
-
-    // Whether the mode `m` is dark right now (Auto follows nightLight.enabled).
-    function resolve(m: int): bool {
+    // The theme in effect for the setting value `chosen`: itself, light or dark for auto (dark while nightLight.enabled), and for
+    // wallpaper the id "wallpaper" once ThemeSource.palette is there, else the theme that was showing.
+    function resolve(chosen: string): string {
         if (!(m >= Enums.ColorMode.Light && m <= Enums.ColorMode.Auto)) throw new Error("invariant: ColorModeState.resolve: unknown mode")
         if (!nightLight) throw new Error("invariant: ColorModeState.resolve: nightLight not set")
         return m === Enums.ColorMode.Dark || (m === Enums.ColorMode.Auto && nightLight.enabled === true)
@@ -99,15 +88,15 @@ Scope {
         if (mode === Enums.ColorMode.Auto) update()
     }
 
-    // Choose a mode: write the setting; valueChanged then switches the shell and repaints the apps.
-    function setMode(m: int): void {
+    // Choose a theme (a value of appearance.theme): write the setting; valueChanged then switches the shell and repaints the apps.
+    function setTheme(id: string): void {
         if (!(m >= Enums.ColorMode.Light && m <= Enums.ColorMode.Auto)) throw new Error("invariant: ColorModeState.setMode: unknown mode")
         if (!appSettings) throw new Error("invariant: ColorModeState.setMode: appSettings not set")
         appSettings.set("appearance.colorMode", nameFromMode(m))
         appSettings.writeUserConfig()     // so the choice survives a restart
     }
 
-    // Light <-> dark by hand (Super+T); Auto becomes the opposite of what is in effect.
+    // Light <-> dark by hand; Auto becomes the opposite of what is in effect. (Replaced by next() and the picker; goes in phase 7.)
     function toggle(): void {
         setMode(dark ? Enums.ColorMode.Light : Enums.ColorMode.Dark)
     }
@@ -121,8 +110,8 @@ Scope {
         Tokens.darkAmount = dark ? 1 : 0
     }
 
-    // The command line of the repaint for the mode in effect: aptus-theme-apps --mode <light|dark> --all --quiet.
-    function appsCommand(isDark: bool): var {
+    // The command line of the repaint for a theme in effect: aptus-theme-apps --theme <id> --all --quiet.
+    function appsCommand(theme: string): var {
         return [Tokens.rootDir + "/bin/aptus-theme-apps", "--mode", isDark ? "dark" : "light", "--all", "--quiet"]
     }
 
@@ -153,5 +142,40 @@ Scope {
             pending = false
             repaintApps()
         }
+    }
+
+    // Whether `id` is a value of appearance.theme: light, dark, auto, wallpaper or one of the themes of tokens.json.
+    function isValid(id: string): bool {
+        throw new Error("not implemented")
+    }
+
+    // The values the picker steps through, in its order: Tokens.themeIds() (light, dark, the colour themes, wallpaper).
+    function choices(): var {
+        throw new Error("not implemented")
+    }
+
+    // Choose the theme `step` places after (or before, negative) the one in effect; wraps around. Used by Super+T in the picker.
+    function next(step: int): void {
+        throw new Error("not implemented")
+    }
+
+    // Show the theme `id` in the shell only (the picker's preview); the apps and the setting stay as they are.
+    function preview(id: string): void {
+        throw new Error("not implemented")
+    }
+
+    // End the preview: back to the theme in effect (resolved).
+    function cancelPreview(): void {
+        throw new Error("not implemented")
+    }
+
+    // Keep the previewed theme: same as setTheme(previewId), then the preview ends.
+    function commitPreview(): void {
+        throw new Error("not implemented")
+    }
+
+    // ThemeSource has a new palette (the wallpaper changed): when the wallpaper theme is chosen, fade to it and repaint the apps.
+    function onWallpaperThemeChanged(): void {
+        throw new Error("not implemented")
     }
 }

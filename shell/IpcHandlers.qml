@@ -26,6 +26,7 @@ Scope {
     property var wallpaperPicker  // WallpaperPicker
     property var islandState    // IslandState
     property var colorModeState // ColorModeState
+    property var themePicker    // ThemePicker
 
     function toggleRotationLock(): void {
         deviceMode.setRotationLocked(!deviceMode.rotationLocked)
@@ -145,12 +146,12 @@ Scope {
             else root.settingsState.openWindow("")
         }
 
-        // Light <-> dark for the shell and the apps (Super+T).
+        // The theme picker (Super+T): open it, or move on to the next theme while it is open. (Body still toggles light/dark until phase 7.)
         function themeModeToggle(): void {
             root.colorModeState.toggle()
         }
 
-        // Set the colour mode: light, dark or auto (anything else is logged and ignored).
+        // Set the theme by its id (light, dark, auto, ocean, forest, dusk, sand, sky, wallpaper); anything else is logged and ignored.
         function themeModeSet(name: string): void {
             const m = root.colorModeState.modeFromName(name)
             if (m < 0) {
@@ -158,6 +159,11 @@ Scope {
                 return
             }
             root.colorModeState.setMode(m)
+        }
+
+        // Move the theme on by `step` places (1 next, -1 previous) without the picker: `aptus msg theme-next 1`.
+        function themeNext(step: int): void {
+            throw new Error("not implemented")
         }
 
         // Keep the screen as it is, or let it follow the sensor again.

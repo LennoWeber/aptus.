@@ -21,4 +21,34 @@ PanelWindow {
 
     visible: false
     color: "transparent"
+
+    // Open on the focused screen with the theme in effect selected, remember it as startThemeId.
+    function show(): void {
+        throw new Error("not implemented")
+    }
+
+    // Close. `keep` true keeps the selected theme (commit), false puts the starting theme back.
+    function hide(keep: bool): void {
+        throw new Error("not implemented")
+    }
+
+    // Super+T: open when closed, else move on to the next theme.
+    function toggle(): void {
+        throw new Error("not implemented")
+    }
+
+    // Move the selection by `step` places (wraps) and show that theme in the shell.
+    function move(step: int): void {
+        throw new Error("not implemented")
+    }
+
+    // Select the entry at `index` and show its theme in the shell (a click or a hover).
+    function select(index: int): void {
+        throw new Error("not implemented")
+    }
+
+    // The index in `entries` of a theme id, -1 when it is not there.
+    function indexOfTheme(id: string): int {
+        throw new Error("not implemented")
+    }
 }

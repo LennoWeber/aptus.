@@ -73,6 +73,11 @@ Scope {
     function isDefault(entry: var): bool { return JSON.stringify(valueOf(entry)) === JSON.stringify(defaultOf(entry)) }
     function editable(entry: var): bool { return ["toggle", "choice", "slider", "number", "text", "list", "location", "tileList", "keyMap"].indexOf(entry.kind) >= 0 }
 
+    // Whether an entry is shown given its `visibleWhen` ({ path, equals } or { path, notEquals } against the setting in effect).
+    function entryVisible(entry: var): bool {
+        throw new Error("not implemented")
+    }
+
     // Entries of the current page or search, hiding advanced ones unless asked for.
     function visibleEntries(): var {
         const q = query.trim().toLowerCase()

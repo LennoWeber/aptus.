@@ -54,6 +54,14 @@ PALETTE_KEYS = ("bg", "surface", "surfaceAlt", "line", "ink", "inkSoft", "inkFai
                 "blue", "magenta", "cyan", "bblue", "bmagenta", "bcyan")
 MODES = ("light", "dark")
 HEX = re.compile(r"#[0-9A-Fa-f]{6}")
+# Themes: light and dark are the two neutral palettes (modes), the colour themes are palette.themes of tokens.json, and
+# "wallpaper" is the palette made by bin/aptus-wallpaper-theme. Every theme has a base, light or dark, which is the mode
+# for everything that only knows light or dark.
+BUILTIN_THEMES = MODES
+WALLPAPER_THEME = os.path.join(STATE, "aptus", "wallpaper-theme.json")
+THEME_ID = re.compile(r"[a-z][a-z0-9-]*")
+# The roles every theme palette has besides PALETTE_KEYS[:10]: accent (sliders and meters), onAccent, on (switch on).
+THEME_EXTRA_KEYS = ("accent", "onAccent", "on")
 
 # Invariants of the constants: alphas are real alphas and the active border is stronger than the inactive one, the
 # Spicetify theme name is one folder name. Target paths are checked where they are used, so a broken XDG variable
@@ -68,6 +76,28 @@ def palette(mode: str) -> dict:
     p = {k: v for k, v in t[t["modes"][mode]].items() if k != "note"}
     p.update({k: v for k, v in t["accents"][mode].items() if k != "note"})
     return p
+
+
+def theme_ids() -> list:
+    """The ids --theme accepts: light, dark, the colour themes of tokens.json and, when its file exists, wallpaper."""
+    raise NotImplementedError
+
+
+def theme_data(theme: str) -> dict:
+    """The raw palette of a theme as in tokens.json (roles, accent roles, base, name, optional accents). For wallpaper it
+    is read from WALLPAPER_THEME. Raises ValueError for an unknown theme."""
+    raise NotImplementedError
+
+
+def theme_mode(theme: str) -> str:
+    """The base of a theme, "light" or "dark" (light for light, dark for dark)."""
+    raise NotImplementedError
+
+
+def theme_palette(theme: str) -> dict:
+    """Like palette(mode) for any theme: the roles of the theme plus the syntax hues (its own accents, or those of its base),
+    without the keys note, name and base."""
+    raise NotImplementedError
 
 
 def _lum(h: str) -> float:
@@ -152,8 +182,9 @@ def colors_of(p: dict, mode: str) -> dict:
     return c
 
 
-def colors_all(p: dict, mode: str) -> dict:
-    """colors_of(p, mode) plus every role of both palettes as light_ROLE and dark_ROLE (templates with both schemes)."""
+def colors_all(p: dict, mode: str, theme: str = None) -> dict:
+    """colors_of(p, mode) plus every role of both palettes as light_ROLE and dark_ROLE (templates with both schemes). For a
+    theme other than light and dark both sets are the colours of that theme, so the app looks the same whichever scheme it picks."""
     c = colors_of(p, mode)
     for m in MODES:
         for k, v in colors_of(palette(m), m).items():

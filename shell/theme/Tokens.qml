@@ -127,9 +127,9 @@ Singleton {
         applyPalette(blend, darkAmount)
     }
 
-    // Palette between day (0) and night (1) (night light), and `dark` (0 light .. 1 dark, the colour mode) towards the dark
-    // palette; the night tint is applied on top, weaker the darker it is (nightTintInDark).
-    function paletteAt(blend: real, dark: real): var {
+    // Palette between day (0) and night (1) (night light) of the mix of fromColors and toColors at `fade` (0 .. 1, themeFade);
+    // the night tint is applied on top, weaker the darker the mix is (darknessAt, nightTintInDark).
+    function paletteAt(blend: real, fade: real): var {
         if (!(blend >= 0 && blend <= 1)) throw new Error("invariant: Tokens.paletteAt: blend outside 0..1")
         if (!(dark >= 0 && dark <= 1)) throw new Error("invariant: Tokens.paletteAt: dark outside 0..1")
         if (!palette) throw new Error("invariant: Tokens.paletteAt: tokens not loaded")
@@ -154,7 +154,7 @@ Singleton {
     }
 
     // Update the colour properties.
-    function applyPalette(blend: real, dark: real): void {
+    function applyPalette(blend: real, fade: real): void {
         if (!(blend >= 0 && blend <= 1)) throw new Error("invariant: Tokens.applyPalette: blend outside 0..1")
         if (!(dark >= 0 && dark <= 1)) throw new Error("invariant: Tokens.applyPalette: dark outside 0..1")
         // NightLightState calls this when its blend changes (it moves over seconds, never a flash).
@@ -175,10 +175,9 @@ Singleton {
         applyDerived(paletteAt(0, dark), dark)
     }
 
-    // The colours that applyPalette does not take from the palette for the Standard source: bar, barInk, barInkSoft,
-    // barInkFaint, selection, wash1 to wash4 and glass, for the palette `p` (from paletteAt) and `dark` (0 .. 1).
-    // Styles other than Standard are light only: while dark is above 0 the Standard colours are used.
-    function applyDerived(p: var, dark: real): void {
+    // The colours that follow the theme without the night tint: bar, barInk, barInkSoft, barInkFaint, selection, wash1 to
+    // wash4 and glass, for the palette `p` (from paletteAt with blend 0) and `darkness` (0 .. 1).
+    function applyDerived(p: var, darkness: real): void {
         if (!(dark >= 0 && dark <= 1)) throw new Error("invariant: Tokens.applyDerived: dark outside 0..1")
         if (!p || p.bg === undefined) throw new Error("invariant: Tokens.applyDerived: palette incomplete")
         bar = p.bg
@@ -193,9 +192,9 @@ Singleton {
         glass = glassFor(p.surface, dark)
     }
 
-    // The fill of the blurred surfaces (Control Center, launcher) for a surface colour: translucent paper in light mode,
-    // translucent dark surface in dark mode; `dark` is 0 .. 1 like darkAmount. Returns "#AARRGGBB".
-    function glassFor(base: color, dark: real): color {
+    // The fill of the blurred surfaces (Control Center, launcher) for a surface colour: translucent, a little denser the
+    // darker the theme is; `darkness` is 0 .. 1 (darknessAt). Returns "#AARRGGBB".
+    function glassFor(base: color, darkness: real): color {
         if (!(dark >= 0 && dark <= 1)) throw new Error("invariant: Tokens.glassFor: dark outside 0..1")
         return Qt.rgba(base.r, base.g, base.b, 0.72 + 0.08 * dark)
     }
@@ -211,43 +210,57 @@ Singleton {
         }
     }
 
-    // The colour theme from the source selected by themeSource: the neutral palette, the fallback colours of the style, or
-    // the colours of the wallpaper. `entries` are the wallpaper colours (WallpaperColors.entries; empty for Fixed or when the
-    // picture cannot be read). Tokens does not import the services, so the caller (shell.qml) passes them.
-    // With darkAmount above 0 the Standard colours apply (image themes are light only), and refreshTheme runs again when darkAmount returns to 0.
-    function refreshTheme(entries: var): void {
+    // The ids of the themes that can be chosen, in the order of the picker: light, dark, ocean, forest, dusk, sand, sky, wallpaper.
+    // "auto" is a setting value, not a theme. "wallpaper" is listed only when customTheme is set.
+    function themeIds(): var {
         throw new Error("not implemented")
     }
 
-    // Pure: the shell colours for a style from the source colours (entries as in WallpaperColors.entries, zero to four; missing
-    // ones come from the style's fallbackColors). Returns { paper, surface, surfaceAlt, line, ink, inkSoft, inkFaint, selection,
-    // bar, barInk, barInkSoft, barInkFaint, glass, grain, wash: [4], signal: { ok, warn, critical } }
-    // with every colour as "#RRGGBB" (glass as "#AARRGGBB"), computed from themeStyles in tokens.json.
-    function styleColors(style: int, entries: var, tone: int): var {
+    // The flat colour map ({ role: "#RRGGBB", base: "light" | "dark", name }) of a theme: light is palette.day, dark is
+    // palette.dark (base dark), the colour themes are palette.themes, wallpaper is customTheme. null for an unknown id,
+    // or for wallpaper while customTheme is null.
+    function themeColors(id: string): var {
         throw new Error("not implemented")
     }
 
-    // Write the result of styleColors into the colour properties.
-    function applyStyle(colors: var): void {
+    // Whether a theme is dark (its base), 0 or 1; unknown ids count as light.
+    function isDarkTheme(id: string): bool {
         throw new Error("not implemented")
     }
 
-    // Move a colour toward the warm night tint by `blend` (0 day .. 1 night), so the night light also works on style colours.
-    function nightShift(c: color, blend: real): color {
+    // The darkness (0 light .. 1 dark) of the colours showing at `fade` between fromColors and toColors; the night tint is weaker the darker it is.
+    function darknessAt(fade: real): real {
         throw new Error("not implemented")
     }
 
-    // Colour maths for styleColors.
-    function hexToHsl(hex: string): var {        // { h: 0..360, s: 0..100, l: 0..100 }
+    // Pure: mix two flat colour maps role by role. t in 0..1; roles missing in either map are taken from the other.
+    function mixColors(a: var, b: var, t: real): var {
         throw new Error("not implemented")
     }
 
-    function hslToHex(h: real, s: real, l: real): string {
+    // Show the theme `id`: `animate` fades from the colours showing now (also while a fade runs), otherwise it switches at once
+    // (start-up). Does nothing for an unknown id.
+    function setTheme(id: string, animate: bool): void {
         throw new Error("not implemented")
     }
 
-    // Hue h moved toward `target` by the fraction `amount`, along the shorter way round the colour wheel.
-    function shiftHue(h: real, target: real, amount: real): real {
+    // The generated palette for the theme "wallpaper" (ThemeSource.palette), or null. When the wallpaper theme shows, it fades to the new colours.
+    function setCustomTheme(colors: var): void {
+        throw new Error("not implemented")
+    }
+
+    // Fill themeList from the loaded tokens (and customTheme) so that the picker and the settings can draw samples.
+    function buildThemeList(): void {
+        throw new Error("not implemented")
+    }
+
+    // The Enums.WallpaperFit for a name of the setting wallpaper.fit (fill, fit, stretch, center, tile); Fill for anything else.
+    function fitFromName(name: string): int {
+        throw new Error("not implemented")
+    }
+
+    // The Image.fillMode that shows a picture the way `fit` (Enums.WallpaperFit) says. Shared by the desktop and the login screen.
+    function fillModeFor(fit: int): int {
         throw new Error("not implemented")
     }
 }

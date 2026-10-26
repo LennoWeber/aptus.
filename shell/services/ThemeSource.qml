@@ -30,4 +30,26 @@ Singleton {
         path: root.file
         printErrors: false
     }
+
+    // Make the palette for the picture at `path` (absolute) with the tone `tone` (auto | light | dark): runs
+    // bin/aptus-wallpaper-theme, sets status to "working", then "ready" and `palette`, or "failed" and `error`. An empty path
+    // or an unreadable picture fails; the previous palette stays.
+    function generate(path: string, tone: string): void {
+        throw new Error("not implemented")
+    }
+
+    // Make the palette for Wallpaper.current with the setting appearance.wallpaperTone; does nothing when it is already made for that picture and tone.
+    function refresh(): void {
+        throw new Error("not implemented")
+    }
+
+    // Read `file` into `palette` (start-up: the palette of the last run), when it belongs to Wallpaper.current.
+    function read(): void {
+        throw new Error("not implemented")
+    }
+
+    // The generator finished: on code 0 read the file and emit changed(), else status "failed" with the first line of its stderr.
+    function onGenerated(code: int): void {
+        throw new Error("not implemented")
+    }
 }
