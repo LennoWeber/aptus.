@@ -27,7 +27,7 @@ Singleton {
     property real radiusRest: entry("radiusRest") ?? 14
     property real radiusOpen: entry("radiusOpen") ?? 22
     // The design (setting island.design) decides the height at rest and whether the island floats; the look the rest.
-    property string design: "capsule"                        // capsule, ninja, ticker or shade
+    property string design: "capsule"                        // capsule, pill, ticker or shade
     readonly property real restHeight: design === "ninja" ? 36 : design === "shade" ? 6 : Tokens.barHeight
     readonly property real gap: design === "ninja" ? 6 : design === "capsule" ? (entry("gap") ?? 0) : 0   // distance from the top edge in px, 0 = flush with the edge
     property bool monoClock: entry("monoClock") === true     // the time in the mono font

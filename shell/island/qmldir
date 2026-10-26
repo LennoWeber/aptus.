@@ -7,7 +7,7 @@ IslandAlert 1.0 IslandAlert.qml
 IslandMedia 1.0 IslandMedia.qml
 IslandButton 1.0 IslandButton.qml
 IslandHome 1.0 IslandHome.qml
-IslandHover 1.0 IslandHover.qml
+IslandQuick 1.0 IslandQuick.qml
 IslandPower 1.0 IslandPower.qml
 IslandScreenshot 1.0 IslandScreenshot.qml
 IslandClipboard 1.0 IslandClipboard.qml

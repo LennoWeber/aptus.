@@ -7,17 +7,16 @@ import Quickshell
 Scope {
     id: root
 
-    // Settings (island.alerts, island.alertSeconds, island.mediaWings, island.hoverOpen).
+    // Settings (island.alerts, island.alertSeconds, island.mediaWings).
     property bool enabled                // the island is the shown top element
     property bool alertsEnabled: true
     property int alertHoldMs: 4000
     property bool mediaWingsEnabled: true
-    property bool hoverEnabled: true
 
     // Stage and view.
     property int stage: Enums.IslandStage.Rest
     property int view: Enums.IslandView.Home
-    property string openScreen: ""       // name of the screen whose island is open or hovered, "" when none
+    property string openScreen: ""       // name of the screen whose island is open, "" when none
 
     // Alerts.
     property var alert: null             // { id, text, detail, severity, tileId, holdMs } or null
@@ -26,13 +25,6 @@ Scope {
 
     // Enums.MorphTarget: set while the launcher or the control center is shown.
     property int morph: Enums.MorphTarget.None
-
-    property string pendingHoverScreen: ""
-    property bool pinned                 // the hover card stays (keyboard focus for the password field) until Esc or a click elsewhere
-
-    // How long the pointer rests on the island before the hover card shows, and how long it must be away before the card goes.
-    property int hoverInMs: 90
-    property int hoverOutMs: 220
 
     signal alertShown(var alert)
     signal opened(string screenName, int view)
@@ -150,18 +142,6 @@ Scope {
     Component.onCompleted: if (hoverInMs <= 0 || hoverOutMs <= 0) throw new Error("invariant: IslandState: hover times must be positive")
 
     Timer { id: hold; onTriggered: root.dismissAlert() }
-    // Resting hoverInMs on the island shows the hover panel; leaving it for hoverOutMs takes it back.
-    Timer {
-        id: hoverIn
-        interval: root.hoverInMs
-        onTriggered: {
-            root.openScreen = root.pendingHoverScreen
-            root.view = Enums.IslandView.Home
-            root.stage = Enums.IslandStage.Hover
-            hold.stop()
-        }
-    }
-    Timer { id: hoverOut; interval: root.hoverOutMs; onTriggered: root.close() }
 
     onEnabledChanged: if (!enabled) { pinned = false; hold.stop(); hoverIn.stop(); hoverOut.stop(); alert = null; queue = []; openScreen = ""; view = Enums.IslandView.Home; stage = Enums.IslandStage.Rest; morph = Enums.MorphTarget.None }
 }

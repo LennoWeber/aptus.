@@ -5,8 +5,8 @@ import qs.theme
 import qs.components
 import qs.services
 
-// The hover panel: the quick settings that the bar's dropdowns had, in one card (volume, brightness, switches,
-// music, battery), shown while the pointer rests on the island.
+// The quick settings card: the quick settings that the bar's dropdowns had, in one card (volume, brightness, switches,
+// music, battery), shown under the opened home card.
 FocusScope {
     id: hoverPanel
 
