@@ -1428,3 +1428,49 @@ Spotify braucht Neustart; Thunderbird hat noch kein Profil; fastfetch bindet das
   - **Test:** Harness-Shell mit Fake-HOME und Symlinks auf `models/theme/services`: Umschalten, Auto + Nachtlicht, Repaint (Zustandsdatei `color-mode`), `paletteAt` für Hell unverändert (`#f4f3ef`/`#1c2127`), Dunkel (`#1c2127`/`#f4f3ef`), Nachtlicht in Dunkel schwächer.
   - **Review Phase 7, behoben:** Super+T schrieb die Einstellung nicht auf die Platte (`writeUserConfig` ergänzt); `spicetify` mit Zeitüberschreitung/Fehler beendet das Skript nicht mehr; `start()` bricht ohne Tokens-Datei nicht mehr ab (Warnung statt Fehler); fastfetch löscht die alte `themes/aptus.jsonc` nur noch, wenn sie unsere Kopfzeile trägt und kein Link ist.
   - **Bekannt, nicht geändert:** Auto beim nächtlichen Login kann einmal Hell→Dunkel wechseln (Nachtlicht wird erst kurz nach dem Start erkannt); xsettingsd/ghostty/yazi schreiben durch Links ins Dotfiles-Repo; `MODE_FILE` gilt auch, wenn ein einzelnes Programm (z. B. Spicetify) fehlte; hängt `Process` beim Start, bleibt `applying` wahr; `Qt.lighter(ok)` in den zwei Kacheln, `LevelBars` mit Standard `black` und feste Kalenderfarben (Identitätsfarben, in beiden Modi lesbar) wurden nicht am Gerät geprüft.
+
+---
+
+## Ablauf 13: Settings übersichtlich gliedern, schöneres Dock (27. Okt. 2026, Branch `settings-dock` von `color-mode`, Worktree `~/Code/Projekte/aptus-dock`)
+
+Stand: **Phase 1 geschrieben; Phasen 2 bis 7 laufen ohne Pause** ([[feedback_phasen_ohne_weiter]], Selbst-Review am Diff, kein Sub-Agent). Eigener Worktree, weil im Hauptordner `island-notify` (Ablauf 12) mit uncommitteten Dateien läuft und die Live-Shell von dort startet. Die Shell wird für Tests nicht angefasst.
+
+### Ziel (Lenno)
+1. Die Settings-App listet viele neue Einstellungen nur untereinander auf. Sie soll **klar gegliedert** sein: sofort erkennbar, wohin etwas gehört.
+2. Das **Dock** soll deutlich schöner werden, mit ein paar **angedockten Apps** ab Werk, und sich **über die Settings ein- und ausschalten** lassen.
+
+### Ist-Stand (geprüft)
+- `config/settings-schema.json`: zehn Kategorien, Kategorie `bar` ("Bar, Island & Dock") hat ~35 Einträge ohne Gruppen (Leiste, Island-Entwurf, Island-Meldungen, Dock, Touch gemischt). `appearance`, `system` (Apps, Strom, Touch, Datenschutz) sind ebenfalls Mischlisten.
+- `CategoryPage` zeigt eine flache Liste; `SettingRow` je Eintrag. Suchtreffer zeigen keine Herkunft.
+- `Sidebar` ist eine flache Liste ohne Gruppen oder Symbole.
+- Dock (`shell/dock/Dock.qml`, `DockItem.qml`): schlichte Fläche (`Tokens.surface`), Icons ohne Zoom, Punkt als Laufanzeige, Kontextmenü. Fenster fest 190 px hoch mit Eingabemaske. Wird in `shell.qml` über `dock.enabled` je Bildschirm erzeugt, schaltet also schon live. Standard: aus, `pinned` mit GNOME-Apps, die auf diesem Rechner fehlen (installiert: kitty, org.kde.dolphin, zen-browser, org.mozilla.firefox, net.thunderbird.Thunderbird, com.spotify.Client, steam, systemsettings, gimp, mpv, libreoffice-writer; kein ghostty).
+- Kein Editor für die angedockten Apps in den Settings (nur Rechtsklick „Keep in dock“).
+- `visibleWhen` ist im Schema benutzt, aber in `visibleEntries` noch ein TODO (gehört zu Branch `themes`) → hier nicht anfassen, um Konflikte zu vermeiden.
+
+### Plan
+**Settings gliedern**
+- Schema: jede Kategorie bekommt `group` (Sidebar-Abschnitt: *Look*, *Desktop*, *Apps*, *System*) und `description` (eine Zeile unter der Überschrift: „Was gehört hierher“). Jeder Eintrag bekommt `section` (Zwischenüberschrift in der Kategorie).
+- Kategorie `bar` wird geteilt: **Top bar** (Leiste, Uhr, Kontextzone), **Island** (Entwurf, Karte, Look, Inhalte, Meldungen), **Dock** (alles zum Dock). Eintrags-IDs bleiben, damit gespeicherte Werte und die Launcher-Suche weiter laufen; nur `category` und `section` ändern sich.
+- `CategoryPage`: Zwischenüberschrift (neue Komponente `SectionHeader`) wenn sich `section` ändert; bei Suche statt dessen Herkunft „Kategorie › Abschnitt“ je Treffer. `Sidebar`: Gruppen-Überschriften. `SettingsWindow`: Beschreibung unter dem Titel.
+- Sortierung der Einträge ergibt sich aus der Schema-Reihenfolge; die Datei wird nach Abschnitten geordnet.
+
+**Dock**
+- Neue Einstellungen: `dock.look` (glass | solid | minimal), `dock.magnify` (Zoom unter dem Zeiger), `dock.iconSize` bleibt; `dock.autoHide` Standard **aus**; `dock.pinned` Standard mit tatsächlich installierten Apps (kitty, Dolphin, Zen, Thunderbird, Spotify, Steam, Systemeinstellungen; fehlende werden übersprungen). Neuer Eintragstyp `dockApps` (Editor in den Settings: Reihenfolge, Entfernen, App aus der Liste installierter Apps hinzufügen).
+- `Dock.qml`: Glasfläche (halbtransparent, `Tokens.glass`, feine Kante und Lichtkante oben, weicher Schatten aus gestapelten Rechtecken), größerer Radius, Trenner zwischen angedockten und nur laufenden Apps, Zoom (Fischauge) mit weicher Animation, Starthüpfer beim Öffnen einer App, ruhigerer Tooltip, Einblenden beim Einschalten.
+- `DockItem.qml`: Zoom-Faktor als Eigenschaft, Starthüpfer, Laufpunkt/Frontstrich bleiben (Farbe nur `Tokens.ink`).
+
+### Betroffene Dateien
+`config/settings-schema.json`, `config/settings.json`, `shell/models/SettingsAppState.qml` (`editable`, Gruppierung), `shell/settings/{CategoryPage,Sidebar,SettingsWindow,SettingRow,qmldir}.qml`, neu `shell/settings/SectionHeader.qml`, `shell/settings/DockAppsEditor.qml`, `shell/dock/{Dock,DockItem}.qml`, README (Abschnitt Dock/Settings).
+
+### Risiken
+- Kategorie `bar` teilen: `settings.open <kategorie>`-Aufrufe und Launcher-Treffer nutzen `entry.category`; IDs von Kategorien in Code suchen (`openWindow("bar")`) und nachziehen.
+- Branch `themes` ändert dasselbe Schema (`visibleWhen`, neue Einträge) → beim Merge Konflikte im Schema möglich; neue Einträge dort bekommen später `section` nachgetragen.
+- Dock-Maske: Fenster 190 px hoch, Zoom darf nicht höher wachsen als die Maske (Icon 72 × 1.6 + Tooltip < 190 → Höhe bei Bedarf anheben).
+- Ohne `qmllint`/ohne Neustart der Live-Shell nur eingeschränkt prüfbar: Tests mit eigener Quickshell-Instanz oder Harness (Phase 5/7).
+- `DesktopEntries.byId` kennt Flatpak-Apps (Spotify) nur, wenn der Eintrag in den XDG-Pfaden liegt; sonst überspringt das Dock sie still.
+
+### Phasen dieses Ablaufs
+1 Plan · 2 Strukturen · 3 Signaturen · 4 TODOs · 5 Probe · 6 Invarianten · 7 Implementierung, jede mit Selbst-Review am Diff.
+
+### Protokoll Ablauf 13
+- **Phase 1 (Plan), erledigt.**
