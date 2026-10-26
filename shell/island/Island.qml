@@ -56,8 +56,10 @@ PanelWindow {
     property bool homeWithQuick: isOpen && view === Enums.IslandView.Home   // the opened Home shows the quick settings below the header (every design)
     // TODO(phase 7): openGrowMs 200.
     readonly property int openGrowMs: 220   // ms: the body grows to an opened view in this time
-    // TODO(phase 7): add isOsd (stage === Osd); the stage getter shows Osd on every screen like an alert.
+    // TODO(phase 7): bind isOsd (stage === Osd) and byHover (isOpen && islandState.openedByHover); no focus grab and no keyboard while byHover.
     property bool isAlert: stage === Enums.IslandStage.Alert
+    property bool isOsd                   // the stage is Osd (the on-screen indicator shows)
+    property bool byHover                 // the island is open because the pointer opened it (no focus grab, no keyboard yet)
 
     // The design (setting island.design): capsule, pill, ticker or shade. It sets the size at rest and the shape.
     readonly property string design: IslandLook.design

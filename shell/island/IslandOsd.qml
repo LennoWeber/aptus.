@@ -11,6 +11,8 @@ Item {
     property color ink
     property color inkSoft
     property color line
+    // TODO(phase 7): hasLabel = osd has a non-empty label (bind it; make it a plain readonly binding, no default false).
+    readonly property bool hasLabel: false   // the indicator shows a text instead of the bar
 
     // Symbol name for an Enums.OsdKind (volume, sun, mic, cup, rotate).
     function glyphFor(kind: int): string {

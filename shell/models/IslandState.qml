@@ -81,6 +81,11 @@ Scope {
         throw new Error("not implemented")
     }
 
+    // The indicator ends: back to the alert that waits, else to rest.
+    function endOsd(): void {
+        throw new Error("not implemented")
+    }
+
     // The pointer rests on the island of that screen: open Home after hoverInMs (only while hoverEnabled and at rest).
     function hoverEnter(screenName: string): void {
         throw new Error("not implemented")
