@@ -15,6 +15,8 @@ Status: usable, still changing. Plan and decisions: [PHASES.md](PHASES.md).
 - **Control center** (blurred overlay with tiles): sound, display, network, Bluetooth, power profile, caffeine, focus, VPN, hotspot, capture, timer, weather, media, calendar, system monitor.
 - **Launcher** with five modes: apps, calculator and system actions (`wifi off`, `timer 10m`, `lock screen`), web search (optional suggestions), settings, AI (docked chat panel for command-line AI tools), clipboard history.
 - **Settings app** with draft, save, a 15 second confirmation and an external watchdog that restores the old file if the shell dies.
+  The sidebar is grouped (Look, Desktop, Apps, System); every page has a short description and sub-headings, and search results say where a setting lives (`Dock › Apps`).
+- **Dock** (Settings → Dock, off by default): kept apps and open windows, looks *glass*, *solid* and *minimal*, zoom under the pointer, a hop while an app starts, a size slider (`dock.iconSize`, 32 to 96), optional space reservation like the bar (`dock.reserveSpace`) and auto-hide. The kept apps are edited in the settings (order, remove, add from the installed apps) or with a right click on an icon.
 - **Lock screen** (PAM), **greeter** for greetd, idle policy: lock after 5 minutes, screen off after 10. **Never suspend or hibernate.**
 - **Touch and tablet mode:** edge swipes, bar hides in tablet mode, screen follows the orientation sensor, built-in on-screen keyboard.
 - **Wallpaper** drawn by the shell, with a picker; **power menu** (lock, log out, restart, shut down).

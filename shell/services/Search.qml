@@ -185,8 +185,7 @@ Singleton {
         }
         const scored = st.entries.filter(e => st.matches(e, query)).map(e => makeResult({
             id: "setting:" + e.id, mode: Enums.LauncherMode.Settings, kind: Enums.ResultKind.Setting,
-            // TODO(phase 7): use st.originOf(e) as subtitle, so the launcher says where a setting lives.
-            title: e.title, subtitle: (st.categories.find(c => c.id === e.category) || { title: "" }).title, keyHint: "Enter",
+            title: e.title, subtitle: st.originOf(e), keyHint: "Enter",
             score: 10 + fuzzyScore(e.title, query),
             run: () => st.focusEntry(e.id)
         }))

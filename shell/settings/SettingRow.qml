@@ -23,8 +23,7 @@ Item {
     signal actionRequested()
 
     // Lists and the location have a tall editor under the title; everything else sits to the right of it.
-    // TODO(phase 7): add "dockApps" to the wide kinds.
-    readonly property bool wide: !!entry && (entry.kind === "list" || entry.kind === "location" || entry.kind === "providerList" || entry.kind === "hotkeyList" || entry.kind === "tileList" || entry.kind === "keyMap")
+    readonly property bool wide: !!entry && (entry.kind === "list" || entry.kind === "location" || entry.kind === "providerList" || entry.kind === "hotkeyList" || entry.kind === "tileList" || entry.kind === "keyMap" || entry.kind === "dockApps")
 
     implicitHeight: wide ? textColumn.implicitHeight + wideEditor.implicitHeight + 44 : Math.max(64, textColumn.implicitHeight + 28)
 
@@ -48,10 +47,15 @@ Item {
         id: textColumn
         anchors { left: parent.left; leftMargin: 4; right: editor.left; rightMargin: 20; verticalCenter: row.wide ? undefined : parent.verticalCenter; top: row.wide ? parent.top : undefined; topMargin: 16 }
         spacing: 3
+        Label {
+            visible: row.origin !== ""
+            text: row.origin
+            role: Enums.TextRole.Bar
+            color: Tokens.inkFaint
+        }
         Row {
             spacing: 8
             Label { text: row.entry ? row.entry.title : ""; font.weight: Font.Medium }
-            // TODO(phase 7): show `origin` as a small caption above the title when it is not empty.
             Label { visible: row.changed; text: "Changed"; role: Enums.TextRole.Bar; color: Tokens.inkFaint; anchors.verticalCenter: parent.verticalCenter }
         }
         Label {
@@ -75,8 +79,7 @@ Item {
         id: wideEditor
         visible: row.wide
         anchors { left: parent.left; leftMargin: 4; right: parent.right; top: textColumn.bottom; topMargin: 14 }
-        // TODO(phase 7): add the DockAppsEditor component for kind "dockApps" (value = array of desktop entry ids).
-        sourceComponent: row.entry && row.entry.kind === "list" ? engineEditor : row.entry && row.entry.kind === "location" ? locationEditor : row.entry && row.entry.kind === "providerList" ? providerEditor : row.entry && row.entry.kind === "hotkeyList" ? hotkeyList : row.entry && row.entry.kind === "tileList" ? tileEditor : row.entry && row.entry.kind === "keyMap" ? modeKeyEditor : null
+        sourceComponent: row.entry && row.entry.kind === "list" ? engineEditor : row.entry && row.entry.kind === "location" ? locationEditor : row.entry && row.entry.kind === "providerList" ? providerEditor : row.entry && row.entry.kind === "hotkeyList" ? hotkeyList : row.entry && row.entry.kind === "tileList" ? tileEditor : row.entry && row.entry.kind === "keyMap" ? modeKeyEditor : row.entry && row.entry.kind === "dockApps" ? dockEditor : null
     }
     Component {
         id: engineEditor
@@ -85,6 +88,10 @@ Item {
     Component {
         id: tileEditor
         TileListEditor { tiles: row.draftValue; onChanged: value => row.valueEdited(value) }
+    }
+    Component {
+        id: dockEditor
+        DockAppsEditor { apps: row.draftValue || []; onChanged: value => row.valueEdited(value) }
     }
     Component {
         id: modeKeyEditor

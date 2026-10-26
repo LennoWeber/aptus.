@@ -49,8 +49,7 @@ FloatingWindow {
         id: sidebar
         anchors { left: parent.left; top: parent.top; bottom: parent.bottom }
         width: 230
-        // TODO(phase 7): pass the grouped categories (categoryGroups) so the sidebar can show group headings.
-        categories: win.appState ? win.appState.categories : []
+        groups: win.appState ? win.appState.categoryGroups() : []
         activeCategoryId: win.appState ? win.appState.activeCategoryId : ""
         onCategorySelected: id => win.appState.setCategory(id)
     }
@@ -94,11 +93,27 @@ FloatingWindow {
             color: Tokens.inkSoft
         }
 
-        // TODO(phase 7): a quiet line with the category description (activeCategory().description) under the heading;
-        // TODO(phase 7): move the page down by its height.
-        // TODO(phase 7): the description must sit in an Item of its own: a Label with `height: implicitHeight` makes a binding loop.
+        // What belongs in this category.
+        Item {
+            id: blurb
+            anchors { left: parent.left; leftMargin: 28; right: parent.right; rightMargin: 28; top: heading.bottom; topMargin: blurbText.text === "" ? 0 : 4 }
+            height: blurbText.text === "" ? 0 : blurbText.implicitHeight
+            Label {
+                id: blurbText
+                anchors { left: parent.left; right: parent.right; top: parent.top }
+                text: {
+                    if (!win.appState || win.appState.query.trim() !== "") return ""
+                    const c = win.appState.activeCategory()
+                    return c && c.description ? c.description : ""
+                }
+                role: Enums.TextRole.Bar
+                color: Tokens.inkFaint
+                wrapMode: Text.Wrap
+            }
+        }
+
         CategoryPage {
-            anchors { left: parent.left; leftMargin: 28; right: parent.right; rightMargin: 28; top: heading.bottom; topMargin: 12; bottom: parent.bottom }
+            anchors { left: parent.left; leftMargin: 28; right: parent.right; rightMargin: 28; top: blurb.bottom; topMargin: 12; bottom: parent.bottom }
             appState: win.appState
             appSettings: win.appSettings
         }

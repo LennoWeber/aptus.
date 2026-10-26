@@ -71,8 +71,7 @@ Scope {
     }
     function valueOf(entry: var): var { return entry.id in draftValues ? draftValues[entry.id] : appliedOf(entry) }
     function isDefault(entry: var): bool { return JSON.stringify(valueOf(entry)) === JSON.stringify(defaultOf(entry)) }
-    // TODO(phase 7): add "dockApps" to the editable kinds, or the dock app list cannot be changed.
-    function editable(entry: var): bool { return ["toggle", "choice", "slider", "number", "text", "list", "location", "tileList", "keyMap"].indexOf(entry.kind) >= 0 }
+    function editable(entry: var): bool { return ["toggle", "choice", "slider", "number", "text", "list", "location", "tileList", "keyMap", "dockApps"].indexOf(entry.kind) >= 0 }
 
     // Entries of the current page or search, hiding advanced ones unless asked for.
     function visibleEntries(): var {
@@ -88,19 +87,28 @@ Scope {
     // Categories grouped for the sidebar, in schema order: [{ group, categories: [category] }].
     function categoryGroups(): var {
         if (categories.some(c => !c.id || !c.title)) throw new Error("invariant: SettingsAppState.categoryGroups: category without id or title")
-        throw new Error("not implemented")
+        const out = []
+        for (const c of categories) {
+            let g = out.find(x => x.group === (c.group || ""))
+            if (!g) {
+                g = { group: c.group || "", categories: [] }
+                out.push(g)
+            }
+            g.categories.push(c)
+        }
+        return out
     }
 
     // The category that is open, or undefined.
     function activeCategory(): var {
-        if (categories.length === 0) throw new Error("invariant: SettingsAppState.activeCategory: schema not loaded")
-        throw new Error("not implemented")
+        return categories.find(c => c.id === activeCategoryId)
     }
 
     // "Category › Section" of an entry, shown with search results.
     function originOf(entry: var): string {
         if (!entry || !categories.some(c => c.id === entry.category)) throw new Error("invariant: SettingsAppState.originOf: entry without a known category")
-        throw new Error("not implemented")
+        const c = categories.find(x => x.id === entry.category)
+        return (c ? c.title : "") + (entry.section ? " \u203a " + entry.section : "")
     }
 
     // Search in title, description and keywords.
