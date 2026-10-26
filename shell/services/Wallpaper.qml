@@ -9,8 +9,12 @@ import qs.models
 Singleton {
     id: root
 
-    // colours read from `current`, the source of the picture-based theme
-    readonly property WallpaperColors colors: WallpaperColors {}
+    // How the picture is placed (setting wallpaper.fit, Enums.WallpaperFit); the lock screen and the login screen use it too.
+    property int fit: Enums.WallpaperFit.Fill
+    // The login screen picture follows `current` (setting appearance.loginWallpaper); `loginSynced` is the picture that was
+    // last handed to the login helper together with the fit, "" when none or after a failure.
+    property bool loginSync: true
+    property string loginSynced
 
     property string directory           // settings wallpaper.directory, empty = ~/Pictures/Wallpapers
     readonly property string folder: directory || (Quickshell.env("HOME") + "/Pictures/Wallpapers")

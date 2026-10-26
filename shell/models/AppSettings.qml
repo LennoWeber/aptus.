@@ -38,10 +38,10 @@ Scope {
     property string aiDefaultProviderId
     property int aiDockEdge            // Enums.DockEdge
     property int aiDockWidthPx
-    property int themeSource           // Enums.ThemeSource, appearance.themeSource, "standard" by default
-    property int themeStyle            // Enums.ThemeStyle, appearance.style, "watercolor" by default
-    property int barTone               // Enums.BarTone, bar.tone, "offwhite" by default
-    property int colorMode             // Enums.ColorMode, appearance.colorMode, "light" by default
+    property string theme              // appearance.theme: light | dark | auto | ocean | forest | dusk | sand | sky | wallpaper, "light" by default
+    property string wallpaperTone      // appearance.wallpaperTone: auto | light | dark, how the wallpaper theme chooses light or dark
+    property bool loginWallpaper       // appearance.loginWallpaper: the login screen shows the desktop wallpaper
+    property int wallpaperFit          // Enums.WallpaperFit, wallpaper.fit, "fill" by default
     property bool lockShowNotificationContent
     property int lockAfterMin          // system.lockAfterMin, 5
     property int screenOffAfterMin     // system.screenOffAfterMin, 10, always after the lock

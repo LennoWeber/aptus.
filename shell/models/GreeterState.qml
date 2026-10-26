@@ -16,6 +16,7 @@ QtObject {
     property var sessions: []           // { id, name, command }
     property string selectedSession
     property string wallpaper
+    property int wallpaperFit: Enums.WallpaperFit.Fill   // "wallpaperFit" of the config: fill | fit | stretch | center | tile
     property bool showClock: true
     property bool showPowerButtons: true
     property bool rememberLastUser: true

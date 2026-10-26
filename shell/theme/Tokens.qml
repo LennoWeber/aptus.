@@ -17,8 +17,18 @@ Singleton {
     // raw data of theme/tokens.json and the current day/night blend (0 day .. 1 night)
     property var palette             // { day: {...}, night: {...} }
     property real blend: 0
-    // Colour mode: 0 = light palette .. 1 = dark palette (ColorModeState drives it); the night light tints on top.
-    property real darkAmount: 0
+    // The theme: `themeId` names it (light, dark, ocean, forest, dusk, sand, sky, wallpaper). The colours are the mix of
+    // `fromColors` and `toColors` (flat { role: "#RRGGBB" } maps of one palette, see palette.themes in tokens.json) at
+    // `themeFade` (0 = from .. 1 = to); a change of theme starts a new fade from the colours showing at that moment.
+    // The night light tints on top of the mix.
+    property string themeId: "light"
+    property real themeFade: 1
+    property var fromColors: null
+    property var toColors: null
+    // The generated theme "wallpaper" (ThemeSource.palette), null until the picture has been read.
+    property var customTheme: null
+    // Entries { id, name, base, bg, surface, ink, accent } of every theme that can be chosen, in the order of the picker.
+    property var themeList: []
     // false while the start-up state is set, so the shell does not fade from light to dark when it starts
     property bool colorModeFade: true
     Behavior on darkAmount {
@@ -42,13 +52,11 @@ Singleton {
     property color ok: "#1F6B4F"
     property color warn: "#B7791F"
     property color critical: "#B3382C"
+    property color accent: "#1C2127"          // sliders, meters, the active workspace; in light and dark the same as ink
+    property color onAccent: "#F4F3EF"        // text and icons on the accent
+    property color on: "#1F6B4F"              // the on state of a switch; in light and dark the "ok" colour
 
-    // colour theming (settings appearance.themeSource, appearance.style, bar.tone); the defaults reproduce the standard palette
-    property int themeSource: Enums.ThemeSource.Standard
-    property int themeStyle: Enums.ThemeStyle.Watercolor
-    property int barTone: Enums.BarTone.OffWhite
-    property var styles                       // raw themeStyles of tokens.json
-    property var extraction                   // raw themeExtraction of tokens.json
+    // bar and derived colours; the defaults reproduce the standard palette
     property color bar: "#F4F3EF"             // top bar fill
     property color barInk: "#1C2127"          // text and icons on the bar
     property color wash1: "#ECEAE4"           // tile tints, taken from the four source colours
@@ -59,7 +67,6 @@ Singleton {
     property color barInkFaint: "#8D939B"     // inactive icons on the bar (barInkFaintMix)
     property color selection: "#ECEAE4"       // selected row
     property color glass: "#B8FBFAF7"         // fill of the blurred surfaces (Control Center, launcher)
-    property string grain: "none"             // "none" | "paper" | "weave", only on large surfaces
 
     // shape
     readonly property int radiusWindow: 10

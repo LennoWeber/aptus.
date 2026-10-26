@@ -4,18 +4,20 @@ import Quickshell.Io
 import qs.models
 import qs.theme
 
-// Light or dark for the shell and the apps (setting appearance.colorMode: light | dark | auto).
-// `mode` is the chosen value, `dark` what is in effect (auto is dark while the night light runs); Tokens.darkAmount
-// follows `dark` (0 or 1) with Tokens.colorModeMs. After a change the apps are repainted by
-// `aptus-theme-apps --mode <light|dark> --all` in the background; the shell itself changes first.
+// The theme of the shell and the apps (setting appearance.theme). `chosen` is the setting, `resolved` the theme in effect
+// (auto is light, or dark while the night light runs; wallpaper needs ThemeSource.palette); Tokens fades to it in
+// Tokens.colorModeMs. After a change the apps are repainted by `aptus-theme-apps --theme <resolved> --all` in the
+// background; the shell itself changes first.
 Scope {
     id: root
 
     property var appSettings    // AppSettings: reads and writes appearance.colorMode
     property var nightLight     // NightLightState: decides `auto`
 
-    property int mode: Enums.ColorMode.Light
-    property bool dark: false
+    property string chosen: "light"            // appearance.theme as set: light | dark | auto | ocean | forest | dusk | sand | sky | wallpaper
+    property string resolved: "light"          // the theme in effect: `chosen`, or light/dark for auto, or the previous one while the wallpaper theme is not ready
+    property string previewId: ""              // the theme the picker shows right now, "" when none (the shell shows it, the apps do not)
+    property bool dark: false                  // the base of the theme showing is dark
     property bool applying: false
     property bool pending: false               // a repaint was asked for while one was running
     property string applyError: ""

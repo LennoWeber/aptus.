@@ -182,7 +182,7 @@
     },
     {
       "id": "colorMode.toggle",
-      "label": "Light or dark",
+      "label": "Choose theme",
       "mods": [
         "SUPER"
       ],
