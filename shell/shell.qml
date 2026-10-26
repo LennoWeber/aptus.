@@ -61,7 +61,7 @@ ShellRoot {
     AudioState { id: audioObj }
     DisplayState { id: displayObj }
     NightLightState { id: nightLightObj }
-    // TODO(phase 7, colour mode): ColorModeState { id: colorModeObj; appSettings: settingsObj; nightLight: nightLightObj }, start() once the settings are loaded, give it to IpcHandlers (colorModeState).
+    ColorModeState { id: colorModeObj; appSettings: settingsObj; nightLight: nightLightObj }
 
     PowerProfileState { id: powerProfileObj }
     CalendarState { id: calendarObj }
@@ -301,7 +301,7 @@ ShellRoot {
 
     IpcHandlers {
         id: ipcObj
-        // TODO(phase 7, colour mode): colorModeState: colorModeObj
+        colorModeState: colorModeObj
         launcherState: launcherObj
         settingsState: settingsAppObj
         lockState: lockObj
@@ -349,7 +349,7 @@ ShellRoot {
         Search.settingsState = settingsAppObj
         Search.controls = { network: networkObj, bluetooth: bluetoothObj, nightLight: nightLightObj, caffeine: caffeineObj, focus: focusObj, timer: timerObj, lock: lockObj }
         applyBlur()
-        // TODO(phase 7, colour mode): colorModeObj.start() after the settings are loaded and before the first frame.
+        colorModeObj.start()
         IslandLook.load()
         IslandLook.apply(islandLook)
         IslandLook.design = islandDesign

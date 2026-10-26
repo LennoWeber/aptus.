@@ -19,8 +19,14 @@ Singleton {
     property real blend: 0
     // Colour mode: 0 = light palette .. 1 = dark palette (ColorModeState drives it); the night light tints on top.
     property real darkAmount: 0
-    // TODO(phase 7, colour mode): Behavior on darkAmount (colorModeMs) and onDarkAmountChanged -> applyPalette(blend, darkAmount); no loop with blend.
-    // TODO(phase 7, colour mode): delete motion.colorModeMs from theme/tokens.json (this constant is the only source), or read it in load().
+    // false while the start-up state is set, so the shell does not fade from light to dark when it starts
+    property bool colorModeFade: true
+    Behavior on darkAmount {
+        enabled: root.colorModeFade
+        NumberAnimation { duration: root.colorModeMs; easing.type: Easing.InOutSine }
+    }
+    // The colours follow while it moves; applyPalette does not write darkAmount back.
+    onDarkAmountChanged: if (palette) applyPalette(blend, darkAmount)
     readonly property int colorModeMs: 300
     // How much of the night tint stays in dark mode (1 = as strong as in light mode).
     readonly property real nightTintInDark: 0.35
@@ -111,20 +117,26 @@ Singleton {
             return
         }
         // TODO(phase 7, Bild-Theming): read themeStyles and themeExtraction from the file; the shell root then calls refreshTheme(entries). The palette stays the Standard source.
-        // TODO(phase 7, colour mode): start with the colour mode in effect: applyPalette(blend, darkAmount).
-        applyPalette(blend)
+        applyPalette(blend, darkAmount)
     }
 
     // Palette between day (0) and night (1) (night light), and `dark` (0 light .. 1 dark, the colour mode) towards the dark
     // palette; the night tint is applied on top, weaker the darker it is (nightTintInDark).
     function paletteAt(blend: real, dark: real): var {
-        // TODO(phase 7, colour mode): mix day with palette.dark by `dark` first, then toward night by blend * (1 - dark * (1 - nightTintInDark)); only "#" values, skip note, modes, brights, roles, accents.
         if (!(blend >= 0 && blend <= 1)) throw new Error("invariant: Tokens.paletteAt: blend outside 0..1")
         if (!(dark >= 0 && dark <= 1)) throw new Error("invariant: Tokens.paletteAt: dark outside 0..1")
         if (!palette) throw new Error("invariant: Tokens.paletteAt: tokens not loaded")
         const out = {}
+        // The night tint is the step from the day to the night colour; it is added to the mix of light and dark,
+        // weaker the darker it is.
+        const tint = blend * (1 - dark * (1 - nightTintInDark))
+        const clamp = v => Math.max(0, Math.min(1, v))
         for (const key in palette.day) {
-            if (String(palette.day[key])[0] === "#") out[key] = mix(palette.day[key], palette.night[key], blend)
+            if (String(palette.day[key])[0] !== "#") continue
+            const day = Qt.color(palette.day[key])
+            const night = Qt.color(palette.night[key])
+            const base = mix(day, Qt.color(palette.dark?.[key] ?? palette.day[key]), dark)
+            out[key] = Qt.rgba(clamp(base.r + (night.r - day.r) * tint), clamp(base.g + (night.g - day.g) * tint), clamp(base.b + (night.b - day.b) * tint), 1)
         }
         return out
     }
@@ -136,13 +148,11 @@ Singleton {
 
     // Update the colour properties.
     function applyPalette(blend: real, dark: real): void {
-        // TODO(phase 7, colour mode): store `dark` in darkAmount without writing blend back (onDarkAmountChanged calls this function).
         if (!(blend >= 0 && blend <= 1)) throw new Error("invariant: Tokens.applyPalette: blend outside 0..1")
         if (!(dark >= 0 && dark <= 1)) throw new Error("invariant: Tokens.applyPalette: dark outside 0..1")
-        // TODO(phase 7, night light): NightLightState calls this when its blend changes; move smoothly over minutes, never a flash.
-        // TODO(phase 7, Bild-Theming): with a themeSource other than Standard the style owns bg, surface, line and the ink colours; do not overwrite them here.
-        // TODO(phase 7, colour mode): paletteAt(blend, dark) and applyDerived(p, dark); with a style as source and dark above 0 the Standard colours apply.
-        const p = paletteAt(blend)
+        // NightLightState calls this when its blend changes (it moves over seconds, never a flash).
+        // TODO(phase 7, Bild-Theming): with a themeSource other than Standard the style owns bg, surface, line and the ink colours; do not overwrite them here while dark is 0.
+        const p = paletteAt(blend, dark)
         root.blend = blend
         bg = p.bg
         surface = p.surface
@@ -154,6 +164,8 @@ Singleton {
         ok = p.ok
         warn = p.warn
         critical = p.critical
+        // the night light has never tinted the bar, the washes or the glass; they follow the light or dark palette only
+        applyDerived(paletteAt(0, dark), dark)
     }
 
     // The colours that applyPalette does not take from the palette for the Standard source: bar, barInk, barInkSoft,
@@ -162,14 +174,23 @@ Singleton {
     function applyDerived(p: var, dark: real): void {
         if (!(dark >= 0 && dark <= 1)) throw new Error("invariant: Tokens.applyDerived: dark outside 0..1")
         if (!p || p.bg === undefined) throw new Error("invariant: Tokens.applyDerived: palette incomplete")
-        throw new Error("not implemented")
+        bar = p.bg
+        barInk = p.ink
+        barInkSoft = p.inkSoft
+        barInkFaint = p.inkFaint
+        selection = p.surfaceAlt
+        wash1 = p.surfaceAlt
+        wash2 = p.surfaceAlt
+        wash3 = p.surfaceAlt
+        wash4 = p.surfaceAlt
+        glass = glassFor(p.surface, dark)
     }
 
     // The fill of the blurred surfaces (Control Center, launcher) for a surface colour: translucent paper in light mode,
     // translucent dark surface in dark mode; `dark` is 0 .. 1 like darkAmount. Returns "#AARRGGBB".
     function glassFor(base: color, dark: real): color {
         if (!(dark >= 0 && dark <= 1)) throw new Error("invariant: Tokens.glassFor: dark outside 0..1")
-        throw new Error("not implemented")
+        return Qt.rgba(base.r, base.g, base.b, 0.72 + 0.08 * dark)
     }
 
     // Colour for a severity: neutral ink, or ok, warn, critical.
@@ -186,7 +207,7 @@ Singleton {
     // The colour theme from the source selected by themeSource: the neutral palette, the fallback colours of the style, or
     // the colours of the wallpaper. `entries` are the wallpaper colours (WallpaperColors.entries; empty for Fixed or when the
     // picture cannot be read). Tokens does not import the services, so the caller (shell.qml) passes them.
-    // TODO(phase 7, colour mode): with darkAmount above 0 apply the Standard colours, and run again when darkAmount returns to 0 (also nightShift).
+    // With darkAmount above 0 the Standard colours apply (image themes are light only), and refreshTheme runs again when darkAmount returns to 0.
     function refreshTheme(entries: var): void {
         throw new Error("not implemented")
     }

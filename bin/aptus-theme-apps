@@ -14,6 +14,7 @@ applied: Spicetify needs `spicetify config current_theme aptus color_scheme Base
 their colours again only where they can (Hyprland, kitty, cava). Running it again rewrites the same files.
 """
 import argparse
+import contextlib
 import json
 import os
 import re
@@ -42,6 +43,7 @@ THUNDERBIRD_ROOTS = [os.path.join(HOME, ".thunderbird"), os.path.join(CFG, "thun
 SPICETIFY_DIR = os.path.join(CFG, "spicetify", "Themes")
 SPICETIFY_THEME = "aptus"
 # Generated files for apps that cannot choose a colour set themselves.
+MODE_FILE = os.path.join(STATE, "aptus", "color-mode")
 FASTFETCH_CONFIG = os.path.join(CFG, "fastfetch", "aptus-config.jsonc")
 GHOSTTY_THEMES = {"light": "aptus-light", "dark": "aptus-dark"}
 YAZI_FLAVORS = {"light": "aptus-light", "dark": "aptus-dark"}
@@ -126,7 +128,11 @@ def colors_of(p: dict, mode: str) -> dict:
 
 def colors_all(p: dict, mode: str) -> dict:
     """colors_of(p, mode) plus every role of both palettes as light_ROLE and dark_ROLE (templates with both schemes)."""
-    raise NotImplementedError("not implemented")
+    c = colors_of(p, mode)
+    for m in MODES:
+        for k, v in colors_of(palette(m), m).items():
+            c[f"{m}_{k}"] = v
+    return c
 
 
 def hex_bare(color: str) -> str:
@@ -255,35 +261,72 @@ def ensure_block(path: str, marker: str, text: str, dry: bool) -> None:
 
 def ghostty_theme(p: dict, mode: str) -> str:
     """The text of the Ghostty theme file for the palette p of MODE (written as GHOSTTY_THEMES[mode])."""
-    raise NotImplementedError("not implemented")
+    c = colors_of(p, mode)
+    lines = [f"# {HEADER}", f"background = {p['bg']}", f"foreground = {p['ink']}", f"cursor-color = {p['ink']}",
+             f"cursor-text = {p['bg']}", f"selection-background = {c['selection_bg']}", f"selection-foreground = {c['selection_fg']}"]
+    lines += [f"palette = {i}={col}" for i, col in enumerate(ansi(p, mode))]
+    return "\n".join(lines) + "\n"
 
 
 def fastfetch_config(c: dict, dry: bool) -> None:
-    # TODO(phase 7, colour mode): delete the old themes/aptus.jsonc when the config is written.
     """FASTFETCH_CONFIG: the user's config.jsonc (read through the dotfiles link) with the display colours of c; nothing is
     written to the dotfiles. fish.fish aliases fastfetch to it."""
-    raise NotImplementedError("not implemented")
+    src = os.path.realpath(os.path.join(CFG, "fastfetch", "config.jsonc"))
+    if not os.path.exists(src):
+        return
+    with open(src) as f:
+        t = f.read()
+    colors = {"keys": c["ink"], "title": c["ink"], "output": c["inkSoft"], "separator": c["inkFaint"], "keyColor": c["ink"]}
+    for key, value in colors.items():
+        t = re.sub(r'("%s"\s*:\s*)"#[0-9A-Fa-f]{6}"' % key, lambda m: m.group(1) + f'"{value}"', t)
+    write(FASTFETCH_CONFIG, f"// {HEADER}\n" + t, dry)
+    old = os.path.join(CFG, "fastfetch", "themes", "aptus.jsonc")
+    if os.path.exists(old) and not dry:
+        os.remove(old)
 
 
 def fish_apply(c: dict, dry: bool) -> None:
     """Set the fish_color_* universal variables from the colours (fish is run once), so fish sessions that are already
     open change too; silent with dry, nothing happens if fish is missing. conf.d/aptus.fish (fish()) covers new sessions."""
-    raise NotImplementedError("not implemented")
+    if dry or shutil.which("fish") is None:
+        return
+    text = render_template("fish-colors.fish", c)
+    subprocess.run(["fish", "-c", text], check=False)
 
 
 def spicetify_apply(mode: str, dry: bool) -> None:
     """If spicetify is installed: set color_scheme to MODE and apply (Spotify needs a restart); a failure is only reported;
     silent with dry. spotify() writes the theme files, this activates them."""
-    raise NotImplementedError("not implemented")
+    if dry or shutil.which("spicetify") is None:
+        return
+    for args in (["config", "current_theme", SPICETIFY_THEME, "color_scheme", mode], ["apply"]):
+        r = subprocess.run(["spicetify"] + args, check=False, capture_output=True, text=True, timeout=120)
+        if r.returncode != 0:
+            print(f"  spicetify {' '.join(args)} failed: {(r.stderr or r.stdout).strip()[:200]}", file=sys.stderr)
+            return
+    print("  spicetify applied (restart Spotify to see it)")
 
 
 def xsettingsd(p, mode, dry):
     """XSETTINGS: Net/ThemeName adw-gtk3 or adw-gtk3-dark for X11 apps (the file is the user's, only that line changes)."""
-    raise NotImplementedError("not implemented")
+    path = XSETTINGSD
+    if not os.path.exists(path):
+        return
+    name = "adw-gtk3-dark" if mode == "dark" else "adw-gtk3"
+    with open(path) as f:
+        t = f.read()
+    n = re.sub(r'^(Net/ThemeName\s+)"[^"]*"', lambda m: m.group(1) + f'"{name}"', t, flags=re.M)
+    if n == t:
+        return
+    if dry:
+        print(f"  [dry-run] Net/ThemeName {name} in {path}")
+        return
+    with open(os.path.realpath(path), "w") as f:
+        f.write(n)
+    print(f"  updated {path}")
 
 
 def reload_apps(chosen: list, dry: bool) -> None:
-    # TODO(phase 7, colour mode): send USR1 to nvim (the plugin reloads aptus) and call fish_apply/spicetify_apply where they are not part of an app function.
     """Tell running programs to read their colours again (Hyprland reload, cava, nvim, kitty), where they can."""
     assert isinstance(chosen, list), "chosen is the list of app names"
     if dry:
@@ -292,6 +335,12 @@ def reload_apps(chosen: list, dry: bool) -> None:
     if "hyprland_look" in chosen and shutil.which("hyprctl"):
         subprocess.run(["hyprctl", "reload"], check=False, stdout=subprocess.DEVNULL)
     if shutil.which("pkill"):
+        if "nvim" in chosen:
+            subprocess.run(["pkill", "-USR1", "-x", "nvim"], check=False)
+        if "xsettingsd" in chosen:
+            subprocess.run(["pkill", "-HUP", "-x", "xsettingsd"], check=False)
+        if "btop" in chosen:
+            subprocess.run(["pkill", "-USR2", "-x", "btop"], check=False)
         if "cava" in chosen:
             subprocess.run(["pkill", "-USR2", "-x", "cava"], check=False)
         if "kitty" in chosen:
@@ -379,14 +428,10 @@ def kitty(p, mode, dry):
 
 
 def ghostty(p, mode, dry):
-    # TODO(phase 7, colour mode): write GHOSTTY_THEMES["light"] and ["dark"] with ghostty_theme(palette(m), m) and set `theme = light:aptus-light,dark:aptus-dark`.
-    a = ansi(p, mode)
-    c = colors_of(p, mode)
-    lines = [f"# {HEADER}", f"background = {p['bg']}", f"foreground = {p['ink']}", f"cursor-color = {p['ink']}",
-             f"cursor-text = {p['bg']}", f"selection-background = {c['selection_bg']}", f"selection-foreground = {c['selection_fg']}"]
-    lines += [f"palette = {i}={c}" for i, c in enumerate(a)]
-    write(os.path.join(CFG, "ghostty", "themes", "aptus"), "\n".join(lines) + "\n", dry)
-    ensure_line(os.path.join(CFG, "ghostty", "config"), "theme = aptus", dry, drop=r"^theme\s*=.*\n?")
+    for m in MODES:
+        write(os.path.join(CFG, "ghostty", "themes", GHOSTTY_THEMES[m]), ghostty_theme(palette(m), m), dry)
+    theme = f"theme = light:{GHOSTTY_THEMES['light']},dark:{GHOSTTY_THEMES['dark']}"
+    ensure_line(os.path.join(CFG, "ghostty", "config"), theme, dry, drop=r"^theme\s*=.*\n?")
 
 
 def btop(p, mode, dry):
@@ -492,7 +537,6 @@ def zathura(p, mode, dry):
 
 
 def gsettings(p, mode, dry):
-    # TODO(phase 7, colour mode): set the Net/ThemeName of xsettingsd too (xsettingsd(p, mode, dry)), and tell xsettingsd to reload.
     pairs = [("color-scheme", "prefer-dark" if mode == "dark" else "prefer-light"),
              ("gtk-theme", "adw-gtk3-dark" if mode == "dark" else "adw-gtk3"),
              ("icon-theme", "Papirus-Dark" if mode == "dark" else "Papirus")]
@@ -514,11 +558,12 @@ def starship(p, mode, dry):
 
 
 def fish(p, mode, dry):
-    # TODO(phase 7, colour mode): add an alias fastfetch -> FASTFETCH_CONFIG to conf.d/aptus.fish and call fish_apply(c, dry).
     """CFG/fish/conf.d/aptus.fish (fish_color_*, STARSHIP_CONFIG) and the STARSHIP_CONFIG line of config.fish, which runs later."""
     c = colors_of(p, mode)
     target = os.path.join(CFG, "starship", "aptus.toml")
-    write(os.path.join(CFG, "fish", "conf.d", "aptus.fish"), render_template("fish.fish", c, {"starship_path": target}), dry)
+    extra = {"starship_path": target, "fastfetch_config": FASTFETCH_CONFIG}
+    write(os.path.join(CFG, "fish", "conf.d", "aptus.fish"), render_template("fish.fish", c, extra), dry)
+    fish_apply(c, dry)
     path = os.path.join(CFG, "fish", "config.fish")
     if not os.path.exists(path):
         return
@@ -546,20 +591,20 @@ def nvim(p, mode, dry):
 
 
 def yazi(p, mode, dry):
-    # TODO(phase 7, colour mode): write both flavors YAZI_FLAVORS (palettes of light and dark) and set [flavor] dark and light to them.
-    c = colors_of(p, mode)
-    write(os.path.join(CFG, "yazi", "flavors", "aptus.yazi", "flavor.toml"), render_template("yazi-flavor.toml", c), dry)
+    for m in MODES:
+        write(os.path.join(CFG, "yazi", "flavors", YAZI_FLAVORS[m] + ".yazi", "flavor.toml"),
+              render_template("yazi-flavor.toml", colors_of(palette(m), m)), dry)
     path = os.path.join(CFG, "yazi", "theme.toml")
-    flavor = '[flavor]\ndark = "aptus"\nlight = "aptus"\n'
+    flavor = f'[flavor]\ndark = "{YAZI_FLAVORS["dark"]}"\nlight = "{YAZI_FLAVORS["light"]}"\n'
     t = open(path).read() if os.path.exists(path) else ""
     if re.search(r"^\[flavor\]", t, flags=re.M):
-        n = re.sub(r"(^\[flavor\][^\[]*)", lambda m: re.sub(r"^(dark|light)\s*=.*$", lambda k: f'{k.group(1)} = "aptus"', m.group(1), flags=re.M), t, flags=re.M)
+        n = re.sub(r"(^\[flavor\][^\[]*)", lambda m: re.sub(r"^(dark|light)\s*=.*$", lambda k: f'{k.group(1)} = "{YAZI_FLAVORS[k.group(1)]}"', m.group(1), flags=re.M), t, flags=re.M)
     else:
         n = (t.rstrip("\n") + "\n\n" if t.strip() else "") + flavor
     if n == t:
         return
     if dry:
-        print(f"  [dry-run] select flavor aptus in {path}")
+        print(f"  [dry-run] select the aptus flavors in {path}")
         return
     if t.strip() and not linked(path) and not os.path.exists(path + ".before-aptus"):
         shutil.copy2(path, path + ".before-aptus")
@@ -569,11 +614,10 @@ def yazi(p, mode, dry):
 
 
 def fastfetch(p, mode, dry):
-    # TODO(phase 7, colour mode): call fastfetch_config(colors, dry) instead of writing themes/aptus.jsonc.
     """fastfetch_config(c, dry); config.jsonc is a link into the dotfiles and is not touched."""
     assert mode in MODES and all(k in p for k in PALETTE_KEYS), "palette comes from palette(mode)"
     assert isinstance(dry, bool) and os.path.isabs(CFG) and os.path.isabs(STATE), "XDG folders must be absolute paths"
-    write(os.path.join(CFG, "fastfetch", "themes", "aptus.jsonc"), render_template("fastfetch.jsonc", colors_of(p, mode)), dry)
+    fastfetch_config(colors_of(p, mode), dry)
 
 
 def cava(p, mode, dry):
@@ -599,7 +643,6 @@ def cava(p, mode, dry):
 
 
 def hyprland_look(p, mode, dry):
-    # TODO(phase 7, colour mode): the shadow base stays black; if hyprctl reload flickers on a switch, set the border colours with hyprctl keyword instead.
     """HYPR_COLORS, a Lua file that returns { activeBorder, inactiveBorder, shadow } as "rgba(RRGGBBAA)" strings (the ink with
     the BORDER and SHADOW alphas); aptus-look.lua reads it with dofile."""
     assert mode in MODES and all(k in p for k in PALETTE_KEYS), "palette comes from palette(mode)"
@@ -638,11 +681,10 @@ def hyprlock(p, mode, dry):
 
 
 def zen(p, mode, dry):
-    # TODO(phase 7, colour mode): render with colors_all(p, mode): the CSS carries both palettes.
     """userChrome.css and userContent.css in every Zen profile."""
     assert mode in MODES and all(k in p for k in PALETTE_KEYS), "palette comes from palette(mode)"
     assert isinstance(dry, bool) and os.path.isabs(CFG) and os.path.isabs(STATE), "XDG folders must be absolute paths"
-    c = colors_of(p, mode)
+    c = colors_all(p, mode)
     profs = profile_dirs([r for r in [ZEN_ROOT] if os.path.isdir(r)])
     if not profs:
         print("  no zen profile found (start it once, then run this again)")
@@ -657,11 +699,10 @@ def zen(p, mode, dry):
 
 
 def thunderbird(p, mode, dry):
-    # TODO(phase 7, colour mode): render with colors_all(p, mode): the CSS carries both palettes.
     """userChrome.css and userContent.css in every Thunderbird profile (nothing if there is none yet)."""
     assert mode in MODES and all(k in p for k in PALETTE_KEYS), "palette comes from palette(mode)"
     assert isinstance(dry, bool) and os.path.isabs(CFG) and os.path.isabs(STATE), "XDG folders must be absolute paths"
-    c = colors_of(p, mode)
+    c = colors_all(p, mode)
     profs = profile_dirs([r for r in THUNDERBIRD_ROOTS if os.path.isdir(r)])
     if not profs:
         print("  no thunderbird profile found (start it once, then run this again)")
@@ -676,32 +717,32 @@ def thunderbird(p, mode, dry):
 
 
 def spotify(p, mode, dry):
-    # TODO(phase 7, colour mode): render color.ini with colors_all (sections light and dark); spicetify_apply(mode, dry) sets color_scheme and applies.
     """Spicetify theme SPICETIFY_THEME (color.ini and user.css), written even if Spicetify is not installed yet; applying it is left to the user."""
     assert mode in MODES and all(k in p for k in PALETTE_KEYS), "palette comes from palette(mode)"
     assert isinstance(dry, bool) and os.path.isabs(CFG) and os.path.isabs(STATE), "XDG folders must be absolute paths"
-    c = colors_of(p, mode)
+    c = colors_all(p, mode)
     d = os.path.join(SPICETIFY_DIR, SPICETIFY_THEME)
     write(os.path.join(d, "color.ini"), render_template("spicetify-color.ini", c), dry)
     write(os.path.join(d, "user.css"), render_template("spicetify-user.css", c), dry)
+    spicetify_apply(mode, dry)
 
 
 # The first seven are the old default; the others change files outside the shell (browser, mail, Spotify, prompt, editor,
 # lock screen) and run only with --only or --all.
-DEFAULT_APPS = ["kitty", "ghostty", "btop", "gtk", "qt", "zathura", "gsettings"]
-APPS = dict(kitty=kitty, ghostty=ghostty, btop=btop, gtk=gtk, qt=qt, zathura=zathura, gsettings=gsettings,
+DEFAULT_APPS = ["kitty", "ghostty", "btop", "gtk", "qt", "zathura", "gsettings", "xsettingsd"]
+APPS = dict(kitty=kitty, ghostty=ghostty, btop=btop, gtk=gtk, qt=qt, zathura=zathura, gsettings=gsettings, xsettingsd=xsettingsd,
             starship=starship, fish=fish, nvim=nvim, yazi=yazi, fastfetch=fastfetch, cava=cava, hyprland_look=hyprland_look,
             hyprlock=hyprlock, zen=zen, thunderbird=thunderbird, spotify=spotify)
 
 
 def main() -> int:
-    # TODO(phase 7, colour mode): add --quiet (no stdout, also the "NAME:" lines); register xsettingsd in APPS and DEFAULT_APPS.
-    # The template check must use colors_all(p, mode); until then it stops every run, because Zen, Thunderbird and Spotify use light_/dark_ roles.
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--mode", choices=list(MODES), default="light")
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--only", default=",".join(DEFAULT_APPS), help="comma separated apps (default: the terminal and toolkit apps)")
     ap.add_argument("--all", action="store_true", help="every app, including browser, mail, Spotify, prompt, editor and lock screen")
+    ap.add_argument("--quiet", action="store_true", help="print nothing but errors")
+    ap.add_argument("--if-changed", action="store_true", help="do nothing if the last run (all apps) was for the same mode")
     args = ap.parse_args()
     chosen = list(APPS) if args.all else [a for a in args.only.split(",") if a]
     if not chosen or len(set(chosen)) != len(chosen):
@@ -715,18 +756,25 @@ def main() -> int:
         if os.environ.get(var) and not os.path.isabs(os.environ[var]):
             print(f"{var} must be an absolute path", file=sys.stderr)
             return 2
+    if args.if_changed and os.path.exists(MODE_FILE) and open(MODE_FILE).read().strip() == args.mode:
+        return 0
     p = palette(args.mode)
-    c = colors_of(p, args.mode)
+    c = colors_all(p, args.mode)
     for message in check_contrast(c):
         print(f"warning: {message}", file=sys.stderr)
-    missing = {r for t in sorted(os.listdir(TEMPLATES)) for r in template_roles(t)} - set(c) - {"starship_path", "shadow_base"}
+    missing = {r for t in sorted(os.listdir(TEMPLATES)) for r in template_roles(t)} - set(c) - {"starship_path", "fastfetch_config", "shadow_base"}
     if missing:
         print(f"templates use roles without a colour: {', '.join(sorted(missing))}", file=sys.stderr)
         return 2
-    for a in chosen:
-        print(f"{a}:")
-        APPS[a](p, args.mode, args.dry_run)
-    reload_apps(chosen, args.dry_run)
+    with contextlib.redirect_stdout(open(os.devnull, "w") if args.quiet else sys.stdout):
+        for a in chosen:
+            print(f"{a}:")
+            APPS[a](p, args.mode, args.dry_run)
+        reload_apps(chosen, args.dry_run)
+    if args.all and not args.dry_run:
+        os.makedirs(os.path.dirname(MODE_FILE), exist_ok=True)
+        with open(MODE_FILE, "w") as f:
+            f.write(args.mode + "\n")
     return 0
 
 

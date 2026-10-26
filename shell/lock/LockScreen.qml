@@ -4,6 +4,7 @@ import Quickshell
 import Quickshell.Wayland
 import Quickshell.Services.Pam
 import qs.models
+import qs.theme
 
 // Wayland session lock with PAM sign-in. If the shell dies while locked, the compositor keeps the screen locked
 // (nobody gets in); switch to a text console (Ctrl+Alt+F3), log in and start the shell again.
@@ -24,8 +25,7 @@ Scope {
 
         WlSessionLockSurface {
             // The solid fallback colour shows for a moment before the first frame.
-            // TODO(phase 7, colour mode): take it from Tokens.bg (dark mode shows a dark flash otherwise).
-            color: "#F4F3EF"
+            color: Tokens.bg
             LockSurface {
                 anchors.fill: parent
                 lockState: root.lockState

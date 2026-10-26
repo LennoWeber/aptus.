@@ -51,7 +51,7 @@ Start with `aptus`. Send commands to the running shell with `aptus msg <command>
 
 ## Colours for the apps
 
-<!-- TODO(phase 7, colour mode): describe Super+T, appearance.colorMode, --quiet, Spicetify color_scheme light|dark and the Spotify restart; fastfetch uses aptus-config.jsonc. -->
+Light or dark: **Super+T** switches and remembers it. The setting is `appearance.colorMode` (`light`, `dark`, `auto`; `auto` is dark while the night light runs), also in the settings app. The shell fades over 300 ms and repaints all apps in the background (`aptus-theme-apps --mode <light|dark> --all --quiet`). `aptus msg theme-mode-set dark` sets it from a script.
 
 `aptus-theme-apps` paints the programs around the shell with the same palette (`theme/tokens.json`, light or dark, templates in `theme/apps`):
 
@@ -61,7 +61,7 @@ aptus-theme-apps --mode dark --all  # everything, dark
 aptus-theme-apps --only starship,zen --dry-run
 ```
 
-`--all` adds Starship (`~/.config/starship/aptus.toml`, selected by fish through `STARSHIP_CONFIG`), fish, Neovim (`colorscheme aptus`), yazi, fastfetch (`themes/aptus.jsonc`), cava, window borders, hyprlock, Zen and Thunderbird (`userChrome.css`, `userContent.css`; start Thunderbird once so it has a profile) and a Spicetify theme (apply it once with `spicetify config current_theme aptus color_scheme Base && spicetify apply`). Replaced files are kept as `NAME.before-aptus`; nothing is installed.
+`--all` adds Starship (`~/.config/starship/aptus.toml`, selected by fish through `STARSHIP_CONFIG`), fish, Neovim (`colorscheme aptus`), yazi, fastfetch (`~/.config/fastfetch/aptus-config.jsonc`, used by the `fastfetch` alias in fish), cava, window borders, hyprlock, Zen and Thunderbird (`userChrome.css`, `userContent.css`; start Thunderbird once so it has a profile) and a Spicetify theme (set `light` or `dark` and applied by the script; restart Spotify to see it). Zen and Thunderbird follow the system colour scheme, which the script sets with gsettings; restart the browser once after the first run. Replaced files are kept as `NAME.before-aptus`; nothing is installed.
 
 ## Keys (defaults)
 

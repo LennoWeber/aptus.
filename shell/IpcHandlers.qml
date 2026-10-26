@@ -26,7 +26,6 @@ Scope {
     property var wallpaperPicker  // WallpaperPicker
     property var islandState    // IslandState
     property var colorModeState // ColorModeState
-    // TODO(phase 7, colour mode): themeModeToggle -> colorModeState.toggle(); themeModeSet -> modeFromName, log and ignore -1, then setMode.
 
     function toggleRotationLock(): void {
         deviceMode.setRotationLocked(!deviceMode.rotationLocked)
@@ -147,15 +146,18 @@ Scope {
         }
 
         // Light <-> dark for the shell and the apps (Super+T).
-        // TODO(phase 7, colour mode): call colorModeState.toggle().
         function themeModeToggle(): void {
-            throw new Error("not implemented")
+            root.colorModeState.toggle()
         }
 
         // Set the colour mode: light, dark or auto (anything else is logged and ignored).
-        // TODO(phase 7, colour mode): modeFromName(name); log and ignore -1, otherwise setMode.
         function themeModeSet(name: string): void {
-            throw new Error("not implemented")
+            const m = root.colorModeState.modeFromName(name)
+            if (m < 0) {
+                console.warn("aptus: theme-mode-set: unknown mode '" + name + "' (light, dark or auto)")
+                return
+            }
+            root.colorModeState.setMode(m)
         }
 
         // Keep the screen as it is, or let it follow the sensor again.
@@ -243,10 +245,6 @@ Scope {
             } else {
                 Quickshell.execDetached(["brightnessctl", "-d", device, "set", action === "up" ? "+1" : "1-"])
             }
-        }
-        // TODO(phase 7, colour mode): delete this old no-op, it is the same function as the new themeModeToggle above (a duplicate name does not load).
-        function themeModeToggle(): void {
-            // aptus has no manual dark mode (light with a night-light blend), so this command is answered and ignored.
         }
         function logLevelStatus(): string {
             // Used by shell-switch to test that the shell answers after the start.
