@@ -38,7 +38,6 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             text: clock.dateText
             role: Enums.TextRole.Bar
-            // TODO(phase 7, Bild-Theming): secondary bar text uses Tokens.barInkSoft, see Bar.qml.
             color: Tokens.inkSoft
         }
         Label {

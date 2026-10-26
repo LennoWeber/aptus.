@@ -39,13 +39,14 @@ Singleton {
         if (!loginSupported) throw new Error("invariant: Wallpaper.setLoginWallpaper: the login helper is not installed")
         if (path !== "" && path[0] !== "/") throw new Error("invariant: Wallpaper.setLoginWallpaper: path must be absolute")
         loginStatus = "working"
+        // TODO(phase 7, themes): append "--fit" and fitName(fit) when path is not empty. The manual call from the picker may ask for a password; syncLogin() must not.
         loginRun.command = ["pkexec", loginHelper, path === "" ? "--clear" : path]
         loginRun.running = true
     }
 
     function setWallpaper(path: string): void {
         if (path !== "" && path[0] !== "/") throw new Error("invariant: Wallpaper.setWallpaper: path must be absolute")
-        // TODO(phase 7, Bild-Theming): after storing, call ThemeSource.read(path); an empty path marks colors.failed so Tokens falls back to the style colours.
+        // TODO(phase 7, themes): after storing: ThemeSource.refresh() (only matters when the theme is wallpaper) and syncLogin().
         current = path
         stateView.setText(path)
     }
@@ -55,7 +56,7 @@ Singleton {
         path: root.stateFile
         blockLoading: true
         printErrors: false
-        // TODO(phase 7, Bild-Theming): also read the colours of the remembered picture at start.
+        // TODO(phase 7, themes): ThemeSource.read() for the remembered picture after the state file is read.
         Component.onCompleted: root.current = text().trim()
     }
 
@@ -71,6 +72,7 @@ Singleton {
         id: loginRun
         // 126 means the password prompt was dismissed: no error to show.
         // qmllint disable signal-handler-parameters
+        // TODO(phase 7, themes): on exit of an automatic sync set loginSynced (code 0) or log the failure; the manual call keeps loginStatus.
         onExited: code => root.loginStatus = code === 0 ? "done" : code === 126 ? "" : "failed"
         // qmllint enable signal-handler-parameters
     }

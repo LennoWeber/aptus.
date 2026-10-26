@@ -51,6 +51,7 @@ Start with `aptus`. Send commands to the running shell with `aptus msg <command>
 
 ## Colours for the apps
 
+<!-- TODO(phase 7, themes): rewrite this section: eight themes (light, dark, ocean, forest, dusk, sand, sky, wallpaper) plus auto, Super+T opens the picker, setting appearance.theme, wallpaper fit and login screen picture, aptus-theme-apps --theme, aptus-wallpaper-theme. -->
 Light or dark: **Super+T** switches and remembers it. The setting is `appearance.colorMode` (`light`, `dark`, `auto`; `auto` is dark while the night light runs), also in the settings app. The shell fades over 300 ms and repaints all apps in the background (`aptus-theme-apps --mode <light|dark> --all --quiet`). `aptus msg theme-mode-set dark` sets it from a script.
 
 `aptus-theme-apps` paints the programs around the shell with the same palette (`theme/tokens.json`, light or dark, templates in `theme/apps`):

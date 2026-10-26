@@ -19,4 +19,6 @@ Item {
 
     implicitWidth: 96
     implicitHeight: 84
+
+    // TODO(phase 7, themes): draw a rounded sample (bg with a surface card, an ink line, an accent dot), the name below; selected = 2 px ink border, highlighted = line border; a click emits chosen(), hover emits hovered(); busy shows a quiet pulse.
 }

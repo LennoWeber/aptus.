@@ -71,6 +71,7 @@ Scope {
     }
     function valueOf(entry: var): var { return entry.id in draftValues ? draftValues[entry.id] : appliedOf(entry) }
     function isDefault(entry: var): bool { return JSON.stringify(valueOf(entry)) === JSON.stringify(defaultOf(entry)) }
+    // TODO(phase 7, themes): the kind "theme" is editable (add it to the list).
     function editable(entry: var): bool { return ["toggle", "choice", "slider", "number", "text", "list", "location", "tileList", "keyMap"].indexOf(entry.kind) >= 0 }
 
     // Whether an entry is shown given its `visibleWhen` ({ path, equals } or { path, notEquals } against the setting in effect).
@@ -82,7 +83,7 @@ Scope {
     function visibleEntries(): var {
         const q = query.trim().toLowerCase()
         return entries.filter(e => {
-            // TODO(phase 7, Bild-Theming): honour `visibleWhen` of an entry ({ path, notEquals }), so appearance.style and bar.tone are hidden while appearance.themeSource is standard.
+            // TODO(phase 7, themes): if (!entryVisible(e)) return false  (visibleWhen); entries hidden by it also drop out of the search.
             if (e.advanced && !showAdvanced) return false
             if (q === "") return e.category === activeCategoryId
             return matches(e, q)

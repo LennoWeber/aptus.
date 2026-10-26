@@ -44,6 +44,7 @@ QtObject {
     }
 
     function applyConfig(cfg: var): void {
+        // TODO(phase 7, themes): wallpaperFit = Tokens.fitFromName(cfg.wallpaperFit || "fill") (Tokens is copied into the greeter; GreeterState must import qs.theme then).
         wallpaper = cfg.wallpaper || ""
         showClock = cfg.showClock !== false
         showPowerButtons = cfg.showPowerButtons !== false

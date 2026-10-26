@@ -23,8 +23,8 @@ ShellRoot {
     id: root
 
     AppSettings { id: settingsObj }
-    // TODO(phase 7, Bild-Theming): when the theme settings, the wallpaper or Wallpaper.colors change: set Tokens.themeSource, themeStyle and barTone from
-    //     settingsObj, then call Tokens.refreshTheme(Wallpaper.colors.entries). Tokens cannot import the services itself.
+    // TODO(phase 7, themes): ThemeSource.tone = appearance.wallpaperTone; ThemeSource.refresh() when Wallpaper.current or the tone changes and the theme is wallpaper; Tokens.setCustomTheme(ThemeSource.palette)
+    //     on ThemeSource.changed; Wallpaper.fit = Tokens.fitFromName(wallpaper.fit); Wallpaper.loginSync = appearance.loginWallpaper (Bindings).
     // The compositor draws the blur; the setting sets its size and passes (applied now and on every change).
     readonly property int blurSetting: settingsObj.get("appearance.blurRadius") ?? 18
     onBlurSettingChanged: applyBlur()
@@ -61,6 +61,7 @@ ShellRoot {
     AudioState { id: audioObj }
     DisplayState { id: displayObj }
     NightLightState { id: nightLightObj }
+    // TODO(phase 7, themes): ColorModeState gets the picker (previews, Super+T); instantiate ThemePicker { id: themePickerObj; themeState: colorModeObj } next to WallpaperPicker (import qs.themepicker).
     ColorModeState { id: colorModeObj; appSettings: settingsObj; nightLight: nightLightObj }
 
     PowerProfileState { id: powerProfileObj }
@@ -169,6 +170,7 @@ ShellRoot {
 
     Variants {
         model: Quickshell.screens
+        // TODO(phase 7, themes): colorModeObj.start() must run after ThemeSource has read the last palette (theme wallpaper), so the first frame already has its colours.
         WallpaperLayer {}
     }
 
@@ -301,6 +303,7 @@ ShellRoot {
 
     IpcHandlers {
         id: ipcObj
+        // TODO(phase 7, themes): themePicker: themePickerObj
         colorModeState: colorModeObj
         launcherState: launcherObj
         settingsState: settingsAppObj

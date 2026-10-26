@@ -70,6 +70,7 @@ assert 0 < BORDER_ALPHA_INACTIVE < BORDER_ALPHA_ACTIVE <= 1 and 0 < SHADOW_ALPHA
 assert os.sep not in SPICETIFY_THEME and SPICETIFY_THEME not in ("", ".", ".."), "aptus-theme-apps: Spicetify theme must be a plain folder name"
 
 
+# TODO(phase 7, themes): palette() stays for light and dark; every other caller goes through theme_palette(). main() sets the module-wide THEME so that the per-app functions (p, mode, dry) can ask colors_all for it.
 def palette(mode: str) -> dict:
     assert mode in MODES, f"unknown mode {mode}"
     t = load_tokens()["palette"]
@@ -121,6 +122,7 @@ def contrast_fit(color: str, bg: str, toward: str, ratio: float = 4.5) -> str:
     return toward
 
 
+# TODO(phase 7, themes): ansi/colors_of: brights and syntax roles are per base mode; a theme uses its base. Hues of a dark-base colour theme on its tinted bg need contrast_fit as the light mode has.
 def ansi(p: dict, mode: str) -> list:
     assert mode in MODES, f"unknown mode {mode}"
     b = load_tokens()["palette"]["brights"][mode]
@@ -154,6 +156,7 @@ def load_tokens() -> dict:
             used = [roles["selection"]["bg"], roles["selection"]["fg"], roles["link"]] + list(roles["syntax"][m].values()) + roles["cavaGradient"]
             assert all(u in known for u in used), f"roles of {m} name an unknown colour"
             assert len(roles["syntax"][m]) == 8 and roles["cavaGradient"], "syntax roles and the cava gradient must be complete"
+        # TODO(phase 7, themes): validate palette.themes: each has base light|dark, PALETTE_KEYS[:10] and THEME_EXTRA_KEYS as #RRGGBB, bg lighter than ink iff base light, text contrast ink/bg and inkSoft/bg >= 4.5; ids match THEME_ID and are not light/dark/auto/wallpaper.
         assert pal["dark"]["bg"] == pal["day"]["ink"] and pal["dark"]["ink"] == pal["day"]["bg"], "dark.bg and dark.ink must mirror day"
         _TOKENS = t
     return _TOKENS
@@ -185,6 +188,7 @@ def colors_of(p: dict, mode: str) -> dict:
 def colors_all(p: dict, mode: str, theme: str = None) -> dict:
     """colors_of(p, mode) plus every role of both palettes as light_ROLE and dark_ROLE (templates with both schemes). For a
     theme other than light and dark both sets are the colours of that theme, so the app looks the same whichever scheme it picks."""
+    # TODO(phase 7, themes): for a theme other than light/dark: light_ROLE and dark_ROLE are both colors_of(theme palette, base); the light/dark pair of the mode stays for light and dark.
     c = colors_of(p, mode)
     for m in MODES:
         for k, v in colors_of(palette(m), m).items():
@@ -801,6 +805,7 @@ APPS = dict(kitty=kitty, ghostty=ghostty, btop=btop, gtk=gtk, qt=qt, zathura=zat
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    # TODO(phase 7, themes): add --theme (choices theme_ids()); --mode stays as an alias for light/dark.
     ap.add_argument("--mode", choices=list(MODES), default="light")
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--only", default=",".join(DEFAULT_APPS), help="comma separated apps (default: the terminal and toolkit apps)")
@@ -820,8 +825,10 @@ def main() -> int:
         if os.environ.get(var) and not os.path.isabs(os.environ[var]):
             print(f"{var} must be an absolute path", file=sys.stderr)
             return 2
+    # TODO(phase 7, themes): MODE_FILE holds the theme id; for wallpaper also the generation stamp (source mtime) so a new picture repaints.
     if args.if_changed and os.path.exists(MODE_FILE) and open(MODE_FILE).read().strip() == args.mode:
         return 0
+    # TODO(phase 7, themes): --theme ID (default: the --mode value); mode = theme_mode(theme); p = theme_palette(theme); colors_all(p, mode, theme).
     p = palette(args.mode)
     c = colors_all(p, args.mode)
     for message in check_contrast(c):
@@ -838,6 +845,7 @@ def main() -> int:
     if args.all and not args.dry_run:
         os.makedirs(os.path.dirname(MODE_FILE), exist_ok=True)
         with open(MODE_FILE, "w") as f:
+            # TODO(phase 7, themes): write the theme id (and the stamp).
             f.write(args.mode + "\n")
     return 0
 

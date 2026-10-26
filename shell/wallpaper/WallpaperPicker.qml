@@ -88,6 +88,7 @@ PanelWindow {
                 : Wallpaper.loginStatus === "done" ? "Login screen updated"
                 : Wallpaper.loginStatus === "failed" ? "Failed, try again"
                 : Wallpaper.current === "" ? "Remove login picture" : "Use for login screen"
+            // TODO(phase 7, themes): pass Wallpaper.fit. With loginSync on, the button is redundant: hide it, or keep it as "sync now".
             onClicked: Wallpaper.setLoginWallpaper(Wallpaper.current)
         }
         Label {

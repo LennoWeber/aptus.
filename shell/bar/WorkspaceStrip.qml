@@ -34,7 +34,6 @@ Item {
             height: strip.height
 
             // The state is carried by weight and a thin line, never by colour. Urgent is the one signal colour.
-            // TODO(phase 7, Bild-Theming): workspace tones become barInk, barInkSoft and barInkFaint, see Bar.qml.
             readonly property color tone: modelData.urgent ? Tokens.warn : modelData.active ? Tokens.ink : modelData.occupied ? Tokens.inkSoft : Tokens.inkFaint
 
             Label {

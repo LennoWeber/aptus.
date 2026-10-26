@@ -31,6 +31,7 @@ Singleton {
     property var themeList: []
     // false while the start-up state is set, so the shell does not fade from light to dark when it starts
     property bool colorModeFade: true
+    // TODO(phase 7, themes): Behavior and handler follow themeFade (the old darkAmount); setTheme drives it with a NumberAnimation from 0 to 1 over colorModeMs.
     Behavior on darkAmount {
         enabled: root.colorModeFade
         NumberAnimation { duration: root.colorModeMs; easing.type: Easing.InOutSine }
@@ -123,12 +124,13 @@ Singleton {
             console.error("aptus: cannot read tokens.json (" + e + "), using built-in day colours")
             return
         }
-        // TODO(phase 7, Bild-Theming): read themeStyles and themeExtraction from the file; the shell root then calls refreshTheme(entries). The palette stays the Standard source.
+        // TODO(phase 7, themes): buildThemeList(), then setTheme(themeId, false) with the theme that ColorModeState.start() resolves; applyPalette needs fromColors/toColors set first (light to light at fade 1).
         applyPalette(blend, darkAmount)
     }
 
     // Palette between day (0) and night (1) (night light) of the mix of fromColors and toColors at `fade` (0 .. 1, themeFade);
     // the night tint is applied on top, weaker the darker the mix is (darknessAt, nightTintInDark).
+    // TODO(phase 7, themes): rewrite for fromColors/toColors (tint scale from darknessAt); the loop over palette.day keys goes, the roles come from the colour maps.
     function paletteAt(blend: real, fade: real): var {
         if (!(blend >= 0 && blend <= 1)) throw new Error("invariant: Tokens.paletteAt: blend outside 0..1")
         if (!(dark >= 0 && dark <= 1)) throw new Error("invariant: Tokens.paletteAt: dark outside 0..1")
@@ -158,7 +160,8 @@ Singleton {
         if (!(blend >= 0 && blend <= 1)) throw new Error("invariant: Tokens.applyPalette: blend outside 0..1")
         if (!(dark >= 0 && dark <= 1)) throw new Error("invariant: Tokens.applyPalette: dark outside 0..1")
         // NightLightState calls this when its blend changes (it moves over seconds, never a flash).
-        // TODO(phase 7, Bild-Theming): with a themeSource other than Standard the style owns bg, surface, line and the ink colours; do not overwrite them here while dark is 0.
+        // TODO(phase 7, themes): paletteAt mixes fromColors and toColors at `fade`; accent, onAccent and on come from the same mix; applyPalette sets them (and calls applyDerived with darknessAt(fade)).
+        // TODO(phase 7, themes): argument is the fade now; `dark` in the invariant message and the checks above becomes fade.
         const p = paletteAt(blend, dark)
         root.blend = blend
         bg = p.bg
@@ -177,6 +180,7 @@ Singleton {
 
     // The colours that follow the theme without the night tint: bar, barInk, barInkSoft, barInkFaint, selection, wash1 to
     // wash4 and glass, for the palette `p` (from paletteAt with blend 0) and `darkness` (0 .. 1).
+    // TODO(phase 7, themes): unchanged in effect; check the call from applyPalette passes darkness and not the old dark amount.
     function applyDerived(p: var, darkness: real): void {
         if (!(dark >= 0 && dark <= 1)) throw new Error("invariant: Tokens.applyDerived: dark outside 0..1")
         if (!p || p.bg === undefined) throw new Error("invariant: Tokens.applyDerived: palette incomplete")

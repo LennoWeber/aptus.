@@ -31,6 +31,7 @@ Item {
             width: slider.ratio * parent.width
             height: parent.height
             radius: 2
+            // TODO(phase 7, themes): the filled part is Tokens.accent (same as ink in light and dark).
             color: Tokens.ink
         }
     }
@@ -43,6 +44,7 @@ Item {
         x: track.x + slider.ratio * track.width - 9
         color: Tokens.surface
         border.width: 1.5
+        // TODO(phase 7, themes): handle border: Tokens.accent.
         border.color: Tokens.ink
         scale: area.pressed ? 1.12 : 1
         Behavior on scale { NumberAnimation { duration: Tokens.durFast } }

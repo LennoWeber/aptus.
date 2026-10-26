@@ -22,6 +22,8 @@ PanelWindow {
     visible: false
     color: "transparent"
 
+    // TODO(phase 7, themes): layer-shell window like WallpaperPicker (Overlay, exclusive keyboard while open, screen of the focused monitor, anchors top centre, exclusionMode Ignore); a Surface with a row of ThemeSwatch over `entries`; keys: Left/Right/Tab move, Enter keeps, Escape cancels, Super+T is the IPC call; a click outside keeps; a short caption with the theme name under the row; the card fades in with `reveal`.
+
     // Open on the focused screen with the theme in effect selected, remember it as startThemeId.
     function show(): void {
         throw new Error("not implemented")

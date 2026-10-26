@@ -35,7 +35,6 @@ PanelWindow {
     anchors { top: true; left: true; right: true }
     implicitHeight: Tokens.barHeight
     exclusiveZone: slidOut ? 0 : Tokens.barHeight
-    // TODO(phase 7, Bild-Theming): the bar fill is Tokens.bar (the Standard source keeps bg); the border stays Tokens.line.
     color: Tokens.bg
     // qmllint disable unqualified unresolved-type
     margins { top: -Tokens.barHeight * bar.slide }
@@ -141,7 +140,6 @@ PanelWindow {
             StatusGlyph {
                 anchors.verticalCenter: parent.verticalCenter
                 kind: "sliders"
-                // TODO(phase 7, Bild-Theming): text and icons on the bar use Tokens.barInk; secondary text barInkSoft, inactive icons barInkFaint.
                 color: Tokens.ink
             }
         }

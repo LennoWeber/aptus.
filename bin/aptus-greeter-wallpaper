@@ -65,6 +65,7 @@ def set_config(wallpaper, fit=None):
 def main():
     if os.geteuid() != 0:
         fail("must run as root (use pkexec)")
+    # TODO(phase 7, themes): use parse_args(sys.argv[1:]) -> (path, clear, fit); a missing --fit leaves the config's fit.
     if len(sys.argv) != 2:
         fail("usage: aptus-greeter-wallpaper PATH | --clear")
     if not os.path.isdir(SHARE) or not os.path.isfile(CONFIG):
@@ -72,6 +73,7 @@ def main():
 
     if sys.argv[1] == "--clear":
         remove_old()
+        # TODO(phase 7, themes): clear: set_config("") leaves the fit as it is.
         set_config("")
         return
 
@@ -96,6 +98,7 @@ def main():
     remove_old()
     target = os.path.join(SHARE, TARGET_PREFIX + ext)
     write_atomic(target, data, 0o644)
+    # TODO(phase 7, themes): set_config(target, fit).
     set_config(target)
 
 

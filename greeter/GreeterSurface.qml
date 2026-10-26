@@ -25,6 +25,7 @@ Item {
         anchors.fill: parent
         visible: status !== Image.Null
         source: surface.greeterState && surface.greeterState.wallpaper ? "file://" + surface.greeterState.wallpaper : ""
+        // TODO(phase 7, themes): Tokens.fillModeFor(greeterState.wallpaperFit); Center and Tile must not be scaled to the screen; bars of Fit show the gradient behind.
         fillMode: Image.PreserveAspectCrop
         asynchronous: true
         opacity: status === Image.Ready ? 1 : 0
@@ -33,8 +34,8 @@ Item {
     Rectangle {
         anchors.fill: parent
         visible: surface.greeterState && surface.greeterState.wallpaper !== ""
-        // TODO(phase 7, Bild-Theming): the greeter has no user settings (/etc/aptus/greeter.json). Decide: Standard, or the style with its fallbackColors; never the wallpaper colours before login.
         color: Tokens.bg
+        // TODO(phase 7, themes): the scrim: keep readable on any picture; the greeter palette stays light (no per-user theme before login).
         opacity: 0.55
     }
 
