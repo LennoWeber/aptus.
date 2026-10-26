@@ -121,6 +121,7 @@ PanelWindow {
     function sizeFor(stageId: int, viewId: int, contentHeight: real, morph: int): var {
         if (morph === Enums.MorphTarget.Launcher) return morphSizes.launcher
         if (morph === Enums.MorphTarget.ControlCenter) return morphSizes.controlCenter
+        // TODO(phase 7, alerts): a card alert takes its size from alertSizeFor(islandState.alert); Plain stays alertWidth x alertHeight.
         if (stageId === Enums.IslandStage.Alert) return { w: alertWidth, h: alertHeight }
         if (stageId === Enums.IslandStage.Osd) return { w: osdWidth, h: osdHeight }
         if (stageId === Enums.IslandStage.Open) {
@@ -141,6 +142,7 @@ PanelWindow {
         if (stageId < Enums.IslandStage.Rest || stageId > Enums.IslandStage.Open) throw new Error("invariant: Island.growMsFor: unknown stage")
         if (stageId === Enums.IslandStage.Osd) return osdGrowMs
         if (stageId === Enums.IslandStage.Open) return byHover ? hoverGrowMs : openGrowMs
+        // TODO(phase 7, alerts): alertGrowMs for a card alert.
         return stageId === Enums.IslandStage.Alert ? 220 : Tokens.durSlow
     }
 
@@ -205,9 +207,11 @@ PanelWindow {
         fill: win.openLike ? IslandLook.fillOpen : win.design === "shade" && !win.isAlert ? IslandLook.inkRest : IslandLook.fillRest
         stroke: win.openLike ? IslandLook.strokeOpen : IslandLook.strokeRest
         strokeWidth: win.openLike ? IslandLook.strokeWidthOpen : IslandLook.strokeWidthRest
+        // TODO(phase 7, alerts): the signal line stays only for Warn and Critical; a card shows its accent inside.
         accent: win.isAlert && win.islandState && win.islandState.alert && win.islandState.alert.severity !== Enums.Severity.Neutral ? Tokens.colorFor(win.islandState.alert.severity) : win.hairline
         accentOpacity: win.isAlert ? 1 : 0.5
         opacity: 1 - win.morphProgress
+        // TODO(phase 7, alerts): a card alert grows with a little overshoot (OutBack-like bezier); the others keep this curve.
         Behavior on width { NumberAnimation { duration: win.growMsFor(win.stage, win.view); easing.type: Easing.BezierSpline; easing.bezierCurve: [0.22, 1, 0.36, 1, 1, 1] } }
         Behavior on height { NumberAnimation { duration: win.growMsFor(win.stage, win.view); easing.type: Easing.BezierSpline; easing.bezierCurve: [0.22, 1, 0.36, 1, 1, 1] } }
         Behavior on cornerRadius { NumberAnimation { duration: win.growMsFor(win.stage, win.view) } }
@@ -261,6 +265,7 @@ PanelWindow {
             line: win.hairline
         }
 
+        // TODO(phase 7, alerts): pass mediaState and the accent, route the dismiss and action signals (Notifications.invoke), keep the tile click.
         IslandAlert {
             anchors.fill: parent
             opacity: win.isAlert ? 1 : 0

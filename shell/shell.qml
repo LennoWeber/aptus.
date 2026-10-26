@@ -277,6 +277,7 @@ ShellRoot {
         aiUsageState: aiUsageObj
     }
 
+    // TODO(phase 7, alerts): set islandHandles while the island shows alerts (islandObj.enabled and islandObj.alertsEnabled).
     NotificationPopups {
         position: settingsObj.get("notifications.position") || "top-right"
     }

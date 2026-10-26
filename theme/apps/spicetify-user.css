@@ -4,3 +4,4 @@
 .Root__top-container { gap: 8px; }
 .main-nowPlayingBar-nowPlayingBar { border-top: 1px solid var(--spice-highlight-elevated); }
 .main-playButton-PlayButton, .main-playButton-primary { background-color: var(--spice-button) !important; color: var(--spice-main) !important; }
+/* TODO(phase 7, spicetify): Encore button variables for both modes, round play buttons, chips, Create, player buttons, heart/add icons, progress; only variables and [data-encore-id], no hashed classes. */

@@ -12,6 +12,7 @@ Item {
     property color inkSoft
     signal clicked()
 
+    // TODO(phase 7, alerts): show AlertCard for every kind but Plain; Plain keeps this row.
     Row {
         anchors.centerIn: parent
         spacing: 8

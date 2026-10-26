@@ -49,6 +49,7 @@ Singleton {
             appName: n.appName,
             summary: n.summary,
             body: n.body,
+            // TODO(phase 7, alerts): keep desktopEntry (n.desktopEntry) in the item for the app symbol.
             icon: n.appIcon,
             image: n.image,
             urgency: urgency,

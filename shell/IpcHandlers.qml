@@ -206,6 +206,7 @@ Scope {
         // Hardware keys. The shell shows the OSD and does the change (instant feedback).
         function brightnessUp(): void {
             root.displayState.changeBrightness(0.05)
+            // TODO(phase 7, alerts): pass the device name as fifth argument (audioState.outputName / inputName, display name).
             root.osd.flash(Enums.OsdKind.Brightness, root.displayState.brightness, false, "")
         }
         function brightnessDown(): void {
@@ -216,6 +217,7 @@ Scope {
             if (root.audioState.muted) root.audioState.setMuted(false)
             const v = Math.min(1, root.audioState.volume + 0.05)
             root.audioState.setVolume(v)
+            // TODO(phase 7, alerts): pass the device name as fifth argument (audioState.outputName / inputName, display name).
             root.osd.flash(Enums.OsdKind.Volume, v, false, "")
         }
         function volumeDown(): void {
@@ -231,6 +233,7 @@ Scope {
         function micMute(): void {
             const nowMuted = !root.audioState.inputMuted
             root.audioState.toggleInputMute()
+            // TODO(phase 7, alerts): pass the device name as fifth argument (audioState.outputName / inputName, display name).
             root.osd.flash(Enums.OsdKind.Microphone, root.audioState.inputVolume, nowMuted, "")
         }
         function media(action: string): void {

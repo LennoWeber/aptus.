@@ -28,6 +28,7 @@ PanelWindow {
         if (newKind < Enums.OsdKind.Volume || newKind > Enums.OsdKind.Caffeine) throw new Error("invariant: Osd.flash: unknown OSD kind")
         // The island shows the indicator when it is the top element; this window stays hidden then.
         if (islandState && islandState.enabled) {
+            // TODO(phase 7, alerts): pass newDetail on.
             islandState.showOsd(newKind, newLevel, isMuted, newLabel)
             return
         }

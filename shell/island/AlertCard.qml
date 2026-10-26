@@ -30,6 +30,7 @@ Item {
         throw new Error("not implemented")
     }
 
+    // TODO(phase 7, alerts): the content: badge or cover with app symbol, header, title, detail, progress, actions, dismiss, media buttons.
     signal dismissed()
     signal activated()
     signal actionInvoked(string actionId)

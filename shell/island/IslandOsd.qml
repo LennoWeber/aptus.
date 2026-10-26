@@ -26,12 +26,14 @@ Item {
     }
 
     // The value as text: "42%", "Muted", or the label.
+    // TODO(phase 7, alerts): no change of text; the value stands large on the right.
     function valueText(): string {
         if (!osd) return ""
         if (osd.label !== "") return osd.label
         return osd.muted ? "Muted" : Math.round(osd.level * 100) + "%"
     }
 
+    // TODO(phase 7, alerts): badge around the symbol, title and device on two lines, large value, thicker bar.
     StatusGlyph {
         x: 18
         anchors.verticalCenter: parent.verticalCenter

@@ -88,6 +88,7 @@ Scope {
     function showOsd(kind: int, level: real, muted: bool, label: string, detail: string): void {
         if (kind < Enums.OsdKind.Volume || kind > Enums.OsdKind.Caffeine) throw new Error("invariant: IslandState.showOsd: unknown OSD kind")
         if (!enabled || stage === Enums.IslandStage.Open || morph !== Enums.MorphTarget.None) return
+        // TODO(phase 7, alerts): store `detail` (the device line) in the indicator data.
         osd = { kind: kind, level: Math.max(0, Math.min(1, level)), muted: muted, label: label || "" }
         hold.stop()
         hoverIn.stop()
@@ -131,9 +132,12 @@ Scope {
     }
 
     // severity: Enums.Severity. Critical goes first; the rest waits its turn (at most queueDepth, oldest dropped).
+    // TODO(phase 7, alerts): build the alert as Enums.AlertKind.Plain with the new fields (appName, appIcon, image ... empty, progress -1)
+    // // and hand it to the same queue as pushRichAlert.
     function pushAlert(id: string, text: string, detail: string, severity: int, tileId: int): void {
         if (!enabled || !alertsEnabled) return
         const a = { id: id, text: text, detail: detail, severity: severity, tileId: tileId, holdMs: alertHoldMs }
+        // TODO(phase 7, alerts): an update of the shown alert (progress of a download, the next track) must replace its fields in place, not restart the grow.
         if (alert && alert.id === id) { alert = a; if (stage === Enums.IslandStage.Alert) hold.restart(); return }
         if (!alert) { show(a); return }
         if (severity === Enums.Severity.Critical && alert.severity !== Enums.Severity.Critical) {
@@ -164,6 +168,7 @@ Scope {
     }
 
     // Show an alert on the pill (an alert is: id, text, detail, severity, tileId, holdMs).
+    // TODO(phase 7, alerts): the hold time of a card alert comes from the alert (holdMs), a card with actions stays longer.
     function show(a: var): void {
         alert = a
         if (stage !== Enums.IslandStage.Open && stage !== Enums.IslandStage.Osd) {

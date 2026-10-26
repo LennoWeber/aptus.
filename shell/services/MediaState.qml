@@ -19,7 +19,9 @@ Scope {
     property string album: player ? player.trackAlbum : ""
     property string artUrl: player ? player.trackArtUrl : ""
     property string playerName: player ? player.identity : ""
+    // TODO(phase 7, alerts): bind to player.desktopEntry.
     property string desktopEntry         // desktop entry of the player ("spotify"), "" when it has none
+    // TODO(phase 7, alerts): bind to iconFor(desktopEntry) (fall back to the identity in lower case).
     property string appIcon              // icon source of the player's app, "" when none is found
     property real positionSec: 0
     property real lengthSec: player && player.lengthSupported ? player.length : 0

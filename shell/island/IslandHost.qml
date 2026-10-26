@@ -60,6 +60,7 @@ Scope {
         if (list.length === 0 || list[0].id === lastPopupId) return
         lastPopupId = list[0].id
         const n = list[0]
+        // TODO(phase 7, alerts): classifyNotification and pushRichAlert with notificationData; keep id "n"+id.
         islandState.pushAlert("n" + n.id, n.summary || n.appName, n.summary ? n.appName : "", n.severity, Enums.TileId.Notifications)
     }
 
@@ -67,6 +68,7 @@ Scope {
     function announcePlayback(): void {
         const m = mediaState
         if (!m || !m.available || m.title === "") return
+        // TODO(phase 7, alerts): Playing/Paused only updates the shown track alert (mediaData(m, "state")), it is not a text alert of its own.
         islandState.pushAlert("playback", m.playing ? "Playing" : "Paused", m.title, Enums.Severity.Neutral, Enums.TileId.Media)
     }
 
@@ -95,6 +97,7 @@ Scope {
     }
     Connections {
         target: host.timerState
+        // TODO(phase 7, alerts): kind Timer with its own symbol.
         function onFinished(label: string) { host.islandState.pushAlert("timer", label ? label + " done" : "Timer done", "", Enums.Severity.Warn, Enums.TileId.Timer) }
     }
     Connections {
@@ -104,6 +107,7 @@ Scope {
             if (b.present && b.discharging && b.percent <= b.criticalBelowPercent) {
                 if (!host.batteryAnnounced) {
                     host.batteryAnnounced = true
+                    // TODO(phase 7, alerts): kind Battery with the percent as progress.
                     host.islandState.pushAlert("battery", "Battery " + Math.round(b.percent) + "%", "Plug in soon", Enums.Severity.Critical, Enums.TileId.PowerProfile)
                 }
             } else if (!b.discharging || b.percent > b.criticalBelowPercent + 5) {
@@ -119,6 +123,7 @@ Scope {
             const key = m.title + "|" + m.artist
             if (m.title === "" || key === host.lastTrackKey) return
             host.lastTrackKey = key
+            // TODO(phase 7, alerts): pushRichAlert with kind Media and mediaData(m, "track"); the cover may arrive later: update by id when artUrl changes.
             if (m.playing) host.islandState.pushAlert("track", m.title, m.artist, Enums.Severity.Neutral, Enums.TileId.Media)
         }
     }
