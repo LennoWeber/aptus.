@@ -24,6 +24,7 @@ Scope {
     property var powerMenu      // PowerMenu
     property var deviceMode     // DeviceModeState
     property var wallpaperPicker  // WallpaperPicker
+    // TODO(phase 7, Island): rename to islandState (IslandState); the island functions below read it.
     property var notchState     // NotchState
 
     function toggleRotationLock(): void {
@@ -68,6 +69,7 @@ Scope {
                 if (root.shellState.stage === Enums.Stage.Detail && root.shellState.activeTile === Enums.TileId.Notifications) root.shellState.closeAll()
                 else root.openNotifications()
             }
+            // TODO(phase 7, Island): with the island shown, "session" toggles the island's Power view and "wallpaper" its Wallpaper view.
             else if (name === "session") root.powerMenu.toggle()
             else if (name === "wallpaper") root.wallpaperPicker.toggle()
             else console.warn("aptus: panel '" + name + "' is not available yet")
@@ -86,6 +88,7 @@ Scope {
                 else root.openControlCenter()
             }
             else if (name === "notification-center") root.openNotifications()
+            // TODO(phase 7, Island): same routing as in panelToggle (open, never close).
             else if (name === "session") { if (!root.powerMenu.shown) root.powerMenu.toggle() }
             else if (name === "wallpaper") root.wallpaperPicker.show()
             else console.warn("aptus: panel '" + name + "' is not available yet")
@@ -99,6 +102,7 @@ Scope {
             root.launcherState.toggle(modes[modeName])
         }
 
+        // TODO(phase 7, Island): bodies of islandToggle and islandOpen: use islandState (toggle/open with the focused screen and the view named by `view`: home, power, screenshot, clipboard, emoji, wallpaper; empty = home).
         // The notch of the focused screen: open, or close when it is open. Does nothing while the bar is shown.
         function islandToggle(view: string): void {
             if (!root.notchState || !root.notchState.enabled) return

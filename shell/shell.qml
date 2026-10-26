@@ -42,6 +42,7 @@ ShellRoot {
         target: shellStateObj
         function onStageChanged() { if (shellStateObj.stage === Enums.Stage.Closed && root.barRevealed) barHideTimer.restart() }
     }
+    // TODO(phase 7, Island): set Tokens.topInset: the bar's height, or the island's rest height plus its look's gap while the island is shown (and island.reserveSpace is on).
     ShellState { id: shellStateObj }
     LauncherState { id: launcherObj; shellState: shellStateObj }
     BrowserState {
@@ -78,6 +79,8 @@ ShellRoot {
         enabled: settingsObj.get("bar.contextZoneEnabled") !== false
     }
 
+    // TODO(phase 7, Island): replace this whole notch block by the island: IslandState (settings island.alerts, island.alertSeconds, island.mediaWings, island.hoverOpen),
+    //     a Loader of island/IslandHost.qml that hands over the states (incl. lockState, displayState), bar.style "island" instead of "notch".
     // The top of the screen: the bar, or the notch (setting bar.style). The bar is also the fallback when the
     // notch fails to load, so the shell never ends up without one.
     readonly property bool notchWanted: settingsObj.get("bar.style") === "notch"
@@ -156,6 +159,7 @@ ShellRoot {
 
     WallpaperPicker { id: wallpaperObj }
     Binding { target: Wallpaper; property: "directory"; value: settingsObj.get("wallpaper.directory") || "" }
+    // TODO(phase 7, Island): with the island shown, "wallpaper requested" opens the island's Wallpaper view instead of the picker.
     Connections { target: settingsAppObj; function onWallpaperRequested() { wallpaperObj.show() } }
 
     // Swipe from the top or left edge (touch only).
@@ -189,6 +193,7 @@ ShellRoot {
             return
         }
         if (actionId === "controlcenter.open") ipcObj.openControlCenter()
+        // TODO(phase 7, Island): with the island shown, "session.open" opens its Power view instead of the full-screen menu.
         else if (actionId === "session.open") powerMenuObj.toggle()
         else if (actionId.indexOf("launcher.open:") === 0) {
             const modes = { apps: Enums.LauncherMode.Apps, web: Enums.LauncherMode.Web, settings: Enums.LauncherMode.Settings,
@@ -239,6 +244,7 @@ ShellRoot {
         rotationLocked: deviceObj.rotationLocked
         onRotationLockRequested: ipcObj.toggleRotationLock()
         onTabletRequested: deviceObj.toggleManualTablet()
+        // TODO(phase 7, Island): with the island shown, open its Power view instead of the full-screen menu.
         onPowerRequested: { shellStateObj.closeAll(); powerMenuObj.toggle() }
         shellState: shellStateObj
         audioState: audioObj
@@ -295,6 +301,7 @@ ShellRoot {
         displayState: displayObj
         osd: osdObj
         shellState: shellStateObj
+        // TODO(phase 7, Island): hand over islandState (and the lock/power targets of the Power view) instead of notchState.
         notchState: notchObj
     }
 
@@ -330,5 +337,6 @@ ShellRoot {
         Search.settingsState = settingsAppObj
         Search.controls = { network: networkObj, bluetooth: bluetoothObj, nightLight: nightLightObj, caffeine: caffeineObj, focus: focusObj, timer: timerObj, lock: lockObj }
         applyBlur()
+        // TODO(phase 7, Island): IslandLook.load() once, and IslandLook.apply(settingsObj.get("island.look")) now and whenever the look setting or the Tokens colours change.
     }
 }

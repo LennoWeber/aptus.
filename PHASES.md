@@ -945,3 +945,11 @@ Lennos „weiter“ → Phase 1b: zehn Look-Entwürfe (Mockup). Entscheidung daz
 - Konstanten und Daten: Größen in `Island.qml` (`alertWidth/Height`, `hoverWidth`, `homeWidth`, `viewSizes`, `morphSizes`), Aktionslisten (`defaultActions` in Power und Screenshot), `IslandEmoji.columns`, Wallpaper-Kartenmaße; Daten `theme/island-looks.json` (zehn Looks) und `config/emoji.json` (1461 Emoji aus der Unicode-Datenbank, 54 KB).
 - Hinweis: Die Glyph-Namen `region`, `screen`, `window`, `record` der Screenshot-Aktionen sind Formnamen, die die Ansicht in Phase 7 selbst zeichnet (`StatusGlyph` kennt sie nicht); Power nutzt vorhandene Glyphen.
 - Prüfung: Diff gelesen, außer Signaturen, Platzhaltern und Konstanten steht nichts darin (nur die zwei Umbenennungen in `IpcHandlers.qml`). Keine Aufrufe eingebaut, keine Strukturen geändert, nicht gebaut.
+
+**Phase 4 (TODO-Markierungen), erledigt:**
+- 15 Kommentare `TODO(phase 7, Island): …` an den Stellen im laufenden Code, die sich ändern müssen, nur Kommentare, kein Code:
+  - `shell.qml` (7): Notch-Block → Island-Loader und `IslandState`; `Tokens.topInset` setzen; `session.open` (Edge-Aktion) und `onPowerRequested` des Control Centers → Island-Power-Ansicht; `onWallpaperRequested` → Island-Wallpaper-Ansicht; `ipcObj` bekommt `islandState` statt `notchState`; `IslandLook.load()` und `apply(...)` beim Start und bei Änderung.
+  - `IpcHandlers.qml` (4): Property `notchState` → `islandState`; Körper von `islandToggle`/`islandOpen`; Routing von `session` und `wallpaper` in `panelToggle` und `panelOpen`.
+  - Vier Fenster lesen `Tokens.topInset` statt `barHeight`: `DropdownHost.qml`, `AiPanel.qml`, `NotificationPopups.qml`, `ControlCenter.qml`.
+- Nichts fehlt aus Phase 2 oder 3 (geprüft: jede TODO-Stelle hat ihr Gegenstück in Struktur oder Signatur). Offene Beobachtung für Phase 5: `Tokens.topInset` ist deklariert, wird aber noch von niemandem gesetzt.
+- Prüfung: `git diff` zeigt ausschließlich Kommentarzeilen.
