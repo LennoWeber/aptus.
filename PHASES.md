@@ -1336,3 +1336,10 @@ Alle Programme, die Lenno nutzt, sehen aus wie aptus: dieselbe ruhige Palette au
 
 ### Phasen dieses Ablaufs
 1 Plan · 2 Strukturen · 3 Signaturen · 4 TODOs · 5 Probe · 6 Invarianten · 7 Implementierung; nach Lennos Vorgabe ohne Pausen ([[feedback_phasen_ohne_weiter]]), jede Phase mit Selbst-Review.
+
+### Protokoll Ablauf 10
+- **Phase 1 (Plan), erledigt.** Entscheidungen oben.
+- **Phase 2 (Strukturen), erledigt:** `theme/tokens.json` bekommt `palette.dark`, `palette.accents` (hell/dunkel), `palette.modes` (light→day, dark→dark), `palette.brights`, `palette.roles` (Auswahl, Link, Syntax-Zuordnung, cava-Verlauf). Nur Daten.
+  - **Review (frischer Sub-Agent), behoben:** Brights fehlten (1), Modus-Abbildung fehlte (2), Rollen für Auswahl, Syntax und cava fehlten (4, 5, 8), Hex-Normalform und veraltete Notizen (7, Notizen), bg/ink-Duplikat im Dunkelsatz notiert.
+  - **Abgelehnt:** (3) Alpha-Werte für Hyprland/hyprlock: Umrechnung ist Logik, Phase 7. (6) Pfade und Formate pro App sowie ein Typ für den Palettenzustand: sind Konstanten und Signaturen, Phase 3.
+  - **Merken für Phase 7:** `SIGNAL_DARK`, `ACCENTS` und die hartcodierten Brights im Skript müssen auf die Tokens umgestellt werden (sonst zwei Wahrheiten); Leser von `palette.*` müssen Schlüssel `note` überspringen.
