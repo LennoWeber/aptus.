@@ -11,6 +11,7 @@
     "style": "watercolor"
   },
   "bar": {
+    "glass": false,
     "style": "bar",
     "height": 28,
     "tone": "offwhite",
@@ -31,6 +32,7 @@
     "pinned": ["kitty", "org.kde.dolphin", "zen-browser", "net.thunderbird.Thunderbird", "com.spotify.Client", "steam", "systemsettings"]
   },
   "island": {
+    "glass": false,
     "design": "capsule",
     "hoverOpen": true,
     "homeStyle": "dashboard",

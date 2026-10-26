@@ -36,19 +36,27 @@ PanelWindow {
     implicitHeight: Tokens.barHeight
     exclusiveZone: slidOut ? 0 : Tokens.barHeight
     // TODO(phase 7, Bild-Theming): the bar fill is Tokens.bar (the Standard source keeps bg); the border stays Tokens.line.
-    color: Tokens.bg
+    // With bar.glass the fill is see-through and the compositor blurs what is behind it.
+    readonly property bool glass: appSettings ? appSettings.get("bar.glass") === true : false
+    color: glass ? Qt.rgba(Tokens.bg.r, Tokens.bg.g, Tokens.bg.b, 0.62) : Tokens.bg
     // qmllint disable unqualified unresolved-type
     margins { top: -Tokens.barHeight * bar.slide }
     // qmllint enable unqualified unresolved-type
     property real slide: slidOut ? 1 : 0
     Behavior on slide { NumberAnimation { duration: Tokens.durSlow; easing.type: Easing.BezierSpline; easing.bezierCurve: [0.2, 0, 0, 1, 1, 1] } }
     WlrLayershell.namespace: "aptus-bar"
+    // The Wayland blur type is not known to qmllint; same as in the launcher.
+    // qmllint disable unresolved-type unqualified
+    BackgroundEffect.blurRegion: Region { item: bar.glass ? glassArea : null }
+    // qmllint enable unresolved-type unqualified
 
     // Fullscreen windows and caffeine keep the screen awake (policy in Idle).
     IdleInhibitor {
         enabled: Idle.inhibit
         window: bar
     }
+
+    Item { id: glassArea; anchors.fill: parent }
 
     // Hairline at the bottom edge, no shadow.
     Rectangle {
