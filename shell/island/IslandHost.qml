@@ -48,6 +48,11 @@ Scope {
         islandState.pushAlert("n" + n.id, n.summary || n.appName, n.summary ? n.appName : "", n.severity, Enums.TileId.Notifications)
     }
 
+    // Push an alert when playback starts or stops ("Playing" / "Paused" with the title).
+    function announcePlayback(): void {
+        throw new Error("not implemented")
+    }
+
     // The launcher or the control center takes the stage (ShellState): tell IslandState where to morph to.
     function followShellState(): void {
         const s = shellState

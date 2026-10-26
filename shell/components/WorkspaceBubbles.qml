@@ -36,6 +36,11 @@ Item {
         return entry.active ? activeSize : (entry.occupied || entry.urgent) ? dotSize : ringSize
     }
 
+    // Width of the shape of one workspace entry: the oval width for the active one, else its diameter (style ovals).
+    function widthFor(entry: var): int {
+        throw new Error("not implemented")
+    }
+
     // Colour of the bubble: urgent is the one signal colour, the rest is ink with weight.
     function toneFor(entry: var): color {
         if (!entry) throw new Error("invariant: WorkspaceBubbles.toneFor: no workspace entry")

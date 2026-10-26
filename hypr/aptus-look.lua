@@ -3,10 +3,10 @@
 -- so a settings change can rewrite and reload it.
 -- Monitor, input and touch settings stay in the user's own file.
 
--- Window transparency and blur: apps stay easy to read (92 % / 85 %), the blur is strong enough to calm the wallpaper behind them.
+-- Window transparency and blur: apps stay easy to read (88 % / 80 %), the blur is strong enough to calm the wallpaper behind them.
 local windowLook = {
-	activeOpacity = 0.92,
-	inactiveOpacity = 0.85,
+	activeOpacity = 0.88,
+	inactiveOpacity = 0.80,
 	blurSize = 10,
 	blurPasses = 4,
 	blurBrightness = 0.9,

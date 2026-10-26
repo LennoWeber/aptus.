@@ -74,6 +74,26 @@ Scope {
         root.view = view
     }
 
+    // Show the on-screen indicator on the pill: kind is Enums.OsdKind, level 0..1, label replaces the bar when not empty.
+    function showOsd(kind: int, level: real, muted: bool, label: string): void {
+        throw new Error("not implemented")
+    }
+
+    // The pointer rests on the island of that screen: open Home after hoverInMs (only while hoverEnabled and at rest).
+    function hoverEnter(screenName: string): void {
+        throw new Error("not implemented")
+    }
+
+    // The pointer left the island of that screen: close after hoverOutMs when it was opened by hover and not used.
+    function hoverLeave(screenName: string): void {
+        throw new Error("not implemented")
+    }
+
+    // The card of that screen was used (a click, a section opened): it stays until Esc or a click elsewhere.
+    function keepOpen(screenName: string): void {
+        throw new Error("not implemented")
+    }
+
     // severity: Enums.Severity. Critical goes first; the rest waits its turn (at most queueDepth, oldest dropped).
     function pushAlert(id: string, text: string, detail: string, severity: int, tileId: int): void {
         if (!enabled || !alertsEnabled) return

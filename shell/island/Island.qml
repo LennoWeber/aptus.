@@ -80,6 +80,10 @@ PanelWindow {
 
     // Sizes of the body (px) for each stage and view; Home takes the height of its content.
     readonly property real alertWidth: 380
+    readonly property real osdWidth: 320      // the on-screen indicator
+    readonly property real osdHeight: 46
+    readonly property int osdGrowMs: 160      // ms: the body grows to the indicator in this time
+    readonly property int hoverGrowMs: 180    // ms: the body grows to the card when the pointer opened it
     readonly property real alertHeight: 38
     readonly property real homeWidth: design === "pill" ? 480 : 520
     readonly property var viewSizes: ({

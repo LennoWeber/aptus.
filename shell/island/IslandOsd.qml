@@ -11,4 +11,14 @@ Item {
     property color ink
     property color inkSoft
     property color line
+
+    // Symbol name for an Enums.OsdKind (volume, sun, mic, cup, rotate).
+    function glyphFor(kind: int): string {
+        throw new Error("not implemented")
+    }
+
+    // The value as text: "42%", "Muted", or the label.
+    function valueText(): string {
+        throw new Error("not implemented")
+    }
 }
