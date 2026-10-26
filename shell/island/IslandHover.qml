@@ -33,6 +33,11 @@ Item {
 
     implicitHeight: column.implicitHeight + 20
 
+    // Open the section name ("wifi" or "bluetooth"), or close it when it is open; the other one closes.
+    function toggleSection(name: string): void {
+        throw new Error("not implemented")
+    }
+
     Column {
         id: column
         anchors { left: parent.left; right: parent.right; top: parent.top; margins: 14; topMargin: 10 }

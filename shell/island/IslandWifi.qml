@@ -11,11 +11,21 @@ FocusScope {
     property var networkState
     property bool shown                 // true while the section is open: scanning only then
     property string passwordFor         // the network whose password is being typed
-    property int maxRows
+    property int maxRows: 5
     property color ink
     property color inkSoft
     property color line
     property color fill
 
     signal closeRequested()
+
+    // A tap on a network: connect or disconnect, ask for the password, or connect to a saved one.
+    function tapNetwork(ssid: string, secured: bool, known: bool, connected: bool): void {
+        throw new Error("not implemented")
+    }
+
+    // Connect to a network with the typed password (an empty one for an open or saved network).
+    function connectTo(ssid: string, password: string): void {
+        throw new Error("not implemented")
+    }
 }

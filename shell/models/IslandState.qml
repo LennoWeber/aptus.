@@ -30,8 +30,8 @@ Scope {
     property string pendingHoverScreen: ""
 
     // How long the pointer rests on the island before the hover card shows, and how long it must be away before the card goes.
-    property int hoverInMs
-    property int hoverOutMs
+    property int hoverInMs: 90
+    property int hoverOutMs: 220
 
     signal alertShown(var alert)
     signal opened(string screenName, int view)
@@ -72,6 +72,12 @@ Scope {
     function showView(view: int): void {
         if (stage !== Enums.IslandStage.Open) throw new Error("invariant: IslandState.showView: the island is not open")
         root.view = view
+    }
+
+    // Turn the hover card of that screen into the opened island (view Home), so that it takes keyboard focus and stays
+    // until Esc or a click elsewhere. Does nothing unless the island is in the Hover stage on that screen.
+    function pin(screenName: string): void {
+        throw new Error("not implemented")
     }
 
     // The pointer rests on the island of that screen. Only has an effect while hoverEnabled and nothing is open.

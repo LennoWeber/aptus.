@@ -14,4 +14,9 @@ Item {
     property color fill
 
     signal viewRequested(int view)      // Enums.IslandView
+
+    // Set the power profile (Enums.PowerMode).
+    function setProfile(profile: int): void {
+        throw new Error("not implemented")
+    }
 }

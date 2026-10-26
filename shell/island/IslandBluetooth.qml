@@ -10,11 +10,16 @@ FocusScope {
 
     property var bluetoothState
     property bool shown                 // true while the section is open: discovery only then
-    property int maxRows
+    property int maxRows: 5
     property color ink
     property color inkSoft
     property color line
     property color fill
 
     signal closeRequested()
+
+    // A tap on a device: connect when it is not connected, else disconnect.
+    function toggleDevice(address: string): void {
+        throw new Error("not implemented")
+    }
 }

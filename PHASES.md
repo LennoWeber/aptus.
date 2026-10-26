@@ -1023,3 +1023,9 @@ Arbeitsregel wie beim vierten Ablauf: nie auf „weiter“ warten, jede Phase pr
 - Daten: Option `bubbles` im Schema, Standard `bar.workspaceStyle` jetzt `bubbles` (die Leiste kennt den Wert noch nicht und zeigt bis Phase 7 Nummern, weil `Bar.qml` alles außer `dots` als Nummern liest).
 - Abweichung vom Plan: Werte (90/220 ms, 180 ms, Blasengrößen, Zeilenzahl) stehen hier nicht, sondern kommen als Konstanten in Phase 3. Plan nannte `IslandWifi.shown` und `passwordFor` als Properties, beides vorhanden.
 - Prüfung: Diff gelesen; keine Funktion, kein Pfeil-Ausdruck, kein Timer, keine Verdrahtung in den neuen Dateien (grep leer); JSON validiert; nicht gebaut.
+
+**Phase 3 (Signaturen), erledigt:**
+- 8 neue Funktionen mit Platzhalter `throw new Error("not implemented")`: `IslandState.pin`, `IslandHover.toggleSection`, `Island.growMsFor`, `IslandWifi.tapNetwork` und `connectTo`, `IslandBluetooth.toggleDevice`, `IslandQuickActions.setProfile`, `WorkspaceBubbles.sizeFor` und `toneFor`. Gegenüber dem Plan neu: `IslandWifi.tapNetwork` (die Tap-Entscheidung getrennt vom Verbinden), `WorkspaceBubbles.sizeFor/toneFor`; entfallen: `IslandWifi.setShown` (das Property `shown` genügt).
+- Konstanten: `IslandState.hoverInMs 90`, `hoverOutMs 220`; `Island.hoverGrowMs 180`; `hoverWidth` 440 (Shade 460); Blasengrößen 8/10/16 px, Zellbreite 24; `maxRows 5` für Wi-Fi und Bluetooth.
+- Verhalten ist unverändert: die Timer in `IslandState` lesen noch 280/320 ms, keine Funktion wird aufgerufen. Einzige sichtbare Folge: die Hover-Karte ist 60 px breiter.
+- Prüfung: Diff gelesen; nur Signaturen, Platzhalter und Konstanten; keine Struktur geändert (Phase 2 unberührt), keine Aufrufe eingebaut; nicht gebaut.

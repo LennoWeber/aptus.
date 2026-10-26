@@ -79,10 +79,10 @@ PanelWindow {
     signal launcherRequested()
 
     // Sizes of the body (px) for each stage and view; Home and Hover take the height of their content.
-    property int hoverGrowMs                 // ms: the body grows to the hover card in this time (the other sizes take Tokens.durSlow)
+    readonly property int hoverGrowMs: 180   // ms: the body grows to the hover card in this time (the other sizes take Tokens.durSlow)
     readonly property real alertWidth: 380
     readonly property real alertHeight: 38
-    readonly property real hoverWidth: design === "shade" ? 440 : 380
+    readonly property real hoverWidth: design === "shade" ? 460 : 440
     readonly property real homeWidth: design === "ninja" ? 480 : 520
     readonly property var viewSizes: ({
         power: { w: 480, h: 150 },
@@ -112,6 +112,11 @@ PanelWindow {
             }
         }
         return { w: restWidth, h: IslandLook.restHeight }
+    }
+
+    // Duration (ms) of the body's growth for a stage (Enums.IslandStage): hoverGrowMs for Hover, Tokens.durSlow otherwise.
+    function growMsFor(stageId: int): int {
+        throw new Error("not implemented")
     }
 
     // Open the island of this screen at a view.
