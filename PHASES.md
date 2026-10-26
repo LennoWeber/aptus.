@@ -6,6 +6,8 @@ Zweiter Phasenablauf (neue Funktion „Notch“, ab 22. Okt.): **Phase 1 (Plan) 
 
 Dritter Phasenablauf (neue Funktion „Bild-Theming“, 22. Okt.): **Phase 1 bis 5 erledigt, wartet auf „weiter“ für Phase 6**, siehe Abschnitt „Bild-Theming“ weiter unten.
 
+Vierter Phasenablauf (neue Funktion „Island“, 26. Okt., ersetzt den Notch): **Phase 1 (Plan) geschrieben, wartet auf „weiter“ für Phase 1b (zehn Look-Entwürfe)**, siehe Abschnitt „Island“ ganz unten.
+
 ## Ziel
 
 Eine komplette, eigenständige Desktop-Shell für **Fedora + Hyprland** (1920x1080), die professionell aussieht, sich ruhig und hochwertig anfühlt und gestalterisch eigene Wege geht. Am Ende: öffentliches GitHub-Repo mit Installer. UI-Sprache: Englisch.
@@ -829,3 +831,74 @@ Entwurf (nur Warm-Palette, Off-white verworfen): Leiste mit Claude-Usage-Ring, L
 - Beide Branches in `main` gemerged. Konflikte in `Enums.qml`, `settings-schema.json` und `PHASES.md`: jeweils beide Seiten behalten.
 - `DropdownHost.openAt`: Default-Parameter (`offsetX: real = 0`) aus dem Notch-Branch läuft in diesem Quickshell nicht ("Type annotations are not supported"); Wert wird jetzt im Körper mit `(offsetX || 0)` abgefangen.
 - Geprüft: Shell startet ohne Fehler und Warnungen. **Nicht geprüft:** `qmllint` ist auf diesem Rechner nicht installiert (`aptus-lint.sh` meldet deshalb nichts); Notch und Dock am Gerät noch nicht ausprobiert.
+
+## Island (vierter Phasenablauf, ab 26. Okt.) – ersetzt den Notch
+
+### Test des gemergten Stands (26. Okt., vor allen weiteren Änderungen)
+- Shell startet mit `main` (Leiste, warm-ui-Control-Center) ohne Fehler. Screenshot der Leiste gesehen.
+- **Notch lädt nicht:** mit `bar.style = notch` kommt `notch/NotchRest.qml:30: SystemClock is not a type` (fehlender Import), danach „Type Notch unavailable“; die Leiste bleibt als Rückfall. Der Notch wird ohnehin ersetzt (siehe unten), der Fehler wird dort nicht repariert, sondern entfällt.
+- **Dock (`dock.enabled`): unklar.** Kein Ladefehler im Log, aber im Screenshot nicht zu sehen (Terminals füllen den Schirm). Wird in Phase 5 mit leerem Workspace geprüft.
+- Testweise gesetzte Datei `~/.config/aptus/settings.json` wieder gelöscht, Shell neu gestartet.
+- `qmllint` ist nicht installiert, `aptus-lint.sh` prüft nichts. Vorschlag: `sudo dnf install qt6-qtdeclarative-devel`, vor Phase 2.
+- Der Merge von `notch` und `redesign/warm-ui` liegt nur lokal (5 Commits vor `origin/main`), nichts gepusht.
+
+### Ziel (Lenno)
+Eine **Insel** (Dynamic Island) oben am Bildschirm als Alternative zur Leiste, in den Settings wählbar (`bar.style`: `bar` | `island`). Verformungen und Übergänge zwischen den Funktionen wie in shell-ninjas Config, aber **im aptus-Stil** (deckend, kein Glas, Haarlinie statt Schatten, Farbe nur als Signal, 140/260 ms, Kurve `[0.2, 0, 0, 1]`). **Launcher und Control Center (Mod + C) bleiben im Aussehen unverändert**; neu sind nur die Übergangsanimationen von und zur Insel.
+
+### Entscheidungen (Lenno)
+- Der Notch aus dem Branch `notch` wird **ersetzt** (`shell/notch/*`, `models/NotchState.qml`, Einstellungen `notch.*`). Das **Dock bleibt**.
+- Funktionen der Insel: Musik mit Visualizer; Meldungen und OSD; Power-Menü (auch das bestehende Session-Menü geht darin auf); Screenshot; Clipboard; Emoji; Wallpaper (Bilder „kommen aus der Insel heraus“).
+- **Hover-Modus:** Fährt man über die Insel, öffnet sich ein Panel mit Schnelleinstellungen (Ersatz der Leisten-Dropdowns: Audio, Netz, Bluetooth, Akku, Nachtlicht, Kalender), im aptus-Stil.
+- **Übergänge** Insel → Launcher und Insel → Control Center, und zurück: die Insel verformt sich in die Fläche des jeweiligen Fensters, das darunter einblendet.
+- **Look:** zuerst **zehn Entwürfe** (Phase 1b, HTML-Mockup), Lenno wählt. Erst danach Phase 2.
+- **Auswahl in den Settings:** Schalter `bar.style` (Leiste/Insel), mit der vorhandenen 15-s-Bestätigung samt Rücknahme.
+- **Shell-ninja-Spuren:** im ganzen Home entfernen (Logo, Name, Bilder). Eigener Strang, siehe unten.
+
+### Vorbild und Lizenz
+shell-ninja (`hyprconf-install`, Quickshell-Config unter `~/.hyprconf/quickshell/island`, rund 18 000 Zeilen) steht unter **MIT**, wie aptus; Übernahme ist erlaubt, verlangt aber den Copyright-Hinweis im Repo. Lenno will den Namen nirgends sehen. **Entscheidung im Plan: kein Code wird kopiert.** Übernommen werden nur die Mechanismen, neu in aptus-Code geschrieben:
+- Ein Fenster pro Bildschirm in fester Größe; ein Fortschrittswert `animProgress` (260 ms, OutCubic) treibt Breite, Höhe und Radius des Körpers; Zielgröße je Ansicht (kleine Ansicht 480 x 560, Wallpaper 920 x 380, weitere je Ansicht).
+- Ruhegröße wechselt je nach Inhalt (Musik, Meldung, OSD, Timer), 320 ms.
+- Ansichten werden durch `currentView` umgeschaltet, der Körper wächst/schrumpft zur neuen Größe, Inhalt blendet erst bei `animProgress >= 0.88` ein.
+- Wallpaper: Karussell mit Plätzen (`slot`), Position, Skalierung und Deckkraft aus dem Abstand zur Mitte.
+- Kein Name, keine Konstante, keine Texte, keine Farben von shell-ninja. Falls später doch Code wörtlich übernommen werden soll: erst fragen, dann Hinweis in `LICENSE` bzw. `NOTICE`.
+
+### Technik (geplant)
+- Neuer Ordner `shell/island/`, ersetzt `shell/notch/`:
+  `IslandHost.qml` (Fenster, Maske für Klick-Durchlässigkeit), `IslandBody.qml` (verformbarer Körper, `animProgress`, Look), `IslandRest.qml`, `IslandAlert.qml` (Meldung/OSD), `IslandMedia.qml`, `IslandHover.qml` (Schnelleinstellungen), Ansichten `PowerView.qml`, `ScreenshotView.qml`, `ClipboardView.qml`, `EmojiView.qml`, `WallpaperView.qml`, `qmldir`.
+- Zustand: `models/IslandState.qml` (löst `NotchState.qml` ab): Ansicht, Phase (Ruhe, Meldung, Hover, Offen), Meldung und Warteschlange, `morphTarget` (Insel, Launcher, Control Center).
+- Neue Typen: `Enums.IslandStage { Rest, Alert, Hover, Open }`, `Enums.IslandView { None, Power, Screenshot, Clipboard, Emoji, Wallpaper }`, `Enums.IslandLook { … }` (Werte nach der Look-Auswahl), `Enums.MorphTarget { Island, Launcher, ControlCenter }`; `NotchStage` entfällt.
+- Einstellungen: `bar.style` (`bar` | `island`), `island.look`, `island.hoverOpen`, `island.alerts`, `island.alertSeconds`, `island.mediaWings`, `island.reserveSpace`; `notch.*` entfällt, vorhandene Werte werden auf `island.*` abgebildet. Art `choice`/`toggle`/`number` gibt es schon.
+- Wiederverwendet (nicht neu geschrieben): Inhalte der `dropdowns/*Dropdown.qml` für das Hover-Panel, `ContextState` für Meldungen, Dienste `MediaState`, `Notifications`, `Clipboard`, `Wallpaper`, `CaptureState`, `Session`, `TimerState`, `BatteryState`.
+- Geändert: `shell/shell.qml` (Loader für Insel statt Notch), `shell/IpcHandlers.qml` (`islandToggle`, `islandOpen <ansicht>`), `bin/aptus` (Übersetzung prüfen), `config/hotkeys.json`, `config/settings.json`, `config/settings-schema.json`; Übergang: `launcher/Launcher.qml`, `controlcenter/ControlCenter.qml` und `models/ShellState.qml` (nur Ein- und Ausblenden, Fläche unverändert); `session/*` (Power-Menü geht in die Insel auf).
+- Bindung an die Leiste lösen (`Tokens.barHeight` in DropdownHost, AiPanel, NotificationPopups, ControlCenter): ein Wert `ShellState.topInset`, wie im früheren Notch-Plan.
+- Notch-Branch: `notch/*` und `NotchState.qml` werden in Phase 2 gelöscht; `dock/*` bleibt.
+
+### Phasen dieses Ablaufs
+1. Plan (dieser Abschnitt). **Phase 1b:** zehn Look-Entwürfe als Mockup, Lenno wählt (Nummer oder Mischung).
+2. Strukturen: Enums, `IslandState`, Einstellungen, Schema, leere Komponentenhüllen; Notch-Struktur entfernen.
+3. Signaturen: Funktionen mit Platzhalter (`open(view)`, `morphTo(target)`, `pushAlert`, `hoverEnter/Leave`, Größe je Ansicht).
+4. TODO-Markierungen in Launcher, Control Center, ShellState, shell.qml, IPC, Session, Settings.
+5. Probe-Implementierung, am Gerät, danach zurückgesetzt. **Hier wird alles getestet** (Dock, Hover, Übergänge, Wallpaper, Power, Mehrmonitor).
+6. Invarianten (zum Beispiel: nie zwei Ansichten gleichzeitig, Insel und Leiste nie beide sichtbar, Morph-Ziel passt zu `stage`).
+7. Implementierung, Lint, Test am Gerät.
+
+### Strang „shell-ninja-Spuren entfernen“ (getrennt, nichts wird gelöscht, bevor Lenno die Liste bestätigt hat)
+Inventar (nur gelesen, Stand 26. Okt.):
+- **Bilder und Logos:** `~/.hyprconf/hypr/Wallpaper/shell-ninja.png`, `~/.local/share/fastfetch/images/shell-ninja.png` (das Logo im Terminal), `~/.local/share/hyprconf/.cache/shell-ninja.png` und `…/thumbs/shell-ninja.quad`, Kopien unter `~/.hyprconf/local/share/…`.
+- **Sichtbarer Name in der Oberfläche:** `~/.hyprconf/quickshell/island/PolkitView.qml`, `PowerView.qml` (Anzeigename „shell-ninja“), Rückfall-Pfad `/home/shell-ninja` in zehn Quickshell-Dateien, `~/.local/share/fastfetch/presets/minimal.jsonc`.
+- **Skripte und Programme:** `~/.local/bin/shell-ninja` (Symlink auf `~/dotfiles/bin/.local/bin/shell-ninja`), `~/.hyprconf/hypr/scripts/{py,sh}/*` (welcome, weather, pick-avatar, pkgupdate-gui, hyprconf.sh), `~/.hyprconf/nvim/lua/shell-ninja/`, `~/.hyprconf/setup.sh`, Qt-Konfigurationen, `~/.hyprconf/fish/*`.
+- **Fremdes Repo:** `~/hyprconf-install/` (Klon des Installers, über 30 Dateien) – Quelle von allem; bei Löschen verschwindet auch der Lizenztext.
+- **Nicht anfassen ohne Rückfrage:** `~/.hyprconf/*` ist die **Ausweichshell** (`shell-switch`) und ist die Grundlage deines Alltags; Namen aus Skripten zu tilgen kann sie kaputt machen. Vorschlag: sichtbare Dinge (Logo, Bilder, Anzeigenamen) ersetzen, Pfade und Skriptnamen nur dort ändern, wo nachweislich nichts davon abhängt; `~/hyprconf-install` löschen oder behalten entscheidet Lenno.
+- **aptus selbst:** frei davon (Prüfung per `grep -ri ninja` im Repo vor jedem Commit; derzeit keine Treffer).
+
+### Risiken
+1. **Übergang in Launcher/Control Center:** beide sind eigene Fenster; der Körper der Insel muss die Zielfläche über dem Fenster verfolgen, sonst springt es. Lösung in Phase 5 am Gerät erproben.
+2. **Hover-Panel:** Hover-Auslöser darf bei kurzem Überfahren nicht flackern (Verzögerung 80 ms rein, 200 ms raus), Touch-Geräte öffnen per Tippen.
+3. **Vollbild:** Top-Ebene liegt unter Vollbild-Fenstern, die Insel ist dort unsichtbar (wie die Leiste).
+4. **Mehrere Bildschirme:** Vorschlag: eine Insel je Bildschirm, nur eine Ansicht gleichzeitig offen.
+5. **Wallpaper-Karussell:** viele Vorschaubilder, braucht Zwischenspeicher der Vorschau; nur sichtbare Plätze laden.
+6. **Doppelte Meldungen:** OSD und Popups gibt es schon; Version 1: Insel ersetzt sie, wenn sie aktiv ist.
+7. **Kein `qmllint`:** ohne Installation ist Phase 7 nicht prüfbar.
+
+### Nächster Schritt
+Lennos „weiter“ → Phase 1b: zehn Look-Entwürfe (Mockup). Entscheidung dazu: soll ich vorher `qt6-qtdeclarative-devel` installieren (für `qmllint`)?
