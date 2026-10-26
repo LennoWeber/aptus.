@@ -1143,3 +1143,8 @@ Arbeitsregel wie zuvor: nie auf „weiter“ warten, jede Phase protokollieren u
 - **Beobachtungen für Phase 7 (keine Lücken):** Die Galerie war links versetzt (das Raster hatte eine überzählige Lücke rechts); beim Einzelbild kollidieren Dateiname und Tastenhinweis in der Fußzeile; im Header überlappt ein langer Pfad den Titel. Fenster 660 px hoch reicht für Home mit Schnelleinstellungen (525 px, mit offenem Bereich etwa 600).
 - Nicht prüfbar ohne echte Tasten und Klicks (wie zuvor): Pfeiltasten im Picker, Enter, Mausrad, Tippen auf ein Bild.
 - Prüfung: Diff der Nachzüge gelesen; Phase 2 nur Properties, eine doppelte entfernt; Phase 4 nur Kommentare; `git diff --check` leer.
+
+**Phase 6 (Invarianten), erledigt:**
+- Die Lücken aus Phase 5 sind nachgezogen (siehe oben), am Diff von Phase 5 geprüft; der Bereich `sound` ist jetzt in `toggleSection` und `onExpandedChanged` erlaubt.
+- Assertions in 4 Dateien: `IslandHover` (`sectionValue` nur für bekannte Bereiche), `IslandWallpaper` (keine negative Bildzahl in `columnsFor` und `thumbSizeFor`, ein Schritt im Raster geht nur auf einer Achse, das Raster hat mindestens eine Spalte und eine Zeile), `IslandSound` (`setOutput` mit Id und Zustandsobjekt).
+- Prüfung: Diff gelesen; nur Assertions, keine Implementierung, keine TODO entfernt, kein Refactoring.

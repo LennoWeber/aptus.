@@ -19,6 +19,8 @@ FocusScope {
 
     // A tap on a device: it becomes the output.
     function setOutput(outputId: string): void {
+        if (!outputId) throw new Error("invariant: IslandSound.setOutput: empty output id")
+        if (!audioState) throw new Error("invariant: IslandSound.setOutput: no audio state")
         throw new Error("not implemented")
     }
 }

@@ -30,6 +30,9 @@ FocusScope {
 
     signal closeRequested()
 
+    // The grid has at least one column and one row.
+    Component.onCompleted: if (maxColumns < 1 || maxRows < 1) throw new Error("invariant: IslandWallpaper: the grid needs a column and a row")
+
     // The gallery: at most maxColumns pictures in a row and maxRows rows in view; the sizes of the parts around the grid.
     readonly property int maxColumns: 4
     readonly property int maxRows: 3
@@ -54,16 +57,19 @@ FocusScope {
 
     // Columns of the grid for a number of pictures: one per picture up to maxColumns.
     function columnsFor(count: int): int {
+        if (count < 0) throw new Error("invariant: IslandWallpaper.columnsFor: negative number of pictures")
         throw new Error("not implemented")
     }
 
     // Size { w, h } of one picture for a number of pictures: large for one or two, smaller as there are more.
     function thumbSizeFor(count: int): var {
+        if (count < 0) throw new Error("invariant: IslandWallpaper.thumbSizeFor: negative number of pictures")
         throw new Error("not implemented")
     }
 
     // Move the selection in the grid by dx columns and dy rows, stopping at the edges.
     function moveSelection(dx: int, dy: int): void {
+        if (dx !== 0 && dy !== 0) throw new Error("invariant: IslandWallpaper.moveSelection: a move is along one axis")
         throw new Error("not implemented")
     }
 
