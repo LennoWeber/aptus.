@@ -50,6 +50,7 @@ check_fedora() {
 
 # Every package aptus uses at run time (the greeter adds cage, see install_greeter).
 # TODO(phase 7, Bild-Theming): add ImageMagick (`magick`), ThemeSource reads the wallpaper colours with it.
+# TODO(phase 7): read the names from packages/aptus-dnf.txt (groups required, session, backup) through bin/aptus-packages; one list only.
 REQUIRED_PACKAGES=(quickshell hyprsunset brightnessctl playerctl grim slurp wl-clipboard cliphist curl
     power-profiles-daemon NetworkManager iio-sensor-proxy wf-recorder libnotify python3)
 COPR_REPO=lionheartp/Hyprland   # has quickshell, hyprsunset and cliphist for Fedora
@@ -143,6 +144,7 @@ install_hyprland_binds() {
 }
 
 # Put bin/aptus into ~/.local/bin and link the config into ~/.config/quickshell/aptus.
+# TODO(phase 7): also link bin/aptus-packages into BIN_DIR.
 install_launcher() {
     do_it mkdir -p "$BIN_DIR" "$STATE_DIR"
     link_into "$ROOT/bin/aptus" "$BIN_DIR/aptus"
@@ -150,6 +152,7 @@ install_launcher() {
     link_into "$ROOT/bin/aptus-settings-watchdog" "$BIN_DIR/aptus-settings-watchdog"
     link_into "$ROOT/bin/aptus-ai-usage" "$BIN_DIR/aptus-ai-usage"
     # The window look is read from the state dir, so a settings change can rewrite it.
+    # TODO(phase 7): copy the look file when it differs from the repo copy (keep a .before copy), so new values reach an existing install.
     if [ ! -e "$STATE_DIR/hyprland-look.lua" ]; then
         do_it cp "$ROOT/hypr/aptus-look.lua" "$STATE_DIR/hyprland-look.lua"
     fi

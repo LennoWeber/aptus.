@@ -8,6 +8,7 @@ import qs.services
 // The quick settings card: the quick settings that the bar's dropdowns had, in one card (volume, brightness, switches,
 // music, battery), shown under the opened home card.
 FocusScope {
+    // TODO(phase 7): rename the id to quick (every `hoverPanel.` in this file) and the error texts "IslandHover" to "IslandQuick".
     id: hoverPanel
 
     property var appSettings
@@ -32,6 +33,7 @@ FocusScope {
     // At most one section is open, and only a known one.
     onExpandedChanged: if (expanded !== "" && expanded !== "wifi" && expanded !== "bluetooth" && expanded !== "sound") throw new Error("invariant: IslandHover: unknown section")
 
+    // TODO(phase 7): fix the comment: Esc in the opened island (there is no pinned card).
     signal closeRequested()             // Esc on a pinned card
     signal viewRequested(int view)      // Enums.IslandView: a shortcut opens a view of the island
     signal sectionToggled(string name)  // a section was opened or closed (the island pins itself for the keyboard)

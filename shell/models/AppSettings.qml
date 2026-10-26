@@ -87,6 +87,7 @@ Scope {
             return out
         }
         defaults = read(defaultsFile)
+        // TODO(phase 7): pass the user tree through migrateValues() before merging.
         values = merge(defaults, read(userFile))
         refreshViews()
     }

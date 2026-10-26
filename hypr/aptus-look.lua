@@ -28,6 +28,7 @@ hl.config({
 		},
 	},
 
+	-- TODO(phase 7): active_opacity and inactive_opacity from windowLook; blur size, passes, brightness, contrast, vibrancy, noise, popups from windowLook (the table above).
 	decoration = {
 		rounding = 10,
 		rounding_power = 2,

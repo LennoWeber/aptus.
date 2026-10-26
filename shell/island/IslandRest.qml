@@ -7,6 +7,7 @@ import qs.components
 
 // The island at rest. What it shows depends on the design (setting island.design):
 //   capsule  workspaces and window title on the left, time and date in the middle, weather, status and battery on the right (560 px)
+// TODO(phase 7): rename the design "ninja" to "pill" in this file: header comment, the case, ninjaSide, ninjaLeft, ninjaClock, ninjaRight, visible test.
 //   ninja    a floating pill: workspace pips, time, day and date, music wings; as wide as its content
 //   ticker   workspaces, one line that rolls through time, weather, music or window, battery; status icons
 //   shade    nothing but a line (the body itself)
@@ -49,6 +50,7 @@ Item {
     // Width the design wants at rest.
     readonly property real wantedWidth: {
         switch (design) {
+        // TODO(phase 7): "pill"; see the note at the header.
         case "ninja": return Math.max(316, Math.ceil(2 * ninjaSide + ninjaClock.implicitWidth + 64))
         case "ticker": return 440
         case "shade": return 120
@@ -248,6 +250,7 @@ Item {
     // ---- ninja ---------------------------------------------------------------------------------------------------
 
     Item {
+        // TODO(phase 7): "pill".
         visible: rest.design === "ninja"
         anchors.fill: parent
 

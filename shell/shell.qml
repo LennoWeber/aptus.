@@ -91,6 +91,7 @@ ShellRoot {
         alertsEnabled: settingsObj.get("island.alerts") !== false
         alertHoldMs: (settingsObj.get("island.alertSeconds") || 4) * 1000
         mediaWingsEnabled: settingsObj.get("island.mediaWings") !== false
+        // TODO(phase 7): delete this binding (IslandState has no hoverEnabled).
         hoverEnabled: settingsObj.get("island.hoverOpen") !== false
     }
     Loader {
@@ -130,6 +131,7 @@ ShellRoot {
     readonly property string islandLook: settingsObj.get("island.look") || "paper"
     onIslandLookChanged: IslandLook.apply(islandLook)
 
+    // TODO(phase 7): "pill" instead of "ninja" in the comment.
     // The island's design (setting island.design): capsule, ninja, ticker or shade.
     readonly property string islandDesign: settingsObj.get("island.design") || "capsule"
     onIslandDesignChanged: IslandLook.design = islandDesign
