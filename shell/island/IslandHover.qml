@@ -28,6 +28,9 @@ FocusScope {
 
     signal tileRequested(int tileId)
     signal controlCenterRequested()
+    // At most one section is open, and only a known one.
+    onExpandedChanged: if (expanded !== "" && expanded !== "wifi" && expanded !== "bluetooth") throw new Error("invariant: IslandHover: unknown section")
+
     signal closeRequested()             // Esc on a pinned card
     signal viewRequested(int view)      // Enums.IslandView: a shortcut opens a view of the island
     signal sectionToggled(string name)  // a section was opened or closed (the island pins itself for the keyboard)
@@ -39,6 +42,7 @@ FocusScope {
 
     // Open the section name ("wifi" or "bluetooth"), or close it when it is open; the other one closes.
     function toggleSection(name: string): void {
+        if (name !== "wifi" && name !== "bluetooth") throw new Error("invariant: IslandHover.toggleSection: unknown section")
         throw new Error("not implemented")
     }
 

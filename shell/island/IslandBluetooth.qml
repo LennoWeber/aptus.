@@ -20,6 +20,8 @@ FocusScope {
 
     // A tap on a device: connect when it is not connected, else disconnect.
     function toggleDevice(address: string): void {
+        if (!address) throw new Error("invariant: IslandBluetooth.toggleDevice: empty device address")
+        if (!bluetoothState || !bluetoothState.powered) throw new Error("invariant: IslandBluetooth.toggleDevice: Bluetooth is off")
         throw new Error("not implemented")
     }
 }

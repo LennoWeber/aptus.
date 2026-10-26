@@ -77,6 +77,7 @@ Scope {
     // Pin the hover card of that screen (pinned = true): it takes keyboard focus and stays until Esc or a click elsewhere,
     // the stage stays Hover. Does nothing unless the island is in the Hover stage on that screen.
     function pin(screenName: string): void {
+        if (!screenName) throw new Error("invariant: IslandState.pin: empty screen name")
         throw new Error("not implemented")
     }
 
@@ -139,6 +140,10 @@ Scope {
         morph = target
         if (target !== Enums.MorphTarget.None) close()
     }
+
+    // The hover card is pinned only while the stage is Hover; both times must be positive.
+    onStageChanged: if (pinned && stage !== Enums.IslandStage.Hover) throw new Error("invariant: IslandState: pinned outside the Hover stage")
+    Component.onCompleted: if (hoverInMs <= 0 || hoverOutMs <= 0) throw new Error("invariant: IslandState: hover times must be positive")
 
     Timer { id: hold; onTriggered: root.dismissAlert() }
     // Resting 280 ms on the island shows the hover panel; leaving it for 320 ms takes it back.

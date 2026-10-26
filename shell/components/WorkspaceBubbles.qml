@@ -19,13 +19,18 @@ Item {
 
     signal workspaceClicked(int workspaceId)
 
+    // The bubbles grow from ring to dot to active bubble, and the cell holds the largest.
+    Component.onCompleted: if (ringSize > dotSize || dotSize > activeSize || activeSize > cellWidth) throw new Error("invariant: WorkspaceBubbles: sizes out of order")
+
     // Diameter of the bubble of one workspace entry (ring, dot or active).
     function sizeFor(entry: var): int {
+        if (!entry) throw new Error("invariant: WorkspaceBubbles.sizeFor: no workspace entry")
         throw new Error("not implemented")
     }
 
     // Colour of the bubble: urgent is the one signal colour, the rest is ink with weight.
     function toneFor(entry: var): color {
+        if (!entry) throw new Error("invariant: WorkspaceBubbles.toneFor: no workspace entry")
         throw new Error("not implemented")
     }
 }

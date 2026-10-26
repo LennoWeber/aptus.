@@ -55,6 +55,7 @@ PanelWindow {
     property bool isOpen: stage === Enums.IslandStage.Open
     property bool isHover: stage === Enums.IslandStage.Hover
     property bool isAlert: stage === Enums.IslandStage.Alert
+    onIsPinnedChanged: if (isPinned && !isHover) throw new Error("invariant: Island: pinned without the hover card")
     property bool isPinned          // the hover card is pinned (islandState.pinned) on this screen
 
     // The design (setting island.design): capsule, ninja, ticker or shade. It sets the size at rest, the shape, and whether
@@ -118,6 +119,7 @@ PanelWindow {
 
     // Duration (ms) of the body's growth for a stage (Enums.IslandStage): hoverGrowMs for Hover, Tokens.durSlow otherwise.
     function growMsFor(stageId: int): int {
+        if (stageId < Enums.IslandStage.Rest || stageId > Enums.IslandStage.Open) throw new Error("invariant: Island.growMsFor: unknown stage")
         throw new Error("not implemented")
     }
 

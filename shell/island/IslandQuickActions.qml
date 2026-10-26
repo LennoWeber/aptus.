@@ -17,6 +17,8 @@ Item {
 
     // Set the power profile (Enums.PowerMode).
     function setProfile(profile: int): void {
+        if (profile < Enums.PowerMode.Saver || profile > Enums.PowerMode.Performance) throw new Error("invariant: IslandQuickActions.setProfile: unknown profile")
+        if (!powerProfileState) throw new Error("invariant: IslandQuickActions.setProfile: no power profile state")
         throw new Error("not implemented")
     }
 }
