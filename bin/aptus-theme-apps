@@ -70,12 +70,38 @@ def palette(mode: str) -> dict:
     return p
 
 
+def _lum(h: str) -> float:
+    ch = [int(h.lstrip("#")[i:i + 2], 16) / 255 for i in (0, 2, 4)]
+    ch = [c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4 for c in ch]
+    return 0.2126 * ch[0] + 0.7152 * ch[1] + 0.0722 * ch[2]
+
+
+def contrast_fit(color: str, bg: str, toward: str, ratio: float = 4.5) -> str:
+    """Mix color toward `toward` in small steps until it has `ratio`:1 contrast on bg."""
+    def cr(a, b):
+        hi, lo = sorted((_lum(a), _lum(b)), reverse=True)
+        return (hi + 0.05) / (lo + 0.05)
+    c = [int(color.lstrip("#")[i:i + 2], 16) for i in (0, 2, 4)]
+    t = [int(toward.lstrip("#")[i:i + 2], 16) for i in (0, 2, 4)]
+    for step in range(21):
+        k = step / 20
+        out = "#%02X%02X%02X" % tuple(round(a + (b - a) * k) for a, b in zip(c, t))
+        if cr(out, bg) >= ratio:
+            return out
+    return toward
+
+
 def ansi(p: dict, mode: str) -> list:
     assert mode in MODES, f"unknown mode {mode}"
     b = load_tokens()["palette"]["brights"][mode]
     if mode == "light":
-        return [p["ink"], p["critical"], p["ok"], p["warn"], p["blue"], p["magenta"], p["cyan"], p["surfaceAlt"],
-                p["inkFaint"], b["critical"], b["ok"], b["warn"], p["bblue"], p["bmagenta"], p["bcyan"], p["bg"]]
+        # On a light ground "white" must stay readable: white/bright black become the soft ink, bright white the ink.
+        # Every hue is pulled toward the ink until it reaches 4.5:1 on the background (WCAG AA for text).
+        def fit(c):
+            return contrast_fit(c, p["bg"], p["ink"])
+        return [p["ink"], fit(p["critical"]), fit(p["ok"]), fit(p["warn"]), fit(p["blue"]), fit(p["magenta"]),
+                fit(p["cyan"]), p["inkSoft"], p["inkSoft"], fit(b["critical"]), fit(b["ok"]), fit(b["warn"]),
+                fit(p["bblue"]), fit(p["bmagenta"]), fit(p["bcyan"]), p["ink"]]
     return [p["surface"], p["critical"], p["ok"], p["warn"], p["blue"], p["magenta"], p["cyan"], p["inkSoft"],
             p["inkFaint"], b["critical"], b["ok"], b["warn"], p["bblue"], p["bmagenta"], p["bcyan"], p["ink"]]
 
