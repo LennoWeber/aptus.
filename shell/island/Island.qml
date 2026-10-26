@@ -59,6 +59,7 @@ PanelWindow {
     // TODO(phase 7): bind isOsd (stage === Osd) and byHover (isOpen && islandState.openedByHover); no focus grab and no keyboard while byHover.
     property bool isAlert: stage === Enums.IslandStage.Alert
     property bool isOsd                   // the stage is Osd (the on-screen indicator shows)
+    onByHoverChanged: if (byHover && !isOpen) throw new Error("invariant: Island: byHover while not open")
     property bool byHover                 // the island is open because the pointer opened it (no focus grab, no keyboard yet)
 
     // The design (setting island.design): capsule, pill, ticker or shade. It sets the size at rest and the shape.

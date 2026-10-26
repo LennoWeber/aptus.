@@ -149,6 +149,11 @@ Scope {
         if (target !== Enums.MorphTarget.None) close()
     }
 
+    // The indicator stage always has its data; the hover flag only belongs to an open island; the times are positive.
+    onStageChanged: if (stage === Enums.IslandStage.Osd && !osd) throw new Error("invariant: IslandState: Osd stage without osd data")
+    onOpenedByHoverChanged: if (openedByHover && stage !== Enums.IslandStage.Open) throw new Error("invariant: IslandState: openedByHover outside the Open stage")
+    Component.onCompleted: if (hoverInMs <= 0 || hoverOutMs <= 0 || osdHoldMs <= 0) throw new Error("invariant: IslandState: hover and indicator times must be positive")
+
     Timer { id: hold; onTriggered: root.dismissAlert() }
     // TODO(phase 7): hoverIn: onTriggered opens Home on pendingHoverScreen with openedByHover = true; hoverOut: onTriggered closes when openedByHover; osdHold: onTriggered ends the Osd stage (to Alert when one waits, else Rest).
     Timer { id: hoverIn; interval: root.hoverInMs }

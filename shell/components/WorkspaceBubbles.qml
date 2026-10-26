@@ -30,6 +30,9 @@ Item {
     // The bubbles grow from ring to dot to active bubble, and the cell holds the largest.
     Component.onCompleted: if (ringSize > dotSize || dotSize > activeSize || activeSize > cellWidth) throw new Error("invariant: WorkspaceBubbles: sizes out of order")
 
+    // The oval has to fit its cell.
+    onOvalChanged: if (oval && ovalWidth > cellWidth) throw new Error("invariant: WorkspaceBubbles: the oval is wider than its cell")
+
     // Diameter of the bubble of one workspace entry (ring, dot or active).
     function sizeFor(entry: var): int {
         if (!entry) throw new Error("invariant: WorkspaceBubbles.sizeFor: no workspace entry")
