@@ -973,4 +973,4 @@ Lenno fand die zehn Entwürfe (Seite `island-designs.html`) nicht gut genug, wol
 - `IslandLook.design`, `restHeight`, `gap` hängen am Entwurf; `Tokens.topInset` nutzt `restHeight + gap`. Der Look (Farben) bleibt getrennt in `island.look`.
 - Test am Gerät (qs aus dem Worktree, eDP-1): jeder Entwurf in Ruhe, Hover, Meldung, Power- und Wallpaper-Ansicht ohne Warnungen im Log; Ninja zusätzlich Morph zum Launcher und zurück. Screenshots im Scratchpad.
 - Nicht geprüft: Mehrmonitor, echter Mauszeiger (Hover lief über die Test-IPC), Umschalten des Entwurfs im laufenden Betrieb über die Settings-App, qmllint (nicht installiert).
-- Offen: shell-ninja-Spuren im Home entfernen (Liste liegt oben, wartet auf Leknnos Bestätigung); Push nach `origin`.
+- Offen: shell-ninja-Spuren im Home entfernen (Liste liegt oben, wartet auf Lennos Bestätigung); Push nach `origin`.
