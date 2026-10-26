@@ -20,6 +20,8 @@ Singleton {
     // Colour mode: 0 = light palette .. 1 = dark palette (ColorModeState drives it); the night light tints on top.
     property real darkAmount: 0
     readonly property int colorModeMs: 300
+    // How much of the night tint stays in dark mode (1 = as strong as in light mode).
+    readonly property real nightTintInDark: 0.35
 
     // colors (semantic)
     property color bg: "#F4F3EF"
@@ -110,8 +112,9 @@ Singleton {
         applyPalette(blend)
     }
 
-    // Palette between day (0) and night (1).
-    function paletteAt(blend: real): var {
+    // Palette between day (0) and night (1) (night light), and `dark` (0 light .. 1 dark, the colour mode) towards the dark
+    // palette; the night tint is applied on top, weaker the darker it is (nightTintInDark).
+    function paletteAt(blend: real, dark: real): var {
         if (!(blend >= 0 && blend <= 1)) throw new Error("invariant: Tokens.paletteAt: blend outside 0..1")
         if (!palette) throw new Error("invariant: Tokens.paletteAt: tokens not loaded")
         const out = {}
@@ -127,7 +130,7 @@ Singleton {
     }
 
     // Update the colour properties.
-    function applyPalette(blend: real): void {
+    function applyPalette(blend: real, dark: real): void {
         if (!(blend >= 0 && blend <= 1)) throw new Error("invariant: Tokens.applyPalette: blend outside 0..1")
         // TODO(phase 7, night light): NightLightState calls this when its blend changes; move smoothly over minutes, never a flash.
         // TODO(phase 7, Bild-Theming): with a themeSource other than Standard the style owns bg, surface, line and the ink colours; do not overwrite them here.
@@ -143,6 +146,19 @@ Singleton {
         ok = p.ok
         warn = p.warn
         critical = p.critical
+    }
+
+    // The colours that applyPalette does not take from the palette for the Standard source: bar, barInk, barInkSoft,
+    // barInkFaint, selection, wash1 to wash4 and glass, for the palette `p` (from paletteAt) and `dark` (0 .. 1).
+    // Styles other than Standard are light only: while dark is above 0 the Standard colours are used.
+    function applyDerived(p: var, dark: real): void {
+        throw new Error("not implemented")
+    }
+
+    // The fill of the blurred surfaces (Control Center, launcher) for a surface colour: translucent paper in light mode,
+    // translucent dark surface in dark mode; `dark` is 0 .. 1 like darkAmount. Returns "#AARRGGBB".
+    function glassFor(base: color, dark: real): color {
+        throw new Error("not implemented")
     }
 
     // Colour for a severity: neutral ink, or ok, warn, critical.

@@ -145,6 +145,16 @@ Scope {
             else root.settingsState.openWindow("")
         }
 
+        // Light <-> dark for the shell and the apps (Super+T).
+        function themeModeToggle(): void {
+            throw new Error("not implemented")
+        }
+
+        // Set the colour mode: light, dark or auto (anything else is logged and ignored).
+        function themeModeSet(name: string): void {
+            throw new Error("not implemented")
+        }
+
         // Keep the screen as it is, or let it follow the sensor again.
         function rotationLockToggle(): void {
             root.toggleRotationLock()

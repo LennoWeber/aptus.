@@ -41,6 +41,11 @@ THUNDERBIRD_ROOTS = [os.path.join(HOME, ".thunderbird"), os.path.join(CFG, "thun
 # Spicetify keeps themes in SPICETIFY_DIR/NAME/{color.ini,user.css}; the theme is written even if Spicetify is not installed yet.
 SPICETIFY_DIR = os.path.join(CFG, "spicetify", "Themes")
 SPICETIFY_THEME = "aptus"
+# Generated files for apps that cannot choose a colour set themselves.
+FASTFETCH_CONFIG = os.path.join(CFG, "fastfetch", "aptus-config.jsonc")
+GHOSTTY_THEMES = {"light": "aptus-light", "dark": "aptus-dark"}
+YAZI_FLAVORS = {"light": "aptus-light", "dark": "aptus-dark"}
+XSETTINGSD = os.path.join(CFG, "xsettingsd", "xsettingsd.conf")
 _TOKENS = None
 # Every palette of tokens.json has these keys; colours are always #RRGGBB.
 PALETTE_KEYS = ("bg", "surface", "surfaceAlt", "line", "ink", "inkSoft", "inkFaint", "ok", "warn", "critical",
@@ -117,6 +122,11 @@ def colors_of(p: dict, mode: str) -> dict:
     for i, v in enumerate(roles["cavaGradient"]):
         c["cava_%d" % i] = c[v]
     return c
+
+
+def colors_all(p: dict, mode: str) -> dict:
+    """colors_of(p, mode) plus every role of both palettes as light_ROLE and dark_ROLE (templates with both schemes)."""
+    raise NotImplementedError("not implemented")
 
 
 def hex_bare(color: str) -> str:
@@ -241,6 +251,34 @@ def ensure_block(path: str, marker: str, text: str, dry: bool) -> None:
     with open(path, "w") as f:
         f.write(new)
     print(f"  updated {path}")
+
+
+def ghostty_theme(p: dict, mode: str) -> str:
+    """The text of the Ghostty theme file for the palette p of MODE (written as GHOSTTY_THEMES[mode])."""
+    raise NotImplementedError("not implemented")
+
+
+def fastfetch_config(c: dict, dry: bool) -> None:
+    """FASTFETCH_CONFIG: the user's config.jsonc (read through the dotfiles link) with the display colours of c; nothing is
+    written to the dotfiles. fish.fish aliases fastfetch to it."""
+    raise NotImplementedError("not implemented")
+
+
+def fish_apply(c: dict, dry: bool) -> None:
+    """Set the fish_color_* universal variables from the colours (fish is run once), so fish sessions that are already
+    open change too; silent with dry, nothing happens if fish is missing. conf.d/aptus.fish (fish()) covers new sessions."""
+    raise NotImplementedError("not implemented")
+
+
+def spicetify_apply(mode: str, dry: bool) -> None:
+    """If spicetify is installed: set color_scheme to MODE and apply (Spotify needs a restart); a failure is only reported;
+    silent with dry. spotify() writes the theme files, this activates them."""
+    raise NotImplementedError("not implemented")
+
+
+def xsettingsd(p, mode, dry):
+    """XSETTINGS: Net/ThemeName adw-gtk3 or adw-gtk3-dark for X11 apps (the file is the user's, only that line changes)."""
+    raise NotImplementedError("not implemented")
 
 
 def reload_apps(chosen: list, dry: bool) -> None:
@@ -525,7 +563,7 @@ def yazi(p, mode, dry):
 
 
 def fastfetch(p, mode, dry):
-    """CFG/fastfetch/themes/aptus.jsonc (same shape as themes/noctalia.jsonc); config.jsonc is a link into the dotfiles and is not touched."""
+    """fastfetch_config(c, dry); config.jsonc is a link into the dotfiles and is not touched."""
     assert mode in MODES and all(k in p for k in PALETTE_KEYS), "palette comes from palette(mode)"
     assert isinstance(dry, bool) and os.path.isabs(CFG) and os.path.isabs(STATE), "XDG folders must be absolute paths"
     write(os.path.join(CFG, "fastfetch", "themes", "aptus.jsonc"), render_template("fastfetch.jsonc", colors_of(p, mode)), dry)
