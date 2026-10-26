@@ -19,7 +19,7 @@ Singleton {
     property real blend: 0
     // Colour mode: 0 = light palette .. 1 = dark palette (ColorModeState drives it); the night light tints on top.
     property real darkAmount: 0
-    property int colorModeMs: 300
+    readonly property int colorModeMs: 300
 
     // colors (semantic)
     property color bg: "#F4F3EF"

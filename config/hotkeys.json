@@ -181,13 +181,13 @@
       "command": "panel-toggle launcher"
     },
     {
-      "id": "appearance.colorMode",
+      "id": "colorMode.toggle",
       "label": "Light or dark",
       "mods": [
         "SUPER"
       ],
       "key": "T",
-      "action": "appearance.colorMode:toggle",
+      "action": "colorMode.toggle",
       "owner": "user",
       "command": "theme-mode-toggle"
     }

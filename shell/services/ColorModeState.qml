@@ -2,11 +2,11 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import qs.models
-import qs.theme
 
 // Light or dark for the shell and the apps (setting appearance.colorMode: light | dark | auto). Structure only.
-// `mode` is the chosen value, `dark` what is in effect (auto is dark while the night light runs). `amount` is
-// Tokens.darkAmount's target. After a change the apps are repainted by `aptus-theme-apps --mode <light|dark> --all`.
+// `mode` is the chosen value, `dark` what is in effect (auto is dark while the night light runs); Tokens.darkAmount
+// follows `dark` (0 or 1) with Tokens.colorModeMs. After a change the apps are repainted by
+// `aptus-theme-apps --mode <light|dark> --all` in the background; the shell itself changes first.
 Scope {
     id: root
 
@@ -15,13 +15,10 @@ Scope {
 
     property int mode: Enums.ColorMode.Light
     property bool dark: false
-    property real amount: 0                    // 0 light .. 1 dark
-    property string applyStatus: "idle"        // idle | running | failed
+    property bool applying: false
     property string applyError: ""
-    property int debounceMs: 250               // several Mod+T presses repaint the apps once
-    property string themeAppsCommand: "aptus-theme-apps"
+    property int debounceMs: 250               // several presses repaint the apps once
 
-    // Repaints the apps in the background; the shell itself changes first.
     Process {
         id: themeApps
     }

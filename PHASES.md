@@ -1403,3 +1403,10 @@ Spotify braucht Neustart; Thunderbird hat noch kein Profil; fastfetch bindet das
 
 ### Phasen dieses Ablaufs
 1 Plan · 2 Strukturen · 3 Signaturen · 4 TODOs · 5 Probe · 6 Invarianten · 7 Implementierung, jede mit frischem Review.
+
+### Protokoll Ablauf 11
+- **Phase 1 (Plan), erledigt.**
+- **Phase 2 (Strukturen), erledigt:** `Enums.ColorMode { Light, Dark, Auto }`; `Tokens.darkAmount`, `Tokens.colorModeMs` (readonly 300); `tokens.json` `motion.colorModeMs`; neuer Typ `ColorModeState` (Scope; `appSettings`, `nightLight`, `mode`, `dark`, `applying`, `applyError`, `debounceMs`, leeres `Process`, `Timer`; `qmldir`); `AppSettings.colorMode`; `IpcHandlers.colorModeState`; Setting `appearance.colorMode` (Schema, Standard `light`); Hotkey-Eintrag `colorMode.toggle` (Super+T, `owner: user`, Kommando `theme-mode-toggle`); Vorlagen von Zen, Thunderbird (CSS) und Spicetify (`[light]`/`[dark]`) tragen beide Paletten mit Platzhaltern `{{light_ROLLE}}`/`{{dark_ROLLE}}`.
+  - **Review, behoben:** Hotkey-Aktionsname, Eigenschaft `colorModeState` in `IpcHandlers`, `AppSettings.colorMode`, `amount`/`themeAppsCommand`/`applyStatus`/ungenutzter Import entfernt, `colorModeMs` readonly, Hotkey-Text aus der Setting-Beschreibung.
+  - **Abgelehnt:** Vorlagen mit `@media` seien Logik: es sind Daten (die Umschaltung macht der Browser). Enum-Platzierung nur Kosmetik.
+  - **Annahmen/Merken:** Zen/Thunderbird wählen die Palette über `prefers-color-scheme`, also über das Systemschema (`gsettings color-scheme` setzt das Skript); Spicetify braucht `color_scheme = light|dark` (die Sektion `[Base]` fällt weg); `colors_of` liefert die Rollen `light_*`/`dark_*` über eine neue Funktion (Phase 3); `ColorModeState` muss in `shell.qml` instanziiert und an `IpcHandlers`, `AppSettings.colorMode` mit Lookup, `Tokens.paletteAt` mit `palette.dark` (nur `#`-Werte mischen, `note`/`modes` überspringen) verdrahtet werden (Phase 4 TODOs).

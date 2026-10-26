@@ -25,6 +25,7 @@ Scope {
     property var deviceMode     // DeviceModeState
     property var wallpaperPicker  // WallpaperPicker
     property var islandState    // IslandState
+    property var colorModeState // ColorModeState
 
     function toggleRotationLock(): void {
         deviceMode.setRotationLocked(!deviceMode.rotationLocked)
