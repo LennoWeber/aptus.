@@ -2,6 +2,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import qs.models
+import qs.theme
 
 // Light or dark for the shell and the apps (setting appearance.colorMode: light | dark | auto). Structure only.
 // `mode` is the chosen value, `dark` what is in effect (auto is dark while the night light runs); Tokens.darkAmount
@@ -41,16 +42,20 @@ Scope {
 
     // The setting value of an Enums.ColorMode: "light", "dark" or "auto".
     function nameFromMode(m: int): string {
+        if (!(m >= Enums.ColorMode.Light && m <= Enums.ColorMode.Auto)) throw new Error("invariant: ColorModeState.nameFromMode: unknown mode")
         throw new Error("not implemented")
     }
 
     // Whether the mode `m` is dark right now (Auto follows nightLight.enabled).
     function resolve(m: int): bool {
+        if (!(m >= Enums.ColorMode.Light && m <= Enums.ColorMode.Auto)) throw new Error("invariant: ColorModeState.resolve: unknown mode")
+        if (!nightLight) throw new Error("invariant: ColorModeState.resolve: nightLight not set")
         throw new Error("not implemented")
     }
 
     // Start-up: read the setting, set the shell to it without a fade, repaint the apps only if the state differs.
     function start(): void {
+        if (!appSettings || !nightLight) throw new Error("invariant: ColorModeState.start: appSettings and nightLight must be set")
         throw new Error("not implemented")
     }
 
@@ -66,6 +71,8 @@ Scope {
 
     // Choose a mode: write the setting, switch the shell, repaint the apps.
     function setMode(m: int): void {
+        if (!(m >= Enums.ColorMode.Light && m <= Enums.ColorMode.Auto)) throw new Error("invariant: ColorModeState.setMode: unknown mode")
+        if (!appSettings) throw new Error("invariant: ColorModeState.setMode: appSettings not set")
         throw new Error("not implemented")
     }
 
@@ -76,6 +83,7 @@ Scope {
 
     // Move Tokens to the resolved mode.
     function applyShell(): void {
+        if (!Tokens.palette) throw new Error("invariant: ColorModeState.applyShell: tokens not loaded")
         throw new Error("not implemented")
     }
 

@@ -120,6 +120,7 @@ Singleton {
     function paletteAt(blend: real, dark: real): var {
         // TODO(phase 7, colour mode): mix day with palette.dark by `dark` first, then toward night by blend * (1 - dark * (1 - nightTintInDark)); only "#" values, skip note, modes, brights, roles, accents.
         if (!(blend >= 0 && blend <= 1)) throw new Error("invariant: Tokens.paletteAt: blend outside 0..1")
+        if (!(dark >= 0 && dark <= 1)) throw new Error("invariant: Tokens.paletteAt: dark outside 0..1")
         if (!palette) throw new Error("invariant: Tokens.paletteAt: tokens not loaded")
         const out = {}
         for (const key in palette.day) {
@@ -137,6 +138,7 @@ Singleton {
     function applyPalette(blend: real, dark: real): void {
         // TODO(phase 7, colour mode): store `dark` in darkAmount without writing blend back (onDarkAmountChanged calls this function).
         if (!(blend >= 0 && blend <= 1)) throw new Error("invariant: Tokens.applyPalette: blend outside 0..1")
+        if (!(dark >= 0 && dark <= 1)) throw new Error("invariant: Tokens.applyPalette: dark outside 0..1")
         // TODO(phase 7, night light): NightLightState calls this when its blend changes; move smoothly over minutes, never a flash.
         // TODO(phase 7, Bild-Theming): with a themeSource other than Standard the style owns bg, surface, line and the ink colours; do not overwrite them here.
         // TODO(phase 7, colour mode): paletteAt(blend, dark) and applyDerived(p, dark); with a style as source and dark above 0 the Standard colours apply.
@@ -158,12 +160,15 @@ Singleton {
     // barInkFaint, selection, wash1 to wash4 and glass, for the palette `p` (from paletteAt) and `dark` (0 .. 1).
     // Styles other than Standard are light only: while dark is above 0 the Standard colours are used.
     function applyDerived(p: var, dark: real): void {
+        if (!(dark >= 0 && dark <= 1)) throw new Error("invariant: Tokens.applyDerived: dark outside 0..1")
+        if (!p || p.bg === undefined) throw new Error("invariant: Tokens.applyDerived: palette incomplete")
         throw new Error("not implemented")
     }
 
     // The fill of the blurred surfaces (Control Center, launcher) for a surface colour: translucent paper in light mode,
     // translucent dark surface in dark mode; `dark` is 0 .. 1 like darkAmount. Returns "#AARRGGBB".
     function glassFor(base: color, dark: real): color {
+        if (!(dark >= 0 && dark <= 1)) throw new Error("invariant: Tokens.glassFor: dark outside 0..1")
         throw new Error("not implemented")
     }
 
