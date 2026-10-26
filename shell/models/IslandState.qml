@@ -26,11 +26,13 @@ Scope {
     property int hoverOutMs: 260         // how long it must be away before it closes
 
     // The on-screen indicator (volume, brightness, ...): shown as a stage of the island.
-    property var osd: null               // { kind (Enums.OsdKind), level (0..1), muted, label } or null
+    property var osd: null               // { kind (Enums.OsdKind), level (0..1), muted, label, detail } or null
     property int osdHoldMs: 1400
 
     // Alerts.
-    property var alert: null             // { id, text, detail, severity, tileId, holdMs } or null
+    // { id, kind (Enums.AlertKind), text, detail, severity, tileId, holdMs, appName, appIcon, image, body, album,
+    //   actions [{ id, label }], notificationId, progress (0..1, -1 = none), playing } or null
+    property var alert: null
     property var queue: []               // alerts waiting, oldest first
     property int queueDepth: 3
 

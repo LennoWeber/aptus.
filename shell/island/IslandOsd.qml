@@ -7,7 +7,7 @@ import qs.components
 Item {
     id: osdView
 
-    property var osd                // { kind (Enums.OsdKind), level (0..1), muted, label } or null
+    property var osd                // { kind (Enums.OsdKind), level (0..1), muted, label, detail } or null
     property color ink
     property color inkSoft
     property color line

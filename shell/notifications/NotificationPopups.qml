@@ -11,6 +11,7 @@ PanelWindow {
     id: win
 
     property string position: "top-right"  // top-right | top-left | top-center
+    property bool islandHandles  // the island shows the notifications, this window stays hidden
     readonly property var items: Notifications.popupItems
 
     function pickScreen(monitor: var): var {

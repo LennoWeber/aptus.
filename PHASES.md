@@ -1472,3 +1472,6 @@ Stand: **Phase 1 geschrieben; Phasen 2 bis 7 laufen ohne Pause** ([[feedback_pha
 
 ### Protokoll Ablauf 12
 - **Phase 1 (Plan), erledigt.**
+- **Phase 2 (Strukturen), erledigt:** `Enums.AlertKind { Plain, Notification, Media, Mail, Download, Timer, Battery }`; `MediaState.desktopEntry`, `MediaState.appIcon` (leer); `Osd.detail`; Form von `IslandState.alert` und `IslandState.osd` (`detail`) in den Kommentaren; `NotificationPopups.islandHandles`; neuer Typ `AlertCard` (Eigenschaften `alert`, `mediaState`, Farben, `kind`, `hasImage`, `hasProgress`, `hasActions`; Signale `dismissed`, `activated`, `actionInvoked`; `qmldir`).
+  - **Review, behoben:** abgeleitete Bindungen (`readonly … alert.kind`, `progress >= 0`) in `AlertCard` waren Logik und fielen bei `undefined` um → reine Deklarationen, Phase 7 bindet sie.
+  - **Annahmen/Merken:** Das Alert-Objekt bleibt ein `var` (QML hat keine Struct-Typen); Nutzer-Daten bleiben Objekte wie bei `Notifications.items`.

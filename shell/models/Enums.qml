@@ -62,6 +62,9 @@ QtObject {
     // Kinds of on-screen indicators.
     enum OsdKind { Volume, Brightness, Microphone, Rotation, Caffeine }
 
+    // What an island alert is about: it decides the layout of the card (Plain is the earlier one-line alert).
+    enum AlertKind { Plain, Notification, Media, Mail, Download, Timer, Battery }
+
     // Screen edges (edge swipes).
     enum Edge { Top, Left, Right, Bottom }
 
