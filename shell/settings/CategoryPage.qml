@@ -48,6 +48,8 @@ Item {
             }
             Repeater {
                 model: page.shown
+                // TODO(phase 7): put a SectionHeader above a row when startsSection(index) is true (not while searching);
+                // TODO(phase 7): while searching, pass `origin` = appState.originOf(entry) to the row.
                 delegate: SettingRow {
                     id: item
                     required property var modelData
@@ -58,6 +60,7 @@ Item {
                     isDefault: page.appState.isDefault(item.modelData)
                     editable: page.appState.editable(item.modelData)
                     choices: item.modelData.kind === "choice" ? page.choicesOf(item.modelData) : []
+                    // TODO(phase 7): clean the odd indentation of the line above (draftValue) while editing here.
                     actionLabel: item.modelData.id === "about.export" ? "Export" : item.modelData.id === "about.import" ? "Import" : item.modelData.id === "about.reset" ? "Reset all" : "Open"
                     highlighted: page.appState.focusedEntryId === item.modelData.id
                     onValueEdited: value => page.appState.setDraft(item.modelData.id, value)

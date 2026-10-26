@@ -49,6 +49,7 @@ FloatingWindow {
         id: sidebar
         anchors { left: parent.left; top: parent.top; bottom: parent.bottom }
         width: 230
+        // TODO(phase 7): pass the grouped categories (categoryGroups) so the sidebar can show group headings.
         categories: win.appState ? win.appState.categories : []
         activeCategoryId: win.appState ? win.appState.activeCategoryId : ""
         onCategorySelected: id => win.appState.setCategory(id)
@@ -93,6 +94,8 @@ FloatingWindow {
             color: Tokens.inkSoft
         }
 
+        // TODO(phase 7): a quiet line with the category description (activeCategory().description) under the heading;
+        // TODO(phase 7): move the page down by its height.
         CategoryPage {
             anchors { left: parent.left; leftMargin: 28; right: parent.right; rightMargin: 28; top: heading.bottom; topMargin: 12; bottom: parent.bottom }
             appState: win.appState

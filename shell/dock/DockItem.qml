@@ -19,6 +19,7 @@ Item {
     signal activated()
     signal menuRequested()
 
+    // TODO(phase 7): width, height and icon size follow zoom (rest size times zoom), smoothly; the row grows around the pointer.
     width: iconSize + 14
     height: iconSize + 18
 
@@ -37,6 +38,7 @@ Item {
         anchors { horizontalCenter: parent.horizontalCenter; top: parent.top; topMargin: 6 }
         width: cell.iconSize
         height: cell.iconSize
+        // TODO(phase 7): remove the hover scale once zoom is in (zoom replaces it); add the start bounce (bouncing) as a short repeating hop.
         scale: mouse.pressed ? 0.92 : mouse.containsMouse ? 1.08 : 1
         Behavior on scale { NumberAnimation { duration: Tokens.durFast; easing.type: Easing.BezierSpline; easing.bezierCurve: [0.2, 0, 0, 1, 1, 1] } }
 

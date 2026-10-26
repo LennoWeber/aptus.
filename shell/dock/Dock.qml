@@ -21,6 +21,7 @@ PanelWindow {
     property real pointerX: -1         // pointer position along the dock, -1 when away
     property string launching          // key of the app that was just started, for the bounce
 
+    // TODO(phase 7): bind look to dock.look, magnify to dock.magnify; default autoHide is now false (the schema default), make the fallback agree.
     readonly property bool autoHide: appSettings ? appSettings.get("dock.autoHide") !== false : true
     readonly property int iconSize: appSettings ? appSettings.get("dock.iconSize") || 44 : 44
     readonly property var pinned: appSettings ? appSettings.get("dock.pinned") || [] : []
@@ -33,6 +34,7 @@ PanelWindow {
 
     screen: modelData
     anchors { left: true; right: true; bottom: true }
+    // TODO(phase 7): the window must stay taller than the zoomed icons plus tooltip and menu; check against iconSize 72 * 1.6.
     implicitHeight: 190
     exclusiveZone: 0
     color: "transparent"
@@ -76,6 +78,7 @@ PanelWindow {
     }
 
     function activate(it: var): void {
+        // TODO(phase 7): call markLaunching(it) before execute(), so the icon bounces while the app starts.
         if (it.windows.length === 0) {
             if (it.entry) it.entry.execute()
             return
@@ -107,6 +110,7 @@ PanelWindow {
         anchors { horizontalCenter: parent.horizontalCenter; bottom: parent.bottom }
         width: Math.max(body.width, 160) + 16
         height: dock.shown ? body.height + 16 : 3
+        // TODO(phase 7): feed pointerX from a second HoverHandler (point.position.x in the body), reset to -1 on leave.
         HoverHandler { id: hover }
     }
 
@@ -115,6 +119,8 @@ PanelWindow {
         anchors.horizontalCenter: parent.horizontalCenter
         y: dock.shown ? parent.height - height - 8 : parent.height + 4
         Behavior on y { NumberAnimation { duration: Tokens.durSlow; easing.type: Easing.BezierSpline; easing.bezierCurve: [0.2, 0, 0, 1, 1, 1] } }
+        // TODO(phase 7): glass/solid/minimal look: fill from Tokens.glass or Tokens.surface, none for minimal, radius, edge, light edge on top and a soft shadow;
+        // TODO(phase 7): width and height must follow the zoomed row, not the rest size.
         width: row.implicitWidth + 16
         height: dock.iconSize + 26
         radius: 20
@@ -126,12 +132,14 @@ PanelWindow {
             id: row
             anchors.centerIn: parent
             Repeater {
+                // TODO(phase 7): add a thin divider before the first non-pinned entry (dividerBefore); give each cell zoom = zoomAt(centre) when magnify is on.
                 model: dock.entries
                 delegate: DockItem {
                     id: cell
                     required property var modelData
                     info: modelData
                     iconSize: dock.iconSize
+                    // TODO(phase 7): pass bouncing = (dock.launching === modelData.key).
                     onActivated: dock.activate(modelData)
                     onMenuRequested: dock.menuFor = modelData
 

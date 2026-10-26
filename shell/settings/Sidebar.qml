@@ -7,6 +7,7 @@ import qs.components
 Item {
     id: bar
 
+    // TODO(phase 7): take groups ([{ group, categories }]) instead of the flat list and show a small group heading above each block.
     property var categories  // { id, title }
     property string activeCategoryId
     signal categorySelected(string categoryId)
