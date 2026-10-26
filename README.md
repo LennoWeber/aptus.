@@ -21,8 +21,13 @@ Status: usable, still changing. Plan and decisions: [PHASES.md](PHASES.md).
 
 ## Requirements
 
-Fedora, Hyprland 0.56+ (Lua config), Quickshell 0.3.2+, plus: `brightnessctl`, `grim`, `slurp`, `wl-clipboard`, `cliphist`,
-`playerctl`, `hyprsunset`, `iio-sensor-proxy`, `cage` (greeter only), `python3`.
+Fedora, Hyprland 0.56+ (Lua config), Quickshell 0.3.2+, plus the packages in `packages/aptus-dnf.txt` (grouped: required, session,
+backup, optional). `bin/aptus-packages` reads that list and only prints; it never installs:
+
+```sh
+bin/aptus-packages check                              # per group: all installed, or what is missing
+bin/aptus-packages command required session backup   # the sudo dnf command for what is missing
+```
 
 ## Install
 
@@ -36,6 +41,10 @@ Fedora, Hyprland 0.56+ (Lua config), Quickshell 0.3.2+, plus: `brightnessctl`, `
 ```
 
 `--yes` answers the questions with yes except the COPR, which needs `--copr`. Packages are never removed by the uninstall.
+
+aptus is meant as the main shell. With the user's `shell-switch` it starts at login; a second shell (Noctalia) stays installed
+as a backup and takes over if aptus does not come up. The window look (a little transparency, strong blur) is in `hypr/aptus-look.lua`;
+the installer copies it to `~/.local/state/aptus/hyprland-look.lua` again whenever it changed.
 
 Start with `aptus`. Send commands to the running shell with `aptus msg <command>`, for example
 `aptus msg panel-toggle control-center`, `aptus msg session lock`, `aptus msg tablet-toggle`.
