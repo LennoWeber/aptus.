@@ -156,6 +156,40 @@ PanelWindow {
         return stageId === Enums.IslandStage.Alert ? (cardAlert ? alertGrowMs : 220) : Tokens.durSlow
     }
 
+    // The width ladder: every stage is at least this much wider than the island at rest (px), so the island only grows.
+    readonly property real growAlert: 40      // an alert and the on-screen indicator
+    readonly property real growCard: 80       // the opened Home card and the alert card
+    readonly property real growView: 60       // the other opened views
+    readonly property real growMorph: 80      // toward the launcher and the control center
+    readonly property real maxWidth: 900      // the body never gets wider than this (the window is 940), also while it overshoots
+    // Timing of the morph (ms): the width leads, the height follows a moment later.
+    readonly property int springMs: 460
+    readonly property int settleMs: 260
+    readonly property int heightDelayMs: 30
+    readonly property real contentScaleFrom: 0.92   // content arrives at this scale and settles to 1
+    readonly property var springCurve: [0.34, 1.3, 0.5, 1, 1, 1]
+    readonly property var calmCurve: [0.22, 1, 0.36, 1, 1, 1]
+
+    // w widened to at least restWidth + grow and at most maxWidth.
+    function floorWidth(w: real, grow: real): real {
+        throw new Error("not implemented")
+    }
+
+    // Easing curve of the body's growth for the current morph mode and direction (a Bezier list for NumberAnimation).
+    function morphCurve(): var {
+        throw new Error("not implemented")
+    }
+
+    // Duration in ms of the width (height false) or the height (height true) of the body, for the current mode and direction.
+    function morphMs(forHeight: bool): int {
+        throw new Error("not implemented")
+    }
+
+    // Scale of content whose opacity is fade (0..1): contentScaleFrom at 0, 1 at 1; always 1 when the mode is off.
+    function contentScale(fade: real): real {
+        throw new Error("not implemented")
+    }
+
     // Body size (object with w and h) of the card for an alert (IslandState.alert), told by its kind and its content.
     function alertSizeFor(a: var): var {
         if (!a) throw new Error("invariant: Island.alertSizeFor: no alert")
