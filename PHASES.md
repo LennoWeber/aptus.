@@ -6,6 +6,8 @@ Zweiter Phasenablauf (neue Funktion „Notch“, ab 22. Okt.): **Phase 1 (Plan) 
 
 Dritter Phasenablauf (neue Funktion „Bild-Theming“, 22. Okt.): **Phase 1 bis 5 erledigt, wartet auf „weiter“ für Phase 6**, siehe Abschnitt „Bild-Theming“ weiter unten.
 
+Vierzehnter Ablauf (Island Morph, 28. Okt., Branch `island-morph`, Worktree `~/Code/Projekte/aptus-island-morph`): **läuft ohne Pausen**, Stand siehe „Protokoll Ablauf 14“ ganz unten.
+
 Zwölfter Ablauf (Themes, 27. Okt.): **läuft ohne Pausen**, Stand siehe „Protokoll Ablauf 12“ ganz unten.
 
 Vierter Phasenablauf (neue Funktion „Island“, 26. Okt., ersetzt den Notch): **läuft ohne Pausen durch (Lenno: nie auf „weiter“ warten, alles protokollieren, jede Phase selbst prüfen)**, Stand siehe „Protokoll Island“ ganz unten.
@@ -1656,3 +1658,12 @@ Zu klein für den Phasenablauf (zwei Schalter, drei Dateien), deshalb direkt umg
 - `bar.glass` (Abschnitt „Bar look“) und `island.glass` (Abschnitt „Design“), beide Standard aus. Leiste: Fensterfarbe `Tokens.bg` mit Alpha 0.62 + `BackgroundEffect.blurRegion` über die ganze Fläche. Island: `fill` mal 0.6 Alpha (`glassOf`) + Blur auf dem Körper mit seinem Eckenradius; gilt für alle Looks und Entwürfe.
 - **Geprüft:** `qmllint` weiter 0 Fehler, 32 Warnungen (wie vorher); Leiste in der Test-Shell auf dem zweiten Bildschirm: durchsichtig, Hintergrund sichtbar. **Island nicht gesehen** (braucht `IslandHost` mit allen Zuständen, nicht in der Test-Shell); nur der Code ist geprüft. Lesbarkeit der Island-Schrift auf hellem Hintergrund ist offen (Alpha 0.6 ist ein Schätzwert).
 - Konfliktgefahr beim Merge: `Island.qml` wird auch in Ablauf 12 (`island-notify`) geändert.
+
+## Island Morph (Ablauf 14, ab 28. Okt.)
+**Ziel (Lenno):** Die Island soll wie auf dem iPhone größer „morphen“, wenn etwas gezeigt wird, nie schmaler werden als im Ruhezustand. Zuerst HTML-Überblick (`docs/island-morph.html`), dann selbstständig in Phasen, ohne Pausen.
+
+### Protokoll Ablauf 14
+- **Phase 1 (Plan), erledigt.** Ursache: Meldung 380, Anzeige 360, Meldungs-Karte 420, Power 480, Screenshot 440, Home (paper) 460 / (dashboard) 520 sind schmaler als die Ruhe (capsule 560). Breite und Höhe laufen zugleich mit derselben Kurve, der Inhalt blendet nur ein/aus.
+  - **Plan:** (1) Breitenleiter relativ zur Ruhebreite des Entwurfs (`Island.growth`: Zuschlag für Anzeige/Meldung, Karte, Ansicht), `sizeFor` nie unter `restWidth + Zuschlag`; (2) Federkurve beim Wachsen (Breite 460 ms, Höhe +30 ms Versatz), ohne Überschwingen beim Schrumpfen (260 ms); (3) Inhaltswechsel mit Skalierung 0,9→1 und Unschärfe nur während des Übergangs (`MultiEffect`); (4) Radius aus der Höhe, im Takt der Höhe; (5) Einstellung `island.morph`: `spring` (Standard) | `calm` | `off`.
+  - **Betroffene Dateien:** `shell/island/Island.qml` (Größen, Kurven, Inhalte), `shell/theme/IslandLook.qml` (Zuschläge je Entwurf), `config/settings.json`, `config/settings-schema.json`, ggf. `IslandCard.widthFor`, `IslandWallpaper` (Breite mindestens Leiter), `README`.
+  - **Risiken:** Überschwingen macht die Breite kurz größer als das Fenster (940) → Obergrenze 900; Unschärfe-Layer pro Ansicht kosten GPU → nur während des Übergangs; Maske (`Region`) folgt `body` (animiert), ok.

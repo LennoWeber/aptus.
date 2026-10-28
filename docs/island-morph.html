@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Island Morph</title>
+<style>
+:root{--bg:#f4f3ef;--card:#fff;--ink:#1b1b1a;--soft:#6b6a66;--line:#e2e0d9;--isl:#f7f6f2;--isl-ink:#1b1b1a;--ok:#2f9e5b;--warn:#d98a1a;--bad:#d64545}
+@media (prefers-color-scheme:dark){:root{--bg:#161615;--card:#1f1f1d;--ink:#eeede8;--soft:#9a988f;--line:#33322e;--isl:#0e0e0d;--isl-ink:#f2f1ec}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 Inter,system-ui,sans-serif}
+main{max-width:920px;margin:0 auto;padding:40px 16px 80px}
+h1{font-size:28px;margin:0 0 4px}h2{font-size:19px;margin:44px 0 10px}p{margin:8px 0}.soft{color:var(--soft)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin:14px 0}
+table{border-collapse:collapse;width:100%;font-size:14px}td,th{padding:7px 8px;border-bottom:1px solid var(--line);text-align:left}th{color:var(--soft);font-weight:600}
+.bad{color:var(--bad);font-weight:600}.good{color:var(--ok);font-weight:600}
+code{background:var(--bg);padding:1px 5px;border-radius:5px;font-size:13px}
+/* Bühne */
+.stage{position:relative;height:250px;background:linear-gradient(160deg,#c9d3d8,#e8dcc8);border-radius:12px;overflow:hidden;border:1px solid var(--line)}
+.stage.dark{background:linear-gradient(160deg,#2a3038,#3b3128)}
+.isl{position:absolute;left:50%;top:10px;transform:translateX(-50%);background:var(--isl);color:var(--isl-ink);border-radius:22px;overflow:hidden;box-shadow:0 0 0 1px rgba(0,0,0,.12);
+ width:var(--w);height:var(--h);}
+.stage.spring .isl{transition:width .46s cubic-bezier(.34,1.38,.5,1),height .52s cubic-bezier(.34,1.3,.5,1) .03s,border-radius .4s}
+.stage.old .isl{transition:width .26s cubic-bezier(.22,1,.36,1),height .26s cubic-bezier(.22,1,.36,1)}
+.layer{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:0 16px;font-size:13px;gap:14px;white-space:nowrap;
+ opacity:0;transform:scale(.9);filter:blur(6px);transition:opacity .18s,transform .3s,filter .22s;pointer-events:none}
+.layer.on{opacity:1;transform:none;filter:none;transition:opacity .24s .12s,transform .38s .1s cubic-bezier(.2,0,0,1),filter .26s .1s}
+.stage.old .layer{filter:none;transform:none;transition:opacity .14s}
+.layer.col{flex-direction:column;align-items:flex-start;justify-content:center;gap:8px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--ok);display:inline-block}
+.bar{height:6px;border-radius:3px;background:rgba(128,128,128,.3);width:260px;overflow:hidden}.bar i{display:block;height:100%;width:62%;background:var(--isl-ink);border-radius:3px}
+.btns{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 0}
+button{font:inherit;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:7px 13px;border-radius:9px;cursor:pointer}button:hover{border-color:var(--soft)}
+button.sel{background:var(--ink);color:var(--bg)}
+.ruler{position:absolute;left:50%;transform:translateX(-50%);top:0;bottom:0;border-left:1px dashed rgba(0,0,0,.25);border-right:1px dashed rgba(0,0,0,.25);width:560px;pointer-events:none}
+.ruler span{position:absolute;bottom:4px;left:6px;font-size:11px;color:rgba(0,0,0,.55)}
+.stage.dark .ruler span{color:rgba(255,255,255,.6)}
+.steps{counter-reset:s;list-style:none;padding:0}.steps li{counter-increment:s;padding-left:34px;position:relative;margin:10px 0}
+.steps li:before{content:counter(s);position:absolute;left:0;top:1px;width:24px;height:24px;border-radius:50%;background:var(--ink);color:var(--bg);text-align:center;font-size:12px;line-height:24px}
+</style>
+</head>
+<body>
+<main>
+<h1>Island Morph</h1>
+<p class="soft">Die Island soll nicht zwischen Größen springen, sondern wie auf dem iPhone aus ihrer Ruheform in die nächste Form wachsen: nie schmaler als vorher, mit federndem Überschwingen, und der Inhalt wandert mit.</p>
+
+<h2>1. Was heute stört</h2>
+<div class="card">
+<p>Im Ruhezustand ist die Island 560 px breit (Entwurf <code>capsule</code>). Mehrere Zustände sind <b>schmaler</b>, sie schrumpfen also, wenn etwas „aufgeht“:</p>
+<table>
+<tr><th>Zustand</th><th>Breite heute</th><th>Verhältnis zu Ruhe (560)</th><th>neu</th></tr>
+<tr><td>Meldung (einfach)</td><td>380</td><td class="bad">−180</td><td class="good">560 + Wachstum → 600</td></tr>
+<tr><td>Anzeige (Lautstärke, Helligkeit)</td><td>360</td><td class="bad">−200</td><td class="good">600</td></tr>
+<tr><td>Meldungs-Karte</td><td>420</td><td class="bad">−140</td><td class="good">640</td></tr>
+<tr><td>Power</td><td>480</td><td class="bad">−80</td><td class="good">620</td></tr>
+<tr><td>Screenshot</td><td>440</td><td class="bad">−120</td><td class="good">620</td></tr>
+<tr><td>Home-Karte (Paper / Dashboard / Bento)</td><td>460 / 520 / 560</td><td class="bad">−100 / −40 / 0</td><td class="good">640</td></tr>
+<tr><td>Zwischen Ruhe und Launcher</td><td>640</td><td>ok</td><td>bleibt</td></tr>
+</table>
+<p class="soft">Dazu kommt: Breite und Höhe laufen gleichzeitig und gleich schnell, der Inhalt blendet nur ein und aus. Das wirkt wie ein Fenster, das die Größe wechselt, nicht wie ein Körper, der sich verformt.</p>
+</div>
+
+<h2>2. Vorher / Nachher zum Ausprobieren</h2>
+<div class="card">
+<div class="stage" id="stage"><div class="ruler"><span>Ruhe = 560 px</span></div>
+ <div class="isl" id="isl">
+  <div class="layer on" data-s="rest"><span>1 2 3 4</span><b>10:42</b><span>Wed 28 Oct</span><span>14° ☁</span><span><i class="dot"></i> 87 %</span></div>
+  <div class="layer" data-s="osd"><span>🔊</span><div class="bar"><i></i></div><span>62 %</span></div>
+  <div class="layer" data-s="alert"><span><i class="dot" style="background:var(--warn)"></i></span><span>Battery at 18 % · plug in soon</span></div>
+  <div class="layer col" data-s="card"><b style="font-size:26px;letter-spacing:-.02em">10:42</b><span class="soft">Wed 28 Oct · 14° · Wi-Fi “Home”</span><div class="bar" style="width:480px"><i style="width:40%"></i></div><div class="bar" style="width:480px"><i style="width:75%"></i></div></div>
+  <div class="layer" data-s="power"><span>⏻ Shut down</span><span>↻ Restart</span><span>🔒 Lock</span><span>⇥ Log out</span></div>
+ </div>
+</div>
+<div class="btns" id="modes"><button data-m="old">Heute</button><button data-m="spring" class="sel">Neu (Morph)</button></div>
+<div class="btns" id="states"><button data-s="rest">Ruhe</button><button data-s="osd">Anzeige</button><button data-s="alert">Meldung</button><button data-s="card">Home-Karte</button><button data-s="power">Power</button></div>
+<p class="soft">„Heute“ nimmt die echten alten Maße (ein Zustand wird schmaler als die Ruhe). „Neu“ nimmt die geplanten Maße, Feder-Kurve und den weichen Inhaltswechsel. Die gestrichelte Linie ist die Ruhebreite.</p>
+</div>
+
+<h2>3. Gestaltung</h2>
+<div class="card">
+<ol class="steps">
+<li><b>Eine Breitenleiter.</b> Jeder Zustand ist mindestens so breit wie die Ruhe plus ein Zuschlag. Ruhe 560 → Anzeige/Meldung 600 → Karte/Ansichten 620 bis 640 → Launcher/Control Center 640 bis 760. Es gibt nur Wachstum, nie Schrumpfen, und zwar für jeden Entwurf (<code>capsule</code>, <code>pill</code>, <code>ticker</code>, <code>shade</code>) relativ zu <i>seiner</i> Ruhebreite.</li>
+<li><b>Feder statt Bremskurve.</b> Breite: 460 ms, leichtes Überschwingen (≈ 4 %), Höhe folgt 30 ms später und etwas länger. Der Körper „dehnt“ sich erst, dann setzt er die Höhe nach, so wie das Original. Beim Zurückschrumpfen kein Überschwingen, kürzere Zeit (260 ms), damit es sofort aufgeräumt wirkt.</li>
+<li><b>Inhalt wandert mit.</b> Der alte Inhalt löst sich in 140 ms (Skalierung auf 0,94, leichte Unschärfe, Aus), der neue kommt nach etwa 120 ms von 0,9 auf 1 (mit Unschärfe, die abklingt). Kein hartes Umschalten, kein Inhalt außerhalb der Form.</li>
+<li><b>Ecken folgen der Form.</b> Der Radius wird aus der Höhe berechnet (Pille bleibt Pille), und läuft im selben Rhythmus wie die Höhe, damit nie eine Ecke „hinterherhinkt“.</li>
+<li><b>Hover-Karte wie das lange Drücken beim iPhone.</b> Die Karte wächst direkt aus der Ruhe heraus (90 ms Wartezeit), beim Verlassen schrumpft sie ohne Überschwingen zurück.</li>
+<li><b>aptus bleibt aptus.</b> Deckend (kein Glas außer dem Schalter), Haarlinie statt Schatten, Farbe nur als Signal, Kurve und Zeiten bleiben im System: Verformung 260 bis 460 ms (nur hier länger, wegen Überschwingen), Inhaltsblenden 140 ms.</li>
+</ol>
+</div>
+
+<h2>4. Technik (kurz)</h2>
+<div class="card">
+<ul>
+<li><code>Island.qml</code>: <code>sizeFor()</code> bekommt eine Untergrenze <code>restWidth + Zuschlag</code>; Zustände mit festen Breiten werden daraus abgeleitet. Alle Maße stehen an einer Stelle (Leiter).</li>
+<li>Federkurve für Breite, Höhe und Radius; Höhe mit kurzer Verzögerung (<code>SequentialAnimation</code> mit <code>PauseAnimation</code>). Die Ruhe-Rückkehr nutzt die alte Kurve ohne Überschwingen.</li>
+<li>Inhalt: ein <code>MorphLayer</code>-Verhalten (Skalierung + Deckkraft + <code>MultiEffect</code>-Unschärfe) für Ruhe, Anzeige, Meldung, Karte und jede Ansicht; die Unschärfe wird nur während des Übergangs eingeschaltet (kein Dauer-Layer).</li>
+<li>Neue Einstellung <code>island.morph</code>: <code>spring</code> (neu, Standard) | <code>calm</code> (ohne Überschwingen) | <code>off</code> (wie heute). So lässt sich jederzeit zurück.</li>
+<li>Fensterfläche: 940 × 660 reichen (größter Körper 760 breit).</li>
+</ul>
+</div>
+
+<h2>5. Phasen</h2>
+<div class="card"><p>Wie die letzten Abläufe: ohne Pausen, jede Phase mit Selbst-Review am Diff, ein Commit pro Phase, Arbeit im Worktree <code>aptus-island-morph</code> (Branch <code>island-morph</code>), damit die laufende Shell unberührt bleibt. Lenno testet danach, gemergt wird erst nach seinem „passt“.</p></div>
+</main>
+<script>
+const SIZES={
+ old:{rest:[560,40],osd:[360,72],alert:[380,38],card:[520,190],power:[480,150]},
+ spring:{rest:[560,40],osd:[600,72],alert:[600,44],card:[640,190],power:[620,150]}
+};
+let mode='spring',st='rest';
+const stage=document.getElementById('stage'),isl=document.getElementById('isl');
+function apply(){
+ stage.classList.toggle('spring',mode==='spring');stage.classList.toggle('old',mode==='old');
+ const s=SIZES[mode][st];isl.style.setProperty('--w',s[0]+'px');isl.style.setProperty('--h',s[1]+'px');
+ isl.style.borderRadius=Math.min(22,s[1]/2)+'px';
+ isl.querySelectorAll('.layer').forEach(l=>l.classList.toggle('on',l.dataset.s===st));
+ document.querySelectorAll('#modes button').forEach(b=>b.classList.toggle('sel',b.dataset.m===mode));
+ document.querySelectorAll('#states button').forEach(b=>b.classList.toggle('sel',b.dataset.s===st));
+}
+document.querySelectorAll('#modes button').forEach(b=>b.onclick=()=>{mode=b.dataset.m;apply()});
+document.querySelectorAll('#states button').forEach(b=>b.onclick=()=>{st=b.dataset.s;apply()});
+apply();
+// kleine Selbstführung beim Laden
+setTimeout(()=>{st='card';apply()},700);setTimeout(()=>{st='rest';apply()},2600);
+</script>
+</body>
+</html>
