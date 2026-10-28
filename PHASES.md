@@ -1684,3 +1684,12 @@ Zu klein für den Phasenablauf (zwei Schalter, drei Dateien), deshalb direkt umg
 **Reihenfolge:** Network zuerst (eigener kompletter Durchlauf Phase 2–7), danach Bluetooth, danach der Rest nach Lennos Wunsch.
 
 **Entscheidungen (Lenno, 28. Okt.):** Umfang: erst Network, dann Bluetooth (Rest später). Vergessen: zweiter Klick bestätigt („Really forget?“), kein Dialog.
+
+### Phase 5: Probe (erledigt, wieder zurückgesetzt)
+Alles in einer Test-Shell (Fenster mit `NetworkTile`/`BluetoothTile` und den echten Services) gestartet, mit `grim` gesehen. Patch im Scratchpad (`probe-cc.patch`).
+- **Ergebnis Network:** Zwei Spalten (links Verbindung mit IP/Gateway/DNS/Band/Speed/Security, rechts Saved mit „Auto“-Schalter und Forget, darunter New und „Hidden network“) sieht im Stil der Shell aus; `Lenno` erscheint als „Out of range“, `qmllint` 0 Fehler.
+- **Lücken:**
+  1. **Phase 2:** Quickshell listet nur Netze mit gespeichertem Profil, `TUB-IoT`/`TUB-Exam` fehlten → Eigenschaft `scanned` (Liste aus `nmcli device wifi list`) fehlt. Außerdem `NetworkTile.hiddenOpen`/`link`, `BluetoothTile.nothing`, `ConfirmButton.severity` Standard `Critical`.
+  2. **Phase 4:** `connectTo` braucht für ungespeicherte Netze einen `nmcli`-Weg (TODO fehlte); leere Zustände („Nothing new in range“, Bluetooth-Gruppen) fehlten als TODO.
+  3. **Kein Strukturfehler, aber Regel:** Row mit `width: parent.width - …` bildet eine Layout-Schleife (Log: „possible polish() loop“), stattdessen Item mit Ankern. Gebundene Listen ersetzen den Standardwert `[]` aus Phase 2 (kein doppeltes `property`).
+  4. **Nicht geprüft:** Bluetooth-Zeilen (am Laptop keine Geräte gekoppelt, Bluetooth war aus; kurz an- und wieder ausgeschaltet), Klick auf Forget/Connect (Klicks nicht automatisierbar).
