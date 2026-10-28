@@ -81,6 +81,8 @@ PanelWindow {
     // Size of the body for the current stage and view.
     property real restWidth: rest.wantedWidth
     readonly property real homeContentHeight: cardStyle ? card.implicitHeight : home.implicitHeight + (homeWithQuick ? quick.implicitHeight : 0)
+    // TODO(phase 7, morph): shownW and shownH follow the target in onTargetWidthChanged/onTargetHeightChanged (set growing first, then the value); set both once in Component.onCompleted.
+    // The body is bound to shownW/shownH, so the animation sees the direction.
     property real targetWidth: sizeFor(stage, view, homeContentHeight, islandState ? islandState.morph : Enums.MorphTarget.None).w
     property real targetHeight: sizeFor(stage, view, homeContentHeight, islandState ? islandState.morph : Enums.MorphTarget.None).h
     // The size the body shows: it follows the target through the animation, so the animation can tell growing from shrinking.
@@ -128,15 +130,19 @@ PanelWindow {
     // Body size (object with w and h) for a stage and view (Enums.IslandStage, Enums.IslandView); contentHeight is the
     // content height of Home. While morph is not None the morph size wins.
     function sizeFor(stageId: int, viewId: int, contentHeight: real, morph: int): var {
+        // TODO(phase 7, morph): morph sizes: floorWidth(w, growMorph), so the island never shrinks toward the launcher or control center.
         if (morph === Enums.MorphTarget.Launcher) return morphSizes.launcher
         if (morph === Enums.MorphTarget.ControlCenter) return morphSizes.controlCenter
         if (stageId === Enums.IslandStage.Alert) {
             const a = islandState ? islandState.alert : null
+            // TODO(phase 7, morph): width of a plain alert and of the card: floorWidth(w, growAlert) / floorWidth(w, growCard).
             return a && a.kind !== Enums.AlertKind.Plain ? alertSizeFor(a) : { w: alertWidth, h: alertHeight }
         }
+        // TODO(phase 7, morph): width of the indicator: floorWidth(osdWidth, growAlert).
         if (stageId === Enums.IslandStage.Osd) return { w: osdWidth, h: osdHeight }
         if (stageId === Enums.IslandStage.Open) {
             switch (viewId) {
+            // TODO(phase 7, morph): widths of the opened views: floorWidth(w, growView); the Home card floorWidth(homeWidth, growCard); the wallpaper view floorWidth(contentWidth, growView).
             case Enums.IslandView.Power: return viewSizes.power
             case Enums.IslandView.Screenshot: return viewSizes.screenshot
             case Enums.IslandView.Clipboard: return viewSizes.clipboard
@@ -149,6 +155,7 @@ PanelWindow {
     }
 
     // Duration (ms) of the body's growth for a stage and a view (Enums.IslandStage, Enums.IslandView): openGrowMs for an opened view, Tokens.durSlow otherwise.
+    // TODO(phase 7, morph): morphMs() takes over the duration of the body; keep growMsFor only for the hover/alert/indicator timing or remove it if unused.
     function growMsFor(stageId: int, viewId: int): int {
         if (stageId < Enums.IslandStage.Rest || stageId > Enums.IslandStage.Open) throw new Error("invariant: Island.growMsFor: unknown stage")
         if (stageId === Enums.IslandStage.Osd) return osdGrowMs
@@ -256,6 +263,7 @@ PanelWindow {
         id: body
         anchors.horizontalCenter: parent.horizontalCenter
         y: IslandLook.gap - (height + IslandLook.gap + 2) * win.slide
+        // TODO(phase 7, morph): bind to win.shownW (and height to win.shownH), see above.
         width: win.targetWidth
         height: win.targetHeight
         floating: IslandLook.gap > 0
@@ -266,6 +274,7 @@ PanelWindow {
         accent: win.isAlert && win.islandState && win.islandState.alert && win.islandState.alert.severity !== Enums.Severity.Neutral ? Tokens.colorFor(win.islandState.alert.severity) : win.hairline
         accentOpacity: win.isAlert ? 1 : 0.5
         opacity: 1 - win.morphProgress
+        // TODO(phase 7, morph): width: morphMs(false) and morphCurve(); height: morphMs(true) with heightDelayMs pause when growing (SequentialAnimation); cornerRadius follows the height's timing; no overshoot while shrinking; mode off = the old behaviour.
         Behavior on width { NumberAnimation { duration: win.growMsFor(win.stage, win.view); easing.type: Easing.BezierSpline; easing.bezierCurve: win.cardAlert ? [0.34, 1.32, 0.5, 1, 1, 1] : [0.22, 1, 0.36, 1, 1, 1] } }
         Behavior on height { NumberAnimation { duration: win.growMsFor(win.stage, win.view); easing.type: Easing.BezierSpline; easing.bezierCurve: win.cardAlert ? [0.34, 1.32, 0.5, 1, 1, 1] : [0.22, 1, 0.36, 1, 1, 1] } }
         Behavior on cornerRadius { NumberAnimation { duration: win.growMsFor(win.stage, win.view) } }
@@ -274,6 +283,7 @@ PanelWindow {
         IslandRest {
             id: rest
             anchors.fill: parent
+            // TODO(phase 7, morph): scale: contentScale(restFade), blur through MultiEffect only while win.moving (layer.enabled), same for the alert view and the opened views below.
             opacity: !win.isAlert && !win.isOsd && win.design !== "shade" ? win.restFade : 0
             visible: opacity > 0.01
             design: win.design
@@ -323,6 +333,7 @@ PanelWindow {
         IslandAlert {
             id: alertView
             anchors.fill: parent
+            // TODO(phase 7, morph): scale and blur as for the rest content.
             opacity: win.isAlert ? 1 : 0
             visible: opacity > 0.01
             // A card shows up a moment after the body started to grow, and slides in a little.
@@ -387,6 +398,7 @@ PanelWindow {
         FocusScope {
             anchors.fill: parent
             focus: win.isOpen && !quick.focus && !card.focus
+            // TODO(phase 7, morph): scale: contentScale(opacity) and blur while win.moving.
             opacity: win.view === Enums.IslandView.Home ? win.cardFade : win.isOpen ? 1 : 0
             visible: opacity > 0.01
             Behavior on opacity { enabled: win.view !== Enums.IslandView.Home; NumberAnimation { duration: Tokens.durFast } }
