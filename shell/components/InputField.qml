@@ -9,4 +9,5 @@ Surface {
     property string placeholder
     property bool secret
     signal accepted()
+    // TODO(phase 7): the TextInput with placeholder and Osk tracking, moved from NetworkTile.Field
 }

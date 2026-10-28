@@ -68,6 +68,7 @@ Item {
         }
     }
 
+    // TODO(phase 7): Field moves to components/InputField; use it here and drop the import that becomes unused
     // A one-line text field in a soft pill.
     component Field: Surface {
         id: field

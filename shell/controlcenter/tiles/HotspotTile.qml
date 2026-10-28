@@ -34,6 +34,7 @@ Item {
         }
     }
 
+    // TODO(phase 7): the drafts must follow networkState.hotspotSsid/hotspotPassword when they arrive after the view opened and nothing was edited yet
     // TODO(phase 7): expanded view: editable name and password (validated, Save restarts a running hotspot), connected devices; drafts start from networkState values
     Item {
         anchors.fill: parent
