@@ -16,8 +16,12 @@ Scope {
     // Connected first, then paired, then the rest by name. Unnamed devices are noise and stay out.
     property var devices: liveDevices
         .filter(d => d.name && (d.paired || d.connected || discovering))
-        .map(d => ({ address: d.address, name: d.name, connected: d.connected, paired: d.paired, batteryPercent: d.batteryAvailable ? (d.battery <= 1 ? d.battery * 100 : d.battery) : -1 }))
-        .sort((a, b) => (b.connected - a.connected) || (b.paired - a.paired) || a.name.localeCompare(b.name))   // list of { address, name, connected, paired, batteryPercent }
+        .map(d => ({ address: d.address, name: d.name, connected: d.connected, paired: d.paired, trusted: d.trusted, batteryPercent: d.batteryAvailable ? (d.battery <= 1 ? d.battery * 100 : d.battery) : -1 }))
+        .sort((a, b) => (b.connected - a.connected) || (b.paired - a.paired) || a.name.localeCompare(b.name))   // list of { address, name, connected, paired, trusted, batteryPercent }
+    // The same devices in the three groups of the detail view.
+    property var connectedDevices: devices.filter(d => d.connected)
+    property var pairedDevices: devices.filter(d => d.paired && !d.connected)
+    property var newDevices: devices.filter(d => !d.paired && !d.connected)
     property int connectedCount: devices.filter(d => d.connected).length
 
     function byAddress(address: string): var {
@@ -55,6 +59,12 @@ Scope {
         if (!powered) throw new Error("invariant: BluetoothState.pairDevice: Bluetooth is off")
         const d = byAddress(address)
         if (d) d.pair()
+    }
+
+    function setTrusted(address: string, on: bool): void {
+        if (!/^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$/.test(address)) throw new Error("invariant: BluetoothState.setTrusted: not a Bluetooth address")
+        const d = byAddress(address)
+        if (d) d.trusted = on
     }
 
     function forgetDevice(address: string): void {
