@@ -13,20 +13,18 @@ Singleton {
     property var looks                    // raw data of theme/island-looks.json: { id, name, ... } per look
 
     // colours: Rest = pill and alert, Open = the opened island
-    // TODO(phase 7, style): fill, ink and stroke colours (rest and open, widths) go through styled(): phone = phoneFill/phoneInk, no stroke; glass = glassTint, phoneInk, glassEdge as stroke.
-    property color fillRest: colorByName(entry("fillRest") || "")
-    property color fillOpen: colorByName(entry("fillOpen") || "")
-    property color inkRest: colorByName(entry("inkRest") || "")
+    property color fillRest: styled(colorByName(entry("fillRest") || ""), phoneFill, glassTint)
+    property color fillOpen: styled(colorByName(entry("fillOpen") || ""), phoneFill, glassTint)
+    property color inkRest: styled(colorByName(entry("inkRest") || ""), phoneInk, phoneInk)
     property color inkSoftRest: Qt.rgba(inkRest.r, inkRest.g, inkRest.b, 0.65)
-    property color inkOpen: colorByName(entry("inkOpen") || "")
-    property color strokeRest: colorByName(entry("strokeRest") || "")
-    property color strokeOpen: colorByName(entry("strokeOpen") || "")
+    property color inkOpen: styled(colorByName(entry("inkOpen") || ""), phoneInk, phoneInk)
+    property color strokeRest: styled(colorByName(entry("strokeRest") || ""), phoneFill, glassEdge)
+    property color strokeOpen: styled(colorByName(entry("strokeOpen") || ""), phoneFill, glassEdge)
     // The same fills, always opaque: for a glyph or a number drawn in the fill's colour on an ink-filled shape (the glass tint is see-through).
-    // TODO(phase 7, style): solidRest and solidOpen are the fillRest/fillOpen of the look, but glassSolid for the glass style (styled).
-    property color solidRest
-    property color solidOpen
-    property real strokeWidthRest: entry("strokeWidthRest") ?? 1
-    property real strokeWidthOpen: entry("strokeWidthOpen") ?? 1
+    property color solidRest: styled(colorByName(entry("fillRest") || ""), phoneFill, glassSolid)
+    property color solidOpen: styled(colorByName(entry("fillOpen") || ""), phoneFill, glassSolid)
+    property real strokeWidthRest: styled(entry("strokeWidthRest") ?? 1, 0, 1)
+    property real strokeWidthOpen: styled(entry("strokeWidthOpen") ?? 1, 0, 1)
 
     // shape
     property real radiusRest: entry("radiusRest") ?? 14
@@ -54,7 +52,7 @@ Singleton {
     // One of three colours (or numbers) by the current style: aptus, phone or glass.
     function styled(forAptus: var, forPhone: var, forGlass: var): var {
         if (["aptus", "phone", "glass"].indexOf(style) < 0) throw new Error("invariant: IslandLook.styled: unknown style " + style)
-        throw new Error("not implemented")
+        return style === "phone" ? forPhone : style === "glass" ? forGlass : forAptus
     }
 
     FileView {

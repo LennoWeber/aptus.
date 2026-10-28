@@ -34,7 +34,20 @@ Item {
         border.color: shape.stroke
     }
 
-    // TODO(phase 7, style): the lit edge (1 px ring, edgeColor) and the sheen (a white gradient from the top, edgeLight) of the glass style, in the same shape as the fill, above it, below the content.
+    // The glass style: a sheen from the top edge, in the shape of the fill.
+    Rectangle {
+        visible: shape.glassEdge
+        x: 0
+        y: shape.floating ? 0 : -shape.cornerRadius
+        width: shape.width
+        height: shape.height + (shape.floating ? 0 : shape.cornerRadius)
+        radius: shape.cornerRadius
+        gradient: Gradient {
+            GradientStop { position: 0; color: Qt.rgba(shape.edgeColor.r, shape.edgeColor.g, shape.edgeColor.b, shape.edgeLight) }
+            GradientStop { position: 0.6; color: Qt.rgba(shape.edgeColor.r, shape.edgeColor.g, shape.edgeColor.b, 0) }
+        }
+    }
+
     // The signal line: the one place the island shows colour by itself, and only while something is serious.
     Rectangle {
         visible: IslandLook.accentLine

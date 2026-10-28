@@ -71,9 +71,8 @@ PanelWindow {
 
     // The design (setting island.design): capsule, pill, ticker or shade. It sets the size at rest and the shape.
     readonly property string design: IslandLook.design
-    // TODO(phase 7, style): the style phone/glass wants a larger open radius for cards (30) and Power; read via innerRadius for the inner shapes.
     readonly property real radiusRest: design === "pill" ? IslandLook.restHeight / 2 : design === "shade" ? 3 : IslandLook.radiusRest
-    readonly property real radiusOpen: design === "pill" ? 26 : design === "shade" ? 18 : IslandLook.radiusOpen
+    readonly property real radiusOpen: design === "shade" ? 18 : IslandLook.style !== "aptus" ? 30 : design === "pill" ? 26 : IslandLook.radiusOpen
 
     // Morph: how far the island has grown toward the launcher or control center (0 = itself, 1 = fully there).
     property real morphProgress: islandState && islandState.morph !== Enums.MorphTarget.None ? 1 : 0
@@ -138,10 +137,9 @@ PanelWindow {
     readonly property real alertMediaHeight: 96
     readonly property int alertGrowMs: 340         // ms: the body grows to the card in this time, with a little overshoot
     readonly property real homeWidth: cardStyle ? card.widthFor(homeStyle) : design === "pill" ? 480 : 520
-    // TODO(phase 7, style): Power and Screenshot are 110 high (tiles of about 82), widths come from the ladder.
     readonly property var viewSizes: ({
-        power: { w: 480, h: 150 },
-        screenshot: { w: 440, h: 150 },
+        power: { w: 480, h: 110 },
+        screenshot: { w: 440, h: 110 },
         clipboard: { w: 520, h: 380 },
         emoji: { w: 480, h: 340 }
     })
@@ -201,7 +199,7 @@ PanelWindow {
     // Corner radius of an inner shape that sits margin px inside the body: the body's radius minus the margin, never below minInnerRadius.
     function innerRadius(outer: real, margin: real): real {
         if (!(outer >= 0) || !(margin >= 0)) throw new Error("invariant: Island.innerRadius: radius and margin must not be negative")
-        throw new Error("not implemented")
+        return Math.max(minInnerRadius, outer - margin)
     }
 
     // w widened to at least restWidth + grow and at most maxWidth.
@@ -258,9 +256,8 @@ PanelWindow {
     }
 
     // With island.glass the fill is see-through and the compositor blurs what is behind it.
-    // TODO(phase 7, style): glass is also true for the glass style (IslandLook.style); glassOf() leaves a colour alone when the style is glass (its tint carries the alpha).
-    readonly property bool glass: appSettings ? appSettings.get("island.glass") === true : false
-    function glassOf(c: color): color { return glass ? Qt.rgba(c.r, c.g, c.b, c.a * 0.6) : c }
+    readonly property bool glass: IslandLook.style === "glass" || (appSettings ? appSettings.get("island.glass") === true : false)
+    function glassOf(c: color): color { return glass && IslandLook.style !== "glass" ? Qt.rgba(c.r, c.g, c.b, c.a * 0.6) : c }
 
     readonly property bool darkOpen: IslandLook.fillOpen.hslLightness < 0.5
 
@@ -306,9 +303,11 @@ PanelWindow {
         width: win.shownW
         height: win.shownH
         floating: IslandLook.gap > 0
-        // TODO(phase 7, style): hand glassEdge, edgeColor and edgeLight to the body for the glass style.
-        cornerRadius: Math.min(win.openLike ? win.radiusOpen : win.cardAlert ? Math.min(win.radiusOpen, 24) : win.radiusRest, Math.min(width, height) / 2)
-        fill: win.glassOf(win.openLike ? IslandLook.fillOpen : win.design === "shade" && !win.isAlert ? IslandLook.inkRest : IslandLook.fillRest)
+        cornerRadius: Math.min(win.openLike ? win.radiusOpen : win.cardAlert ? Math.min(win.radiusOpen, 24) : win.isOsd ? Math.min(win.radiusOpen, 26) : win.radiusRest, Math.min(width, height) / 2)
+        glassEdge: IslandLook.style === "glass"
+        edgeColor: IslandLook.glassEdge
+        edgeLight: IslandLook.glassSheen
+        fill: win.glassOf(win.openLike ? IslandLook.fillOpen : win.design === "shade" && !win.isAlert && IslandLook.style === "aptus" ? IslandLook.inkRest : IslandLook.fillRest)
         stroke: win.openLike ? IslandLook.strokeOpen : IslandLook.strokeRest
         strokeWidth: win.openLike ? IslandLook.strokeWidthOpen : IslandLook.strokeWidthRest
         accent: win.isAlert && win.islandState && win.islandState.alert && win.islandState.alert.severity !== Enums.Severity.Neutral ? Tokens.colorFor(win.islandState.alert.severity) : win.hairline
@@ -345,8 +344,7 @@ PanelWindow {
             weatherState: win.weatherState
             showWorkspaces: win.showWorkspaces
             workspaceStyle: win.workspaceStyle
-            // TODO(phase 7, style): solid colour (IslandLook.solidOpen / solidRest), the glass tint is see-through.
-            inkOn: win.openLike ? IslandLook.fillOpen : IslandLook.fillRest
+            inkOn: win.openLike ? IslandLook.solidOpen : IslandLook.solidRest
             showStatus: win.showStatus
             showWeather: win.showWeather
             onWorkspaceClicked: id => Compositor.focusWorkspace(id)
@@ -368,6 +366,7 @@ PanelWindow {
             visible: opacity > 0.01
             Behavior on opacity { NumberAnimation { duration: Tokens.durFast } }
             osd: win.islandState ? win.islandState.osd : null
+            outerRadius: body.cornerRadius
             ink: win.fg
             inkSoft: win.fgSoft
             line: win.hairline
@@ -394,8 +393,8 @@ PanelWindow {
             // qmllint enable unqualified
             alert: win.islandState ? win.islandState.alert : null
             mediaState: win.mediaState
-            // TODO(phase 7, style): cardWidth = floorWidth(alertCardWidth, growAlert), the width the body will have, not the animated one (the card height depends on it); pass outerRadius: body.cornerRadius here and to Power, Screenshot and the indicator.
-            cardWidth: win.alertCardWidth
+            cardWidth: win.floorWidth(win.alertCardWidth, win.growAlert)   // the width the body will have: the card height depends on it
+            outerRadius: body.cornerRadius
             ink: win.fg
             inkSoft: win.fgSoft
             line: win.hairline
@@ -436,8 +435,7 @@ PanelWindow {
             ink: win.fg
             inkSoft: win.fgSoft
             line: win.hairline
-            // TODO(phase 7, style): solid colour (IslandLook.solidOpen / solidRest), the glass tint is see-through.
-            fill: win.openLike ? IslandLook.fillOpen : IslandLook.fillRest
+            fill: win.openLike ? IslandLook.solidOpen : IslandLook.solidRest
             onControlCenterRequested: win.closeAndThen("controlCenter")
             onSectionToggled: name => { if (name !== "" && win.islandState) win.islandState.keepOpen(win.modelData.name) }
             onViewRequested: v => win.openView(v)
@@ -477,8 +475,7 @@ PanelWindow {
                 mediaState: win.mediaState
                 workspaces: win.workspaces
                 workspaceStyle: win.workspaceStyle
-                // TODO(phase 7, style): solid colour (IslandLook.solidOpen / solidRest), the glass tint is see-through.
-                inkOn: IslandLook.fillOpen
+                inkOn: IslandLook.solidOpen
                 clockFormat: win.clockFormat
                 ink: win.fg
                 inkSoft: win.fgSoft
@@ -513,14 +510,12 @@ PanelWindow {
                 workspaces: win.workspaces
                 workspaceStyle: win.workspaceStyle
                 clockFormat: win.clockFormat
-                // TODO(phase 7, style): solid colour (IslandLook.solidOpen / solidRest), the glass tint is see-through.
-                inkOn: IslandLook.fillOpen
+                inkOn: IslandLook.solidOpen
                 focus: win.homeWithCard && expanded !== ""   // a list with a field (the Wi-Fi password) takes the keyboard
                 ink: win.fg
                 inkSoft: win.fgSoft
                 line: win.hairline
-                // TODO(phase 7, style): solid colour (IslandLook.solidOpen / solidRest), the glass tint is see-through.
-                fill: win.openLike ? IslandLook.fillOpen : IslandLook.fillRest
+                fill: win.openLike ? IslandLook.solidOpen : IslandLook.solidRest
                 onControlCenterRequested: win.closeAndThen("controlCenter")
                 onSectionToggled: name => { if (name !== "" && win.islandState) win.islandState.keepOpen(win.modelData.name) }
                 onViewRequested: v => win.openView(v)
@@ -533,6 +528,7 @@ PanelWindow {
                 opacity: win.view === Enums.IslandView.Power ? 1 : 0
                 visible: opacity > 0.01
                 focus: win.view === Enums.IslandView.Power
+                outerRadius: body.cornerRadius
                 Behavior on opacity { NumberAnimation { duration: Tokens.durFast } }
                 lockState: win.lockState
                 ink: win.fg
@@ -547,6 +543,7 @@ PanelWindow {
                 opacity: win.view === Enums.IslandView.Screenshot ? 1 : 0
                 visible: opacity > 0.01
                 focus: win.view === Enums.IslandView.Screenshot
+                outerRadius: body.cornerRadius
                 Behavior on opacity { NumberAnimation { duration: Tokens.durFast } }
                 captureState: win.captureState
                 ink: win.fg

@@ -96,8 +96,7 @@ Item {
         Rectangle {
             id: plate
             anchors.fill: parent
-            // TODO(phase 7, style): badge radius = outerRadius minus the badge margin (14), min 4 (concentric).
-            radius: card.isMedia ? 12 : 14
+            radius: Math.max(4, card.outerRadius - 14)
             color: Qt.rgba(card.ink.r, card.ink.g, card.ink.b, 0.10)
             border.width: 1
             border.color: Qt.rgba(card.ink.r, card.ink.g, card.ink.b, 0.12)

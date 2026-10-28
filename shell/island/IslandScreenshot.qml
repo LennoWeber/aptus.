@@ -25,7 +25,7 @@ FocusScope {
     // Width of one tile when count tiles share a row of total px: margins left and right, spacing between.
     function cellWidth(total: real, count: int): real {
         if (!(count > 0)) throw new Error("invariant: IslandScreenshot.cellWidth: there must be at least one tile")
-        throw new Error("not implemented")
+        return (total - 2 * cellMargin - (count - 1) * cellSpacing) / count
     }
 
     readonly property var defaultActions: [
@@ -64,10 +64,10 @@ FocusScope {
         else if (event.key >= Qt.Key_1 && event.key <= Qt.Key_4) { selectedIndex = event.key - Qt.Key_1; activateSelected(); event.accepted = true }
     }
 
-    // TODO(phase 7, style): the tiles share the width through cellWidth(width, actions.length) and take the height minus 2 * cellMargin; the Row is anchored with cellMargin, not centred with fixed cells.
     Row {
-        anchors.centerIn: parent
-        spacing: 10
+        x: shot.cellMargin
+        y: shot.cellMargin
+        spacing: shot.cellSpacing
 
         Repeater {
             model: shot.actions
@@ -77,20 +77,19 @@ FocusScope {
                 required property int index
                 readonly property bool isSelected: shot.selectedIndex === index
                 readonly property bool isRecording: modelData.id === "record" && shot.captureState && shot.captureState.recording
-                width: 96
-                height: 110
+                width: shot.cellWidth(shot.width, shot.actions.length)
+                height: shot.height - 2 * shot.cellMargin
 
                 Rectangle {
                     anchors.fill: parent
-                    // TODO(phase 7, style): tile radius = outerRadius minus cellMargin (also for the outline below); glyph and label sit relative to the tile height.
-                    radius: 14
+                    radius: Math.max(4, shot.outerRadius - shot.cellMargin)
                     color: shot.ink
                     opacity: tap.pressed ? 0.16 : (tap.containsMouse || cell.isSelected) ? 0.09 : 0.04
                     Behavior on opacity { NumberAnimation { duration: Tokens.durFast } }
                 }
                 Rectangle {
                     anchors.fill: parent
-                    radius: 14
+                    radius: Math.max(4, shot.outerRadius - shot.cellMargin)
                     color: "transparent"
                     border.width: cell.isSelected ? 1 : 0
                     border.color: shot.ink
@@ -99,7 +98,7 @@ FocusScope {
                 // The shapes are drawn here, small and plain.
                 Item {
                     anchors.horizontalCenter: parent.horizontalCenter
-                    y: 24
+                    y: Math.round(parent.height / 2 - 30)
                     width: 32
                     height: 28
                     Rectangle {
@@ -141,7 +140,7 @@ FocusScope {
                 }
                 Label {
                     anchors.horizontalCenter: parent.horizontalCenter
-                    y: 72
+                    y: Math.round(parent.height / 2 + 8)
                     text: cell.isRecording ? "Stop" : cell.modelData.label
                     color: shot.ink
                     font.weight: Font.Medium

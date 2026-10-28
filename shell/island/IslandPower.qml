@@ -26,7 +26,7 @@ FocusScope {
     // Width of one tile when count tiles share a row of total px: margins left and right, spacing between.
     function cellWidth(total: real, count: int): real {
         if (!(count > 0)) throw new Error("invariant: IslandPower.cellWidth: there must be at least one tile")
-        throw new Error("not implemented")
+        return (total - 2 * cellMargin - (count - 1) * cellSpacing) / count
     }
 
     readonly property var defaultActions: [
@@ -74,10 +74,10 @@ FocusScope {
         else if (event.key >= Qt.Key_1 && event.key <= Qt.Key_4) { selectedIndex = event.key - Qt.Key_1; activateSelected(); event.accepted = true }
     }
 
-    // TODO(phase 7, style): the tiles share the width through cellWidth(width, actions.length) and take the height minus 2 * cellMargin; the Row is anchored with cellMargin, not centred with fixed cells.
     Row {
-        anchors.centerIn: parent
-        spacing: 10
+        x: power.cellMargin
+        y: power.cellMargin
+        spacing: power.cellSpacing
 
         Repeater {
             model: power.actions
@@ -87,38 +87,39 @@ FocusScope {
                 required property int index
                 readonly property bool isArmed: power.armed === modelData.id
                 readonly property bool isSelected: power.selectedIndex === index
-                width: 104
-                height: 118
+                width: power.cellWidth(power.width, power.actions.length)
+                height: power.height - 2 * power.cellMargin
 
                 Rectangle {
                     anchors.fill: parent
-                    // TODO(phase 7, style): tile radius = outerRadius minus cellMargin (also for the outline below); glyph and label sit relative to the tile height, not at fixed y.
-                    radius: 14
+                    radius: Math.max(4, power.outerRadius - power.cellMargin)
                     color: power.ink
                     opacity: tap.pressed ? 0.16 : (tap.containsMouse || cell.isSelected) ? 0.09 : 0.04
                     Behavior on opacity { NumberAnimation { duration: Tokens.durFast } }
                 }
                 Rectangle {
                     anchors.fill: parent
-                    radius: 14
+                    radius: Math.max(4, power.outerRadius - power.cellMargin)
                     color: "transparent"
                     border.width: cell.isArmed ? 1.5 : cell.isSelected ? 1 : 0
                     border.color: cell.isArmed ? Tokens.critical : power.ink
                 }
-                StatusGlyph {
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    y: 30
-                    kind: cell.modelData.glyph
-                    width: 28
-                    height: 28
-                    color: cell.isArmed ? Tokens.critical : power.ink
-                }
-                Label {
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    y: 76
-                    text: cell.isArmed ? "Tap again" : cell.modelData.label
-                    color: cell.isArmed ? Tokens.critical : power.ink
-                    font.weight: Font.Medium
+                Column {
+                    anchors.centerIn: parent
+                    spacing: 8
+                    StatusGlyph {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        kind: cell.modelData.glyph
+                        width: 28
+                        height: 28
+                        color: cell.isArmed ? Tokens.critical : power.ink
+                    }
+                    Label {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        text: cell.isArmed ? "Tap again" : cell.modelData.label
+                        color: cell.isArmed ? Tokens.critical : power.ink
+                        font.weight: Font.Medium
+                    }
                 }
                 MouseArea {
                     id: tap
