@@ -63,6 +63,7 @@ Scope {
     }
 
     function setTrusted(address: string, on: bool): void {
+        if (!/^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$/.test(address)) throw new Error("invariant: BluetoothState.setTrusted: not a Bluetooth address")
         throw new Error("not implemented")
     }
 

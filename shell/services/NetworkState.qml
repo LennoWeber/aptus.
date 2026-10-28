@@ -87,18 +87,27 @@ Scope {
     }
 
     function connectSaved(profileName: string): void {
+        if (!profileName) throw new Error("invariant: NetworkState.connectSaved: empty profile name")
+        if (!wifiEnabled) throw new Error("invariant: NetworkState.connectSaved: Wi-Fi is off")
         throw new Error("not implemented")
     }
 
     function setAutoconnect(profileName: string, on: bool): void {
+        if (!profileName) throw new Error("invariant: NetworkState.setAutoconnect: empty profile name")
+        if (profileName === "Hotspot") throw new Error("invariant: NetworkState.setAutoconnect: the hotspot profile is not a saved network")
         throw new Error("not implemented")
     }
 
     function forgetSaved(profileName: string): void {
+        if (!profileName) throw new Error("invariant: NetworkState.forgetSaved: empty profile name")
+        if (profileName === "Hotspot") throw new Error("invariant: NetworkState.forgetSaved: the hotspot profile is not a saved network")
+        if (savedProfiles.length > 0 && !savedProfiles.some(p => p.name === profileName)) throw new Error("invariant: NetworkState.forgetSaved: only saved Wi-Fi profiles may be deleted")
         throw new Error("not implemented")
     }
 
     function connectHidden(networkName: string, password: string): void {
+        if (!networkName) throw new Error("invariant: NetworkState.connectHidden: empty network name")
+        if (!wifiEnabled) throw new Error("invariant: NetworkState.connectHidden: Wi-Fi is off")
         throw new Error("not implemented")
     }
 
