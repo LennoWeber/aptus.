@@ -79,6 +79,14 @@ Scope {
         if (source && source.audio) source.audio.muted = !inputMuted
     }
 
+    function setAppVolume(appId: int, level: real): void {
+        throw new Error("not implemented")
+    }
+
+    function setAppMuted(appId: int, on: bool): void {
+        throw new Error("not implemented")
+    }
+
     function setInput(inputId: string): void {
         if (!inputId) throw new Error("invariant: AudioState.setInput: empty input id")
         const node = nodeByName(inputId, false)

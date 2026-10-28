@@ -31,6 +31,24 @@ Scope {
         }
     }
 
+    // Reads panel name, transform, scale and the refresh rates it offers.
+    function readMonitor(): void {
+        throw new Error("not implemented")
+    }
+
+    function setScale(factor: real): void {
+        throw new Error("not implemented")
+    }
+
+    function setRefresh(hz: real): void {
+        throw new Error("not implemented")
+    }
+
+    // Applies the saved choice once at start.
+    function restore(): void {
+        throw new Error("not implemented")
+    }
+
     function setBrightness(level: real): void {
         if (!(level >= 0 && level <= 1)) throw new Error("invariant: DisplayState.setBrightness: brightness outside 0..1")
         // Never fully dark: 1 % is the floor so the screen cannot be lost.

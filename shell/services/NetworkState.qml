@@ -150,6 +150,18 @@ Scope {
         refreshLater.restart()
     }
 
+    function configureHotspot(networkName: string, password: string): void {
+        throw new Error("not implemented")
+    }
+
+    function setVpnAutoconnect(profileId: string, on: bool): void {
+        throw new Error("not implemented")
+    }
+
+    function removeVpn(profileId: string): void {
+        throw new Error("not implemented")
+    }
+
     function setHotspot(on: bool): void {
         if (on) {
             hotspotProc.command = ["nmcli", "device", "wifi", "hotspot"]
