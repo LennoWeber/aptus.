@@ -14,6 +14,8 @@ Scope {
     property int transform           // Hyprland transform 0..3
     property real refreshHz
     property var refreshChoices: []  // list of numbers, from the modes the panel reports
+    readonly property string mode: ""   // the Hyprland mode string for the current size and rate, e.g. 1920x1080@60.00
+    property bool restored            // the saved choice has been applied once
     readonly property var scaleChoices: [1, 1.25, 1.5]
     readonly property string stateFile: Quickshell.env("HOME") + "/.local/state/aptus/display.json"
 

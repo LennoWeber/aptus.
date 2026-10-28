@@ -14,3 +14,4 @@ WorkspaceBubbles 1.0 WorkspaceBubbles.qml
 ThemeSwatch 1.0 ThemeSwatch.qml
 ConfirmButton 1.0 ConfirmButton.qml
 SegmentedControl 1.0 SegmentedControl.qml
+InputField 1.0 InputField.qml

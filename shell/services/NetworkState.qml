@@ -39,6 +39,7 @@ Scope {
     // The active Wi-Fi link, empty when not connected.
     property var linkDetails: ({})    // { device, ip, gateway, dns, band, channel, rate, security }
     property string ethernetIp
+    property var connectionIps: ({})    // IPv4 address of every active connection, by profile name
     property string vpnIp
 
     // Saved profiles joined with what is in range right now: connected first, then in range by signal, then the rest by name.
