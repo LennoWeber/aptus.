@@ -21,6 +21,10 @@ Singleton {
     property color inkOpen: colorByName(entry("inkOpen") || "")
     property color strokeRest: colorByName(entry("strokeRest") || "")
     property color strokeOpen: colorByName(entry("strokeOpen") || "")
+    // The same fills, always opaque: for a glyph or a number drawn in the fill's colour on an ink-filled shape (the glass tint is see-through).
+    // TODO(phase 7, style): solidRest and solidOpen are the fillRest/fillOpen of the look, but glassSolid for the glass style (styled).
+    property color solidRest
+    property color solidOpen
     property real strokeWidthRest: entry("strokeWidthRest") ?? 1
     property real strokeWidthOpen: entry("strokeWidthOpen") ?? 1
 
@@ -42,6 +46,7 @@ Singleton {
     readonly property color phoneFill: "#000000"
     readonly property color phoneInk: "#ffffff"
     readonly property color glassTint: Qt.rgba(0.08, 0.09, 0.11, 0.42)   // dark, so white ink stays readable over a light picture
+    readonly property color glassSolid: Qt.rgba(0.08, 0.09, 0.11, 1)
     readonly property color glassEdge: Qt.rgba(1, 1, 1, 0.30)
     readonly property real glassSheen: 0.22
 

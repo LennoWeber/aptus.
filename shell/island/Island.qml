@@ -344,6 +344,7 @@ PanelWindow {
             weatherState: win.weatherState
             showWorkspaces: win.showWorkspaces
             workspaceStyle: win.workspaceStyle
+            // TODO(phase 7, style): solid colour (IslandLook.solidOpen / solidRest), the glass tint is see-through.
             inkOn: win.openLike ? IslandLook.fillOpen : IslandLook.fillRest
             showStatus: win.showStatus
             showWeather: win.showWeather
@@ -434,6 +435,7 @@ PanelWindow {
             ink: win.fg
             inkSoft: win.fgSoft
             line: win.hairline
+            // TODO(phase 7, style): solid colour (IslandLook.solidOpen / solidRest), the glass tint is see-through.
             fill: win.openLike ? IslandLook.fillOpen : IslandLook.fillRest
             onControlCenterRequested: win.closeAndThen("controlCenter")
             onSectionToggled: name => { if (name !== "" && win.islandState) win.islandState.keepOpen(win.modelData.name) }
@@ -474,6 +476,7 @@ PanelWindow {
                 mediaState: win.mediaState
                 workspaces: win.workspaces
                 workspaceStyle: win.workspaceStyle
+                // TODO(phase 7, style): solid colour (IslandLook.solidOpen / solidRest), the glass tint is see-through.
                 inkOn: IslandLook.fillOpen
                 clockFormat: win.clockFormat
                 ink: win.fg
@@ -509,11 +512,13 @@ PanelWindow {
                 workspaces: win.workspaces
                 workspaceStyle: win.workspaceStyle
                 clockFormat: win.clockFormat
+                // TODO(phase 7, style): solid colour (IslandLook.solidOpen / solidRest), the glass tint is see-through.
                 inkOn: IslandLook.fillOpen
                 focus: win.homeWithCard && expanded !== ""   // a list with a field (the Wi-Fi password) takes the keyboard
                 ink: win.fg
                 inkSoft: win.fgSoft
                 line: win.hairline
+                // TODO(phase 7, style): solid colour (IslandLook.solidOpen / solidRest), the glass tint is see-through.
                 fill: win.openLike ? IslandLook.fillOpen : IslandLook.fillRest
                 onControlCenterRequested: win.closeAndThen("controlCenter")
                 onSectionToggled: name => { if (name !== "" && win.islandState) win.islandState.keepOpen(win.modelData.name) }
