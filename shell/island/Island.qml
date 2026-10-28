@@ -1,3 +1,4 @@
+pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Effects
 import Quickshell
@@ -295,6 +296,22 @@ PanelWindow {
     readonly property color fg: openLike ? IslandLook.inkOpen : IslandLook.inkRest
     readonly property color fgSoft: Qt.rgba(fg.r, fg.g, fg.b, 0.65)
     readonly property color hairline: Qt.rgba(fg.r, fg.g, fg.b, 0.16)
+
+    // A soft shadow under the body for the phone and glass styles: three stacked, very light rounded shapes (no effect layer).
+    Repeater {
+        model: IslandLook.style === "aptus" ? 0 : 3
+        delegate: Rectangle {
+            required property int index
+            readonly property real spread: 5 * (index + 1)
+            x: body.x - spread
+            y: body.y + 4 + index * 2
+            width: body.width + 2 * spread
+            height: body.height + spread
+            radius: body.cornerRadius + spread
+            color: Qt.rgba(0, 0, 0, 0.07)
+            opacity: body.opacity
+        }
+    }
 
     IslandBody {
         id: body
