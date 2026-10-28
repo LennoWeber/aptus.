@@ -30,6 +30,8 @@ QtObject {
 
     // Enums.Orientation values 0..3 equal the Hyprland transforms (normal, 90, 180, 270).
     property int applied
+    property real monitorScale: 1                  // the scale and mode the user chose in the display tile
+    property string monitorMode: "1920x1080@60"
     function apply(transform: int): void {
         if (transform === applied) return
         applied = transform

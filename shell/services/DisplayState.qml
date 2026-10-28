@@ -10,6 +10,12 @@ Scope {
     property int widthPx
     property int heightPx
     property real scale
+    property string output           // the built-in panel, e.g. eDP-1
+    property int transform           // Hyprland transform 0..3
+    property real refreshHz
+    property var refreshChoices: []  // list of numbers, from the modes the panel reports
+    readonly property var scaleChoices: [1, 1.25, 1.5]
+    readonly property string stateFile: Quickshell.env("HOME") + "/.local/state/aptus/display.json"
 
     // brightnessctl prints "current,max" in machine mode; read once at start and after every change.
     Process {

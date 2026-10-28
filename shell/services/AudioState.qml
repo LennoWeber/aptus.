@@ -18,6 +18,7 @@ Scope {
     property bool inputMuted: source && source.audio ? source.audio.muted : false
     property string inputName: source ? describe(source) : ""
     property var inputs: listNodes(false)         // list of { id, name, active }
+    property var apps: []                         // programs that play sound: list of { id, name, volume, muted }
 
     // Real devices (sinks and sources, no streams of single programs). They must be tracked to be usable.
     readonly property var devices: Array.from(Pipewire.nodes.values).filter(n => n.type === PwNodeType.AudioSink || n.type === PwNodeType.AudioSource)

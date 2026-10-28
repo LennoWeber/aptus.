@@ -11,6 +11,9 @@ Item {
     property var networkState
 
     readonly property bool on: networkState ? networkState.hotspotActive : false
+    property string draftSsid
+    property string draftPassword
+    property bool dirty              // the drafts differ from what NetworkManager has
 
     Item {
         anchors.fill: parent

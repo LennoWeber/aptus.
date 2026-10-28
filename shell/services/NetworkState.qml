@@ -39,6 +39,7 @@ Scope {
     // The active Wi-Fi link, empty when not connected.
     property var linkDetails: ({})    // { device, ip, gateway, dns, band, channel, rate, security }
     property string ethernetIp
+    property string vpnIp
 
     // Saved profiles joined with what is in range right now: connected first, then in range by signal, then the rest by name.
     property var savedNetworks: savedProfiles.map(p => {
