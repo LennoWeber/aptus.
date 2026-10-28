@@ -11,6 +11,7 @@ Item {
     property color ink
     property color inkSoft
     property color line
+    property real outerRadius: 22       // corner radius of the island body: inner shapes take outerRadius minus their margin
 
     readonly property bool hasLabel: osd !== null && osd !== undefined && osd.label !== ""
     readonly property bool muted: osd !== null && osd !== undefined && osd.muted
@@ -40,7 +41,7 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         width: 44
         height: 44
-        radius: 14
+        radius: Math.max(4, osdView.outerRadius - 14)
         color: Qt.rgba((osdView.muted ? Tokens.critical : osdView.ink).r, (osdView.muted ? Tokens.critical : osdView.ink).g, (osdView.muted ? Tokens.critical : osdView.ink).b, 0.14)
         StatusGlyph {
             anchors.centerIn: parent

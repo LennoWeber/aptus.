@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Effects
 import Quickshell
 import Quickshell.Wayland
 import Quickshell.Hyprland
@@ -43,6 +44,8 @@ PanelWindow {
     readonly property bool cardStyle: homeStyle !== "classic"
     property bool showWeather: appSettings ? appSettings.get("island.showWeather") !== false : true
     property string clockFormat: appSettings ? appSettings.get("bar.clockFormat") || "24h" : "24h"
+    property string morphMode: appSettings ? appSettings.get("island.morph") || "spring" : "spring"   // island.morph: spring, calm or off
+    onMorphModeChanged: if (["spring", "calm", "off"].indexOf(morphMode) < 0) throw new Error("invariant: Island: unknown morph mode " + morphMode)
 
     // This screen's stage and view: Open only on the screen that was opened; an alert shows on every screen.
     property int stage: {
@@ -69,7 +72,7 @@ PanelWindow {
     // The design (setting island.design): capsule, pill, ticker or shade. It sets the size at rest and the shape.
     readonly property string design: IslandLook.design
     readonly property real radiusRest: design === "pill" ? IslandLook.restHeight / 2 : design === "shade" ? 3 : IslandLook.radiusRest
-    readonly property real radiusOpen: design === "pill" ? 26 : design === "shade" ? 18 : IslandLook.radiusOpen
+    readonly property real radiusOpen: design === "shade" ? 18 : IslandLook.style !== "aptus" ? 30 : design === "pill" ? 26 : IslandLook.radiusOpen
 
     // Morph: how far the island has grown toward the launcher or control center (0 = itself, 1 = fully there).
     property real morphProgress: islandState && islandState.morph !== Enums.MorphTarget.None ? 1 : 0
@@ -82,11 +85,35 @@ PanelWindow {
     readonly property real homeContentHeight: cardStyle ? card.implicitHeight : home.implicitHeight + (homeWithQuick ? quick.implicitHeight : 0)
     property real targetWidth: sizeFor(stage, view, homeContentHeight, islandState ? islandState.morph : Enums.MorphTarget.None).w
     property real targetHeight: sizeFor(stage, view, homeContentHeight, islandState ? islandState.morph : Enums.MorphTarget.None).h
+    // The size the body shows: it follows the target through the animation, so the animation can tell growing from shrinking.
+    property real shownW
+    property real shownH
+    property bool growing: true        // the last change of the target made the body bigger
+    property bool ready                // the first size is set; from then on the body animates
+    property bool widthRunning
+    property bool heightRunning
+    readonly property bool moving: widthRunning || heightRunning   // the body is animating its size
+    onTargetWidthChanged: retarget()
+    function retarget(): void {
+        if (ready) growing = (targetWidth - shownW) + (targetHeight - shownH) >= 0
+        shownW = targetWidth
+        shownH = targetHeight
+    }
+    Component.onCompleted: { retarget(); ready = true }
+    Behavior on shownW { enabled: win.ready; NumberAnimation { onRunningChanged: win.widthRunning = running; duration: win.morphMs(false); easing.type: Easing.BezierSpline; easing.bezierCurve: win.morphCurve() } }
+    Behavior on shownH {
+        enabled: win.ready
+        SequentialAnimation {
+            onRunningChanged: win.heightRunning = running
+            PauseAnimation { duration: win.growing && win.morphMode === "spring" ? win.heightDelayMs : 0 }
+            NumberAnimation { duration: win.morphMs(true); easing.type: Easing.BezierSpline; easing.bezierCurve: win.morphCurve() }
+        }
+    }
 
     // How far the body has grown from the pill to the opened card (0..1), read from its real size, so the content follows
     // the shape: the pill content leaves while the body starts to grow, the card content arrives when it is nearly there.
     property real openHeight: 400
-    onTargetHeightChanged: if (isOpen) openHeight = targetHeight
+    onTargetHeightChanged: { if (isOpen) openHeight = targetHeight; retarget() }
     readonly property real progress: Math.max(0, Math.min(1, (body.height - IslandLook.restHeight) / Math.max(1, openHeight - IslandLook.restHeight)))
     readonly property real cardFade: Math.max(0, Math.min(1, (progress - 0.5) / 0.4))
     readonly property real restFade: Math.max(0, Math.min(1, 1 - progress * 3.5))
@@ -104,15 +131,15 @@ PanelWindow {
     readonly property int osdGrowMs: 160      // ms: the body grows to the indicator in this time
     readonly property int hoverGrowMs: 260    // ms: the body grows to the card when the pointer opened it
     readonly property real alertHeight: 38
-    readonly property real alertCardWidth: 420     // the grown alert card
+    readonly property real alertCardWidth: 520     // the grown alert card (the content is laid out for this width, centred in the body)
     readonly property real alertCardMinHeight: 76
     readonly property real alertCardMaxHeight: 132
     readonly property real alertMediaHeight: 96
     readonly property int alertGrowMs: 340         // ms: the body grows to the card in this time, with a little overshoot
     readonly property real homeWidth: cardStyle ? card.widthFor(homeStyle) : design === "pill" ? 480 : 520
     readonly property var viewSizes: ({
-        power: { w: 480, h: 150 },
-        screenshot: { w: 440, h: 150 },
+        power: { w: 480, h: 110 },
+        screenshot: { w: 440, h: 110 },
         clipboard: { w: 520, h: 380 },
         emoji: { w: 480, h: 340 }
     })
@@ -122,21 +149,21 @@ PanelWindow {
     // Body size (object with w and h) for a stage and view (Enums.IslandStage, Enums.IslandView); contentHeight is the
     // content height of Home. While morph is not None the morph size wins.
     function sizeFor(stageId: int, viewId: int, contentHeight: real, morph: int): var {
-        if (morph === Enums.MorphTarget.Launcher) return morphSizes.launcher
-        if (morph === Enums.MorphTarget.ControlCenter) return morphSizes.controlCenter
+        if (morph === Enums.MorphTarget.Launcher) return { w: floorWidth(morphSizes.launcher.w, growMorph), h: morphSizes.launcher.h }
+        if (morph === Enums.MorphTarget.ControlCenter) return { w: floorWidth(morphSizes.controlCenter.w, growMorph), h: morphSizes.controlCenter.h }
         if (stageId === Enums.IslandStage.Alert) {
             const a = islandState ? islandState.alert : null
-            return a && a.kind !== Enums.AlertKind.Plain ? alertSizeFor(a) : { w: alertWidth, h: alertHeight }
+            return a && a.kind !== Enums.AlertKind.Plain ? alertSizeFor(a) : { w: floorWidth(alertWidth, growAlert), h: alertHeight }
         }
-        if (stageId === Enums.IslandStage.Osd) return { w: osdWidth, h: osdHeight }
+        if (stageId === Enums.IslandStage.Osd) return { w: floorWidth(osdWidth, growAlert), h: osdHeight }
         if (stageId === Enums.IslandStage.Open) {
             switch (viewId) {
-            case Enums.IslandView.Power: return viewSizes.power
-            case Enums.IslandView.Screenshot: return viewSizes.screenshot
-            case Enums.IslandView.Clipboard: return viewSizes.clipboard
-            case Enums.IslandView.Emoji: return viewSizes.emoji
-            case Enums.IslandView.Wallpaper: return { w: wallpaper.contentWidth, h: wallpaper.contentHeight }
-            default: return { w: homeWidth, h: contentHeight + 4 }
+            case Enums.IslandView.Power: return { w: floorWidth(viewSizes.power.w, growView), h: viewSizes.power.h }
+            case Enums.IslandView.Screenshot: return { w: floorWidth(viewSizes.screenshot.w, growView), h: viewSizes.screenshot.h }
+            case Enums.IslandView.Clipboard: return { w: floorWidth(viewSizes.clipboard.w, growView), h: viewSizes.clipboard.h }
+            case Enums.IslandView.Emoji: return { w: floorWidth(viewSizes.emoji.w, growView), h: viewSizes.emoji.h }
+            case Enums.IslandView.Wallpaper: return { w: floorWidth(wallpaper.contentWidth, growView), h: wallpaper.contentHeight }
+            default: return { w: floorWidth(homeWidth, growCard), h: contentHeight + 4 }
             }
         }
         return { w: restWidth, h: IslandLook.restHeight }
@@ -150,13 +177,70 @@ PanelWindow {
         return stageId === Enums.IslandStage.Alert ? (cardAlert ? alertGrowMs : 220) : Tokens.durSlow
     }
 
+    // The width ladder: every stage is at least this much wider than the island at rest (px), so the island only grows.
+    readonly property real growAlert: 40      // an alert and the on-screen indicator
+    readonly property real growCard: 80       // the opened Home card and the alert card
+    readonly property real growView: 60       // the other opened views
+    readonly property real growMorph: 80      // toward the launcher and the control center
+    readonly property real maxWidth: 900      // the body never gets wider than this (the window is 940), also while it overshoots
+    // Timing of the morph (ms): the width leads, the height follows a moment later.
+    readonly property int springMs: 460
+    readonly property int settleMs: 260
+    readonly property int heightDelayMs: 30
+    readonly property real contentScaleFrom: 0.92   // content arrives at this scale and settles to 1
+    readonly property var springCurve: [0.34, 1.3, 0.5, 1, 1, 1]
+    readonly property var calmCurve: [0.22, 1, 0.36, 1, 1, 1]
+
+    // Spacing inside the body (px).
+    readonly property real padSide: 18        // left and right margin of a one-line layout
+    readonly property real padCard: 20        // left and right margin of a card
+    readonly property real minInnerRadius: 4
+
+    // Corner radius of an inner shape that sits margin px inside the body: the body's radius minus the margin, never below minInnerRadius.
+    function innerRadius(outer: real, margin: real): real {
+        if (!(outer >= 0) || !(margin >= 0)) throw new Error("invariant: Island.innerRadius: radius and margin must not be negative")
+        return Math.max(minInnerRadius, outer - margin)
+    }
+
+    // w widened to at least restWidth + grow and at most maxWidth.
+    function floorWidth(w: real, grow: real): real {
+        if (!(w > 0) || !isFinite(w)) throw new Error("invariant: Island.floorWidth: width must be a positive number")
+        if (!(grow >= 0) || !isFinite(grow)) throw new Error("invariant: Island.floorWidth: growth must not be negative")
+        if (!(restWidth > 0)) throw new Error("invariant: Island.floorWidth: the rest width is not known yet")
+        if (restWidth + grow > maxWidth) throw new Error("invariant: Island.floorWidth: the ladder is wider than maxWidth")
+        return Math.min(maxWidth, Math.max(w, restWidth + grow))
+    }
+
+    // Easing curve of the body's growth for the current morph mode and direction (a Bezier list for NumberAnimation).
+    function morphCurve(): var {
+        if (["spring", "calm", "off"].indexOf(morphMode) < 0) throw new Error("invariant: Island.morphCurve: unknown mode " + morphMode)
+        return morphMode === "spring" && growing ? springCurve : calmCurve
+    }
+
+    // Duration in ms of the width (height false) or the height (height true) of the body, for the current mode and direction.
+    function morphMs(forHeight: bool): int {
+        if (["spring", "calm", "off"].indexOf(morphMode) < 0) throw new Error("invariant: Island.morphMs: unknown mode " + morphMode)
+        if (typeof forHeight !== "boolean") throw new Error("invariant: Island.morphMs: forHeight must be a boolean")
+        if (morphMode === "off") return growMsFor(stage, view)
+        if (!growing) return settleMs
+        if (isOsd) return osdGrowMs + 160
+        return morphMode === "spring" ? springMs : settleMs + 100
+    }
+
+    // Scale of content whose opacity is fade (0..1): contentScaleFrom at 0, 1 at 1; always 1 when the mode is off.
+    function contentScale(fade: real): real {
+        if (!isFinite(fade)) throw new Error("invariant: Island.contentScale: fade must be a number")
+        if (morphMode === "off") return 1
+        return contentScaleFrom + (1 - contentScaleFrom) * Math.max(0, Math.min(1, fade))
+    }
+
     // Body size (object with w and h) of the card for an alert (IslandState.alert), told by its kind and its content.
     function alertSizeFor(a: var): var {
         if (!a) throw new Error("invariant: Island.alertSizeFor: no alert")
         if (a.kind === Enums.AlertKind.Plain) throw new Error("invariant: Island.alertSizeFor: a Plain alert has no card")
         const wanted = alertView.cardHeight
         const h = Math.max(a.kind === Enums.AlertKind.Media ? alertMediaHeight : alertCardMinHeight, Math.min(alertCardMaxHeight, wanted))
-        return { w: alertCardWidth, h: h }
+        return { w: floorWidth(alertCardWidth, growAlert), h: h }
     }
 
     // Open the island of this screen at a view.
@@ -172,8 +256,8 @@ PanelWindow {
     }
 
     // With island.glass the fill is see-through and the compositor blurs what is behind it.
-    readonly property bool glass: appSettings ? appSettings.get("island.glass") === true : false
-    function glassOf(c: color): color { return glass ? Qt.rgba(c.r, c.g, c.b, c.a * 0.6) : c }
+    readonly property bool glass: IslandLook.style === "glass" || (appSettings ? appSettings.get("island.glass") === true : false)
+    function glassOf(c: color): color { return glass && IslandLook.style !== "glass" ? Qt.rgba(c.r, c.g, c.b, c.a * 0.6) : c }
 
     readonly property bool darkOpen: IslandLook.fillOpen.hslLightness < 0.5
 
@@ -216,19 +300,20 @@ PanelWindow {
         id: body
         anchors.horizontalCenter: parent.horizontalCenter
         y: IslandLook.gap - (height + IslandLook.gap + 2) * win.slide
-        width: win.targetWidth
-        height: win.targetHeight
+        width: win.shownW
+        height: win.shownH
         floating: IslandLook.gap > 0
-        cornerRadius: Math.min(win.openLike ? win.radiusOpen : win.cardAlert ? Math.min(win.radiusOpen, 24) : win.radiusRest, Math.min(width, height) / 2)
-        fill: win.glassOf(win.openLike ? IslandLook.fillOpen : win.design === "shade" && !win.isAlert ? IslandLook.inkRest : IslandLook.fillRest)
+        cornerRadius: Math.min(win.openLike ? win.radiusOpen : win.cardAlert ? Math.min(win.radiusOpen, 24) : win.isOsd ? Math.min(win.radiusOpen, 26) : win.radiusRest, Math.min(width, height) / 2)
+        glassEdge: IslandLook.style === "glass"
+        edgeColor: IslandLook.glassEdge
+        edgeLight: IslandLook.glassSheen
+        fill: win.glassOf(win.openLike ? IslandLook.fillOpen : win.design === "shade" && !win.isAlert && IslandLook.style === "aptus" ? IslandLook.inkRest : IslandLook.fillRest)
         stroke: win.openLike ? IslandLook.strokeOpen : IslandLook.strokeRest
         strokeWidth: win.openLike ? IslandLook.strokeWidthOpen : IslandLook.strokeWidthRest
         accent: win.isAlert && win.islandState && win.islandState.alert && win.islandState.alert.severity !== Enums.Severity.Neutral ? Tokens.colorFor(win.islandState.alert.severity) : win.hairline
         accentOpacity: win.isAlert ? 1 : 0.5
         opacity: 1 - win.morphProgress
-        Behavior on width { NumberAnimation { duration: win.growMsFor(win.stage, win.view); easing.type: Easing.BezierSpline; easing.bezierCurve: win.cardAlert ? [0.34, 1.32, 0.5, 1, 1, 1] : [0.22, 1, 0.36, 1, 1, 1] } }
-        Behavior on height { NumberAnimation { duration: win.growMsFor(win.stage, win.view); easing.type: Easing.BezierSpline; easing.bezierCurve: win.cardAlert ? [0.34, 1.32, 0.5, 1, 1, 1] : [0.22, 1, 0.36, 1, 1, 1] } }
-        Behavior on cornerRadius { NumberAnimation { duration: win.growMsFor(win.stage, win.view) } }
+        Behavior on cornerRadius { NumberAnimation { duration: win.morphMs(true) } }
 
         // Rest: a tap opens.
         IslandRest {
@@ -236,6 +321,12 @@ PanelWindow {
             anchors.fill: parent
             opacity: !win.isAlert && !win.isOsd && win.design !== "shade" ? win.restFade : 0
             visible: opacity > 0.01
+            scale: win.contentScale(opacity)
+            layer.enabled: win.morphMode !== "off" && win.moving && visible
+            // The effect is a separate scope: it reads the opacity of its item by id.
+            // qmllint disable unqualified
+            layer.effect: MultiEffect { blurEnabled: true; blurMax: 24; blur: 1 - rest.opacity }
+            // qmllint enable unqualified
             design: win.design
             cornerRadius: body.cornerRadius
             mediaState: win.mediaState
@@ -253,7 +344,7 @@ PanelWindow {
             weatherState: win.weatherState
             showWorkspaces: win.showWorkspaces
             workspaceStyle: win.workspaceStyle
-            inkOn: win.openLike ? IslandLook.fillOpen : IslandLook.fillRest
+            inkOn: win.openLike ? IslandLook.solidOpen : IslandLook.solidRest
             showStatus: win.showStatus
             showWeather: win.showWeather
             onWorkspaceClicked: id => Compositor.focusWorkspace(id)
@@ -275,6 +366,7 @@ PanelWindow {
             visible: opacity > 0.01
             Behavior on opacity { NumberAnimation { duration: Tokens.durFast } }
             osd: win.islandState ? win.islandState.osd : null
+            outerRadius: body.cornerRadius
             ink: win.fg
             inkSoft: win.fgSoft
             line: win.hairline
@@ -293,9 +385,16 @@ PanelWindow {
                 }
             }
             transform: Translate { y: win.cardAlert ? (1 - alertView.opacity) * 10 : 0 }
+            scale: win.contentScale(opacity)
+            layer.enabled: win.morphMode !== "off" && win.moving && visible
+            // The effect is a separate scope: it reads the opacity of its item by id.
+            // qmllint disable unqualified
+            layer.effect: MultiEffect { blurEnabled: true; blurMax: 24; blur: 1 - alertView.opacity }
+            // qmllint enable unqualified
             alert: win.islandState ? win.islandState.alert : null
             mediaState: win.mediaState
-            cardWidth: win.alertCardWidth
+            cardWidth: win.floorWidth(win.alertCardWidth, win.growAlert)   // the width the body will have: the card height depends on it
+            outerRadius: body.cornerRadius
             ink: win.fg
             inkSoft: win.fgSoft
             line: win.hairline
@@ -336,7 +435,7 @@ PanelWindow {
             ink: win.fg
             inkSoft: win.fgSoft
             line: win.hairline
-            fill: win.openLike ? IslandLook.fillOpen : IslandLook.fillRest
+            fill: win.openLike ? IslandLook.solidOpen : IslandLook.solidRest
             onControlCenterRequested: win.closeAndThen("controlCenter")
             onSectionToggled: name => { if (name !== "" && win.islandState) win.islandState.keepOpen(win.modelData.name) }
             onViewRequested: v => win.openView(v)
@@ -345,11 +444,18 @@ PanelWindow {
 
         // Opened: one view at a time, each fades in when the body has grown.
         FocusScope {
+            id: views
             anchors.fill: parent
             focus: win.isOpen && !quick.focus && !card.focus
             opacity: win.view === Enums.IslandView.Home ? win.cardFade : win.isOpen ? 1 : 0
             visible: opacity > 0.01
             Behavior on opacity { enabled: win.view !== Enums.IslandView.Home; NumberAnimation { duration: Tokens.durFast } }
+            scale: win.contentScale(opacity)
+            layer.enabled: win.morphMode !== "off" && win.moving && visible
+            // The effect is a separate scope: it reads the opacity of its item by id.
+            // qmllint disable unqualified
+            layer.effect: MultiEffect { blurEnabled: true; blurMax: 24; blur: 1 - views.opacity }
+            // qmllint enable unqualified
             Keys.onEscapePressed: win.islandState.close()
 
             IslandHome {
@@ -369,7 +475,7 @@ PanelWindow {
                 mediaState: win.mediaState
                 workspaces: win.workspaces
                 workspaceStyle: win.workspaceStyle
-                inkOn: IslandLook.fillOpen
+                inkOn: IslandLook.solidOpen
                 clockFormat: win.clockFormat
                 ink: win.fg
                 inkSoft: win.fgSoft
@@ -404,12 +510,12 @@ PanelWindow {
                 workspaces: win.workspaces
                 workspaceStyle: win.workspaceStyle
                 clockFormat: win.clockFormat
-                inkOn: IslandLook.fillOpen
+                inkOn: IslandLook.solidOpen
                 focus: win.homeWithCard && expanded !== ""   // a list with a field (the Wi-Fi password) takes the keyboard
                 ink: win.fg
                 inkSoft: win.fgSoft
                 line: win.hairline
-                fill: win.openLike ? IslandLook.fillOpen : IslandLook.fillRest
+                fill: win.openLike ? IslandLook.solidOpen : IslandLook.solidRest
                 onControlCenterRequested: win.closeAndThen("controlCenter")
                 onSectionToggled: name => { if (name !== "" && win.islandState) win.islandState.keepOpen(win.modelData.name) }
                 onViewRequested: v => win.openView(v)
@@ -422,6 +528,7 @@ PanelWindow {
                 opacity: win.view === Enums.IslandView.Power ? 1 : 0
                 visible: opacity > 0.01
                 focus: win.view === Enums.IslandView.Power
+                outerRadius: body.cornerRadius
                 Behavior on opacity { NumberAnimation { duration: Tokens.durFast } }
                 lockState: win.lockState
                 ink: win.fg
@@ -436,6 +543,7 @@ PanelWindow {
                 opacity: win.view === Enums.IslandView.Screenshot ? 1 : 0
                 visible: opacity > 0.01
                 focus: win.view === Enums.IslandView.Screenshot
+                outerRadius: body.cornerRadius
                 Behavior on opacity { NumberAnimation { duration: Tokens.durFast } }
                 captureState: win.captureState
                 ink: win.fg

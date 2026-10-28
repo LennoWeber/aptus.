@@ -16,6 +16,7 @@ Status: usable, still changing. Plan and decisions: [PHASES.md](PHASES.md).
 - **Launcher** with five modes: apps, calculator and system actions (`wifi off`, `timer 10m`, `lock screen`), web search (optional suggestions), settings, AI (docked chat panel for command-line AI tools), clipboard history.
 - **Settings app** with draft, save, a 15 second confirmation and an external watchdog that restores the old file if the shell dies.
   Bar and island each have a *Glass* switch (`bar.glass`, `island.glass`): a see-through fill with the picture behind it blurred.
+  The island grows when something shows (`island.morph`: *spring*, *calm* or *off*) and never gets narrower than at rest. `island.style` picks *aptus* (light, solid), *phone* (pure black, like the iPhone island) or *glass* (dark see-through glass with a lit edge).
   The sidebar is grouped (Look, Desktop, Apps, System); every page has a short description and sub-headings, and search results say where a setting lives (`Dock › Apps`).
 - **Dock** (Settings → Dock, off by default): kept apps and open windows, looks *glass*, *solid* and *minimal*, zoom under the pointer, a hop while an app starts, a size slider (`dock.iconSize`, 32 to 96), optional space reservation like the bar (`dock.reserveSpace`) and auto-hide. The kept apps are edited in the settings (order, remove, add from the installed apps) or with a right click on an icon.
 - **Lock screen** (PAM), **greeter** for greetd, idle policy: lock after 5 minutes, screen off after 10. **Never suspend or hibernate.**

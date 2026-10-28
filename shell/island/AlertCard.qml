@@ -15,6 +15,7 @@ Item {
     property color ink
     property color inkSoft
     property color line
+    property real outerRadius: 22       // corner radius of the island body: inner shapes take outerRadius minus their margin
     property color accent                // colour of the badge, the progress and the action buttons
 
     property int kind: alert ? alert.kind : Enums.AlertKind.Plain
@@ -95,7 +96,7 @@ Item {
         Rectangle {
             id: plate
             anchors.fill: parent
-            radius: card.isMedia ? 12 : 14
+            radius: Math.max(4, card.outerRadius - 14)
             color: Qt.rgba(card.ink.r, card.ink.g, card.ink.b, 0.10)
             border.width: 1
             border.color: Qt.rgba(card.ink.r, card.ink.g, card.ink.b, 0.12)

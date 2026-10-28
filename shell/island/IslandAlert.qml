@@ -13,6 +13,7 @@ Item {
     property color ink
     property color inkSoft
     property color line
+    property real outerRadius: 22       // corner radius of the island body: inner shapes take outerRadius minus their margin
     property color accent
     property real cardWidth: 420
 
@@ -27,13 +28,13 @@ Item {
     // The card is wider than the body while it grows: what leaves the body is cut off.
     clip: isCard
 
-    Row {
+    // One line that fills the pill: the dot on the left, the title next to it, the detail on the right (18 px from both edges).
+    Item {
         visible: !alertView.isCard
-        anchors.centerIn: parent
-        spacing: 8
-        width: Math.min(implicitWidth, alertView.width - 28)
+        anchors { fill: parent; leftMargin: 18; rightMargin: 18 }
 
         Rectangle {
+            id: dot
             anchors.verticalCenter: parent.verticalCenter
             width: 8
             height: 8
@@ -41,21 +42,23 @@ Item {
             color: alertView.alert && alertView.alert.severity !== Enums.Severity.Neutral ? Tokens.colorFor(alertView.alert.severity) : alertView.inkSoft
         }
         Label {
-            anchors.verticalCenter: parent.verticalCenter
+            anchors { left: dot.right; leftMargin: 10; verticalCenter: parent.verticalCenter }
+            width: Math.min(implicitWidth, parent.width - dot.width - 10 - (detail.visible ? detail.width + 12 : 0))
             text: alertView.alert ? alertView.alert.text : ""
             color: alertView.ink
             font.weight: Font.DemiBold
             elide: Text.ElideRight
-            width: Math.min(implicitWidth, alertView.width - 60)
         }
         Label {
-            anchors.verticalCenter: parent.verticalCenter
-            visible: text !== "" && x + implicitWidth < alertView.width - 20
+            id: detail
+            anchors { right: parent.right; verticalCenter: parent.verticalCenter }
+            visible: text !== ""
+            width: Math.min(implicitWidth, parent.width * 0.4)
             text: alertView.alert ? alertView.alert.detail : ""
             color: alertView.inkSoft
             role: Enums.TextRole.Bar
+            horizontalAlignment: Text.AlignRight
             elide: Text.ElideRight
-            width: Math.min(implicitWidth, 150)
         }
     }
 
@@ -70,6 +73,7 @@ Item {
         visible: alertView.isCard
         anchors.horizontalCenter: parent.horizontalCenter
         width: alertView.cardWidth
+        outerRadius: alertView.outerRadius
         alert: alertView.isCard ? alertView.alert : null
         mediaState: alertView.mediaState
         ink: alertView.ink
