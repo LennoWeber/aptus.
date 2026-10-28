@@ -9,7 +9,7 @@ Item {
     property string label
     property string confirmLabel: "Really?"
     property bool armed
-    property int severity  // Enums.Severity, the colour of the armed state
+    property int severity: Enums.Severity.Critical  // the colour of the armed state
     signal confirmed()
 
     function disarm(): void {

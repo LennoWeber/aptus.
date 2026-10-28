@@ -12,6 +12,8 @@ Item {
     property bool expanded
     property var networkState
     property string passwordFor  // the network whose password is being typed
+    property bool hiddenOpen     // the form for a hidden network is open
+    readonly property var link: networkState && networkState.linkDetails ? networkState.linkDetails : ({})
 
     // Scanning only while the list is on screen.
     onExpandedChanged: {

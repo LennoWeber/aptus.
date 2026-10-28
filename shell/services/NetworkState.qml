@@ -39,6 +39,8 @@ Scope {
     // In range and not saved yet, strongest first.
     property var newNetworks: []      // list of { ssid, signal, secured }
     // The active Wi-Fi link, empty when not connected.
+    // Quickshell only lists networks that have a saved profile, so everything in range comes from nmcli.
+    property var scanned: []          // list of { ssid, signal, secured }
     property var linkDetails: ({})    // { device, ip, gateway, dns, band, channel, rate, security }
     property string ethernetIp
 
