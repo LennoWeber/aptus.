@@ -131,13 +131,55 @@ Item {
         }
     }
 
-    // Expanded: output on the left, input on the right, the full width in use.
+    // One program: name, level, mute on the right.
+    component AppRow: Item {
+        id: app
+        required property var modelData
+        width: parent ? parent.width : 0
+        height: 58
+        Label {
+            anchors { left: parent.left; right: mute.left; rightMargin: 10; top: parent.top; topMargin: 4 }
+            elide: Text.ElideRight
+            text: app.modelData.name
+            font.weight: Font.Medium
+            color: app.modelData.muted ? Tokens.inkFaint : Tokens.ink
+        }
+        SliderControl {
+            anchors { left: parent.left; right: mute.left; rightMargin: 10; bottom: parent.bottom; bottomMargin: 2 }
+            value: app.modelData.volume
+            opacity: app.modelData.muted ? 0.45 : 1
+            onMoved: v => tile.audioState.setAppVolume(app.modelData.id, v)
+        }
+        Item {
+            id: mute
+            anchors { right: parent.right; verticalCenter: parent.verticalCenter }
+            width: 40
+            height: 40
+            StatusGlyph {
+                anchors.centerIn: parent
+                width: 20
+                height: 20
+                kind: "volume"
+                muted: app.modelData.muted
+                level: app.modelData.volume
+                color: app.modelData.muted ? Tokens.critical : Tokens.inkSoft
+            }
+            MouseArea {
+                anchors.fill: parent
+                onClicked: tile.audioState.setAppMuted(app.modelData.id, !app.modelData.muted)
+            }
+        }
+    }
+
+    // Expanded: output, input and the programs, three columns across the full width.
     Item {
         anchors.fill: parent
         visible: tile.expanded
+        readonly property real colWidth: (width - 2 * 49) / 3
 
         DeviceColumn {
-            anchors { left: parent.left; top: parent.top; bottom: parent.bottom; right: divider.left; rightMargin: 24 }
+            anchors { left: parent.left; top: parent.top; bottom: parent.bottom }
+            width: parent.colWidth
             title: "Output"
             glyph: "volume"
             volume: tile.audioState ? tile.audioState.volume : 0
@@ -152,13 +194,14 @@ Item {
 
         Rectangle {
             id: divider
-            anchors { horizontalCenter: parent.horizontalCenter; top: parent.top; bottom: parent.bottom }
+            anchors { left: parent.left; leftMargin: parent.colWidth + 24; top: parent.top; bottom: parent.bottom }
             width: 1
             color: Tokens.line
         }
 
         DeviceColumn {
-            anchors { left: divider.right; leftMargin: 24; top: parent.top; bottom: parent.bottom; right: parent.right }
+            anchors { left: divider.right; leftMargin: 24; top: parent.top; bottom: parent.bottom }
+            width: parent.colWidth
             title: "Input"
             glyph: "mic"
             volume: tile.audioState ? tile.audioState.inputVolume : 0
@@ -169,6 +212,44 @@ Item {
             onVolumeMoved: v => tile.audioState.setInputVolume(v)
             onMuteToggled: on => tile.audioState.toggleInputMute()
             onDeviceChosen: deviceId => tile.audioState.setInput(deviceId)
+        }
+
+        Rectangle {
+            id: divider2
+            anchors { left: parent.left; leftMargin: 2 * parent.colWidth + 73; top: parent.top; bottom: parent.bottom }
+            width: 1
+            color: Tokens.line
+        }
+
+        Item {
+            anchors { left: divider2.right; leftMargin: 24; top: parent.top; bottom: parent.bottom; right: parent.right }
+
+            Label {
+                id: appsHead
+                text: "Apps"
+                role: Enums.TextRole.Bar
+                color: Tokens.inkFaint
+            }
+            Flickable {
+                anchors { top: appsHead.bottom; topMargin: 6; left: parent.left; right: parent.right; bottom: parent.bottom }
+                contentHeight: appList.implicitHeight
+                clip: true
+                boundsBehavior: Flickable.StopAtBounds
+
+                Column {
+                    id: appList
+                    width: parent.width
+                    Repeater {
+                        model: tile.audioState ? tile.audioState.apps : []
+                        delegate: AppRow {}
+                    }
+                    Label {
+                        visible: tile.audioState && tile.audioState.apps.length === 0
+                        text: "Nothing is playing"
+                        color: Tokens.inkFaint
+                    }
+                }
+            }
         }
     }
 }

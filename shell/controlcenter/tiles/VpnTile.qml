@@ -33,12 +33,70 @@ Item {
         }
     }
 
+    // One profile: name and state, then Auto, Remove and the connect switch.
+    component ProfileRow: Item {
+        id: prof
+        required property var modelData
+        width: parent ? parent.width : 0
+        height: 52
+
+        Column {
+            anchors { left: parent.left; right: controls.left; rightMargin: 12; verticalCenter: parent.verticalCenter }
+            spacing: 1
+            Label {
+                width: parent.width
+                elide: Text.ElideRight
+                text: prof.modelData.name
+                font.weight: Font.Medium
+            }
+            Label {
+                width: parent.width
+                elide: Text.ElideRight
+                role: Enums.TextRole.Bar
+                text: prof.modelData.active ? (tile.networkState.vpnIp ? "Connected, " + tile.networkState.vpnIp : "Connected") : "Off"
+                color: prof.modelData.active ? Tokens.ok : Tokens.inkFaint
+            }
+        }
+        Row {
+            id: controls
+            anchors { right: parent.right; verticalCenter: parent.verticalCenter }
+            spacing: 14
+            Row {
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: 8
+                Label { anchors.verticalCenter: parent.verticalCenter; text: "Auto"; role: Enums.TextRole.Bar; color: Tokens.inkFaint }
+                ToggleSwitch {
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 36
+                    checked: prof.modelData.autoconnect
+                    onToggled: on => tile.networkState.setVpnAutoconnect(prof.modelData.id, on)
+                }
+            }
+            ConfirmButton {
+                anchors.verticalCenter: parent.verticalCenter
+                label: "Remove"
+                onConfirmed: tile.networkState.removeVpn(prof.modelData.id)
+            }
+            Row {
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: 8
+                Label { anchors.verticalCenter: parent.verticalCenter; text: "On"; role: Enums.TextRole.Bar; color: Tokens.inkFaint }
+                ToggleSwitch {
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 36
+                    checked: prof.modelData.active
+                    onToggled: on => tile.networkState.setVpn(prof.modelData.id, on)
+                }
+            }
+        }
+    }
+
     Item {
         anchors.fill: parent
         visible: tile.expanded
 
         Column {
-            width: Math.min(parent.width, 460)
+            width: Math.min(parent.width, 640)
             anchors.horizontalCenter: parent.horizontalCenter
             spacing: 6
 
@@ -49,13 +107,7 @@ Item {
             }
             Repeater {
                 model: tile.profiles
-                delegate: ToggleSwitch {
-                    required property var modelData
-                    width: parent.width
-                    label: modelData.name
-                    checked: modelData.active
-                    onToggled: on => tile.networkState.setVpn(modelData.id, on)
-                }
+                delegate: ProfileRow {}
             }
             Label {
                 visible: tile.profiles.length === 0

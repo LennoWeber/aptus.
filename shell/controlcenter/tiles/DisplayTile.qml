@@ -35,13 +35,15 @@ Item {
         }
     }
 
-    // Expanded: brightness on the left, night light on the right, the full width in use.
+    // Expanded: brightness, night light and the screen itself, three columns across the full width.
     Item {
         anchors.fill: parent
         visible: tile.expanded
+        readonly property real colWidth: (width - 2 * 49) / 3
 
         Column {
-            anchors { left: parent.left; top: parent.top; right: divider.left; rightMargin: 24 }
+            anchors { left: parent.left; top: parent.top }
+            width: parent.colWidth
             spacing: 6
 
             Label {
@@ -70,13 +72,14 @@ Item {
 
         Rectangle {
             id: divider
-            anchors { horizontalCenter: parent.horizontalCenter; top: parent.top; bottom: parent.bottom }
+            anchors { left: parent.left; leftMargin: parent.colWidth + 24; top: parent.top; bottom: parent.bottom }
             width: 1
             color: Tokens.line
         }
 
         Column {
-            anchors { left: divider.right; leftMargin: 24; top: parent.top; right: parent.right }
+            anchors { left: divider.right; leftMargin: 24; top: parent.top }
+            width: parent.colWidth
             spacing: 6
 
             Label {
@@ -117,6 +120,56 @@ Item {
                 label: "Evening to morning (20:00 to 07:00)"
                 checked: tile.nightLightState ? tile.nightLightState.scheduled : false
                 onToggled: on => tile.nightLightState.setScheduled(on)
+            }
+        }
+
+        Rectangle {
+            id: divider2
+            anchors { left: parent.left; leftMargin: 2 * parent.colWidth + 73; top: parent.top; bottom: parent.bottom }
+            width: 1
+            color: Tokens.line
+        }
+
+        Column {
+            anchors { left: divider2.right; leftMargin: 24; top: parent.top; right: parent.right }
+            spacing: 6
+
+            Label {
+                text: "Screen"
+                role: Enums.TextRole.Bar
+                color: Tokens.inkFaint
+            }
+            Label {
+                text: tile.displayState && tile.displayState.output ? tile.displayState.widthPx + " x " + tile.displayState.heightPx : ""
+                role: Enums.TextRole.Display
+                tabularNumbers: true
+            }
+            Label {
+                text: tile.displayState ? tile.displayState.output : ""
+                role: Enums.TextRole.Mono
+                color: Tokens.inkFaint
+            }
+            Item { width: 1; height: 10 }
+            Label { text: "Scale"; role: Enums.TextRole.Bar; color: Tokens.inkFaint }
+            SegmentedControl {
+                width: parent.width
+                options: tile.displayState ? tile.displayState.scaleChoices.map(f => ({ label: Math.round(f * 100) + "%", value: f })) : []
+                current: tile.displayState ? tile.displayState.scale : 1
+                onPicked: v => tile.displayState.setScale(v)
+            }
+            Item { width: 1; height: 6 }
+            Label { text: "Refresh rate"; role: Enums.TextRole.Bar; color: Tokens.inkFaint }
+            SegmentedControl {
+                width: parent.width
+                options: tile.displayState ? tile.displayState.refreshChoices.map(h => ({ label: Math.round(h) + " Hz", value: h })) : []
+                current: tile.displayState ? tile.displayState.refreshHz : 60
+                onPicked: v => tile.displayState.setRefresh(v)
+            }
+            Label {
+                width: parent.width
+                wrapMode: Text.Wrap
+                text: tile.displayState && tile.displayState.refreshHz < 55 ? "A lower rate saves battery." : "The panel offers one resolution."
+                color: Tokens.inkSoft
             }
         }
     }

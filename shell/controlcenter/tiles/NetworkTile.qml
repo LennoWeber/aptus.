@@ -2,7 +2,6 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import qs.models
 import qs.theme
-import qs.services
 import qs.components
 
 // Content of the NetworkTile.
@@ -65,35 +64,6 @@ Item {
             label: "Wi-Fi"
             checked: tile.networkState ? tile.networkState.wifiEnabled : false
             onToggled: on => tile.networkState.setWifiEnabled(on)
-        }
-    }
-
-    // A one-line text field in a soft pill.
-    component Field: Surface {
-        id: field
-        property alias text: input.text
-        property string placeholder
-        property bool secret
-        signal accepted()
-        cornerRadius: 10
-        TextInput {
-            id: input
-            anchors { fill: parent; leftMargin: 12; rightMargin: 12 }
-            verticalAlignment: TextInput.AlignVCenter
-            echoMode: field.secret ? TextInput.Password : TextInput.Normal
-            font.family: Tokens.fontUi
-            font.pixelSize: Tokens.sizeBody
-            color: Tokens.ink
-            clip: true
-            onAccepted: field.accepted()
-            onActiveFocusChanged: Osk.track(input, activeFocus)
-            Text {
-                visible: input.text === ""
-                anchors.verticalCenter: parent.verticalCenter
-                text: field.placeholder
-                font: input.font
-                color: Tokens.inkFaint
-            }
         }
     }
 
@@ -311,7 +281,7 @@ Item {
                             visible: tile.passwordFor === entry.modelData.ssid
                             width: parent.width
                             height: visible ? 48 : 0
-                            Field {
+                            InputField {
                                 id: pass
                                 anchors { fill: parent; leftMargin: 26; rightMargin: 90; topMargin: 4; bottomMargin: 4 }
                                 placeholder: "Password"
@@ -357,11 +327,11 @@ Item {
                     Column {
                         anchors { fill: parent; leftMargin: 26; topMargin: 4 }
                         spacing: 6
-                        Field { id: hiddenName; width: parent.width - 4; height: 36; placeholder: "Network name" }
+                        InputField { id: hiddenName; width: parent.width - 4; height: 36; placeholder: "Network name" }
                         Item {
                             width: parent.width - 4
                             height: 36
-                            Field { id: hiddenPass; anchors { left: parent.left; right: join2.left; rightMargin: 8; top: parent.top; bottom: parent.bottom } placeholder: "Password (empty if open)"; secret: true }
+                            InputField { id: hiddenPass; anchors { left: parent.left; right: join2.left; rightMargin: 8; top: parent.top; bottom: parent.bottom } placeholder: "Password (empty if open)"; secret: true }
                             ActionButton {
                                 id: join2
                                 anchors { right: parent.right; top: parent.top; bottom: parent.bottom }

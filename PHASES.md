@@ -1703,3 +1703,32 @@ Alles in einer Test-Shell (Fenster mit `NetworkTile`/`BluetoothTile` und den ech
   - **Geprüft:** `qmllint` 0 Fehler, 38 Warnungen (keine neue; die Bluetooth-`defaultAdapter`-Warnung war schon da); Test-Fenster auf dem Laptop per `grim`: Network mit echten Daten (TUB-Guest verbunden, `Lenno` out of range, 4 neue Netze), ConfirmButton in beiden Zuständen. **Nicht geprüft:** Klicks (Forget, Connect, Auto-Schalter, Join), Bluetooth-Zeilen mit echten Geräten (keine gekoppelt), Anzeige in der echten Detailfläche des Control Centers (Test-Fenster 1100x640).
   - **Hinweise:** Die laufende Shell kommt aus `aptus-island-morph`; Branch `cc-more` ist nicht gemerged und nicht gepusht. Beim Verbinden mit neuem Netz geht das Passwort als `nmcli`-Argument (kurz in `ps` sichtbar). Quickshell kennt unbekannte Netze nicht, deshalb kommt „New“ aus `nmcli device wifi list`.
   - **Offen (spätere Läufe, Lennos Liste):** Hotspot bearbeiten, VPN-Details, Audio pro Programm, Display-Auflösung/Drehung.
+
+## Control Center: Rest der Liste (Ablauf 15, 28. Okt., Branch `cc-more2`, läuft ohne Pausen)
+
+### Phase 1: Plan (erledigt)
+Ziel: die offenen Punkte aus Ablauf 14 bauen, im gleichen Stil. `cc-more` ist in `main` gemerged (lokal).
+- **Audio:** dritte Spalte „Apps“ mit Lautstärke und Stumm je Programm (PipeWire-Streams `AudioOutStream`). `AudioState.apps`, `setAppVolume`, `setAppMuted`.
+- **Display:** dritte Spalte „Screen“: Skalierung 100/125/150 % und Wiederholrate (aus `hyprctl monitors`), Auflösung nur Anzeige (Panel hat nur 1920x1080). Neue Komponente `SegmentedControl`. `DisplayState.setScale/setRefresh`, Zustand in `~/.local/state/aptus/display.json` und beim Start wieder angewendet. `DeviceModeState.apply` schreibt bisher fest Skalierung 1 und 60 Hz → muss die gewählten Werte nehmen (sonst setzt jede Drehung sie zurück). Über `hyprctl eval 'hl.monitor{…}'` (Hyprland-Lua; `hyprctl keyword` geht nicht).
+- **Hotspot:** Name und Passwort bearbeiten (SSID 1–32 Byte, Passwort 8–63 Zeichen, Prüfung mit Hinweistext), Anzahl verbundener Geräte (`iw … station dump`). Läuft der Hotspot, startet Speichern ihn neu. Einschalten testen wir **nicht** live (trennt das WLAN des Laptops).
+- **VPN:** je Profil Auto-Schalter und Entfernen mit zweitem Klick, beim aktiven Profil die IP. `setVpnAutoconnect`, `removeVpn`, `vpnIp`.
+- **Risiken:** Auflösungs-/Skalierungswechsel können das Bild verstellen (immer Rückweg: 100 % zuerst in der Liste, Wiederherstellen beim Start aus Datei, keine Auflösung wählbar); VPN-Profil löschen nur Typ `vpn`/`wireguard`; Passwort nie loggen.
+
+### Phase 5: Probe (erledigt, wieder zurückgesetzt)
+Wie in Ablauf 14: Test-Fenster mit den echten Tiles/Services, `grim`. Patch im Scratchpad (`probe-cc2.patch`). Temporär ein Test-VPN-Profil (WireGuard) und ein Test-Hotspot-Profil angelegt (nie gestartet) und danach gelöscht.
+- **Ergebnis:** Audio (drei Spalten, Apps mit Schieber und Stumm), Display (drei Spalten, `SegmentedControl` für 100/125/150 % und 60/48 Hz), Hotspot (Name/Passwort, Speichern/Revert), VPN (Auto, Remove, On) sehen im Stil aus; `qmllint` 0 Fehler. Skalierungsbefehl live geprüft (125 % → 1.25 gemeldet, dann sofort 100 %), Zustandsdatei-Schreibbefehl getestet.
+- **Lücken:**
+  1. **Phase 2:** neue Komponente `InputField` (aus `NetworkTile` herausgezogen, wird auch vom Hotspot gebraucht); `NetworkState.connectionIps` (IP je Verbindung, `vpnIp` ist daraus abgeleitet); `DisplayState.mode`, `restored`, `savedView`.
+  2. **Phase 4:** HotspotTile: Entwürfe müssen nachgezogen werden, wenn Profil-Werte erst nach dem Öffnen eintreffen (sonst „shell hotspot“ statt `test-ap`); ungenutzter Import in `NetworkTile` nach dem Herausziehen.
+  3. **Nicht geprüft:** Klicks, Hotspot einschalten (trennt das WLAN), echte VPN-Verbindung (IP-Anzeige), Wiederherstellen der Skalierung nach Neustart, 125 %/150 % im Control Center selbst (Layout bei Skalierung).
+
+### Phase 6 und 7 (Ablauf 15, erledigt, 28. Okt.)
+- **Phase 6:** Prüfungen vor den Platzhaltern (Stream-ID ganzzahlig, Lautstärke 0..1, Skalierung/Rate nur aus den angebotenen Werten, Hotspot-Name 1–32 Byte, Passwort 8–63 Zeichen, Profil-ID nicht leer). Veraltete VPN-Profil-IDs sind kein Fehler (nur `return`).
+- **Phase 7:** Probe-Patch auf den Stand von Phase 6 gespielt, Konflikte von Hand gelöst (Probe-Code, Prüfungen behalten), `SegmentedControl` neu geschrieben (der Patch enthielt nur die Änderungen am Gerüst), Hotspot-Entwürfe folgen späten Daten (`Connections`, solange nichts geändert wurde). Alle TODOs dieses Ablaufs weg.
+  - **Audio:** dritte Spalte „Apps“, je Programm Schieber und Stumm.
+  - **Display:** dritte Spalte „Screen“ mit Auflösung (nur Anzeige), Skalierung 100/125/150 %, Wiederholrate (60/48 Hz); Wahl wird in `~/.local/state/aptus/display.json` gespeichert und beim Start angewendet; `DeviceModeState.apply` (Drehung) nutzt jetzt dieselben Werte.
+  - **Hotspot:** Name/Passwort bearbeiten (Save, Revert, Hinweis bei ungültigen Längen), Geräteanzahl (`iw station dump`); ohne Profil legt Save es an, ohne es zu starten; Einschalten nutzt ein vorhandenes Profil statt eines neuen Zufallspassworts.
+  - **VPN:** je Profil Auto-Schalter, Remove (zweiter Klick) und An/Aus, beim verbundenen Profil die IP.
+  - **Neu:** `components/SegmentedControl`, `components/InputField` (aus `NetworkTile` herausgezogen).
+  - **Geprüft:** `qmllint` 0 Fehler, 38 Warnungen (wie vorher); Test-Fenster mit echten Services und Testprofilen (WireGuard, Hotspot; danach gelöscht): Audio, Display, Hotspot (zeigt gespeicherte Werte), VPN; Skalierungsbefehl live (125 % und sofort zurück auf 100 %); Schreibbefehl der Zustandsdatei getestet.
+  - **Nicht geprüft:** Klicks, Hotspot einschalten und Geräteanzahl (trennt das WLAN), aktive VPN-Verbindung (IP), Neustart mit gespeicherter Skalierung, Layout bei 125/150 % im echten Control Center. Branch `cc-more2`, nicht gemerged.

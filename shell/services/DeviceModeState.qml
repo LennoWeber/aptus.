@@ -30,11 +30,13 @@ QtObject {
 
     // Enums.Orientation values 0..3 equal the Hyprland transforms (normal, 90, 180, 270).
     property int applied
+    property real monitorScale: 1                  // the scale and mode the user chose in the display tile
+    property string monitorMode: "1920x1080@60"
     function apply(transform: int): void {
         if (transform === applied) return
         applied = transform
         Quickshell.execDetached(["hyprctl", "eval",
-            "hl.monitor({ output = '" + root.output + "', mode = '1920x1080@60', position = '0x0', scale = '1', transform = " + transform + " })"])
+            "hl.monitor({ output = '" + root.output + "', mode = '" + monitorMode + "', position = '0x0', scale = '" + monitorScale + "', transform = " + transform + " })"])
     }
 
     // The tablet switch is read straight from the input device: the first one that reports SW_TABLET_MODE.
