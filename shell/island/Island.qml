@@ -200,6 +200,7 @@ PanelWindow {
 
     // Corner radius of an inner shape that sits margin px inside the body: the body's radius minus the margin, never below minInnerRadius.
     function innerRadius(outer: real, margin: real): real {
+        if (!(outer >= 0) || !(margin >= 0)) throw new Error("invariant: Island.innerRadius: radius and margin must not be negative")
         throw new Error("not implemented")
     }
 

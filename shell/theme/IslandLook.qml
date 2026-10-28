@@ -33,6 +33,7 @@ Singleton {
     property real radiusOpen: entry("radiusOpen") ?? 22
     // The design (setting island.design) decides the height at rest and whether the island floats; the look the rest.
     property string style: "aptus"                           // aptus, phone or glass (setting island.style)
+    onStyleChanged: if (["aptus", "phone", "glass"].indexOf(style) < 0) throw new Error("invariant: IslandLook: unknown style " + style)
     property string design: "capsule"                        // capsule, pill, ticker or shade
     onDesignChanged: if (["capsule", "pill", "ticker", "shade"].indexOf(design) < 0) throw new Error("invariant: IslandLook: unknown design " + design)
     readonly property real restHeight: design === "pill" ? 36 : design === "shade" ? 10 : Tokens.barHeight
@@ -52,6 +53,7 @@ Singleton {
 
     // One of three colours (or numbers) by the current style: aptus, phone or glass.
     function styled(forAptus: var, forPhone: var, forGlass: var): var {
+        if (["aptus", "phone", "glass"].indexOf(style) < 0) throw new Error("invariant: IslandLook.styled: unknown style " + style)
         throw new Error("not implemented")
     }
 

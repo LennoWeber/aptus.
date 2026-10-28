@@ -25,6 +25,7 @@ FocusScope {
 
     // Width of one tile when count tiles share a row of total px: margins left and right, spacing between.
     function cellWidth(total: real, count: int): real {
+        if (!(count > 0)) throw new Error("invariant: IslandPower.cellWidth: there must be at least one tile")
         throw new Error("not implemented")
     }
 
