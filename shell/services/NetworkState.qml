@@ -209,6 +209,7 @@ Scope {
                         if (key === "IP4.DNS") dns.push(val)
                         else v[key] = val
                     }
+                    // TODO(phase 7): remember the IP of every connection by name, so vpnIp can be set for the active VPN profile
                     if (!v["GENERAL.CONNECTION"]) continue
                     if (v["GENERAL.TYPE"] === "wifi") wifi = { ip: (v["IP4.ADDRESS"] || "").split("/")[0], gateway: v["IP4.GATEWAY"] || "", dns: dns.join(", ") }
                     else if (v["GENERAL.TYPE"] === "ethernet") wired = (v["IP4.ADDRESS"] || "").split("/")[0]
@@ -253,6 +254,7 @@ Scope {
                     const f = line.replace(/\\:/g, "\u0001").split(":").map(x => x.replace(/\u0001/g, ":"))
                     if (f[0] === "Hotspot") hotspotUp = f[2] !== ""
                     if (f[1] === "802-11-wireless" && f[0] !== "Hotspot") saved.push({ name: f[0], uuid: f[3], autoconnect: f[4] === "yes" })
+                    // TODO(phase 7): VPN entries need autoconnect (f[4]); the profile script also has to count hotspot clients (iw station dump) into hotspotClients
                     if (f[1] === "vpn" || f[1] === "wireguard") profiles.push({ id: f[0], name: f[0], active: f[2] !== "" })
                 }
                 root.savedProfiles = saved

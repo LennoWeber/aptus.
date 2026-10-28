@@ -47,6 +47,7 @@ Item {
                 role: Enums.TextRole.Bar
                 color: Tokens.inkFaint
             }
+            // TODO(phase 7): per profile an Auto switch and a ConfirmButton Remove, for the active one the IP (vpnIp)
             Repeater {
                 model: tile.profiles
                 delegate: ToggleSwitch {

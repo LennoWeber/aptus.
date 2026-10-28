@@ -17,6 +17,7 @@ Scope {
     readonly property var scaleChoices: [1, 1.25, 1.5]
     readonly property string stateFile: Quickshell.env("HOME") + "/.local/state/aptus/display.json"
 
+    // TODO(phase 7): call readMonitor() and restore() at start (Component.onCompleted), readMonitor again after every change
     // brightnessctl prints "current,max" in machine mode; read once at start and after every change.
     Process {
         id: reader

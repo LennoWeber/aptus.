@@ -20,6 +20,7 @@ Scope {
     property var inputs: listNodes(false)         // list of { id, name, active }
     property var apps: []                         // programs that play sound: list of { id, name, volume, muted }
 
+    // TODO(phase 7): fill apps from the AudioOutStream nodes (name from application.name); they are tracked already
     // Real devices (sinks and sources, no streams of single programs). They must be tracked to be usable.
     readonly property var devices: Array.from(Pipewire.nodes.values).filter(n => n.type === PwNodeType.AudioSink || n.type === PwNodeType.AudioSource)
 

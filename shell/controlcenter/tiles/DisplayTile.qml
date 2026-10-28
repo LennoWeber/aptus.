@@ -35,6 +35,7 @@ Item {
         }
     }
 
+    // TODO(phase 7): a third column "Screen" with SegmentedControl for scale and refresh rate and the resolution as text
     // Expanded: brightness on the left, night light on the right, the full width in use.
     Item {
         anchors.fill: parent

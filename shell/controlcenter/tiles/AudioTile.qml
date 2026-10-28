@@ -131,6 +131,7 @@ Item {
         }
     }
 
+    // TODO(phase 7): a third column "Apps" (name, level, mute per program) next to Output and Input
     // Expanded: output on the left, input on the right, the full width in use.
     Item {
         anchors.fill: parent

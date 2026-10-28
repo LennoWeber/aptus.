@@ -34,6 +34,7 @@ Item {
         }
     }
 
+    // TODO(phase 7): expanded view: editable name and password (validated, Save restarts a running hotspot), connected devices; drafts start from networkState values
     Item {
         anchors.fill: parent
         visible: tile.expanded

@@ -32,6 +32,7 @@ QtObject {
     property int applied
     property real monitorScale: 1                  // the scale and mode the user chose in the display tile
     property string monitorMode: "1920x1080@60"
+    // TODO(phase 7): apply() below writes mode and scale fixed; use monitorMode and monitorScale
     function apply(transform: int): void {
         if (transform === applied) return
         applied = transform
