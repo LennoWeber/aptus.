@@ -1713,3 +1713,11 @@ Ziel: die offenen Punkte aus Ablauf 14 bauen, im gleichen Stil. `cc-more` ist in
 - **Hotspot:** Name und Passwort bearbeiten (SSID 1–32 Byte, Passwort 8–63 Zeichen, Prüfung mit Hinweistext), Anzahl verbundener Geräte (`iw … station dump`). Läuft der Hotspot, startet Speichern ihn neu. Einschalten testen wir **nicht** live (trennt das WLAN des Laptops).
 - **VPN:** je Profil Auto-Schalter und Entfernen mit zweitem Klick, beim aktiven Profil die IP. `setVpnAutoconnect`, `removeVpn`, `vpnIp`.
 - **Risiken:** Auflösungs-/Skalierungswechsel können das Bild verstellen (immer Rückweg: 100 % zuerst in der Liste, Wiederherstellen beim Start aus Datei, keine Auflösung wählbar); VPN-Profil löschen nur Typ `vpn`/`wireguard`; Passwort nie loggen.
+
+### Phase 5: Probe (erledigt, wieder zurückgesetzt)
+Wie in Ablauf 14: Test-Fenster mit den echten Tiles/Services, `grim`. Patch im Scratchpad (`probe-cc2.patch`). Temporär ein Test-VPN-Profil (WireGuard) und ein Test-Hotspot-Profil angelegt (nie gestartet) und danach gelöscht.
+- **Ergebnis:** Audio (drei Spalten, Apps mit Schieber und Stumm), Display (drei Spalten, `SegmentedControl` für 100/125/150 % und 60/48 Hz), Hotspot (Name/Passwort, Speichern/Revert), VPN (Auto, Remove, On) sehen im Stil aus; `qmllint` 0 Fehler. Skalierungsbefehl live geprüft (125 % → 1.25 gemeldet, dann sofort 100 %), Zustandsdatei-Schreibbefehl getestet.
+- **Lücken:**
+  1. **Phase 2:** neue Komponente `InputField` (aus `NetworkTile` herausgezogen, wird auch vom Hotspot gebraucht); `NetworkState.connectionIps` (IP je Verbindung, `vpnIp` ist daraus abgeleitet); `DisplayState.mode`, `restored`, `savedView`.
+  2. **Phase 4:** HotspotTile: Entwürfe müssen nachgezogen werden, wenn Profil-Werte erst nach dem Öffnen eintreffen (sonst „shell hotspot“ statt `test-ap`); ungenutzter Import in `NetworkTile` nach dem Herausziehen.
+  3. **Nicht geprüft:** Klicks, Hotspot einschalten (trennt das WLAN), echte VPN-Verbindung (IP-Anzeige), Wiederherstellen der Skalierung nach Neustart, 125 %/150 % im Control Center selbst (Layout bei Skalierung).
