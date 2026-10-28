@@ -81,10 +81,13 @@ Scope {
     }
 
     function setAppVolume(appId: int, level: real): void {
+        if (!Number.isInteger(appId)) throw new Error("invariant: AudioState.setAppVolume: not a stream id")
+        if (!(level >= 0 && level <= 1)) throw new Error("invariant: AudioState.setAppVolume: volume outside 0..1")
         throw new Error("not implemented")
     }
 
     function setAppMuted(appId: int, on: bool): void {
+        if (!Number.isInteger(appId)) throw new Error("invariant: AudioState.setAppMuted: not a stream id")
         throw new Error("not implemented")
     }
 

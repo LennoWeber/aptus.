@@ -40,10 +40,12 @@ Scope {
     }
 
     function setScale(factor: real): void {
+        if (!scaleChoices.includes(factor)) throw new Error("invariant: DisplayState.setScale: scale is not one of the offered choices")
         throw new Error("not implemented")
     }
 
     function setRefresh(hz: real): void {
+        if (!refreshChoices.includes(hz)) throw new Error("invariant: DisplayState.setRefresh: rate is not one the panel offers")
         throw new Error("not implemented")
     }
 

@@ -152,14 +152,18 @@ Scope {
     }
 
     function configureHotspot(networkName: string, password: string): void {
+        if (unescape(encodeURIComponent(networkName)).length < 1 || unescape(encodeURIComponent(networkName)).length > 32) throw new Error("invariant: NetworkState.configureHotspot: the name needs 1 to 32 bytes")
+        if (password.length < 8 || password.length > 63) throw new Error("invariant: NetworkState.configureHotspot: the password needs 8 to 63 characters")
         throw new Error("not implemented")
     }
 
     function setVpnAutoconnect(profileId: string, on: bool): void {
+        if (!profileId) throw new Error("invariant: NetworkState.setVpnAutoconnect: empty VPN profile id")
         throw new Error("not implemented")
     }
 
     function removeVpn(profileId: string): void {
+        if (!profileId) throw new Error("invariant: NetworkState.removeVpn: empty VPN profile id")
         throw new Error("not implemented")
     }
 
