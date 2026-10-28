@@ -1,5 +1,5 @@
 import QtQuick
-// TODO(phase 7, morph): import QtQuick.Effects (MultiEffect for the blur of the content).
+import QtQuick.Effects
 import Quickshell
 import Quickshell.Wayland
 import Quickshell.Hyprland
@@ -83,23 +83,37 @@ PanelWindow {
     // Size of the body for the current stage and view.
     property real restWidth: rest.wantedWidth
     readonly property real homeContentHeight: cardStyle ? card.implicitHeight : home.implicitHeight + (homeWithQuick ? quick.implicitHeight : 0)
-    // TODO(phase 7, morph): shownW and shownH follow the target in onTargetWidthChanged/onTargetHeightChanged (set growing first, then the value); set both once in Component.onCompleted.
-    // The body is bound to shownW/shownH, so the animation sees the direction.
     property real targetWidth: sizeFor(stage, view, homeContentHeight, islandState ? islandState.morph : Enums.MorphTarget.None).w
     property real targetHeight: sizeFor(stage, view, homeContentHeight, islandState ? islandState.morph : Enums.MorphTarget.None).h
     // The size the body shows: it follows the target through the animation, so the animation can tell growing from shrinking.
-    // TODO(phase 7, morph): moving is bound to the running state of the two size animations (their ids), ready is set after the first size.
     property real shownW
     property real shownH
     property bool growing: true        // the last change of the target made the body bigger
     property bool ready                // the first size is set; from then on the body animates
-    property bool moving               // the body is animating its size
+    property bool widthRunning
+    property bool heightRunning
+    readonly property bool moving: widthRunning || heightRunning   // the body is animating its size
+    onTargetWidthChanged: retarget()
+    function retarget(): void {
+        if (ready) growing = (targetWidth - shownW) + (targetHeight - shownH) >= 0
+        shownW = targetWidth
+        shownH = targetHeight
+    }
+    Component.onCompleted: { retarget(); ready = true }
+    Behavior on shownW { enabled: win.ready; NumberAnimation { onRunningChanged: win.widthRunning = running; duration: win.morphMs(false); easing.type: Easing.BezierSpline; easing.bezierCurve: win.morphCurve() } }
+    Behavior on shownH {
+        enabled: win.ready
+        SequentialAnimation {
+            onRunningChanged: win.heightRunning = running
+            PauseAnimation { duration: win.growing && win.morphMode === "spring" ? win.heightDelayMs : 0 }
+            NumberAnimation { duration: win.morphMs(true); easing.type: Easing.BezierSpline; easing.bezierCurve: win.morphCurve() }
+        }
+    }
 
     // How far the body has grown from the pill to the opened card (0..1), read from its real size, so the content follows
     // the shape: the pill content leaves while the body starts to grow, the card content arrives when it is nearly there.
     property real openHeight: 400
-    // TODO(phase 7, morph): this handler also calls the function that follows the target (shownW/shownH, growing); a second onTargetHeightChanged is a duplicate.
-    onTargetHeightChanged: if (isOpen) openHeight = targetHeight
+    onTargetHeightChanged: { if (isOpen) openHeight = targetHeight; retarget() }
     readonly property real progress: Math.max(0, Math.min(1, (body.height - IslandLook.restHeight) / Math.max(1, openHeight - IslandLook.restHeight)))
     readonly property real cardFade: Math.max(0, Math.min(1, (progress - 0.5) / 0.4))
     readonly property real restFade: Math.max(0, Math.min(1, 1 - progress * 3.5))
@@ -117,8 +131,7 @@ PanelWindow {
     readonly property int osdGrowMs: 160      // ms: the body grows to the indicator in this time
     readonly property int hoverGrowMs: 260    // ms: the body grows to the card when the pointer opened it
     readonly property real alertHeight: 38
-    readonly property real alertCardWidth: 420     // the grown alert card
-    // TODO(phase 7, morph): the card content stays 420 wide while the body is wider (floor): lay the content out for the card width (about 520) and centre it, or the body looks empty.
+    readonly property real alertCardWidth: 520     // the grown alert card (the content is laid out for this width, centred in the body)
     readonly property real alertCardMinHeight: 76
     readonly property real alertCardMaxHeight: 132
     readonly property real alertMediaHeight: 96
@@ -136,32 +149,27 @@ PanelWindow {
     // Body size (object with w and h) for a stage and view (Enums.IslandStage, Enums.IslandView); contentHeight is the
     // content height of Home. While morph is not None the morph size wins.
     function sizeFor(stageId: int, viewId: int, contentHeight: real, morph: int): var {
-        // TODO(phase 7, morph): morph sizes: floorWidth(w, growMorph), so the island never shrinks toward the launcher or control center.
-        if (morph === Enums.MorphTarget.Launcher) return morphSizes.launcher
-        if (morph === Enums.MorphTarget.ControlCenter) return morphSizes.controlCenter
+        if (morph === Enums.MorphTarget.Launcher) return { w: floorWidth(morphSizes.launcher.w, growMorph), h: morphSizes.launcher.h }
+        if (morph === Enums.MorphTarget.ControlCenter) return { w: floorWidth(morphSizes.controlCenter.w, growMorph), h: morphSizes.controlCenter.h }
         if (stageId === Enums.IslandStage.Alert) {
             const a = islandState ? islandState.alert : null
-            // TODO(phase 7, morph): width of a plain alert and of the card: floorWidth(w, growAlert) / floorWidth(w, growCard).
-            return a && a.kind !== Enums.AlertKind.Plain ? alertSizeFor(a) : { w: alertWidth, h: alertHeight }
+            return a && a.kind !== Enums.AlertKind.Plain ? alertSizeFor(a) : { w: floorWidth(alertWidth, growAlert), h: alertHeight }
         }
-        // TODO(phase 7, morph): width of the indicator: floorWidth(osdWidth, growAlert).
-        if (stageId === Enums.IslandStage.Osd) return { w: osdWidth, h: osdHeight }
+        if (stageId === Enums.IslandStage.Osd) return { w: floorWidth(osdWidth, growAlert), h: osdHeight }
         if (stageId === Enums.IslandStage.Open) {
             switch (viewId) {
-            // TODO(phase 7, morph): widths of the opened views: floorWidth(w, growView); the Home card floorWidth(homeWidth, growCard); the wallpaper view floorWidth(contentWidth, growView).
-            case Enums.IslandView.Power: return viewSizes.power
-            case Enums.IslandView.Screenshot: return viewSizes.screenshot
-            case Enums.IslandView.Clipboard: return viewSizes.clipboard
-            case Enums.IslandView.Emoji: return viewSizes.emoji
-            case Enums.IslandView.Wallpaper: return { w: wallpaper.contentWidth, h: wallpaper.contentHeight }
-            default: return { w: homeWidth, h: contentHeight + 4 }
+            case Enums.IslandView.Power: return { w: floorWidth(viewSizes.power.w, growView), h: viewSizes.power.h }
+            case Enums.IslandView.Screenshot: return { w: floorWidth(viewSizes.screenshot.w, growView), h: viewSizes.screenshot.h }
+            case Enums.IslandView.Clipboard: return { w: floorWidth(viewSizes.clipboard.w, growView), h: viewSizes.clipboard.h }
+            case Enums.IslandView.Emoji: return { w: floorWidth(viewSizes.emoji.w, growView), h: viewSizes.emoji.h }
+            case Enums.IslandView.Wallpaper: return { w: floorWidth(wallpaper.contentWidth, growView), h: wallpaper.contentHeight }
+            default: return { w: floorWidth(homeWidth, growCard), h: contentHeight + 4 }
             }
         }
         return { w: restWidth, h: IslandLook.restHeight }
     }
 
     // Duration (ms) of the body's growth for a stage and a view (Enums.IslandStage, Enums.IslandView): openGrowMs for an opened view, Tokens.durSlow otherwise.
-    // TODO(phase 7, morph): morphMs() takes over the duration of the body; keep growMsFor only for the hover/alert/indicator timing or remove it if unused.
     function growMsFor(stageId: int, viewId: int): int {
         if (stageId < Enums.IslandStage.Rest || stageId > Enums.IslandStage.Open) throw new Error("invariant: Island.growMsFor: unknown stage")
         if (stageId === Enums.IslandStage.Osd) return osdGrowMs
@@ -189,26 +197,30 @@ PanelWindow {
         if (!(grow >= 0) || !isFinite(grow)) throw new Error("invariant: Island.floorWidth: growth must not be negative")
         if (!(restWidth > 0)) throw new Error("invariant: Island.floorWidth: the rest width is not known yet")
         if (restWidth + grow > maxWidth) throw new Error("invariant: Island.floorWidth: the ladder is wider than maxWidth")
-        throw new Error("not implemented")
+        return Math.min(maxWidth, Math.max(w, restWidth + grow))
     }
 
     // Easing curve of the body's growth for the current morph mode and direction (a Bezier list for NumberAnimation).
     function morphCurve(): var {
         if (["spring", "calm", "off"].indexOf(morphMode) < 0) throw new Error("invariant: Island.morphCurve: unknown mode " + morphMode)
-        throw new Error("not implemented")
+        return morphMode === "spring" && growing ? springCurve : calmCurve
     }
 
     // Duration in ms of the width (height false) or the height (height true) of the body, for the current mode and direction.
     function morphMs(forHeight: bool): int {
         if (["spring", "calm", "off"].indexOf(morphMode) < 0) throw new Error("invariant: Island.morphMs: unknown mode " + morphMode)
         if (typeof forHeight !== "boolean") throw new Error("invariant: Island.morphMs: forHeight must be a boolean")
-        throw new Error("not implemented")
+        if (morphMode === "off") return growMsFor(stage, view)
+        if (!growing) return settleMs
+        if (isOsd) return osdGrowMs + 160
+        return morphMode === "spring" ? springMs : settleMs + 100
     }
 
     // Scale of content whose opacity is fade (0..1): contentScaleFrom at 0, 1 at 1; always 1 when the mode is off.
     function contentScale(fade: real): real {
         if (!isFinite(fade)) throw new Error("invariant: Island.contentScale: fade must be a number")
-        throw new Error("not implemented")
+        if (morphMode === "off") return 1
+        return contentScaleFrom + (1 - contentScaleFrom) * Math.max(0, Math.min(1, fade))
     }
 
     // Body size (object with w and h) of the card for an alert (IslandState.alert), told by its kind and its content.
@@ -217,7 +229,7 @@ PanelWindow {
         if (a.kind === Enums.AlertKind.Plain) throw new Error("invariant: Island.alertSizeFor: a Plain alert has no card")
         const wanted = alertView.cardHeight
         const h = Math.max(a.kind === Enums.AlertKind.Media ? alertMediaHeight : alertCardMinHeight, Math.min(alertCardMaxHeight, wanted))
-        return { w: alertCardWidth, h: h }
+        return { w: floorWidth(alertCardWidth, growAlert), h: h }
     }
 
     // Open the island of this screen at a view.
@@ -277,9 +289,8 @@ PanelWindow {
         id: body
         anchors.horizontalCenter: parent.horizontalCenter
         y: IslandLook.gap - (height + IslandLook.gap + 2) * win.slide
-        // TODO(phase 7, morph): bind to win.shownW (and height to win.shownH), see above.
-        width: win.targetWidth
-        height: win.targetHeight
+        width: win.shownW
+        height: win.shownH
         floating: IslandLook.gap > 0
         cornerRadius: Math.min(win.openLike ? win.radiusOpen : win.cardAlert ? Math.min(win.radiusOpen, 24) : win.radiusRest, Math.min(width, height) / 2)
         fill: win.glassOf(win.openLike ? IslandLook.fillOpen : win.design === "shade" && !win.isAlert ? IslandLook.inkRest : IslandLook.fillRest)
@@ -288,18 +299,20 @@ PanelWindow {
         accent: win.isAlert && win.islandState && win.islandState.alert && win.islandState.alert.severity !== Enums.Severity.Neutral ? Tokens.colorFor(win.islandState.alert.severity) : win.hairline
         accentOpacity: win.isAlert ? 1 : 0.5
         opacity: 1 - win.morphProgress
-        // TODO(phase 7, morph): width: morphMs(false) and morphCurve(); height: morphMs(true) with heightDelayMs pause when growing (SequentialAnimation); cornerRadius follows the height's timing; no overshoot while shrinking; mode off = the old behaviour.
-        Behavior on width { NumberAnimation { duration: win.growMsFor(win.stage, win.view); easing.type: Easing.BezierSpline; easing.bezierCurve: win.cardAlert ? [0.34, 1.32, 0.5, 1, 1, 1] : [0.22, 1, 0.36, 1, 1, 1] } }
-        Behavior on height { NumberAnimation { duration: win.growMsFor(win.stage, win.view); easing.type: Easing.BezierSpline; easing.bezierCurve: win.cardAlert ? [0.34, 1.32, 0.5, 1, 1, 1] : [0.22, 1, 0.36, 1, 1, 1] } }
-        Behavior on cornerRadius { NumberAnimation { duration: win.growMsFor(win.stage, win.view) } }
+        Behavior on cornerRadius { NumberAnimation { duration: win.morphMs(true) } }
 
         // Rest: a tap opens.
         IslandRest {
             id: rest
             anchors.fill: parent
-            // TODO(phase 7, morph): scale: contentScale(restFade), blur through MultiEffect only while win.moving (layer.enabled), same for the alert view and the opened views below.
             opacity: !win.isAlert && !win.isOsd && win.design !== "shade" ? win.restFade : 0
             visible: opacity > 0.01
+            scale: win.contentScale(opacity)
+            layer.enabled: win.morphMode !== "off" && win.moving && visible
+            // The effect is a separate scope: it reads the opacity of its item by id.
+            // qmllint disable unqualified
+            layer.effect: MultiEffect { blurEnabled: true; blurMax: 24; blur: 1 - rest.opacity }
+            // qmllint enable unqualified
             design: win.design
             cornerRadius: body.cornerRadius
             mediaState: win.mediaState
@@ -347,7 +360,6 @@ PanelWindow {
         IslandAlert {
             id: alertView
             anchors.fill: parent
-            // TODO(phase 7, morph): scale and blur as for the rest content.
             opacity: win.isAlert ? 1 : 0
             visible: opacity > 0.01
             // A card shows up a moment after the body started to grow, and slides in a little.
@@ -358,6 +370,12 @@ PanelWindow {
                 }
             }
             transform: Translate { y: win.cardAlert ? (1 - alertView.opacity) * 10 : 0 }
+            scale: win.contentScale(opacity)
+            layer.enabled: win.morphMode !== "off" && win.moving && visible
+            // The effect is a separate scope: it reads the opacity of its item by id.
+            // qmllint disable unqualified
+            layer.effect: MultiEffect { blurEnabled: true; blurMax: 24; blur: 1 - alertView.opacity }
+            // qmllint enable unqualified
             alert: win.islandState ? win.islandState.alert : null
             mediaState: win.mediaState
             cardWidth: win.alertCardWidth
@@ -410,13 +428,18 @@ PanelWindow {
 
         // Opened: one view at a time, each fades in when the body has grown.
         FocusScope {
-            // TODO(phase 7, morph): needs an id (views), the blur reads its opacity.
+            id: views
             anchors.fill: parent
             focus: win.isOpen && !quick.focus && !card.focus
-            // TODO(phase 7, morph): scale: contentScale(opacity) and blur while win.moving.
             opacity: win.view === Enums.IslandView.Home ? win.cardFade : win.isOpen ? 1 : 0
             visible: opacity > 0.01
             Behavior on opacity { enabled: win.view !== Enums.IslandView.Home; NumberAnimation { duration: Tokens.durFast } }
+            scale: win.contentScale(opacity)
+            layer.enabled: win.morphMode !== "off" && win.moving && visible
+            // The effect is a separate scope: it reads the opacity of its item by id.
+            // qmllint disable unqualified
+            layer.effect: MultiEffect { blurEnabled: true; blurMax: 24; blur: 1 - views.opacity }
+            // qmllint enable unqualified
             Keys.onEscapePressed: win.islandState.close()
 
             IslandHome {
