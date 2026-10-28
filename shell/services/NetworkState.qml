@@ -42,6 +42,7 @@ Scope {
     property var linkDetails: ({})    // { device, ip, gateway, dns, band, channel, rate, security }
     property string ethernetIp
 
+    // TODO(phase 7): fill savedNetworks (savedProfiles joined with wifiList) and newNetworks (wifiList without known); drop the hotspot profile.
     // The Wi-Fi networks of the device (live objects).
     readonly property var wifiList: wifiDevice ? Array.from(wifiDevice.networks.values) : []
 
@@ -101,6 +102,7 @@ Scope {
         if (wifiDevice) wifiDevice.disconnect()
     }
 
+    // TODO(phase 7): forget() only knows networks in range; the tile uses forgetSaved() instead, drop this if nothing else calls it
     function forget(networkName: string): void {
         if (!networkName) throw new Error("invariant: NetworkState.forget: empty network name")
         const n = byName(networkName)
@@ -143,7 +145,7 @@ Scope {
         repeat: true
         running: true
         triggeredOnStart: true
-        onTriggered: root.refreshProfiles()
+        onTriggered: root.refreshProfiles()   // TODO(phase 7): also refreshSaved() and refreshLink() here and in refreshLater
     }
 
     Process {
@@ -161,6 +163,7 @@ Scope {
                     if (f[0] === "Hotspot") hotspotUp = f[2] !== ""
                     if (f[1] === "vpn" || f[1] === "wireguard") profiles.push({ id: f[0], name: f[0], active: f[2] !== "" })
                 }
+                // TODO(phase 7): fill savedProfiles from the 802-11-wireless rows (needs UUID and AUTOCONNECT in the nmcli fields), without "Hotspot"
                 root.vpnProfiles = profiles
                 const act = profiles.find(x => x.active)
                 root.vpnActive = !!act

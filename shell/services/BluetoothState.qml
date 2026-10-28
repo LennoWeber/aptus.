@@ -16,6 +16,7 @@ Scope {
     // Connected first, then paired, then the rest by name. Unnamed devices are noise and stay out.
     property var devices: liveDevices
         .filter(d => d.name && (d.paired || d.connected || discovering))
+        // TODO(phase 7): add trusted to the entry and fill the three group lists from devices
         .map(d => ({ address: d.address, name: d.name, connected: d.connected, paired: d.paired, batteryPercent: d.batteryAvailable ? (d.battery <= 1 ? d.battery * 100 : d.battery) : -1 }))
         .sort((a, b) => (b.connected - a.connected) || (b.paired - a.paired) || a.name.localeCompare(b.name))   // list of { address, name, connected, paired, batteryPercent }
     // The same devices in the three groups of the detail view.

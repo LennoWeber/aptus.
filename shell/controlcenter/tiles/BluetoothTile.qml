@@ -37,6 +37,7 @@ Item {
         }
     }
 
+    // TODO(phase 7): group into Connected, Paired (Trusted switch, Forget) and New; Forget goes through ConfirmButton
     Column {
         anchors.fill: parent
         visible: tile.expanded

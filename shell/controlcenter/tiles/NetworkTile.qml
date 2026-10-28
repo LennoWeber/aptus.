@@ -16,6 +16,7 @@ Item {
     // Scanning only while the list is on screen.
     onExpandedChanged: {
         if (!networkState) return
+        // TODO(phase 7): refresh saved networks and link details when the view opens
         if (expanded && networkState.wifiEnabled) networkState.scan()
         else networkState.stopScan()
     }
@@ -65,6 +66,7 @@ Item {
         }
     }
 
+    // TODO(phase 7): replace this single list by the sections Connected (details, Disconnect, Forget), Saved (auto-connect, Forget, in range), New (password row) and "Hidden network"
     Column {
         anchors.fill: parent
         visible: tile.expanded
