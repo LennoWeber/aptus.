@@ -11,6 +11,7 @@ Item {
     property color ink
     property color inkSoft
     property color line
+    property real outerRadius: 22       // corner radius of the island body: inner shapes take outerRadius minus their margin
 
     readonly property bool hasLabel: osd !== null && osd !== undefined && osd.label !== ""
     readonly property bool muted: osd !== null && osd !== undefined && osd.muted

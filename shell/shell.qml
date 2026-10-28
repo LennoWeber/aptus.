@@ -135,6 +135,9 @@ ShellRoot {
     readonly property string islandDesign: settingsObj.get("island.design") || "capsule"
     onIslandDesignChanged: IslandLook.design = islandDesign
 
+    // The island's style (setting island.style): aptus, phone or glass.
+    readonly property string islandStyle: settingsObj.get("island.style") || "aptus"
+
     // The dock (setting dock.enabled).
     Variants {
         model: settingsObj.get("dock.enabled") === true ? Quickshell.screens : []

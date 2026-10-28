@@ -13,6 +13,9 @@ Item {
     property bool floating                // all four corners round
     property color accent                 // colour of the signal line, only when IslandLook.accentLine
     property real accentOpacity
+    property bool glassEdge               // the lit edge and the sheen of the glass style
+    property color edgeColor              // colour of the lit edge
+    property real edgeLight               // 0..1, how strong the sheen is
     default property alias content: holder.data
 
     clip: !floating

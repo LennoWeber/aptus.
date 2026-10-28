@@ -15,6 +15,7 @@ Item {
     property color ink
     property color inkSoft
     property color line
+    property real outerRadius: 22       // corner radius of the island body: inner shapes take outerRadius minus their margin
     property color accent                // colour of the badge, the progress and the action buttons
 
     property int kind: alert ? alert.kind : Enums.AlertKind.Plain
