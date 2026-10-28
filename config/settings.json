@@ -34,6 +34,7 @@
   "island": {
     "glass": false,
     "design": "capsule",
+    "morph": "spring",
     "hoverOpen": true,
     "homeStyle": "dashboard",
     "look": "paper",

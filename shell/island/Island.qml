@@ -43,6 +43,7 @@ PanelWindow {
     readonly property bool cardStyle: homeStyle !== "classic"
     property bool showWeather: appSettings ? appSettings.get("island.showWeather") !== false : true
     property string clockFormat: appSettings ? appSettings.get("bar.clockFormat") || "24h" : "24h"
+    property string morphMode: appSettings ? appSettings.get("island.morph") || "spring" : "spring"   // island.morph: spring, calm or off
 
     // This screen's stage and view: Open only on the screen that was opened; an alert shows on every screen.
     property int stage: {
@@ -82,6 +83,11 @@ PanelWindow {
     readonly property real homeContentHeight: cardStyle ? card.implicitHeight : home.implicitHeight + (homeWithQuick ? quick.implicitHeight : 0)
     property real targetWidth: sizeFor(stage, view, homeContentHeight, islandState ? islandState.morph : Enums.MorphTarget.None).w
     property real targetHeight: sizeFor(stage, view, homeContentHeight, islandState ? islandState.morph : Enums.MorphTarget.None).h
+    // The size the body shows: it follows the target through the animation, so the animation can tell growing from shrinking.
+    property real shownW
+    property real shownH
+    property bool growing: true        // the last change of the target made the body bigger
+    readonly property bool moving: shownW !== targetWidth || shownH !== targetHeight
 
     // How far the body has grown from the pill to the opened card (0..1), read from its real size, so the content follows
     // the shape: the pill content leaves while the body starts to grow, the card content arrives when it is nearly there.
