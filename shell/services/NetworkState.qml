@@ -34,18 +34,20 @@ Scope {
 
     // Everything NetworkManager has saved for Wi-Fi, in range or not (nmcli; the hotspot profile is never part of it).
     property var savedProfiles: []    // list of { name, uuid, autoconnect }
-    // Saved profiles joined with what is in range right now: connected first, then in range by signal, then the rest by name.
-    property var savedNetworks: []    // list of { name, uuid, autoconnect, inRange, connected, signal, secured }
-    // In range and not saved yet, strongest first.
-    property var newNetworks: []      // list of { ssid, signal, secured }
-    // The active Wi-Fi link, empty when not connected.
     // Quickshell only lists networks that have a saved profile, so everything in range comes from nmcli.
     property var scanned: []          // list of { ssid, signal, secured }
+    // The active Wi-Fi link, empty when not connected.
     property var linkDetails: ({})    // { device, ip, gateway, dns, band, channel, rate, security }
     property string ethernetIp
 
-    // TODO(phase 7): newNetworks = scanned without the saved names; fill scanned in linkReader from the second half of the nmcli output
-    // TODO(phase 7): fill savedNetworks (savedProfiles joined with wifiList) and newNetworks (wifiList without known); drop the hotspot profile.
+    // Saved profiles joined with what is in range right now: connected first, then in range by signal, then the rest by name.
+    property var savedNetworks: savedProfiles.map(p => {
+        const n = wifiList.find(x => x.name === p.name)
+        return { name: p.name, uuid: p.uuid, autoconnect: p.autoconnect, inRange: !!n, connected: !!n && n.connected, signal: n ? n.signalStrength : 0, secured: n ? n.security !== WifiSecurityType.Open : true }
+    }).sort((a, b) => (b.connected - a.connected) || (b.inRange - a.inRange) || (b.signal - a.signal) || a.name.localeCompare(b.name))   // list of { name, uuid, autoconnect, inRange, connected, signal, secured }
+    // In range and not saved yet, strongest first (scanned is already sorted).
+    property var newNetworks: scanned.filter(n => !savedProfiles.some(p => p.name === n.ssid))   // list of { ssid, signal, secured }
+
     // The Wi-Fi networks of the device (live objects).
     readonly property var wifiList: wifiDevice ? Array.from(wifiDevice.networks.values) : []
 
@@ -71,51 +73,65 @@ Scope {
         if (!networkName) throw new Error("invariant: NetworkState.connectTo: empty network name")
         if (!wifiEnabled) throw new Error("invariant: NetworkState.connectTo: Wi-Fi is off")
         const n = byName(networkName)
-        // TODO(phase 7): a network without a saved profile is unknown to Quickshell: connect it with nmcli device wifi connect (password as an argument)
-        if (!n) return
+        if (!n) {
+            // not saved yet, so Quickshell does not know it
+            const cmd = ["nmcli", "device", "wifi", "connect", networkName]
+            if (password) cmd.push("password", password)
+            Quickshell.execDetached(cmd)
+            refreshLater.restart()
+            return
+        }
         if (password) n.connectWithPsk(password)
         else n.connect()
     }
 
     // Saved networks go through nmcli, so they also work for networks that are out of range.
     function refreshSaved(): void {
-        throw new Error("not implemented")
+        refreshProfiles()
     }
 
     function refreshLink(): void {
-        throw new Error("not implemented")
+        if (!linkReader.running) linkReader.running = true
     }
 
     function connectSaved(profileName: string): void {
         if (!profileName) throw new Error("invariant: NetworkState.connectSaved: empty profile name")
         if (!wifiEnabled) throw new Error("invariant: NetworkState.connectSaved: Wi-Fi is off")
-        throw new Error("not implemented")
+        if (!savedProfiles.some(p => p.name === profileName)) return
+        Quickshell.execDetached(["nmcli", "connection", "up", "id", profileName])
+        refreshLater.restart()
     }
 
     function setAutoconnect(profileName: string, on: bool): void {
         if (!profileName) throw new Error("invariant: NetworkState.setAutoconnect: empty profile name")
         if (profileName === "Hotspot") throw new Error("invariant: NetworkState.setAutoconnect: the hotspot profile is not a saved network")
-        throw new Error("not implemented")
+        if (!savedProfiles.some(p => p.name === profileName)) return
+        Quickshell.execDetached(["nmcli", "connection", "modify", "id", profileName, "connection.autoconnect", on ? "yes" : "no"])
+        refreshLater.restart()
     }
 
     function forgetSaved(profileName: string): void {
         if (!profileName) throw new Error("invariant: NetworkState.forgetSaved: empty profile name")
         if (profileName === "Hotspot") throw new Error("invariant: NetworkState.forgetSaved: the hotspot profile is not a saved network")
-        if (savedProfiles.length > 0 && !savedProfiles.some(p => p.name === profileName)) throw new Error("invariant: NetworkState.forgetSaved: only saved Wi-Fi profiles may be deleted")
-        throw new Error("not implemented")
+        if (!savedProfiles.some(p => p.name === profileName)) return   // a stale list after a change from outside is no error
+        Quickshell.execDetached(["nmcli", "connection", "delete", "id", profileName])
+        refreshLater.restart()
     }
 
     function connectHidden(networkName: string, password: string): void {
         if (!networkName) throw new Error("invariant: NetworkState.connectHidden: empty network name")
         if (!wifiEnabled) throw new Error("invariant: NetworkState.connectHidden: Wi-Fi is off")
-        throw new Error("not implemented")
+        if (!wifiDevice) return
+        const cmd = ["nmcli", "device", "wifi", "connect", networkName, "hidden", "yes"]
+        if (password) cmd.push("password", password)
+        Quickshell.execDetached(cmd)
+        refreshLater.restart()
     }
 
     function disconnectWifi(): void {
         if (wifiDevice) wifiDevice.disconnect()
     }
 
-    // TODO(phase 7): forget() only knows networks in range; the tile uses forgetSaved() instead, drop this if nothing else calls it
     function forget(networkName: string): void {
         if (!networkName) throw new Error("invariant: NetworkState.forget: empty network name")
         const n = byName(networkName)
@@ -150,7 +166,7 @@ Scope {
     Timer {
         id: refreshLater
         interval: 2500
-        onTriggered: root.refreshProfiles()
+        onTriggered: { root.refreshProfiles(); root.refreshLink() }
     }
 
     Timer {
@@ -158,25 +174,75 @@ Scope {
         repeat: true
         running: true
         triggeredOnStart: true
-        onTriggered: root.refreshProfiles()   // TODO(phase 7): also refreshSaved() and refreshLink() here and in refreshLater
+        onTriggered: { root.refreshProfiles(); root.refreshLink() }
+    }
+
+    Process {
+        id: linkReader
+        command: ["sh", "-c", "nmcli -t -f GENERAL.TYPE,GENERAL.CONNECTION,IP4.ADDRESS,IP4.GATEWAY,IP4.DNS device show; echo @@; nmcli -t -f IN-USE,CHAN,FREQ,RATE,SECURITY,SSID,SIGNAL device wifi list --rescan no"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const halves = text.split("@@\n")
+                let wifi = null
+                let wired = ""
+                for (const block of halves[0].split("\n\n")) {
+                    const v = {}
+                    const dns = []
+                    for (const line of block.split("\n")) {
+                        const i = line.indexOf(":")
+                        if (i < 0) continue
+                        const key = line.slice(0, i).replace(/\[\d+\]$/, "")
+                        const val = line.slice(i + 1)
+                        if (key === "IP4.DNS") dns.push(val)
+                        else v[key] = val
+                    }
+                    if (!v["GENERAL.CONNECTION"]) continue
+                    if (v["GENERAL.TYPE"] === "wifi") wifi = { ip: (v["IP4.ADDRESS"] || "").split("/")[0], gateway: v["IP4.GATEWAY"] || "", dns: dns.join(", ") }
+                    else if (v["GENERAL.TYPE"] === "ethernet") wired = (v["IP4.ADDRESS"] || "").split("/")[0]
+                }
+                const seen = {}
+                for (const line of (halves[1] || "").split("\n")) {
+                    if (!line) continue
+                    const f = line.replace(/\\:/g, "\u0001").split(":").map(x => x.replace(/\u0001/g, ":"))
+                    const ssid = f[5]
+                    const strength = Number(f[6]) / 100
+                    if (ssid && !(seen[ssid] && seen[ssid].signal >= strength)) seen[ssid] = { ssid: ssid, signal: strength, secured: f[4] !== "" }
+                }
+                root.scanned = Object.values(seen).sort((a, b) => b.signal - a.signal)
+                if (wifi) {
+                    const row = (halves[1] || "").split("\n").find(l => l.startsWith("*:"))
+                    if (row) {
+                        const f = row.split(":")
+                        wifi.channel = f[1]
+                        wifi.band = f[2].startsWith("5") ? "5 GHz" : f[2].startsWith("6") ? "6 GHz" : "2.4 GHz"
+                        wifi.rate = f[3]
+                        wifi.security = f[4] || "Open"
+                    }
+                }
+                root.linkDetails = wifi || ({})
+                root.ethernetIp = wired
+            }
+        }
     }
 
     Process {
         id: profileReader
-        command: ["sh", "-c", "nmcli -t -f NAME,TYPE,DEVICE connection show; echo @@; nmcli -s -g 802-11-wireless.ssid,802-11-wireless-security.psk connection show Hotspot 2>/dev/null"]
+        command: ["sh", "-c", "nmcli -t -f NAME,TYPE,DEVICE,UUID,AUTOCONNECT connection show; echo @@; nmcli -s -g 802-11-wireless.ssid,802-11-wireless-security.psk connection show Hotspot 2>/dev/null"]
         stdout: StdioCollector {
             onStreamFinished: {
                 const halves = text.split("@@\n")
                 const profiles = []
+                const saved = []
                 let hotspotUp = false
                 for (const line of halves[0].split("\n")) {
                     if (!line) continue
                     // Fields are separated by ':' and a ':' inside a field is escaped as '\:'.
                     const f = line.replace(/\\:/g, "\u0001").split(":").map(x => x.replace(/\u0001/g, ":"))
                     if (f[0] === "Hotspot") hotspotUp = f[2] !== ""
+                    if (f[1] === "802-11-wireless" && f[0] !== "Hotspot") saved.push({ name: f[0], uuid: f[3], autoconnect: f[4] === "yes" })
                     if (f[1] === "vpn" || f[1] === "wireguard") profiles.push({ id: f[0], name: f[0], active: f[2] !== "" })
                 }
-                // TODO(phase 7): fill savedProfiles from the 802-11-wireless rows (needs UUID and AUTOCONNECT in the nmcli fields), without "Hotspot"
+                root.savedProfiles = saved
                 root.vpnProfiles = profiles
                 const act = profiles.find(x => x.active)
                 root.vpnActive = !!act

@@ -1693,3 +1693,13 @@ Alles in einer Test-Shell (Fenster mit `NetworkTile`/`BluetoothTile` und den ech
   2. **Phase 4:** `connectTo` braucht für ungespeicherte Netze einen `nmcli`-Weg (TODO fehlte); leere Zustände („Nothing new in range“, Bluetooth-Gruppen) fehlten als TODO.
   3. **Kein Strukturfehler, aber Regel:** Row mit `width: parent.width - …` bildet eine Layout-Schleife (Log: „possible polish() loop“), stattdessen Item mit Ankern. Gebundene Listen ersetzen den Standardwert `[]` aus Phase 2 (kein doppeltes `property`).
   4. **Nicht geprüft:** Bluetooth-Zeilen (am Laptop keine Geräte gekoppelt, Bluetooth war aus; kurz an- und wieder ausgeschaltet), Klick auf Forget/Connect (Klicks nicht automatisierbar).
+
+### Phase 6 und 7 (erledigt, 28. Okt., ohne Pausen auf Lennos Anweisung)
+- **Phase 6:** Prüfungen vor den Platzhaltern (Profilname nicht leer, Wi-Fi an, `Hotspot` nie als gespeichertes Netz, Bluetooth-Adresse gültig). Bei `forgetSaved` ist ein veralteter Eintrag **kein** Fehler (Liste kann sich durch Änderungen von außen verschieben), dort nur `return`; Abweichung von der ersten Fassung der Invariante.
+- **Phase 7:** Probe-Patch auf den Stand von Phase 6 gespielt (3-Wege, Konflikte von Hand gelöst, Prüfungen behalten), dazu Bluetooth-Leerzustände. Alle TODOs weg.
+  - **Network:** links Verbindung (IP, Gateway, DNS, Band/Kanal, Speed, Security, Disconnect), rechts *Saved* (auch außer Reichweite, „In range, 75%“/„Out of range“, Auto-Schalter, Forget mit zweitem Klick), *New networks* (aus `nmcli`, Passwortzeile, Verbinden auch ohne gespeichertes Profil), *Hidden network*.
+  - **Bluetooth:** *Connected / Paired / New*, „Trusted“-Schalter, Forget mit zweitem Klick, Akku im Untertitel, Leertexte.
+  - **ConfirmButton:** erster Klick färbt rot („Really?“), nach 3 s oder zweitem Klick zurück; Rot nur klein und mit Text.
+  - **Geprüft:** `qmllint` 0 Fehler, 38 Warnungen (keine neue; die Bluetooth-`defaultAdapter`-Warnung war schon da); Test-Fenster auf dem Laptop per `grim`: Network mit echten Daten (TUB-Guest verbunden, `Lenno` out of range, 4 neue Netze), ConfirmButton in beiden Zuständen. **Nicht geprüft:** Klicks (Forget, Connect, Auto-Schalter, Join), Bluetooth-Zeilen mit echten Geräten (keine gekoppelt), Anzeige in der echten Detailfläche des Control Centers (Test-Fenster 1100x640).
+  - **Hinweise:** Die laufende Shell kommt aus `aptus-island-morph`; Branch `cc-more` ist nicht gemerged und nicht gepusht. Beim Verbinden mit neuem Netz geht das Passwort als `nmcli`-Argument (kurz in `ps` sichtbar). Quickshell kennt unbekannte Netze nicht, deshalb kommt „New“ aus `nmcli device wifi list`.
+  - **Offen (spätere Läufe, Lennos Liste):** Hotspot bearbeiten, VPN-Details, Audio pro Programm, Display-Auflösung/Drehung.
