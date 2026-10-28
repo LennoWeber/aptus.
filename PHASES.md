@@ -1703,3 +1703,13 @@ Alles in einer Test-Shell (Fenster mit `NetworkTile`/`BluetoothTile` und den ech
   - **Geprüft:** `qmllint` 0 Fehler, 38 Warnungen (keine neue; die Bluetooth-`defaultAdapter`-Warnung war schon da); Test-Fenster auf dem Laptop per `grim`: Network mit echten Daten (TUB-Guest verbunden, `Lenno` out of range, 4 neue Netze), ConfirmButton in beiden Zuständen. **Nicht geprüft:** Klicks (Forget, Connect, Auto-Schalter, Join), Bluetooth-Zeilen mit echten Geräten (keine gekoppelt), Anzeige in der echten Detailfläche des Control Centers (Test-Fenster 1100x640).
   - **Hinweise:** Die laufende Shell kommt aus `aptus-island-morph`; Branch `cc-more` ist nicht gemerged und nicht gepusht. Beim Verbinden mit neuem Netz geht das Passwort als `nmcli`-Argument (kurz in `ps` sichtbar). Quickshell kennt unbekannte Netze nicht, deshalb kommt „New“ aus `nmcli device wifi list`.
   - **Offen (spätere Läufe, Lennos Liste):** Hotspot bearbeiten, VPN-Details, Audio pro Programm, Display-Auflösung/Drehung.
+
+## Control Center: Rest der Liste (Ablauf 15, 28. Okt., Branch `cc-more2`, läuft ohne Pausen)
+
+### Phase 1: Plan (erledigt)
+Ziel: die offenen Punkte aus Ablauf 14 bauen, im gleichen Stil. `cc-more` ist in `main` gemerged (lokal).
+- **Audio:** dritte Spalte „Apps“ mit Lautstärke und Stumm je Programm (PipeWire-Streams `AudioOutStream`). `AudioState.apps`, `setAppVolume`, `setAppMuted`.
+- **Display:** dritte Spalte „Screen“: Skalierung 100/125/150 % und Wiederholrate (aus `hyprctl monitors`), Auflösung nur Anzeige (Panel hat nur 1920x1080). Neue Komponente `SegmentedControl`. `DisplayState.setScale/setRefresh`, Zustand in `~/.local/state/aptus/display.json` und beim Start wieder angewendet. `DeviceModeState.apply` schreibt bisher fest Skalierung 1 und 60 Hz → muss die gewählten Werte nehmen (sonst setzt jede Drehung sie zurück). Über `hyprctl eval 'hl.monitor{…}'` (Hyprland-Lua; `hyprctl keyword` geht nicht).
+- **Hotspot:** Name und Passwort bearbeiten (SSID 1–32 Byte, Passwort 8–63 Zeichen, Prüfung mit Hinweistext), Anzahl verbundener Geräte (`iw … station dump`). Läuft der Hotspot, startet Speichern ihn neu. Einschalten testen wir **nicht** live (trennt das WLAN des Laptops).
+- **VPN:** je Profil Auto-Schalter und Entfernen mit zweitem Klick, beim aktiven Profil die IP. `setVpnAutoconnect`, `removeVpn`, `vpnIp`.
+- **Risiken:** Auflösungs-/Skalierungswechsel können das Bild verstellen (immer Rückweg: 100 % zuerst in der Liste, Wiederherstellen beim Start aus Datei, keine Auflösung wählbar); VPN-Profil löschen nur Typ `vpn`/`wireguard`; Passwort nie loggen.
