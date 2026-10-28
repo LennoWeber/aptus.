@@ -44,6 +44,7 @@ Scope {
     property var linkDetails: ({})    // { device, ip, gateway, dns, band, channel, rate, security }
     property string ethernetIp
 
+    // TODO(phase 7): newNetworks = scanned without the saved names; fill scanned in linkReader from the second half of the nmcli output
     // TODO(phase 7): fill savedNetworks (savedProfiles joined with wifiList) and newNetworks (wifiList without known); drop the hotspot profile.
     // The Wi-Fi networks of the device (live objects).
     readonly property var wifiList: wifiDevice ? Array.from(wifiDevice.networks.values) : []
@@ -70,6 +71,7 @@ Scope {
         if (!networkName) throw new Error("invariant: NetworkState.connectTo: empty network name")
         if (!wifiEnabled) throw new Error("invariant: NetworkState.connectTo: Wi-Fi is off")
         const n = byName(networkName)
+        // TODO(phase 7): a network without a saved profile is unknown to Quickshell: connect it with nmcli device wifi connect (password as an argument)
         if (!n) return
         if (password) n.connectWithPsk(password)
         else n.connect()

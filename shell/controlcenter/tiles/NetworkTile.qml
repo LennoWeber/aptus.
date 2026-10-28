@@ -68,6 +68,7 @@ Item {
         }
     }
 
+    // TODO(phase 7): empty states ("Nothing new in range", Wi-Fi off) and no Row whose width depends on its parent (polish loop)
     // TODO(phase 7): replace this single list by the sections Connected (details, Disconnect, Forget), Saved (auto-connect, Forget, in range), New (password row) and "Hidden network"
     Column {
         anchors.fill: parent
