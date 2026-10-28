@@ -1656,3 +1656,31 @@ Zu klein für den Phasenablauf (zwei Schalter, drei Dateien), deshalb direkt umg
 - `bar.glass` (Abschnitt „Bar look“) und `island.glass` (Abschnitt „Design“), beide Standard aus. Leiste: Fensterfarbe `Tokens.bg` mit Alpha 0.62 + `BackgroundEffect.blurRegion` über die ganze Fläche. Island: `fill` mal 0.6 Alpha (`glassOf`) + Blur auf dem Körper mit seinem Eckenradius; gilt für alle Looks und Entwürfe.
 - **Geprüft:** `qmllint` weiter 0 Fehler, 32 Warnungen (wie vorher); Leiste in der Test-Shell auf dem zweiten Bildschirm: durchsichtig, Hintergrund sichtbar. **Island nicht gesehen** (braucht `IslandHost` mit allen Zuständen, nicht in der Test-Shell); nur der Code ist geprüft. Lesbarkeit der Island-Schrift auf hellem Hintergrund ist offen (Alpha 0.6 ist ein Schätzwert).
 - Konfliktgefahr beim Merge: `Island.qml` wird auch in Ablauf 12 (`island-notify`) geändert.
+
+## Control Center: mehr Funktionen (Ablauf 14, 28. Okt., Branch `cc-more`)
+
+### Phase 1: Verstehen und planen (erledigt, wartet auf Lennos Antworten und „weiter“)
+
+**Ziel (Lenno):** Im Control Center fehlen Funktionen. Beispiel Netzwerk: man sieht nicht, welche Netze das System schon kennt, welche neu sind, und wie man ein Netz vergisst. Auch die anderen Kacheln prüfen, was möglich wäre.
+
+**Befund im Code:**
+- `NetworkState.networks` kommt aus `Quickshell.Networking` und enthält nur Netze in Reichweite. `known` gibt es, `forget()` auch, aber `NetworkTile` zeigt nur „Saved“ als Untertitel, ohne Gruppen und ohne Vergessen. **Gespeicherte Netze außer Reichweite sind unsichtbar** (auf dem Laptop: `TUB-Guest`, `eduroam`, `_Free_Wifi_Berlin`, `Lenno`; `nmcli connection show` kennt sie).
+- Kein `qrencode`, kein `powerprofilesctl` installiert; `nmcli`, `hyprctl`, `wpctl`, `pactl`, `bluetoothctl` sind da.
+- Detailansichten: Network/Bluetooth sind einfache Listen; Hotspot zeigt nur Name und Passwort (nicht änderbar); VPN nur Schalter; Audio hat Geräte, aber keine Programme; Display nur Helligkeit und Nachtlicht.
+
+**Plan nach Kachel (Vorschlag, Lenno streicht/ergänzt):**
+1. **Network (Kern):** Detail in drei Abschnitten: *Connected* (Name, Band/Kanal, Sicherheit, IP, Gateway, Link-Speed, „Forget“, „Disconnect“), *Saved* (alle gespeicherten Netze, auch außer Reichweite, mit „in range“-Anzeige, Automatisch-verbinden-Schalter, Vergessen mit Bestätigung), *New* (in Reichweite, nicht gespeichert, mit Passwortzeile). Dazu „Hidden network…“ und Ethernet-Zeile mit IP. Daten: `Quickshell.Networking` plus `nmcli -t` (Liste gespeicherter Profile, `connection modify … autoconnect`, `connection delete`, `-s -g` für Details).
+2. **Bluetooth:** Gruppen *Connected / Paired / New*, Vergessen, „Trusted“ und Automatisch verbinden pro Gerät, Akku. Daten: `Quickshell.Bluetooth` (`forget()`, `trusted`), sonst `bluetoothctl`.
+3. **Hotspot:** Name und Passwort ändern, verbundene Geräte (Anzahl gibt es schon, Namen via `nmcli`/`iw`), Passwort anzeigen/verbergen.
+4. **VPN:** Profil löschen/umbenennen nicht nötig; stattdessen Status mit Dauer, Importieren per Dateiwahl bleibt Terminal-Hinweis. (klein)
+5. **Audio:** Lautstärke je Programm (PipeWire-Streams), schon vorhandene Geräteliste bleibt.
+6. **Display:** Auflösung/Wiederholrate/Skalierung und Drehung über `hyprctl` (wichtig beim 2-in-1).
+7. **Weitere Ideen (nur nennen):** Power Profile: Verbrauch in W; System Monitor: Top-Prozesse beenden; Notifications: pro App stumm.
+
+**Betroffene Dateien (voraussichtlich):** `services/NetworkState.qml`, `services/BluetoothState.qml`, `services/AudioState.qml`, `services/DisplayState.qml`, `controlcenter/tiles/{Network,Bluetooth,Hotspot,Vpn,Audio,Display}Tile.qml`, dazu ein neues wiederverwendbares `components/ConfirmRow.qml` (Vergessen mit Bestätigung) und `components/SectionLabel`-ähnliche Gruppenköpfe, falls `Label role: Bar` nicht reicht.
+
+**Risiken:** (a) `nmcli connection delete` löscht Profile, auch das von Ethernet/VPN: nur WLAN-Profile (`802-11-wireless`) und nie `Hotspot` anbieten; (b) Passwörter nie loggen, Hotspot-Passwort ist schon sichtbar; (c) Liste muss sich auch aktualisieren, wenn außerhalb geändert wird (Timer 10 s existiert); (d) Detailfläche ist begrenzt, lange Listen brauchen Scrollen (Flickable existiert); (e) Quickshell-Objekte werden bei Vergessen ungültig → Liste aus Snapshot rendern.
+
+**Reihenfolge:** Network zuerst (eigener kompletter Durchlauf Phase 2–7), danach Bluetooth, danach der Rest nach Lennos Wunsch.
+
+**Entscheidungen (Lenno, 28. Okt.):** Umfang: erst Network, dann Bluetooth (Rest später). Vergessen: zweiter Klick bestätigt („Really forget?“), kein Dialog.
