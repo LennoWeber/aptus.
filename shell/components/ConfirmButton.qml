@@ -11,4 +11,8 @@ Item {
     property bool armed
     property int severity  // Enums.Severity, the colour of the armed state
     signal confirmed()
+
+    function disarm(): void {
+        throw new Error("not implemented")
+    }
 }

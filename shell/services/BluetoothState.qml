@@ -61,6 +61,10 @@ Scope {
         if (d) d.pair()
     }
 
+    function setTrusted(address: string, on: bool): void {
+        throw new Error("not implemented")
+    }
+
     function forgetDevice(address: string): void {
         if (!/^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$/.test(address)) throw new Error("invariant: BluetoothState.forgetDevice: not a Bluetooth address")
         const d = byAddress(address)

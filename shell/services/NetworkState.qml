@@ -72,6 +72,31 @@ Scope {
         else n.connect()
     }
 
+    // Saved networks go through nmcli, so they also work for networks that are out of range.
+    function refreshSaved(): void {
+        throw new Error("not implemented")
+    }
+
+    function refreshLink(): void {
+        throw new Error("not implemented")
+    }
+
+    function connectSaved(profileName: string): void {
+        throw new Error("not implemented")
+    }
+
+    function setAutoconnect(profileName: string, on: bool): void {
+        throw new Error("not implemented")
+    }
+
+    function forgetSaved(profileName: string): void {
+        throw new Error("not implemented")
+    }
+
+    function connectHidden(networkName: string, password: string): void {
+        throw new Error("not implemented")
+    }
+
     function disconnectWifi(): void {
         if (wifiDevice) wifiDevice.disconnect()
     }
