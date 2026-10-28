@@ -1,4 +1,5 @@
 import QtQuick
+// TODO(phase 7, morph): import QtQuick.Effects (MultiEffect for the blur of the content).
 import Quickshell
 import Quickshell.Wayland
 import Quickshell.Hyprland
@@ -86,14 +87,17 @@ PanelWindow {
     property real targetWidth: sizeFor(stage, view, homeContentHeight, islandState ? islandState.morph : Enums.MorphTarget.None).w
     property real targetHeight: sizeFor(stage, view, homeContentHeight, islandState ? islandState.morph : Enums.MorphTarget.None).h
     // The size the body shows: it follows the target through the animation, so the animation can tell growing from shrinking.
+    // TODO(phase 7, morph): moving is bound to the running state of the two size animations (their ids), ready is set after the first size.
     property real shownW
     property real shownH
     property bool growing: true        // the last change of the target made the body bigger
-    readonly property bool moving: shownW !== targetWidth || shownH !== targetHeight
+    property bool ready                // the first size is set; from then on the body animates
+    property bool moving               // the body is animating its size
 
     // How far the body has grown from the pill to the opened card (0..1), read from its real size, so the content follows
     // the shape: the pill content leaves while the body starts to grow, the card content arrives when it is nearly there.
     property real openHeight: 400
+    // TODO(phase 7, morph): this handler also calls the function that follows the target (shownW/shownH, growing); a second onTargetHeightChanged is a duplicate.
     onTargetHeightChanged: if (isOpen) openHeight = targetHeight
     readonly property real progress: Math.max(0, Math.min(1, (body.height - IslandLook.restHeight) / Math.max(1, openHeight - IslandLook.restHeight)))
     readonly property real cardFade: Math.max(0, Math.min(1, (progress - 0.5) / 0.4))
@@ -113,6 +117,7 @@ PanelWindow {
     readonly property int hoverGrowMs: 260    // ms: the body grows to the card when the pointer opened it
     readonly property real alertHeight: 38
     readonly property real alertCardWidth: 420     // the grown alert card
+    // TODO(phase 7, morph): the card content stays 420 wide while the body is wider (floor): lay the content out for the card width (about 520) and centre it, or the body looks empty.
     readonly property real alertCardMinHeight: 76
     readonly property real alertCardMaxHeight: 132
     readonly property real alertMediaHeight: 96
@@ -396,6 +401,7 @@ PanelWindow {
 
         // Opened: one view at a time, each fades in when the body has grown.
         FocusScope {
+            // TODO(phase 7, morph): needs an id (views), the blur reads its opacity.
             anchors.fill: parent
             focus: win.isOpen && !quick.focus && !card.focus
             // TODO(phase 7, morph): scale: contentScale(opacity) and blur while win.moving.
