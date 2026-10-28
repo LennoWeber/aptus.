@@ -18,6 +18,10 @@ Scope {
         .filter(d => d.name && (d.paired || d.connected || discovering))
         .map(d => ({ address: d.address, name: d.name, connected: d.connected, paired: d.paired, batteryPercent: d.batteryAvailable ? (d.battery <= 1 ? d.battery * 100 : d.battery) : -1 }))
         .sort((a, b) => (b.connected - a.connected) || (b.paired - a.paired) || a.name.localeCompare(b.name))   // list of { address, name, connected, paired, batteryPercent }
+    // The same devices in the three groups of the detail view.
+    property var connectedDevices: []  // list of device entries
+    property var pairedDevices: []     // paired, not connected
+    property var newDevices: []        // found while searching, not paired
     property int connectedCount: devices.filter(d => d.connected).length
 
     function byAddress(address: string): var {

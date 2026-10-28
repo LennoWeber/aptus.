@@ -32,6 +32,16 @@ Scope {
     property int hotspotClients
     property bool ethernetConnected: wiredDevices.some(d => d.connected)
 
+    // Everything NetworkManager has saved for Wi-Fi, in range or not (nmcli; the hotspot profile is never part of it).
+    property var savedProfiles: []    // list of { name, uuid, autoconnect }
+    // Saved profiles joined with what is in range right now: connected first, then in range by signal, then the rest by name.
+    property var savedNetworks: []    // list of { name, uuid, autoconnect, inRange, connected, signal, secured }
+    // In range and not saved yet, strongest first.
+    property var newNetworks: []      // list of { ssid, signal, secured }
+    // The active Wi-Fi link, empty when not connected.
+    property var linkDetails: ({})    // { device, ip, gateway, dns, band, channel, rate, security }
+    property string ethernetIp
+
     // The Wi-Fi networks of the device (live objects).
     readonly property var wifiList: wifiDevice ? Array.from(wifiDevice.networks.values) : []
 
