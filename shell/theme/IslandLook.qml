@@ -13,6 +13,7 @@ Singleton {
     property var looks                    // raw data of theme/island-looks.json: { id, name, ... } per look
 
     // colours: Rest = pill and alert, Open = the opened island
+    // TODO(phase 7, style): fill, ink and stroke colours (rest and open, widths) go through styled(): phone = phoneFill/phoneInk, no stroke; glass = glassTint, phoneInk, glassEdge as stroke.
     property color fillRest: colorByName(entry("fillRest") || "")
     property color fillOpen: colorByName(entry("fillOpen") || "")
     property color inkRest: colorByName(entry("inkRest") || "")

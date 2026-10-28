@@ -41,6 +41,7 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         width: 44
         height: 44
+        // TODO(phase 7, style): plate radius = outerRadius minus its margin (14), min 4.
         radius: 14
         color: Qt.rgba((osdView.muted ? Tokens.critical : osdView.ink).r, (osdView.muted ? Tokens.critical : osdView.ink).g, (osdView.muted ? Tokens.critical : osdView.ink).b, 0.14)
         StatusGlyph {

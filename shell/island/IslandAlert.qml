@@ -28,6 +28,7 @@ Item {
     // The card is wider than the body while it grows: what leaves the body is cut off.
     clip: isCard
 
+    // TODO(phase 7, style): plain alert: dot or symbol at padding 18 on the left, title next to it, detail right aligned at padding 18 (anchors, no centred Row), so it fills the body.
     Row {
         visible: !alertView.isCard
         anchors.centerIn: parent
@@ -69,6 +70,7 @@ Item {
     AlertCard {
         id: card
         visible: alertView.isCard
+        // TODO(phase 7, style): the card has the width of the body (cardWidth is already the target width), outerRadius goes to the card.
         anchors.horizontalCenter: parent.horizontalCenter
         width: alertView.cardWidth
         alert: alertView.isCard ? alertView.alert : null

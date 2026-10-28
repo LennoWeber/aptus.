@@ -71,6 +71,7 @@ PanelWindow {
 
     // The design (setting island.design): capsule, pill, ticker or shade. It sets the size at rest and the shape.
     readonly property string design: IslandLook.design
+    // TODO(phase 7, style): the style phone/glass wants a larger open radius for cards (30) and Power; read via innerRadius for the inner shapes.
     readonly property real radiusRest: design === "pill" ? IslandLook.restHeight / 2 : design === "shade" ? 3 : IslandLook.radiusRest
     readonly property real radiusOpen: design === "pill" ? 26 : design === "shade" ? 18 : IslandLook.radiusOpen
 
@@ -137,6 +138,7 @@ PanelWindow {
     readonly property real alertMediaHeight: 96
     readonly property int alertGrowMs: 340         // ms: the body grows to the card in this time, with a little overshoot
     readonly property real homeWidth: cardStyle ? card.widthFor(homeStyle) : design === "pill" ? 480 : 520
+    // TODO(phase 7, style): Power and Screenshot are 110 high (tiles of about 82), widths come from the ladder.
     readonly property var viewSizes: ({
         power: { w: 480, h: 150 },
         screenshot: { w: 440, h: 150 },
@@ -255,6 +257,7 @@ PanelWindow {
     }
 
     // With island.glass the fill is see-through and the compositor blurs what is behind it.
+    // TODO(phase 7, style): glass is also true for the glass style (IslandLook.style); glassOf() leaves a colour alone when the style is glass (its tint carries the alpha).
     readonly property bool glass: appSettings ? appSettings.get("island.glass") === true : false
     function glassOf(c: color): color { return glass ? Qt.rgba(c.r, c.g, c.b, c.a * 0.6) : c }
 
@@ -302,6 +305,7 @@ PanelWindow {
         width: win.shownW
         height: win.shownH
         floating: IslandLook.gap > 0
+        // TODO(phase 7, style): hand glassEdge, edgeColor and edgeLight to the body for the glass style.
         cornerRadius: Math.min(win.openLike ? win.radiusOpen : win.cardAlert ? Math.min(win.radiusOpen, 24) : win.radiusRest, Math.min(width, height) / 2)
         fill: win.glassOf(win.openLike ? IslandLook.fillOpen : win.design === "shade" && !win.isAlert ? IslandLook.inkRest : IslandLook.fillRest)
         stroke: win.openLike ? IslandLook.strokeOpen : IslandLook.strokeRest
@@ -388,6 +392,7 @@ PanelWindow {
             // qmllint enable unqualified
             alert: win.islandState ? win.islandState.alert : null
             mediaState: win.mediaState
+            // TODO(phase 7, style): cardWidth = floorWidth(alertCardWidth, growAlert), the width the body will have, not the animated one (the card height depends on it); pass outerRadius: body.cornerRadius here and to Power, Screenshot and the indicator.
             cardWidth: win.alertCardWidth
             ink: win.fg
             inkSoft: win.fgSoft

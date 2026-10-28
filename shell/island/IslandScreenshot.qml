@@ -63,6 +63,7 @@ FocusScope {
         else if (event.key >= Qt.Key_1 && event.key <= Qt.Key_4) { selectedIndex = event.key - Qt.Key_1; activateSelected(); event.accepted = true }
     }
 
+    // TODO(phase 7, style): the tiles share the width through cellWidth(width, actions.length) and take the height minus 2 * cellMargin; the Row is anchored with cellMargin, not centred with fixed cells.
     Row {
         anchors.centerIn: parent
         spacing: 10
@@ -80,6 +81,7 @@ FocusScope {
 
                 Rectangle {
                     anchors.fill: parent
+                    // TODO(phase 7, style): tile radius = outerRadius minus cellMargin (also for the outline below); glyph and label sit relative to the tile height.
                     radius: 14
                     color: shot.ink
                     opacity: tap.pressed ? 0.16 : (tap.containsMouse || cell.isSelected) ? 0.09 : 0.04

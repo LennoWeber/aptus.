@@ -34,6 +34,7 @@ Item {
         border.color: shape.stroke
     }
 
+    // TODO(phase 7, style): the lit edge (1 px ring, edgeColor) and the sheen (a white gradient from the top, edgeLight) of the glass style, in the same shape as the fill, above it, below the content.
     // The signal line: the one place the island shows colour by itself, and only while something is serious.
     Rectangle {
         visible: IslandLook.accentLine

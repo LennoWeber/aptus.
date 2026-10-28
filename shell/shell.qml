@@ -136,6 +136,7 @@ ShellRoot {
     onIslandDesignChanged: IslandLook.design = islandDesign
 
     // The island's style (setting island.style): aptus, phone or glass.
+    // TODO(phase 7, style): apply it to IslandLook.style here (onIslandStyleChanged) and in Component.onCompleted.
     readonly property string islandStyle: settingsObj.get("island.style") || "aptus"
 
     // The dock (setting dock.enabled).
