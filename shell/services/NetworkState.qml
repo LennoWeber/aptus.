@@ -40,7 +40,7 @@ Scope {
     property var linkDetails: ({})    // { device, ip, gateway, dns, band, channel, rate, security }
     property string ethernetIp
     property var connectionIps: ({})    // IPv4 address of every active connection, by profile name
-    property string vpnIp
+    property string vpnIp: connectionIps[vpnName] || ""
 
     // Saved profiles joined with what is in range right now: connected first, then in range by signal, then the rest by name.
     property var savedNetworks: savedProfiles.map(p => {
@@ -154,21 +154,36 @@ Scope {
     function configureHotspot(networkName: string, password: string): void {
         if (unescape(encodeURIComponent(networkName)).length < 1 || unescape(encodeURIComponent(networkName)).length > 32) throw new Error("invariant: NetworkState.configureHotspot: the name needs 1 to 32 bytes")
         if (password.length < 8 || password.length > 63) throw new Error("invariant: NetworkState.configureHotspot: the password needs 8 to 63 characters")
-        throw new Error("not implemented")
+        if (hotspotSsid) {
+            // The profile exists: change it, and bring it up again when it is running.
+            Quickshell.execDetached(["sh", "-c", "nmcli connection modify Hotspot 802-11-wireless.ssid \"$1\" 802-11-wireless-security.psk \"$2\" && { nmcli -t -f NAME connection show --active | grep -qx Hotspot && nmcli connection up Hotspot; true; }", "sh", networkName, password])
+        } else {
+            // First time: create the profile without starting it (starting it would drop this laptop's Wi-Fi).
+            Quickshell.execDetached(["nmcli", "connection", "add", "type", "wifi", "ifname", "*", "con-name", "Hotspot", "autoconnect", "no", "ssid", networkName,
+                "802-11-wireless.mode", "ap", "802-11-wireless.band", "bg", "ipv4.method", "shared",
+                "802-11-wireless-security.key-mgmt", "wpa-psk", "802-11-wireless-security.psk", password])
+        }
+        refreshLater.restart()
     }
 
     function setVpnAutoconnect(profileId: string, on: bool): void {
         if (!profileId) throw new Error("invariant: NetworkState.setVpnAutoconnect: empty VPN profile id")
-        throw new Error("not implemented")
+        if (!vpnProfiles.some(p => p.id === profileId)) return
+        Quickshell.execDetached(["nmcli", "connection", "modify", "id", profileId, "connection.autoconnect", on ? "yes" : "no"])
+        refreshLater.restart()
     }
 
     function removeVpn(profileId: string): void {
         if (!profileId) throw new Error("invariant: NetworkState.removeVpn: empty VPN profile id")
-        throw new Error("not implemented")
+        if (!vpnProfiles.some(p => p.id === profileId)) return
+        Quickshell.execDetached(["nmcli", "connection", "delete", "id", profileId])
+        refreshLater.restart()
     }
 
     function setHotspot(on: bool): void {
-        if (on) {
+        if (on && hotspotSsid) {
+            Quickshell.execDetached(["nmcli", "connection", "up", "Hotspot"])
+        } else if (on) {
             hotspotProc.command = ["nmcli", "device", "wifi", "hotspot"]
             hotspotProc.running = true
         } else {
@@ -203,6 +218,7 @@ Scope {
                 const halves = text.split("@@\n")
                 let wifi = null
                 let wired = ""
+                const ips = {}
                 for (const block of halves[0].split("\n\n")) {
                     const v = {}
                     const dns = []
@@ -214,8 +230,8 @@ Scope {
                         if (key === "IP4.DNS") dns.push(val)
                         else v[key] = val
                     }
-                    // TODO(phase 7): remember the IP of every connection by name, so vpnIp can be set for the active VPN profile
                     if (!v["GENERAL.CONNECTION"]) continue
+                    ips[v["GENERAL.CONNECTION"]] = (v["IP4.ADDRESS"] || "").split("/")[0]
                     if (v["GENERAL.TYPE"] === "wifi") wifi = { ip: (v["IP4.ADDRESS"] || "").split("/")[0], gateway: v["IP4.GATEWAY"] || "", dns: dns.join(", ") }
                     else if (v["GENERAL.TYPE"] === "ethernet") wired = (v["IP4.ADDRESS"] || "").split("/")[0]
                 }
@@ -238,6 +254,7 @@ Scope {
                         wifi.security = f[4] || "Open"
                     }
                 }
+                root.connectionIps = ips
                 root.linkDetails = wifi || ({})
                 root.ethernetIp = wired
             }
@@ -246,7 +263,7 @@ Scope {
 
     Process {
         id: profileReader
-        command: ["sh", "-c", "nmcli -t -f NAME,TYPE,DEVICE,UUID,AUTOCONNECT connection show; echo @@; nmcli -s -g 802-11-wireless.ssid,802-11-wireless-security.psk connection show Hotspot 2>/dev/null"]
+        command: ["sh", "-c", "nmcli -t -f NAME,TYPE,DEVICE,UUID,AUTOCONNECT connection show; echo @@; nmcli -s -g 802-11-wireless.ssid,802-11-wireless-security.psk connection show Hotspot 2>/dev/null; echo @@; for d in $(iw dev 2>/dev/null | awk '$1==\"Interface\"{print $2}'); do iw dev $d station dump 2>/dev/null; done | grep -c '^Station'"]
         stdout: StdioCollector {
             onStreamFinished: {
                 const halves = text.split("@@\n")
@@ -259,8 +276,7 @@ Scope {
                     const f = line.replace(/\\:/g, "\u0001").split(":").map(x => x.replace(/\u0001/g, ":"))
                     if (f[0] === "Hotspot") hotspotUp = f[2] !== ""
                     if (f[1] === "802-11-wireless" && f[0] !== "Hotspot") saved.push({ name: f[0], uuid: f[3], autoconnect: f[4] === "yes" })
-                    // TODO(phase 7): VPN entries need autoconnect (f[4]); the profile script also has to count hotspot clients (iw station dump) into hotspotClients
-                    if (f[1] === "vpn" || f[1] === "wireguard") profiles.push({ id: f[0], name: f[0], active: f[2] !== "" })
+                    if (f[1] === "vpn" || f[1] === "wireguard") profiles.push({ id: f[0], name: f[0], active: f[2] !== "", autoconnect: f[4] === "yes" })
                 }
                 root.savedProfiles = saved
                 root.vpnProfiles = profiles
@@ -271,6 +287,7 @@ Scope {
                 const secrets = (halves[1] || "").split("\n")
                 root.hotspotSsid = secrets[0] || ""
                 root.hotspotPassword = secrets[1] || ""
+                root.hotspotClients = hotspotUp ? Number((halves[2] || "0").trim()) : 0
             }
         }
     }

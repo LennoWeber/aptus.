@@ -32,8 +32,7 @@ ShellRoot {
             "hl.config({ decoration = { blur = { size = " + Math.max(1, Math.round(blurSetting / 2)) + ", passes = " + (blurSetting <= 10 ? 2 : 3) + " } } })"])
     }
 
-    // TODO(phase 7): hand displayObj.scale and its mode to deviceObj (monitorScale, monitorMode)
-    DeviceModeState { id: deviceObj; autoRotate: settingsObj.get("touch.autoRotate") !== false }
+    DeviceModeState { id: deviceObj; monitorScale: displayObj.scale; monitorMode: displayObj.mode; autoRotate: settingsObj.get("touch.autoRotate") !== false }
 
     // In tablet mode the bar hides to leave room for reading; a swipe from the top edge shows it for a few seconds.
     property bool barRevealed

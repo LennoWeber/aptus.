@@ -18,9 +18,12 @@ Scope {
     property bool inputMuted: source && source.audio ? source.audio.muted : false
     property string inputName: source ? describe(source) : ""
     property var inputs: listNodes(false)         // list of { id, name, active }
-    property var apps: []                         // programs that play sound: list of { id, name, volume, muted }
+    // Programs that play sound.
+    property var apps: Array.from(Pipewire.nodes.values)
+        .filter(n => n.type === PwNodeType.AudioOutStream && n.audio)
+        .map(n => ({ id: n.id, name: n.properties["application.name"] || n.description || n.name, volume: n.audio.volume, muted: n.audio.muted }))
+        .sort((a, b) => a.name.localeCompare(b.name))   // list of { id, name, volume, muted }
 
-    // TODO(phase 7): fill apps from the AudioOutStream nodes (name from application.name); they are tracked already
     // Real devices (sinks and sources, no streams of single programs). They must be tracked to be usable.
     readonly property var devices: Array.from(Pipewire.nodes.values).filter(n => n.type === PwNodeType.AudioSink || n.type === PwNodeType.AudioSource)
 
@@ -83,12 +86,14 @@ Scope {
     function setAppVolume(appId: int, level: real): void {
         if (!Number.isInteger(appId)) throw new Error("invariant: AudioState.setAppVolume: not a stream id")
         if (!(level >= 0 && level <= 1)) throw new Error("invariant: AudioState.setAppVolume: volume outside 0..1")
-        throw new Error("not implemented")
+        const n = Array.from(Pipewire.nodes.values).find(x => x.id === appId && x.audio)
+        if (n) n.audio.volume = level
     }
 
     function setAppMuted(appId: int, on: bool): void {
         if (!Number.isInteger(appId)) throw new Error("invariant: AudioState.setAppMuted: not a stream id")
-        throw new Error("not implemented")
+        const n = Array.from(Pipewire.nodes.values).find(x => x.id === appId && x.audio)
+        if (n) n.audio.muted = on
     }
 
     function setInput(inputId: string): void {
