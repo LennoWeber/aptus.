@@ -191,6 +191,16 @@ PanelWindow {
     readonly property var springCurve: [0.34, 1.3, 0.5, 1, 1, 1]
     readonly property var calmCurve: [0.22, 1, 0.36, 1, 1, 1]
 
+    // Spacing inside the body (px).
+    readonly property real padSide: 18        // left and right margin of a one-line layout
+    readonly property real padCard: 20        // left and right margin of a card
+    readonly property real minInnerRadius: 4
+
+    // Corner radius of an inner shape that sits margin px inside the body: the body's radius minus the margin, never below minInnerRadius.
+    function innerRadius(outer: real, margin: real): real {
+        throw new Error("not implemented")
+    }
+
     // w widened to at least restWidth + grow and at most maxWidth.
     function floorWidth(w: real, grow: real): real {
         if (!(w > 0) || !isFinite(w)) throw new Error("invariant: Island.floorWidth: width must be a positive number")

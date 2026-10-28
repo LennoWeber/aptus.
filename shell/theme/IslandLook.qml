@@ -37,6 +37,18 @@ Singleton {
 
     readonly property string defaultId: "paper"
 
+    // Constants of the phone and glass styles.
+    readonly property color phoneFill: "#000000"
+    readonly property color phoneInk: "#ffffff"
+    readonly property color glassTint: Qt.rgba(0.08, 0.09, 0.11, 0.42)   // dark, so white ink stays readable over a light picture
+    readonly property color glassEdge: Qt.rgba(1, 1, 1, 0.30)
+    readonly property real glassSheen: 0.22
+
+    // One of three colours (or numbers) by the current style: aptus, phone or glass.
+    function styled(forAptus: var, forPhone: var, forGlass: var): var {
+        throw new Error("not implemented")
+    }
+
     FileView {
         id: looksFile
         path: Tokens.rootDir + "/theme/island-looks.json"

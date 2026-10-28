@@ -19,6 +19,14 @@ FocusScope {
 
     signal closeRequested()
 
+    readonly property real cellMargin: 14     // distance of the tiles from the body's edge
+    readonly property real cellSpacing: 10
+
+    // Width of one tile when count tiles share a row of total px: margins left and right, spacing between.
+    function cellWidth(total: real, count: int): real {
+        throw new Error("not implemented")
+    }
+
     readonly property var defaultActions: [
         { id: "region", label: "Region", glyph: "region" },
         { id: "screen", label: "Screen", glyph: "screen" },
