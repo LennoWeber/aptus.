@@ -45,6 +45,7 @@ PanelWindow {
     property bool showWeather: appSettings ? appSettings.get("island.showWeather") !== false : true
     property string clockFormat: appSettings ? appSettings.get("bar.clockFormat") || "24h" : "24h"
     property string morphMode: appSettings ? appSettings.get("island.morph") || "spring" : "spring"   // island.morph: spring, calm or off
+    onMorphModeChanged: if (["spring", "calm", "off"].indexOf(morphMode) < 0) throw new Error("invariant: Island: unknown morph mode " + morphMode)
 
     // This screen's stage and view: Open only on the screen that was opened; an alert shows on every screen.
     property int stage: {
@@ -184,21 +185,29 @@ PanelWindow {
 
     // w widened to at least restWidth + grow and at most maxWidth.
     function floorWidth(w: real, grow: real): real {
+        if (!(w > 0) || !isFinite(w)) throw new Error("invariant: Island.floorWidth: width must be a positive number")
+        if (!(grow >= 0) || !isFinite(grow)) throw new Error("invariant: Island.floorWidth: growth must not be negative")
+        if (!(restWidth > 0)) throw new Error("invariant: Island.floorWidth: the rest width is not known yet")
+        if (restWidth + grow > maxWidth) throw new Error("invariant: Island.floorWidth: the ladder is wider than maxWidth")
         throw new Error("not implemented")
     }
 
     // Easing curve of the body's growth for the current morph mode and direction (a Bezier list for NumberAnimation).
     function morphCurve(): var {
+        if (["spring", "calm", "off"].indexOf(morphMode) < 0) throw new Error("invariant: Island.morphCurve: unknown mode " + morphMode)
         throw new Error("not implemented")
     }
 
     // Duration in ms of the width (height false) or the height (height true) of the body, for the current mode and direction.
     function morphMs(forHeight: bool): int {
+        if (["spring", "calm", "off"].indexOf(morphMode) < 0) throw new Error("invariant: Island.morphMs: unknown mode " + morphMode)
+        if (typeof forHeight !== "boolean") throw new Error("invariant: Island.morphMs: forHeight must be a boolean")
         throw new Error("not implemented")
     }
 
     // Scale of content whose opacity is fade (0..1): contentScaleFrom at 0, 1 at 1; always 1 when the mode is off.
     function contentScale(fade: real): real {
+        if (!isFinite(fade)) throw new Error("invariant: Island.contentScale: fade must be a number")
         throw new Error("not implemented")
     }
 
