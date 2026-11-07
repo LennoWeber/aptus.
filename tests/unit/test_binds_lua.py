@@ -6,7 +6,6 @@ from __future__ import annotations
 #   (no lua 5.4 is installed; 09's binds use no 5.4-only syntax).
 
 
-
 def test_every_shortcut_bound() -> None:
     raise NotImplementedError
 

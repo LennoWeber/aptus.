@@ -13,6 +13,8 @@ QtObject {
 
     // The family name of the loaded Material Symbols Rounded (Tokens.fontGlyph until loaded).
     readonly property string glyphFamily: ""
+    // The FontLoader (a QtObject has no default property, so it sits in a property).
+    property FontLoader _glyphFont: null
     // Tooltips currently visible and when the last one hid (ms since epoch).
     property int tooltipsVisible: 0
     property real tooltipHiddenAt: 0

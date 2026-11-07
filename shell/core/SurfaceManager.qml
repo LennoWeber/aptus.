@@ -44,6 +44,9 @@ Singleton {
     property var backHandlers: ({})
     // Source of passive entry ids.
     property int passiveSerial: 0
+    // Hyprland monitor names with a fullscreen window on their active workspace (bound from
+    // Hypr.fullscreenMonitors in shell.qml; applied through rules.setFullscreen, M-31).
+    property var fullscreenMonitors: []
 
     signal surfaceOpened(string monitor, string surface)
     signal surfaceClosed(string monitor, string surface)
@@ -95,9 +98,6 @@ Singleton {
     function _snapshot(): var { throw new Error("SurfaceManager._snapshot: not implemented"); }
     function _monitorFor(monitor: var): string { throw new Error("SurfaceManager._monitorFor: not implemented"); }
 
-    // Hyprland monitor names with a fullscreen window on their active workspace (bound from
-    // Hypr.fullscreenMonitors in shell.qml; applied through rules.setFullscreen, M-31).
-    property var fullscreenMonitors: []
 
     // Private state.
     // The active monitor as rules.js last saw it (the Spotlight rule needs the old one).

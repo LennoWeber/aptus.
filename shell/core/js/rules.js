@@ -91,7 +91,7 @@ function update(monitors, global, monitor, id, payload, now) { notImplemented("u
 function dismiss(monitors, global, monitor, id, now) { notImplemented("dismiss") }
 // notch.md §9 → { kind: "osd" | "toast" | "event" | "card" | "rest" | "hidden", entry }.
 // opts: { overFullscreen: "critical" | "none" | "all" (notch.overFullscreen), limits }.
-// Order: OSD (newest; not under the Deck, whose sliders move) > toast (highest priority, then
+// Order: OSD (newest; also while the Deck is open, 05 §2) > toast (highest priority, then
 // FIFO) > event > card > rest. Under an interactive mode: OSD suppressed, events dropped, toasts
 // queued (rest is reported). Under a fullscreen window: "hidden" except OSD and what
 // overFullscreen allows (critical: priority ≥ 2). The recording dot is the Notch's own drawing.

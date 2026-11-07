@@ -196,7 +196,7 @@ hl.window_rule({
 })
 
 -- The scratch workspace starts its terminal on first use (a workspace.created handler: the
--- on_created_empty rule is deprecated in Hyprland 0.57)
+-- on_created_empty rule is deprecated in Hyprland 0.57.1)
 hl.on("workspace.created", function(ws)
   if ws.name == "special:scratch" and ws.is_empty then hl.exec_cmd("ghostty --class=aptus.scratch") end
 end)

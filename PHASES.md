@@ -438,7 +438,7 @@ appears within ~2.5 s; the scratch terminal floats below the bar.
   Tokens `_r`, `_autoMode`, `_themeMs`, `_from`, `_to`, `_t`, colour roles readonly (bound to
   `_blend`); Motion `_m`, `_systemReduced`; Hypr `_windowEvents`, `_pending`; Wallpaper `_dir`;
   Shortcuts `_routes`; WallpaperLayer `_aFront`, `_scale`, `_native`, `_hAlign`, `_vAlign`;
-  `Session.canLock`; `available` on Focus, Dnd, Capture, Jot (Ipc answers an error while false);
+  `Bulge.lineColour`/`lineWidth` (the frame line is the same path stroked); `Session.canLock`; `available` on Focus, Dnd, Capture, Jot (Ipc answers an error while false);
   `CrashLog.streak`/`started`; MonitorState `id: root` + rules.js import; shell.qml's ShellRoot
   with `introProgress`, `_startChecked`, `_ready` (it was comment-only). Components: a
   `ComponentShared` singleton (glyph font loaded once from the repo, tooltip regrace clock, ink and
@@ -447,7 +447,7 @@ appears within ~2.5 s; the scratch terminal floats below the bar.
   input; `Slider.glyphClicked()`; `disabledReason` on Button and IconButton (`enabled: false` kills
   the hover the tooltip needs); Glyph becomes an Item with two Texts (glyph-swap crossfade, 04 §3
   rule 6, also P-17's fallback); private state of every component (Menu, MenuHost, Tooltip, Tile,
-  Slider, Segmented, RollingDigits, …); tokens `surfaces.notch.cardWidth/cardHeightMin/cardHeights`
+  Slider, Segmented, RollingDigits, …); tokens `surfaces.notch.cardWidth/resultCardHeight/cardHeights`
   (notch.md §5's numbers had no token).
 - Phase 3 (signatures): config.js helpers (`isObj`, `clone`, `expand`, `insideHome`,
   `insideHomeTypes`, `fail`, `okv`, `checkInt`, `inValues`, `checkShapeField`, `locateError`,
@@ -455,7 +455,7 @@ appears within ~2.5 s; the scratch terminal floats below the bar.
   paletteName)`; rules.js helpers (`isCard` … `findEntry`), `tick`, a trailing `now` on
   openMenu/closeMenu/addMonitor/removeMonitor/setActive/setLocked/setFullscreen/
   setSettingsFocused, `expire(m, now, limits)`, arbitrate `opts.limits` (no `recording`);
-  `sun.eventMinutes`/`at`/`RAD`; `format.pad2`; `colour.round8`, public `colour.mix`;
+  `sun.eventMinutes`/`at`/`RAD`; `format.pad2`; `colour.round8` (the probe's OKLab `colour.mix` is not kept: Tokens blends linearly, nothing else used it);
   `bulge.num`; QML helpers `Config._store`, `Paths._xdg`, `SurfaceManager._syncActive`, Tokens
   `_colours`/`_shown`/`_mix`/`_blend`/`_updateAuto`, Hypr `_client`/`_target`/`_refresh`,
   Wallpaper `_list`, Shortcuts `_activeNotch`/`_spotlightScope`, WallpaperLayer
@@ -465,8 +465,9 @@ appears within ~2.5 s; the scratch terminal floats below the bar.
   `test_no_deprecated_config`, `tst_components` (14 tests); `List.navigate(key, modifiers)`
   (Spotlight's field keeps the focus and forwards keys); `Motion.catalogueMs(path, out)` (reduced
   motion for catalogue durations); the component helpers. Conventions in the docs: "critical" = priority ≥ 2; menus count as
-  interactive but toasts queue only behind interactive notch modes, Overview and Capture; OSD is
-  suppressed under the Deck.
+  interactive but toasts queue only behind interactive notch modes, Overview and Capture (07 §5,
+  notch.md §9 now say so). The probe suppressed OSD under the Deck; 05 §2 lets them coexist, so
+  phase 7 follows the spec.
 - Phase 4 (TODOs): Tokens crossfade and mode `auto`; Hypr refresh queue and `focused`; Wallpaper
   FolderListModel; Config backup `printErrors: false`, `set` refuses cross-rule breaks via
   `_store`; SurfaceManager never writes `activeMonitor`/`locked`, fullscreen input and the
@@ -494,3 +495,22 @@ appears within ~2.5 s; the scratch terminal floats below the bar.
 **Rejected (with reason):** a public `aptus.schema` module and a stable `Check.id` for doctor
 (the schema test can import `doctor.config.validate`; check names `config: <key>` are stable).
 
+
+### Review of the phase-5 gap fill (fresh reviewer, diff `c14c1f7..1b546fa`)
+
+No rule violations (every body a placeholder, defaults literal, the Field alias with a bare
+`TextInput` accepted as the structure an alias needs); every listed gap present; lint shows no
+syntax errors; tokens.json valid. **Fixed:**
+- OSD under the Deck: the probe suppressed it, 05 §2 lets the Deck coexist with OSD, so the
+  rules doc follows the spec (phase 7 changes the probe's arbitration accordingly).
+- Toasts also queue behind Overview and Capture: written into 07 §5 and notch.md §9 (the spec
+  named only interactive notch modes).
+- 07 §5 passive entry gains `key`, `shown`, `waited`; Tokens comments name `_themeMs`, not Motion;
+  one blend for the crossfade (linear, Tokens._mix), the unused OKLab `colour.mix` dropped.
+- ComponentShared gets `_glyphFont` (a QtObject has no default property for a FontLoader child).
+- `cardHeightMin` → `resultCardHeight` (Progress cards are 80, so "min" was wrong).
+- Ring/Thumb TODOs name `thickness`/`radius`; `fullscreenMonitors` moved to SurfaceManager's public
+  inputs; `Config._store` documented (how reset() goes through it); `Session.canLock` readonly
+  with the public properties; Bulge's reference fixed and its new properties logged; Hypr
+  `_windowEvents` comment; 0.57.1 in 09; shell.qml keeps only the imports its structure uses;
+  TODOs no longer glued to `id: root`; blank lines in test_binds_lua.py.

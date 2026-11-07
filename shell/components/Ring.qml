@@ -6,7 +6,7 @@ import qs.core
 Item {
     id: root
 
-    // TODO(phase): the size default comes from Tokens.ring.width, not a literal.
+    // TODO(phase): the thickness default comes from Tokens.ring.width, not a literal.
     // TODO(phase): a progress ring (Shape arc) for timers and focus.
 
     // 0..1

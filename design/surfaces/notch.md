@@ -161,6 +161,7 @@ moves instead.
 
 ```
 interactive mode open  → OSD suppressed, events dropped, toasts queued, compact activities hidden
+  (also while Overview or Capture is open; the Deck is no blocker, 05 §2)
 otherwise:
   OSD active           → shows (toast paused underneath)
   else toast queued    → shows

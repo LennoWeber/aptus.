@@ -150,7 +150,7 @@ closes anything.
 MonitorState {
   notch:     "rest" | "spotlight" | "switcher" | "today" | "session" | "polkit"
              | "gallery" | "jot" | "keys" | "keysPeek" | "focusPicker" | "card:<activity>"
-  passive:   queue of { id, kind: toast|osd|event, payload, priority, born }
+  passive:   queue of { id, kind: toast|osd|event, payload, priority, key, born, shown, waited }
   deck:      { open: bool, pages: [ "main", "wifi", … ] }
   overview:  bool
   menu:      null | { anchorX, anchorY, model, owner, onTriggered(row) }   (MenuHost closes the
@@ -176,7 +176,7 @@ Transition rules (enforced here, not in surfaces):
 | open Overview | anything | everything else closes first (exit timelines run concurrently) |
 | open anything | locked | refused, except media keys/OSD, which render on the lock surface |
 | open anything except polkit | polkit open | queued until polkit closes |
-| post a toast | an interactive notch mode is open | queued; shown on close if younger than 30 s, else Today only |
+| post a toast | an interactive notch mode, Overview or Capture is open | queued; shown on close if younger than 30 s, else Today only |
 | post an OSD | anything | OSD wins over toasts (toast pauses its timer and resumes) |
 | monitor removed | surfaces open on it | closed without animation |
 | active monitor changes | a notch mode open on the old one | closed (Spotlight rule); passive content stays |

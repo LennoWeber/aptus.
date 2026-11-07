@@ -6,6 +6,7 @@ import qs.core
 
 Item {
     id: root
+
     // TODO(phase): the size default comes from Tokens.glyphRow, not a literal.
 
     // TODO(phase): Material Symbols Rounded via ComponentShared.glyphFamily (one FontLoader), two Texts

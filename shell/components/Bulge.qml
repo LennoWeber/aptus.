@@ -24,7 +24,7 @@ Shape {
     property bool bodiesOnly: false
     property color colour
 
-    // The 1 px frame line along the content area's outline (03 §6, Tokens.frameLine); 0 = none.
+    // The 1 px frame line along the content area's outline (03 §2 `line`, §3; Tokens.frameLine); 0 = none.
     property color lineColour: "transparent"
     property real lineWidth: 0
 

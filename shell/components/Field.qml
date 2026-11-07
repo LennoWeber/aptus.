@@ -4,6 +4,7 @@ import qs.core
 
 Item {
     id: root
+
     // TODO(phase): the caret does not blink (04 §1 rule 5); Ctrl+Backspace clears (05 §5) and emits edited("").
 
     // TODO(phase): TextInput in a sunken rounded rect, accent caret, placeholder in ink.faint, password mode.

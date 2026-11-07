@@ -4,7 +4,7 @@
 import QtQuick
 
 Item {
-    // TODO(phase): cardHeight default ← Tokens.surfaces.notch.cardHeightMin, not 96.
+    // TODO(phase): cardHeight default ← Tokens.surfaces.notch.resultCardHeight, not 96.
 
     property string monitorName: ""
     // The toast payload (card-specific fields).

@@ -4,6 +4,7 @@ import qs.core
 
 Item {
     id: root
+
     // TODO(phase): controlled: never writes `value`; shows its own value only while dragging. Keys ← →
     //   only (↑ ↓ move between Deck rows); a click on the leading glyph emits glyphClicked().
 

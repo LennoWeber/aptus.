@@ -28,5 +28,3 @@ function toward(from, to, t) { notImplemented("toward") }
 function hueDistance(a, b) { notImplemented("hueDistance") }
 // The OKLCH hue of a hex colour.
 function hue(hex) { notImplemented("hue") }
-// OKLab interpolation between two "#rrggbb" colours, t in 0..1 (Tokens' theme crossfade).
-function mix(a, b, t) { notImplemented("mix") }

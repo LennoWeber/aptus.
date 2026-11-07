@@ -57,7 +57,7 @@ Singleton {
     function reload(): void { throw new Error("Hypr.reload: not implemented"); }
 
     // Private state.
-    // lastIpcObject is filled by refreshToplevels; window events make it stale.
+    // Hyprland event names after which lastIpcObject is stale (refreshToplevels needed).
     readonly property var _windowEvents: []
     // Quickshell 0.3.2: two refresh*() calls in the same JS turn leave every list empty, and
     // refreshMonitors() clears focusedMonitor until the next refreshWorkspaces(). So refreshes are

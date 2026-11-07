@@ -17,13 +17,6 @@
 //   signature missing → introProgress 0 → 1 (M-01), then write the flag.
 import QtQuick
 import Quickshell
-import Quickshell.Io
-import qs.core
-import qs.services
-import qs.registry
-import qs.windows
-import qs.surfaces.lock
-import qs.surfaces.settings
 
 ShellRoot {
     id: root

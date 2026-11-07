@@ -1,7 +1,7 @@
 pragma Singleton
 // Every visual token of 03-visual-language, resolved for the current mode, accent, contrast and
 // glass (08-theming §3). The single source is theme/tokens.json; no component types a literal.
-// Colour properties animate together over Motion's theme duration (M-30).
+// Colour properties crossfade together over the theme duration (M-30, `_themeMs`).
 import QtQuick
 import Quickshell
 
@@ -167,7 +167,7 @@ Singleton {
     readonly property var surfaces: ({})
 
     // Resolve the palette (08 §3, core/js/resolve.js) from tokens, settings and the wallpaper,
-    // and apply it (the colour properties animate over Motion.ambientTheme, M-30).
+    // and apply it (the colour properties crossfade over `_themeMs`, M-30).
     function resolveNow(): void { throw new Error("Tokens.resolveNow: not implemented"); }
     // Apply a resolution object (resolve.js result, or current/shell.json written outside).
     function apply(resolved: var): void { throw new Error("Tokens.apply: not implemented"); }
@@ -197,7 +197,7 @@ Singleton {
     function _colours(r: var): var { throw new Error("Tokens._colours: not implemented"); }
     // role → color as shown right now (mid-crossfade included), the start of the next fade.
     function _shown(): var { throw new Error("Tokens._shown: not implemented"); }
-    // Linear mix of two colours (crossfade frames).
+    // Linear RGB mix of two colours (crossfade frames; cheap enough for 23 roles at 60 fps).
     function _mix(a: color, b: color, t: real): color { throw new Error("Tokens._mix: not implemented"); }
     // A role's colour at the crossfade progress _t (each readonly role binds to it).
     function _blend(role: string): color { throw new Error("Tokens._blend: not implemented"); }

@@ -67,5 +67,9 @@ Singleton {
     property string _v1Text: ""
 
     // Private helpers.
+    // Commit one change: `value` becomes the override of `key` (removed when it equals the
+    // default, which is how reset() goes through here), `next` the complete validated value map
+    // (derived keys included); marks the key pending, emits settingChanged per changed key, starts
+    // the save debounce.
     function _store(key: string, value: var, next: var): void { throw new Error("Config._store: not implemented"); }
 }

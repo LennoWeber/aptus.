@@ -15,6 +15,10 @@ Singleton {
     property bool lidClosed: false
 
     // Lock now (Super+L, IPC, idle, lid).
+    // The lock screen exists (S6 binds it); until then `session lock` answers an error so Super+L
+    // falls back to hyprlock.
+    readonly property bool canLock: false
+
     function lock(): void { throw new Error("Session.lock: not implemented"); }
     // The graceful logout of surfaces/session.md §3, without the countdown when called from a key.
     function logout(): void { throw new Error("Session.logout: not implemented"); }
@@ -23,6 +27,4 @@ Singleton {
     // Only while power.allowSuspend.
     function suspend(): void { throw new Error("Session.suspend: not implemented"); }
 
-    // The lock screen exists (S6); until then `session lock` answers an error so Super+L falls back.
-    property bool canLock: false
 }
