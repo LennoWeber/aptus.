@@ -1,3 +1,0 @@
-module qs.theme
-singleton Tokens 1.0 Tokens.qml
-singleton IslandLook 1.0 IslandLook.qml

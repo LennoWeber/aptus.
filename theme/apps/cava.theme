@@ -1,8 +1,0 @@
-# aptus-theme-apps: generated from theme/tokens.json, do not edit (run aptus-theme-apps again)
-[color]
-background = '{{bg}}'
-foreground = '{{ink}}'
-gradient = 1
-gradient_color_1 = '{{cava_0}}'
-gradient_color_2 = '{{cava_1}}'
-gradient_color_3 = '{{cava_2}}'

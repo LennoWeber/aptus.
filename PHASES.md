@@ -51,3 +51,103 @@ sees instances on the caller's `WAYLAND_DISPLAY`.
 
 **Checked by:** each probe's pass condition from 11-roadmap §1, measured as listed; P-03 also
 checked negatively (an unknown field is reported, so silence means acceptance).
+
+**Slip:** one `hyprctl notify` test was sent without `-i` and showed a 2-second red "x"
+notification in Lenno's real session. No other effect. Rule since then: every `hyprctl` in
+development carries `-i <nested signature>`; the e2e harness enforces it (07 §13).
+
+---
+
+## S1 · Foundation
+
+### Phase 1 · plan (2026-11-07)
+
+**Goal.** Everything later stages build on, so that S2–S10 only add or fill files in their own
+folders: v1 removal; Python `paths`/`atomic`/`log`/`hypr`; the CLI skeleton; `aptus-session`
+(scope-only) and `aptus-supervise`; `install.sh` (non-destructive, diff + approval); the complete
+`hypr/` Lua (09); `theme/tokens.json` with every token of 03 and 04; `Tokens`, `Motion`, `Config`
+(full schema of 10), `Paths`, `Log`, `Format`; the `SurfaceManager` with every surface id and the
+transition rules of 07 §5; every `GlobalShortcut` and `IpcHandler` of 07 §7 (stubs routed to
+service/surface stubs); the component library of 03 §9; `MonitorShell` with the wallpaper,
+reserve and shell layers; wallpaper drawing; the frame (one shape with every drawer's bulge) and a
+static bar; the test harness (pytest, qmltestrunner, qmllint with 0 warnings, nested Hyprland
+with `APTUS_TEST=1`).
+
+**Architecture decisions** (not spelled out in the spec; they make parallel stages possible):
+
+1. **Logic in pure JS, state in QML.** Transition rules, config validation, colour maths, format
+   helpers and the frame path live in `.pragma library` files under `shell/core/js/`; the
+   singletons are thin wrappers. qmltestrunner tests the JS directly (Quickshell's `Singleton`
+   needs `qs`).
+2. **Stub files for every stage-owned root type.** `MonitorShell` and `shell.qml` instantiate
+   `Bar`, `Notch`, `Deck`, `Overview`, `CaptureOverlay`, `RecFrame`, `Lock`, `SettingsWindow` from
+   their stage folders; `NotchModes.qml` maps notch-mode ids to `Spotlight`, `Switcher`, `Today`,
+   `SessionSheet`, `PolkitPrompt`, `Gallery`, `Jot`, `Keys`, `FocusPicker`. S1 writes each as a
+   stub with the final interface; the owning stage fills it and never needs to touch
+   `MonitorShell`.
+3. **One frame shape.** `Frame` draws the frame band and every open drawer's bulge as one path
+   (the content area's outline gets a dent per bulge), so drawers are seamless with any alpha
+   (glass). Drawers publish a `BulgeSpec` (x, width, height, cove, dock: `top` | `topLeft` |
+   `topRight` | `topFull`); the path maths is `core/js/bulge.js`. Fullscreen slide-out (M-31) and
+   the frame half of the intro (M-01) are in `Frame`, so S3 never edits it.
+4. **Notch-mode contract** (`components/NotchMode.qml`): `monitorName`, `args`, `active`
+   (false while leaving), `bulgeWidth`/`bulgeHeight` (what the notch springs to),
+   `takesKeyboard`, `back(): bool` (Esc ladder: true when it stepped back internally),
+   `closeRequested()`. Drawers (`Deck`, `Overview`) have the same `back()` and a `bulge` spec.
+5. **Esc ladder** = `SurfaceManager.back()`: close the menu; else call the top surface's
+   registered back function; when it returns false, close the surface.
+6. **Services as stubs with their action methods.** `services/qmldir` lists every service of
+   07 §6 plus `Switcher`, `Progress` (notch §11); each stub already has the methods the shortcut
+   and IPC registries call (`Audio.stepVolume`, `Media.toggle`, `Focus.toggle`, …), logging
+   "not available yet" until its stage fills it. `Hypr` (monitors, focused monitor, active
+   window, fullscreen per monitor, toplevel geometry for the away catcher) and `Wallpaper`
+   (resolution and drawing; gallery, rotation, analysis are S10) are implemented in S1 because
+   the manager and the wallpaper layer need them.
+7. **Config**: `Config.get(key)` reads a `revision` counter so bindings re-evaluate on change;
+   `set/reset`, validation from the schema (types, ranges, enums, cross-key rules of 10), atomic
+   debounced write of non-defaults with `"v": 2`, unknown keys kept, a v1 file (no `"v"`) is never
+   read and is backed up to `settings.json.v1` before the first write.
+8. **Test mode**: `APTUS_TEST=1` derives every XDG path from `HOME` (inherited `XDG_*` outside
+   `HOME` are ignored), runtime flags go to `$HOME/.aptus-run/`, logs to `$HOME/aptus-*.log`,
+   `aptus-lease`/units/env import refuse or skip, and `hypr.py` refuses to talk to the instance in
+   `APTUS_REAL_HYPRLAND_SIGNATURE` (set by the harness from the parent session).
+9. **Locking never fails open**: the `Super+L` command becomes
+   `aptus msg session lock || hyprlock -c <aptus conf> || hyprlock` (the aptus conf only exists
+   after S2's first render); 09 §7 is updated in phase 7.
+
+**Files** (new unless noted):
+
+| Area | Files |
+|---|---|
+| v1 removal | delete `shell/ greeter/ system/ packages/ theme/ config/ hypr/ docs/ HANDOFF.md aptus-lint.* bin/*` (v1) |
+| Python | `lib/aptus/{__init__,paths,atomic,log,hypr,cli,msg,session,supervise}.py`, `lib/aptus/doctor/{__init__,config,deps}.py`, `lib/aptus/install/{__init__,hyprlua}.py` |
+| bin | `aptus`, `aptus-session`, `aptus-supervise` (thin launchers into `lib/aptus`) |
+| hypr | `hypr/{init,env,look,motion,rules,binds}.lua` (09, complete) |
+| theme | `theme/tokens.json` |
+| shell core | `shell/shell.qml`, `shell/core/{qmldir,Tokens,Motion,Config,Paths,Log,Format,SurfaceManager,MonitorState,Shortcuts,Ipc,NotchModes}.qml`, `shell/core/js/{colour,rules,config,format,bulge,sun}.js` |
+| components | `shell/components/{qmldir,Bulge,BulgeSpec,NotchMode,Label,Glyph,Wash,FocusRing,Button,IconButton,Tile,Switch,Slider,Segmented,Field,Keycap,Ring,Level,Row,List,Menu,MenuHost,Tooltip,Badge,EmptyState,AppIcon,Thumb,Scrim}.qml` |
+| services | `shell/services/qmldir` + one file per service (stubs; `Hypr`, `Wallpaper` implemented) |
+| surfaces | `frame/Frame.qml`, `wallpaper/WallpaperLayer.qml`, `bar/Bar.qml` (static skeleton), stubs: `notch/Notch.qml`, `deck/Deck.qml`, `overview/Overview.qml`, `capture/{CaptureOverlay,RecFrame}.qml`, `lock/Lock.qml`, `settings/SettingsWindow.qml`, `spotlight/Spotlight.qml`, `switcher/Switcher.qml`, `today/Today.qml`, `session/SessionSheet.qml`, `polkit/PolkitPrompt.qml`, `gallery/Gallery.qml`, `jot/Jot.qml`, `keys/Keys.qml`, `focus/FocusPicker.qml`, each folder with its `qmldir` |
+| windows | `shell/windows/MonitorShell.qml` |
+| config | `shell/config/settings-schema.json` |
+| assets | `shell/assets/fonts/MaterialSymbolsRounded.ttf` + `LICENSE` (Apache 2.0, from google/material-design-icons) |
+| install | `install.sh` (rewritten) |
+| tests | `tests/run` (all), `tests/lint.sh` (qmllint), `tests/unit/test_*.py`, `tests/qml/tst_*.qml`, `tests/e2e/{nested.py,vpointer.py,hyprland.lua,test_s1.py}` |
+| docs | `README.md`, `CLAUDE.md` (v2 status lines), `.gitignore` |
+
+**Risks.** (a) The frame path rebuilt per animation frame could cost GPU time on the UHD 630:
+measured in phase 7 (frame time in the nested session), fallback is a separate shape per bulge
+overlapping the bar by 1 px (only visible with glass). (b) Quickshell IPC with optional arguments:
+checked in phase 5; `aptus msg` pads missing arguments with `""` from `qs ipc show`. (c) `qs ipc`
+exit codes when no shell runs decide whether the lock fallback fires: checked in phase 5.
+(d) qmllint and `qs.*` imports: the v1 approach (a temporary `qs → shell` link passed with `-I`)
+is reused. (e) `pytest` is not installed (needs root, asked); until then tests run in a scratch
+venv, and the suite is plain pytest.
+
+**Checks (end of S1).** pytest green; qmltestrunner green; qmllint 0 warnings; nested session:
+the shell starts through `aptus-session start` → `aptus-supervise` → `qs`, shows wallpaper, frame
+and static bar on the nested output (grim screenshot reviewed), `hyprctl globalshortcuts` lists
+every name of 07 §7, `aptus msg shell state` returns JSON, `aptus msg surface open spotlight` /
+`back` change the state as 07 §5 says, the reserve layer reserves 32 px, the mask lets clicks
+through, `hyprctl configerrors` is empty, `install.sh` in a temporary `HOME` shows the
+`hyprland.lua` diff and installs only after "y".
