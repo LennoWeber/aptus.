@@ -1,2 +1,3 @@
+# TODO(phase): drop v1's aptus-lint.txt; add __pycache__/ and .pytest_cache/.
 aptus-lint.txt
 *.tar.gz

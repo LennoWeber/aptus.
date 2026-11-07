@@ -27,6 +27,8 @@ def v1_leftovers(paths: Paths) -> list[Path]:
     raise NotImplementedError
 
 
+# TODO(phase): ~/.config/hypr is a stow link into ~/dotfiles: plan() shows the resolved path of the
+#   aptus link (an untracked file in the dotfiles repo) and asks for it as its own group.
 def plan(paths: Paths) -> list[Action]:
     """Directories (state, scope mirrors, ~/.local/bin), links (~/.config/hypr/aptus → hypr/,
     ~/.local/bin/aptus* → bin/), v1 leftovers to move, the hyprland.lua edit."""

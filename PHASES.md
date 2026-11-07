@@ -334,7 +334,7 @@ classifies the output, and treats an empty answer as an error.
 
 ### Phase 4 · TODO markers (2026-11-07)
 
-**Done** (comments only, 108 `TODO(phase)` markers in 85 files; no code):
+**Done** (comments only, 110 `TODO(phase)` markers outside PHASES.md; no code):
 - Wiring places that exist only as comment files so far: `shell/shell.qml` (watchFiles, Bindings
   into core, monitor sync, MonitorShell per screen with the registry tables, Shortcuts/Ipc/Lock/
   SettingsWindow, start order with the locked marker and the intro flag), `hypr/{env,look,motion,
@@ -350,5 +350,45 @@ classifies the output, and treats an empty answer as an error.
   `WallpaperLayer`, `hypr/init.lua` and `hypr/binds.lua`.
 - Docs: `README.md` (v2 rewrite) and `CLAUDE.md` (status lines).
 
-**Nothing missing from phases 2–3 was found while marking.** (The review fixes of `d09b302`
-already covered the gaps.)
+**Missing from phases 2–3 (reported, corrected after the review):** phase 4 created 15
+comment-only files that phases 2–3 should have laid down as placeholders: `shell/shell.qml` (the
+root type), `bin/{aptus,aptus-session,aptus-supervise}`, `hypr/{env,look,motion,rules}.lua`,
+`install.sh`, `tests/run`, `tests/lint.sh`, `tests/e2e/hyprland.lua`, `.qmllint.ini`.
+Marker convention: in new Python, JS and test files the placeholder body with its docstring is the
+marker (each `raise NotImplementedError` / `notImplemented(…)` / `fail("not implemented")` is a place
+to fill); `TODO(phase)` marks wiring that has no placeholder body.
+
+### Review of phase 4 (fresh reviewer, diff `d09b302..c64013b`)
+
+**Fixed (markers and docs only):**
+- `Frame`: `barHeight` (not the renamed `top`) and `innerRadius`; M-31 runs on catalogue
+  `fullscreen.out/in` (180/240), not the surface timings.
+- M-31 fully marked: `Frame.hidden ← monitor.fullscreen`, the 400 ms hot-edge push sets `revealed`,
+  the mask while revealed, the Bar follows the frame's hide.
+- `shell.qml`: start-order steps 2 (layers start hidden) and 3 (eager Hypr, Notifications, Idle,
+  Session, Wallpaper).
+- `Tokens`: textScale → barHeight/type, `frame.edge` → frameEdge.
+- `Wallpaper`: the resolution chain of wallpaper.md §3 (`monitors` → `byMode` → `all` → newest
+  image → ground), filling `images`; `WallpaperLayer`: tile, focus, sourceSize × scale, async.
+- `MonitorShell`: `screen: modelData`, transparent layers, introProgress/notchWidth/fill/focus
+  wiring, away catcher calls `close(monitor.top, name)`; long TODOs split to two lines (also `Hypr`,
+  `Ipc`, `install.sh`).
+- `Shortcuts`: overview-open/-close open/close; super-tap and keys-peek honour their settings.
+- `Format`: QML `import "js/format.js" as F`. `binds.lua`: TODOs at `G`, `overrides`, `bind`.
+- `install.sh`: `python3 -s` with PYTHONPATH (`-I` ignores it); APTUS_TEST refuses when HOME is
+  the passwd home; mode 755 noted on every launcher and script.
+- `supervise.py`: qs output → `systemd-cat -t aptus-shell`, under APTUS_TEST `$HOME/aptus-shell.log`;
+  single-instance flock.
+- e2e start path: `nested.py` fills the temp HOME (bin links, config copy with the `aptus` link in
+  `<tmp>/cfg`); the `hyprland.start` hook starts the shell, `start_shell` only waits.
+- `install`: `~/.config/hypr` is a stow link into `~/dotfiles`, so the `aptus` link would be an
+  untracked file there; the plan shows the resolved path and asks for it as its own group.
+- `test_install.py`: an install.sh wrapper test marked. `.gitignore` cleanup marked.
+- Spec: 07 §3 names the intro flag `intro.<signature>` as the code does; a stray blank line in 09 §7
+  removed.
+
+**Gaps for phases 2–3 (filled after the phase-5 probe, with the probe's gaps):**
+- Fullscreen never reaches core: `SurfaceManager` needs a `fullscreenMonitors` input (bound from
+  `Hypr.fullscreenMonitors` in shell.qml, applied through `rules.setFullscreen`).
+- `Session.canLock` (false in the stub) so Ipc's `session.lock` answers without S6 editing Ipc.
+- `Bar.hide` (the frame's slide-out amount) for M-31.

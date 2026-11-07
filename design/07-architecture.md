@@ -117,8 +117,8 @@ the shell's first frame shows the frame colour, not black.
 3. Services start lazily on first use, except `Hypr`, `Notifications` (must own the bus name
    before apps send), `Shortcuts`, `Ipc`, `Idle`, `Session` (lock state), `Wallpaper`.
 4. If `~/.local/state/aptus/locked` exists: lock immediately (crash restore), no intro.
-5. Otherwise, the first start of a Hyprland session (`intro.played` flag in
-   `$XDG_RUNTIME_DIR/aptus/` for this Hyprland signature is missing) plays M-01; restarts don't.
+5. Otherwise, the first start of a Hyprland session (the flag `intro.<HYPRLAND_INSTANCE_SIGNATURE>`
+   in `$XDG_RUNTIME_DIR/aptus/` is missing) plays M-01; restarts don't.
 
 ## 4. Windows per monitor
 

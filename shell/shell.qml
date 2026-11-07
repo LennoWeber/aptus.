@@ -8,5 +8,9 @@
 //   activities: Activities.activities; cards: Activities.cards }.
 // TODO(phase): one Shortcuts {} and one Ipc {}; Lock {}; a Loader for SettingsWindow while
 //   SurfaceManager.settingsOpen.
-// TODO(phase): start order of 07 §3: locked marker → lock at once without intro; intro flag for
-//   this Hyprland signature missing → introProgress 0 → 1 (M-01), then write the flag.
+// TODO(phase): start order of 07 §3 step 2: every MonitorShell's layers start hidden until Config
+//   and Tokens have resolved (no unstyled first frame).
+// TODO(phase): step 3: touch Hypr, Notifications (owns the bus name before apps send), Idle, Session
+//   and Wallpaper in Component.onCompleted (singletons are lazy); Shortcuts and Ipc are objects here.
+// TODO(phase): steps 4–5: locked marker → lock at once without intro; intro flag for this Hyprland
+//   signature missing → introProgress 0 → 1 (M-01), then write the flag.

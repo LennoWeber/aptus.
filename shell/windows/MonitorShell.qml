@@ -13,17 +13,24 @@ Scope {
     id: root
 
     // TODO(phase): monitor ← SurfaceManager.monitorState(name); keyboard ← monitor.keyboard.
-    // TODO(phase): WallpaperLayer { monitorName; source: Wallpaper.pathFor(name) } (Background, aptus-wallpaper).
+    // TODO(phase): every PanelWindow below: screen: modelData (multi-monitor); colour "transparent"
+    //   on aptus-reserve and aptus-shell (the QsWindow default would show through glass).
+    // TODO(phase): WallpaperLayer { monitorName; source: Wallpaper.pathFor(name); fill ← Config
+    //   wallpaper.fill; focus ← Config wallpaper.focus } (Background, aptus-wallpaper).
     // TODO(phase): aptus-reserve: PanelWindow on Top, anchored top/left/right, height and exclusiveZone
     //   = Tokens.barHeight, empty mask, no keyboard (07 §4).
     // TODO(phase): aptus-shell: PanelWindow on Overlay, all edges, ExclusionMode.Ignore, keyboardFocus
-    //   Exclusive ↔ None from `keyboard`; mask = bar + notch + open drawers, whole monitor while interactive
-    //   (away catcher), a 2 px top strip under a fullscreen window (P-11).
-    // TODO(phase): inside it, bottom to top: Frame { bulges: notch, deck, overview }, Bar, Notch
-    //   { modeComponents: notchModes; activityComponents: activities; cardComponents: cards },
-    //   Deck, Overview { pillRects: bar.pillRects }, MenuHost, CaptureOverlay (top, exclusive).
-    // TODO(phase): away catcher: a click outside the open surface → SurfaceManager.back-to-close and
-    //   Hypr.focusWindow(Hypr.windowAt(...)) so the click reaches the window (05 §3).
+    //   Exclusive ↔ None from `keyboard`.
+    // TODO(phase): aptus-shell mask: bar + notch + open drawers; whole monitor while interactive (away
+    //   catcher); under a fullscreen window a 2 px top strip (P-11), the bar while revealed.
+    // TODO(phase): inside it, bottom to top: Frame { bulges: notch, deck, overview; introProgress },
+    //   Bar { introProgress; notchWidth ← notch.restWidth }, Notch { modeComponents: notchModes;
+    // TODO(phase): …activityComponents: activities; cardComponents: cards }, Deck, Overview
+    //   { pillRects: bar.pillRects }, MenuHost, CaptureOverlay (top, exclusive).
+    // TODO(phase): M-31: Frame.hidden ← monitor.fullscreen; a 400 ms push against the top strip
+    //   (catalogue fullscreen.hotEdgePush) sets Frame.revealed; leaving the bar clears it.
+    // TODO(phase): away catcher: a click outside the open surface → SurfaceManager.close(monitor.top,
+    //   name), then Hypr.focusWindow(Hypr.windowAt(…)) so the click reaches the window (05 §3).
     // TODO(phase): RecFrame { monitorName } (S9 fills it).
 
     // The screen (Variants model data).

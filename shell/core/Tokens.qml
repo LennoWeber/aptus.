@@ -10,6 +10,8 @@ Singleton {
 
     // TODO(phase): FileView on Paths.tokensFile (blockLoading) → raw; every geometry/type/component
     //   property reads raw instead of its literal default.
+    // TODO(phase): textScale ← Config appearance.textScale; barHeight from raw type.textScale.barHeight
+    //   (32/35/40) and `type` scaled by it; frameEdge ← Config frame.edge (the reserve zone follows).
     // TODO(phase): resolveNow() on Config appearance.* changes and on wallpaperHue/Lightness changes;
     //   ColorAnimation Behaviors over Motion.theme on every colour (M-30).
     // TODO(phase): accents/neutrals from raw.accents + accentOrder for the current mode; wallpaperChroma

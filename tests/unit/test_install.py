@@ -21,3 +21,7 @@ def test_nothing_without_approval() -> None:
 
 def test_uninstall_plan() -> None:
     raise NotImplementedError
+
+
+# TODO(phase): install.sh wrapper: APTUS_TEST=1, temp HOME, answer "n" → nothing changed; with the
+#   passwd home under APTUS_TEST → refuses.

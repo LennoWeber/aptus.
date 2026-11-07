@@ -247,7 +247,6 @@ the aptus block does not depend on.
 
 ### Mechanism
 
-
 ```lua
 local home = os.getenv("HOME")
 local G = function(name) return hl.dsp.global("aptus:" .. name) end

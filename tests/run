@@ -1,3 +1,3 @@
 # tests/run: every test level of 07 §13 that runs without hands.
-# TODO(phase): pytest tests/unit (system python3, or $APTUS_PYTEST), qmltestrunner on tests/qml
+# TODO(phase): (mode 755) pytest tests/unit (system python3, or $APTUS_PYTEST), qmltestrunner on tests/qml
 #   (QT_QPA_PLATFORM=offscreen), tests/lint.sh; `tests/run e2e` adds pytest tests/e2e (nested Hyprland).

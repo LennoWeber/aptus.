@@ -12,8 +12,9 @@ Scope {
     id: root
 
     // TODO(phase): each function forwards to SurfaceManager / services and answers "ok", JSON or
-    //   "error: …"; never an empty answer (aptus msg treats empty output as a failure). session.lock
-    //   answers "error: no lock screen yet" until Session can lock (S6), so Super+L falls back.
+    //   "error: …"; never an empty answer (aptus msg treats empty output as a failure).
+    // TODO(phase): session.lock answers "error: no lock screen yet" while the lock screen is missing
+    //   (S6 fills it), so Super+L falls back to hyprlock.
 
     // `aptus msg shell state` also lists service summaries; services add theirs here by name.
     function serviceSummary(): var { throw new Error("Ipc.serviceSummary: not implemented"); }

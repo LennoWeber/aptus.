@@ -7,7 +7,7 @@ import Quickshell
 Singleton {
     id: root
 
-    // TODO(phase): .import "js/format.js" and forward each wrapper (ago uses Date.now()).
+    // TODO(phase): `import "js/format.js" as F` and forward each wrapper (ago uses Date.now()).
 
     // Wrappers of core/js/format.js (03 §4).
     function time(date: var): string { throw new Error("Format.time: not implemented"); }

@@ -1,3 +1,3 @@
 # aptus-session: thin launcher into lib/aptus (07 §2).
-# TODO(phase): #!/usr/bin/python3 -I; put <repo>/lib (from this file's real path) on sys.path;
+# TODO(phase): #!/usr/bin/python3 -I (mode 755); put <repo>/lib (from this file's real path) on sys.path;
 #   sys.exit(aptus.session.main(sys.argv[1:])).

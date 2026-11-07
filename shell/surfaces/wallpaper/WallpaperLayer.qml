@@ -9,7 +9,9 @@ PanelWindow {
     id: root
 
     // TODO(phase): Background layer, namespace aptus-wallpaper, all edges, exclusiveZone -1, no input
-    //   (empty mask); two Images (current, next) with the M-28 crossfade; fill modes fill/fit/center; colour ground under it.
+    //   (empty mask); colour ground under two Images (current, next) with the M-28 crossfade.
+    // TODO(phase): fill modes fill/fit/center/tile and focus; sourceSize = logical size × scale,
+    //   asynchronous decode (the next image fades in only once ready).
 
     required property string monitorName
     // The image being shown and the one decoding behind it (M-28 crossfade).

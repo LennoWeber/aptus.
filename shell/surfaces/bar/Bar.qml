@@ -8,6 +8,7 @@ Item {
 
     // TODO(phase): static skeleton: band height Tokens.barHeight, left/centre/right zones with
     //   padBar and gapBarZone, the centre kept clear for notchWidth; slides down with introProgress.
+    // TODO(phase): M-31: slides up with the frame's hide under a fullscreen window (Frame.hide).
 
     property MonitorState monitor
     property real introProgress: 1

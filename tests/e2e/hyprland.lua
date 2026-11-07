@@ -1,3 +1,3 @@
 -- The nested Hyprland's config (07 §13).
--- TODO(phase): one output (preferred), kb_layout de, then require("aptus.init") with this
---   directory's aptus → <repo>/hypr link made by nested.py (HOME is the temp home).
+-- TODO(phase): one output (preferred), kb_layout de, then require("aptus.init"). nested.py copies
+--   this file to <tmp>/cfg/hyprland.lua beside an aptus → <repo>/hypr link (nothing in the repo).

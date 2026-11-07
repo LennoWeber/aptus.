@@ -20,6 +20,9 @@ class CrashLog:
     times: list[float]                            # monotonic times of recent crashes
 
 
+# TODO(phase): qs stdout/stderr → `systemd-cat -t aptus-shell` (07 §10); under APTUS_TEST →
+#   $HOME/aptus-shell.log instead, so a test shell never writes to the journal (decision 8).
+# TODO(phase): main() takes an flock on <runtime>/supervise.lock; a second supervisor exits 0.
 def shell_command(paths: Paths) -> list[str]:
     """qs -p <repo>/shell --no-duplicate."""
     raise NotImplementedError

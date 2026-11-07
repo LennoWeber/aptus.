@@ -7,8 +7,10 @@ import Quickshell
 Singleton {
     id: root
 
-    // TODO(phase): FileView on Paths.wallpaperState; pathFor() = preview › per-monitor path › default
-    //   (surfaces/wallpaper.md §1); set() writes wallpaper.json atomically.
+    // TODO(phase): FileView on Paths.wallpaperState; pathFor() = preview[name] › monitors[name] ›
+    //   byMode[Tokens.mode] › all › images[0] › "" (ground) (wallpaper.md §3).
+    // TODO(phase): images ← wallpaper.dir listed newest first (FolderListModel or `find -printf`),
+    //   re-read on change; set() writes wallpaper.json atomically.
 
     // the parsed wallpaper.json
     property var state: ({})
@@ -24,7 +26,8 @@ Singleton {
     // mean OKLCH chroma of the image, -1 unknown (S10; wallpaper.md §5)
     property real chroma: -1
 
-    // The image a monitor shows: the gallery preview, else wallpaper.json's per-monitor path, else the default, else "" (surfaces/wallpaper.md §1).
+    // The image a monitor shows (wallpaper.md §3): the gallery preview, else monitors[name], byMode,
+    // all, the newest image in wallpaper.dir, else "" (plain ground).
     function pathFor(monitor: string): string { throw new Error("Wallpaper.pathFor: not implemented"); }
     // Set the wallpaper of one monitor, or of every monitor when monitor is "" (IPC `wallpaper set`).
     function set(path: string, monitor: var): void { throw new Error("Wallpaper.set: not implemented"); }

@@ -13,8 +13,10 @@ Scope {
 
     // TODO(phase): Variants over `names` → GlobalShortcut { appid: "aptus"; name } with onPressed /
     //   onReleased → pressed()/released() (P-01: a Repeater needs an Item parent, Variants does not).
-    // TODO(phase): routing table of 07 §7: surfaces → SurfaceManager.toggle; super-tap ends a peek or
-    //   toggles Spotlight; keys-peek opens keysPeek (spotlight.superHoldKeys); the rest → service methods.
+    // TODO(phase): routing of 07 §7: surfaces → SurfaceManager.toggle, overview-open/-close → open/close;
+    //   the rest → service methods.
+    // TODO(phase): super-tap ends a shown peek, else toggles Spotlight only while spotlight.superTap;
+    //   keys-peek opens keysPeek only while spotlight.superHoldKeys.
 
     // The names, in the order of 07 §7.
     readonly property var names: [

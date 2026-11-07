@@ -40,8 +40,11 @@ class Nested:
         bus and the temporary HOME."""
         raise NotImplementedError
 
+    # TODO(phase): start() fills <tmp>/home first: .local/bin/aptus, aptus-session, aptus-supervise →
+    #   <repo>/bin links; tests/e2e/hyprland.lua copied to <tmp>/cfg with an aptus → <repo>/hypr link.
     def start_shell(self, timeout: float = 10.0) -> None:
-        """aptus-session start inside the nested session; wait until `shell state` answers."""
+        """Wait until the shell answers `shell state`. The nested session's hyprland.start hook
+        (hypr/init.lua) already ran <tmp>/home/.local/bin/aptus-session, so this starts nothing."""
         raise NotImplementedError
 
     def shortcut(self, name: str) -> None:

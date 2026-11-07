@@ -8,9 +8,9 @@ Singleton {
     id: root
 
     // TODO(phase): bind to Quickshell.Hyprland: monitors, focusedMonitor, activeToplevel, workspaces
-    //   (hasFullscreen per monitor's active workspace), toplevels (lastIpcObject after refreshToplevels);
-    //   rawEvent for submap and fullscreen; dispatch() through Hyprland.dispatch (Lua expressions);
-    //   the window actions are dispatches (S1); workspaces/urgent/special are S3's.
+    //   (hasFullscreen per monitor's active workspace), toplevels (lastIpcObject after refreshToplevels).
+    // TODO(phase): rawEvent for submap and fullscreen; dispatch() through Hyprland.dispatch (Lua
+    //   expressions); the window actions are dispatches (S1); workspaces/urgent/special are S3's.
 
     // Hyprland monitors: [{ name, x, y, width, height, scale, focused, activeWorkspace }]
     property var monitors: []
