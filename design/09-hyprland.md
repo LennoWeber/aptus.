@@ -262,14 +262,19 @@ do
 end
 
 -- Description format read by the Keys service: "aptus:<id> | <Group> | <Description>[ | hidden]"
+-- A chord is unbound only the first time aptus binds it in this load: `SUPER + Super_L` carries
+-- two aptus binds (tap on release, hold on long press), and unbinding before the second would
+-- delete the first (probe P-03).
+local unbound = {}
 local function bind(id, chord, action, group, desc, opts)
   local c = overrides[id]
   if c == false then return end
   c = c or chord
-  hl.unbind(c)
-  opts = opts or {}
-  opts.description = "aptus:" .. id .. " | " .. group .. " | " .. desc
-  hl.bind(c, action, opts)
+  if not unbound[c] then hl.unbind(c); unbound[c] = true end
+  local o = {}
+  for k, v in pairs(opts or {}) do o[k] = v end      -- L and R are shared; never mutate them
+  o.description = "aptus:" .. id .. " | " .. group .. " | " .. desc
+  hl.bind(c, action, o)
 end
 ```
 
