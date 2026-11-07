@@ -12,13 +12,22 @@ def parser() -> argparse.ArgumentParser:
     raise NotImplementedError
 
 
-def cmd_logs(follow: bool, component: str | None) -> int:
-    """journalctl --user -t aptus-shell -t aptus-session -u 'aptus-*' [-f]."""
+def journal_queries(component: str | None) -> list[list[str]]:
+    """The journalctl argument lists for `aptus logs`: journalctl ANDs -t with -u, so the tags
+    (aptus-shell, aptus-session, aptus-supervise) and the units (aptus-*) are two queries, merged
+    by timestamp (-o json). `component` narrows to one tag or unit."""
     raise NotImplementedError
 
 
-def cmd_dev(argv: Sequence[str]) -> int:
-    """Run the shell in the foreground with APTUS_DEV=1 (live reload, P-23)."""
+def cmd_logs(follow: bool, component: str | None) -> int:
+    """Print the merged journal (07 §11); with follow, both queries stream (-f) and lines are
+    printed as they arrive."""
+    raise NotImplementedError
+
+
+def cmd_dev(on: bool) -> int:
+    """`aptus dev [on|off]`: create/remove <runtime>/dev and restart the supervised shell; the
+    supervisor starts qs with APTUS_DEV=1 while the flag exists (live reload, P-23)."""
     raise NotImplementedError
 
 

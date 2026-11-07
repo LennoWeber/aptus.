@@ -15,12 +15,17 @@ QtObject {
     property int notchSerial: 0
 
     // Passive content waiting for or shown by the notch:
-    // [{ id: int, kind: "toast" | "osd" | "event", payload: var, priority: int, born: ms }]
+    // [{ id: int, kind: "toast" | "osd" | "event", key: string, payload: var, priority: int, born: ms }]
+    // `key` replaces an entry of the same key (one OSD per kind, a notification's replaces_id).
+    // Payload conventions: toast { notification } or { card: "capture" | "colour" | "stillOpen",
+    // …card fields, flyFrom: {x,y,width,height} (M-23) }; osd { kind, value, label, device };
+    // event { text, glyph }.
     property var passive: []
-    // The arbitration result of notch.md §9 (one entry of `passive`), or null.
-    property var passiveTop: null
+    // The arbitration result of notch.md §9: { kind: "osd" | "toast" | "event" | "card" | "rest" |
+    // "hidden", entry } (entry: a passive entry, or for "card" the pinned activity id).
+    property var passiveTop: ({ kind: "rest", entry: null })
 
-    // The Deck and its page stack (["main"] or ["main", "wifi"], …).
+    // The Deck and its page stack, owned by SurfaceManager: open("deck", { page }) pushes, back() pops (["main"] or ["main", "wifi"], …).
     property bool deck: false
     property var deckPages: ["main"]
     property var deckArgs: ({})
@@ -43,8 +48,11 @@ QtObject {
     // True for one transition that must not animate (monitor removed, crash restore).
     property bool instant: false
 
-    // Derived: an interactive surface is open (keyboard exclusive + away catcher).
+    // Derived: an interactive surface is open (away catcher, toasts queue). Cards and keysPeek are
+    // not interactive (07 §5).
     readonly property bool interactive: false
+    // Derived: the shell layer takes the keyboard (interactive, or a card opened by click).
+    readonly property bool keyboard: false
     // Derived: the open surface that Esc/back acts on first ("" when none).
     readonly property string top: ""
 }

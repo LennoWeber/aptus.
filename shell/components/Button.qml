@@ -9,7 +9,6 @@ Item {
     // "primary" | "plain" | "quiet" | "risk"
     property string variant: "plain"
     property string glyph: ""
-    property bool enabled: true
     property string tooltip: ""
     // Show the focus ring (set by the surface after keyboard navigation).
     property bool keyboardFocus: false

@@ -7,6 +7,7 @@ import Quickshell
 Singleton {
     id: root
 
+    // [{ uid, title, start: Date, end: Date, allDay: bool, calendar, colour, location, link, description }]
     property var events: []
     // the next event today
     property var next: null

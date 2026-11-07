@@ -14,4 +14,6 @@ Singleton {
     property var sunrise: null
     // Date of today's sunset
     property var sunset: null
+    function setActive(on: bool): void { throw new Error("NightLight.setActive: not implemented"); }
+    function setTemperature(kelvin: int): void { throw new Error("NightLight.setTemperature: not implemented"); }
 }

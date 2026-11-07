@@ -4,13 +4,13 @@ pragma Singleton
 pragma ComponentBehavior: Bound
 import QtQuick
 import Quickshell
+import "../core/js/rules.js" as Rules
 
 Singleton {
     id: root
 
     // The interactive and passive notch modes ("card:<activity>" cards belong to the notch itself).
-    readonly property var ids: ["spotlight", "switcher", "today", "session", "polkit", "gallery",
-                                "jot", "keys", "keysPeek", "focusPicker"]
+    readonly property var ids: Rules.NOTCH_MODES
 
     // id → Component (keysPeek uses the Keys sheet with args.peek).
     readonly property var components: ({})

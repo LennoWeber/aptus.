@@ -1,2 +1,4 @@
 module qs.surfaces.focus
 FocusPicker 1.0 FocusPicker.qml
+FocusActivity 1.0 FocusActivity.qml
+TimerActivity 1.0 TimerActivity.qml

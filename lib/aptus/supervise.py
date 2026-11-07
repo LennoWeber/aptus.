@@ -1,7 +1,7 @@
 """`aptus-supervise`: runs and restarts the shell (07-architecture §10)."""
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
 from .paths import Paths
@@ -22,6 +22,11 @@ class CrashLog:
 
 def shell_command(paths: Paths) -> list[str]:
     """qs -p <repo>/shell --no-duplicate."""
+    raise NotImplementedError
+
+
+def shell_env(paths: Paths, env: Mapping[str, str]) -> dict[str, str]:
+    """The shell's environment: `env` plus APTUS_DEV=1 while <runtime>/dev exists (aptus dev)."""
     raise NotImplementedError
 
 

@@ -10,7 +10,6 @@ Item {
     property string stateText: ""
     property bool on: false
     property bool hasPage: false
-    property bool enabled: true
     property string disabledReason: ""
     property bool keyboardFocus: false
     signal toggled()

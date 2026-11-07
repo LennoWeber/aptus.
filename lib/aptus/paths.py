@@ -20,6 +20,8 @@ class Paths:
     cache_home: Path           # $XDG_CACHE_HOME
     data_home: Path            # $XDG_DATA_HOME
     runtime_home: Path         # $XDG_RUNTIME_DIR ($HOME/.aptus-run in tests)
+    hypr_runtime: Path         # the real $XDG_RUNTIME_DIR/hypr (Hyprland's sockets; also in tests,
+                               # where only the nested instance may be addressed, see hypr.py)
 
     config: Path               # ~/.config/aptus
     state: Path                # ~/.local/state/aptus
@@ -36,9 +38,19 @@ class Paths:
     settings: Path             # ~/.config/aptus/settings.json
     calendars: Path            # ~/.config/aptus/calendars.json
     lease: Path                # ~/.local/state/aptus/lease
+    lease_lock: Path           # lease/lock (flock target)
+    lease_journal: Path        # lease/journal.json
+    lease_slots: Path          # lease/slots/
+    lease_conflicts: Path      # lease/conflicts/
+    lease_history: Path        # lease/history/
     theme: Path                # ~/.local/state/aptus/theme
+    theme_current: Path        # theme/current → gen-<n>
     scope: Path                # ~/.local/state/aptus/scope
-    hypr_state: Path           # ~/.local/state/aptus/hypr (generated.lua, binds.local.lua)
+    hypr_state: Path           # ~/.local/state/aptus/hypr
+    generated_lua: Path        # hypr/generated.lua
+    binds_local: Path          # hypr/binds.local.lua
+    agenda: Path               # ~/.local/state/aptus/agenda.json
+    clipboard_db: Path         # ~/.local/state/aptus/clipboard.db
     hyprlock_conf: Path        # ~/.local/state/aptus/hyprlock.conf
     locked_marker: Path        # ~/.local/state/aptus/locked
     install_state: Path        # ~/.local/state/aptus/install (backups, removed.lua, baseline.json)
@@ -53,6 +65,12 @@ class Paths:
     restart_flag: Path         # <runtime>/restart
     dev_flag: Path             # <runtime>/dev
     guard_state: Path          # <runtime>/guard.state
+    clip_changed: Path         # <runtime>/clip.changed
+    session_status: Path       # <runtime>/session.json
+    intro_flag_prefix: Path    # <runtime>/intro. (+ HYPRLAND_INSTANCE_SIGNATURE)
+
+    cache_bat: Path            # ~/.cache/aptus/bat
+    cache_agenda_http: Path    # ~/.cache/aptus/agenda-http
 
 
 ENV_TEST = "APTUS_TEST"
@@ -66,7 +84,8 @@ def resolve(env: Mapping[str, str] | None = None) -> Paths:
 
 
 def get() -> Paths:
-    """The paths of this process (resolved once)."""
+    """The paths of this process: resolved once normally; under APTUS_TEST=1 resolved on every
+    call (the test fixture changes HOME per test, a cache would outlive it)."""
     raise NotImplementedError
 
 

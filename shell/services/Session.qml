@@ -17,4 +17,6 @@ Singleton {
     function logout(): void { throw new Error("Session.logout: not implemented"); }
     function reboot(): void { throw new Error("Session.reboot: not implemented"); }
     function poweroff(): void { throw new Error("Session.poweroff: not implemented"); }
+    // Only while power.allowSuspend.
+    function suspend(): void { throw new Error("Session.suspend: not implemented"); }
 }

@@ -1,3 +1,6 @@
 module qs.surfaces.capture
 CaptureOverlay 1.0 CaptureOverlay.qml
 RecFrame 1.0 RecFrame.qml
+RecordingActivity 1.0 RecordingActivity.qml
+CaptureCard 1.0 CaptureCard.qml
+ColourCard 1.0 ColourCard.qml

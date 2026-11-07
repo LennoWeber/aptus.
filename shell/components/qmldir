@@ -17,7 +17,7 @@ Field 1.0 Field.qml
 Keycap 1.0 Keycap.qml
 Ring 1.0 Ring.qml
 Level 1.0 Level.qml
-Row 1.0 Row.qml
+ListRow 1.0 ListRow.qml
 List 1.0 List.qml
 Menu 1.0 Menu.qml
 MenuHost 1.0 MenuHost.qml
@@ -27,3 +27,11 @@ EmptyState 1.0 EmptyState.qml
 AppIcon 1.0 AppIcon.qml
 Thumb 1.0 Thumb.qml
 Scrim 1.0 Scrim.qml
+Activity 1.0 Activity.qml
+NotchCard 1.0 NotchCard.qml
+Checkbox 1.0 Checkbox.qml
+RollingDigits 1.0 RollingDigits.qml
+Ellipsis 1.0 Ellipsis.qml
+ErrorLine 1.0 ErrorLine.qml
+PagerDots 1.0 PagerDots.qml
+Swatch 1.0 Swatch.qml

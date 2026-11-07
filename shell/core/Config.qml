@@ -24,6 +24,11 @@ Singleton {
     property bool loaded: false
     // The last problem with settings.json ("" when fine), for the settings window banner.
     property string fileError: ""
+    // settings.json is a v1 file (no "v"): ignored, backed up to settings.json.v1 before the first write.
+    property bool v1File: false
+    // Keys set in this session that are not written yet (debounce): an outside change to the file
+    // does not overwrite them (settings.md §9).
+    property var pending: ({})
 
     signal settingChanged(string key)
     signal settingInvalid(string key, string message)
@@ -46,4 +51,5 @@ Singleton {
     function _loadSchema(): void { throw new Error("Config._loadSchema: not implemented"); }
     function _loadFile(text: string): void { throw new Error("Config._loadFile: not implemented"); }
     function _save(): void { throw new Error("Config._save: not implemented"); }
+    function _backupV1(): void { throw new Error("Config._backupV1: not implemented"); }
 }

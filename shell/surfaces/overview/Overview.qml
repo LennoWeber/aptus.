@@ -5,4 +5,7 @@ import qs.components
 
 Drawer {
     id: root
+
+    // M-14: the bar's workspace pills (Bar.pillRects), passed in by MonitorShell.
+    property var pillRects: []
 }

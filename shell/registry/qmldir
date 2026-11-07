@@ -2,3 +2,4 @@ module qs.registry
 singleton NotchModes 1.0 NotchModes.qml
 Shortcuts 1.0 Shortcuts.qml
 Ipc 1.0 Ipc.qml
+singleton Activities 1.0 Activities.qml

@@ -18,7 +18,8 @@ annotation) without a dialog.
 ## 3. Selection overlay
 
 On trigger, aptus captures every monitor once (`ScreencopyView`, not live) and shows that frozen image
-on a full-screen overlay layer per monitor (`aptus-capture`, overlay layer, exclusive keyboard).
+on the monitor's `aptus-shell` layer above every other surface (exclusive keyboard; one layer, so the
+thumbnail can fly from the selection into the notch, M-23, [07](../07-architecture.md) §4).
 What you see is exactly what will be saved: the moment you pressed the key.
 
 ```

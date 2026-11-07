@@ -68,5 +68,6 @@ class Nested:
 
 
 def real_signature() -> str:
-    """The signature of the session the tests run in (to refuse it)."""
+    """The signature of the session the tests run in (to refuse it); raises when there is none,
+    so the harness never runs blind."""
     raise NotImplementedError

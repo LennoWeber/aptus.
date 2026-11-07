@@ -250,8 +250,11 @@ the aptus block does not depend on.
 ```lua
 local home = os.getenv("HOME")
 local G = function(name) return hl.dsp.global("aptus:" .. name) end
+-- Locking never fails open: `aptus msg` exits non-zero when the shell is down, frozen (2 s
+-- timeout) or answers "error: …" (no lock screen yet); the aptus hyprlock.conf exists only after
+-- the first theme render, so plain hyprlock is the last fallback.
 local LOCK = home .. "/.local/bin/aptus msg session lock || hyprlock -c "
-          .. home .. "/.local/state/aptus/hyprlock.conf"
+          .. home .. "/.local/state/aptus/hyprlock.conf || hyprlock"
 
 -- Overrides from Settings › Keys: { [id] = "SUPER + J" | false }
 local overrides = {}
@@ -261,7 +264,7 @@ do
   if f then f:close(); local ok, t = pcall(dofile, p); if ok and type(t) == "table" then overrides = t end end
 end
 
--- Description format read by the Keys service: "aptus:<id> | <Group> | <Description>[ | hidden]"
+-- Description format read by the Binds service: "aptus:<id> | <Group> | <Description>[ | hidden]"
 -- A chord is unbound only the first time aptus binds it in this load: `SUPER + Super_L` carries
 -- two aptus binds (tap on release, hold on long press), and unbinding before the second would
 -- delete the first (probe P-03).
@@ -359,7 +362,7 @@ Notes:
   the keyboard). Fallback: the switcher commits on `Enter`/click and on a 1.2 s pause.
 - Lenno's binds outside the block (terminal, browser, file manager, yazi, rotation, float, pseudo,
   split, fullscreen, focus arrows, workspaces 1–0, move to workspace, `Super+wheel`,
-  `Super+Alt+←/→`, mouse move/resize) keep working unchanged. The Keys service describes them from
+  `Super+Alt+←/→`, mouse move/resize) keep working unchanged. The Binds service describes them from
   `shell/config/known-binds.json` (dispatcher + argument patterns → group and description, e.g.
   `exec_cmd ghostty|kitty` → "Apps · Terminal", `focus workspace N` → "Workspaces · Go to N").
 

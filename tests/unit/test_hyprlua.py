@@ -37,3 +37,11 @@ def test_uninstall_restores() -> None:
 
 def test_multiline_statement() -> None:
     raise NotImplementedError
+
+
+def test_three_line_autostart_removed() -> None:
+    raise NotImplementedError
+
+
+def test_commented_autostart_kept() -> None:
+    raise NotImplementedError

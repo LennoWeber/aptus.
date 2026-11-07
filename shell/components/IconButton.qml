@@ -10,7 +10,6 @@ Item {
     // "bar" | "drawer"
     property string size: "drawer"
     property bool on: false
-    property bool enabled: true
     property bool keyboardFocus: false
     signal clicked()
     signal rightClicked()

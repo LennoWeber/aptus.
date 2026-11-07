@@ -156,7 +156,7 @@ Rules:
   (probe P-17; fallback: crossfade between the two glyph states).
 - Sizes: 16 in the bar, 18 in rows and tiles, 20 in drawer headers, 24 in toasts, 40 in empty states.
 - **App icons** come from desktop entries (`IconImage`, theme `aptus-icons-*`), sizes 16 (bar), 20
-  (rows), 28 (Spotlight rows), 32 (switcher), 48 (toasts, overview cards). A missing icon falls back
+  (rows), 24 (toasts, [notch.md](surfaces/notch.md) §6), 28 (Spotlight rows), 32 (switcher), 48 (overview cards). A missing icon falls back
   to a `raised` rounded square with the app name's first letter in `ink.sec`.
 
 ## 6. Geometry
@@ -211,7 +211,7 @@ Base 4 px. Tokens: `s1` 2 · `s2` 4 · `s3` 6 · `s4` 8 · `s5` 12 · `s6` 16 ·
 
 | Context | Padding | Gaps |
 |---|---|---|
-| Bar | 12 from the frame's inner corners | 8 between items, 16 between zones |
+| Bar | 8 from the frame edge (content starts 14 px from the screen edge, [bar.md](surfaces/bar.md) §2) | 8 between items, 16 between zones |
 | Drawers | 16 | 12 between sections, 8 inside a section |
 | Rows | 8 horizontal, icon-to-text 12 | |
 | Tiles | 12 | |
@@ -235,8 +235,8 @@ Base 4 px. Tokens: `s1` 2 · `s2` 4 · `s3` 6 · `s4` 8 · `s5` 12 · `s6` 16 ·
 
 | Component | Spec |
 |---|---|
-| **Button, primary** | height 32, radius 8, accent fill, `onAccent` label `bodyStrong`; one per surface at most |
-| **Button, plain** | height 32, radius 8, `raised` fill, `ink.main` label |
+| **Button, primary** | height 32, radius 8, 12 horizontal padding, accent fill, `onAccent` label `bodyStrong`; one per surface at most |
+| **Button, plain** | height 32, radius 8, 12 horizontal padding, `raised` fill, `ink.main` label |
 | **Button, quiet** | height 28, no fill until hover, `ink.sec` label |
 | **Button, risk** | plain button with crit label and a leading `warning` glyph; never the default |
 | **Icon button** | 28 × 28 (bar) or 32 × 32 (drawers), radius 8, glyph 18, tooltip required |
@@ -244,15 +244,21 @@ Base 4 px. Tokens: `s1` 2 · `s2` 4 · `s3` 6 · `s4` 8 · `s5` 12 · `s6` 16 ·
 | **Switch** | 36 × 20 track, 16 thumb; off: `line` track; on: accent track, `onAccent` thumb |
 | **Slider** | 4 px track (`line`), filled part accent, thumb 16 round `ink.main`; glyph at the start changes with level (volume glyphs per 0/33/66/100); value label at the end in `meta`, tabular |
 | **Segmented control** | height 28, radius 8, `sunken` track, selected segment `raised` with a 120 ms sliding indicator |
-| **Row** | 36 high (44 in Spotlight), radius 8, leading icon, title `bodyStrong`/`body`, trailing meta or keycap; selected = `current` wash |
+| **List row** (`ListRow`) | 36 high (44 in Spotlight), radius 8, leading icon, title `bodyStrong`/`body`, trailing meta or keycap; selected = `current` wash |
 | **Field** | `sunken`, radius 12, 40 high (52 in Spotlight), caret 2 px accent |
 | **Keycap** | JetBrains Mono `micro`, `raised` fill, radius 4, 18 high, 6 padding |
 | **Ring** | 2 px track `line`, 2 px arc accent (or warn/crit), round caps; used for focus sessions, timers, battery in the deck |
 | **Level** | the OSD bar: 6 px high, radius 3, accent fill, animates with the snappy spring |
 | **Menu** | floating, `raised`, radius 12, 6 padding, rows 30 high, shadow; separators are 1 px `line` inset 8 |
 | **Tooltip** | `raised`, radius 8, `body` `ink.main`, 6 × 8 padding, 600 ms delay, 0 ms when moving between tooltipped items within 1 s |
-| **Badge** | 6 px dot (unread), or a pill with a count in `micro` |
+| **Badge** | 6 px dot (unread), or a 16 px high pill with a count in `micro` |
 | **Empty state** | glyph 40 in `ink.faint`, one line `ink.sec`, optional one action |
+| **Checkbox** | 18 × 18, radius 4; off: 1.5 px `ink.meta` outline; on: accent fill with a `check` glyph in `onAccent` (Today and Jot todos) |
+| **Rolling digits** | tabular figures; only changed digits roll: the old one rises 6 px and fades, the new one rises from below (`fade`, M-34) — clock, battery figure, tile state lines (M-18) |
+| **Ellipsis** | the loading state of §8: three 4 px dots in `ink.meta`, 3 px apart, fading in after 300 ms |
+| **Error line** | the error state of §8: one line in `ink.sec` and a plain "Retry" button |
+| **Pager dots** | 6 px dots 6 apart, `ink.faint`, current `ink.sec` (notch cards, Deck media) |
+| **Swatch** | a 20 px colour dot; selected: a 2 px ring in `ink.main` 2 px outside; the six accents and the two neutrals `ink.sec` and `ink.meta` (accent setting, calendar colours, colour card) |
 
 ## 10. Banned patterns
 

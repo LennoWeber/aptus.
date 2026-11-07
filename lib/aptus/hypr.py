@@ -25,19 +25,26 @@ ENV_REAL_SIG = "APTUS_REAL_HYPRLAND_SIGNATURE"   # set by the e2e harness: never
 
 
 def signature(env: Mapping[str, str] | None = None) -> str:
-    """HYPRLAND_INSTANCE_SIGNATURE, or HyprError when unset. Under APTUS_TEST=1 it raises
-    RefusedInstance when it equals APTUS_REAL_HYPRLAND_SIGNATURE."""
+    """HYPRLAND_INSTANCE_SIGNATURE (HyprError when unset), checked by check_allowed."""
+    raise NotImplementedError
+
+
+def check_allowed(sig: str, env: Mapping[str, str] | None = None) -> None:
+    """Under APTUS_TEST=1 refuse (RefusedInstance) unless APTUS_REAL_HYPRLAND_SIGNATURE is set and
+    non-empty and differs from `sig`: a test must never address the session it runs in, and an
+    unknown real signature fails closed. Outside tests a no-op."""
     raise NotImplementedError
 
 
 def socket_path(paths: Paths, sig: str) -> Path:
-    """$XDG_RUNTIME_DIR/hypr/<sig>/.socket.sock (the real runtime dir, also in tests)."""
+    """<paths.hypr_runtime>/<sig>/.socket.sock."""
     raise NotImplementedError
 
 
 def request(command: str, *, sig: str | None = None, as_json: bool = False,
             timeout: float = 2.0) -> str:
-    """One request on the command socket ("j/" prefix with as_json). Raises HyprError."""
+    """One request on the command socket ("j/" prefix with as_json). Every request, whatever the
+    source of `sig`, goes through check_allowed first. Raises HyprError."""
     raise NotImplementedError
 
 

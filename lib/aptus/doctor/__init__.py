@@ -13,6 +13,7 @@ class Check:
     name: str
     ok: bool
     detail: str = ""
+    warn: bool = False         # ok, but worth a look (stale plocate index, uncovered template)
 
 
 def run(which: Sequence[str], paths: Paths) -> list[Check]:
@@ -21,7 +22,7 @@ def run(which: Sequence[str], paths: Paths) -> list[Check]:
 
 
 def render(checks: Sequence[Check]) -> str:
-    """One line per check: "ok   name" / "FAIL name: detail"."""
+    """One line per check: "ok   name", "warn name: detail", "FAIL name: detail"."""
     raise NotImplementedError
 
 

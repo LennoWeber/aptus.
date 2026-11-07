@@ -1,6 +1,12 @@
 """`aptus doctor config`: settings.json against the schema (07-architecture §8)."""
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from . import Check
+    from ..paths import Paths
+
 
 def check(paths: Paths) -> list[Check]:
     """settings.json parses, has "v": 2, every key is known and valid (same rules as

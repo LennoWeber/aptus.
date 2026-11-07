@@ -25,3 +25,11 @@ def test_repo_paths() -> None:
 
 def test_inside() -> None:
     raise NotImplementedError
+
+
+def test_get_not_cached_in_tests() -> None:
+    raise NotImplementedError
+
+
+def test_hypr_runtime_is_real() -> None:
+    raise NotImplementedError

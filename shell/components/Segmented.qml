@@ -8,7 +8,6 @@ Item {
     // [{ value, label }]
     property var options: []
     property var value
-    property bool enabled: true
     property bool keyboardFocus: false
     signal selected(var value)
 }

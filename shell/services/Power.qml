@@ -7,6 +7,9 @@ import Quickshell
 Singleton {
     id: root
 
+    // profiles this machine offers ("power-saver", "balanced", "performance")
+    property var profiles: []
+
     property bool hasBattery: false
     // 0..100
     property real percentage: 0
@@ -17,4 +20,5 @@ Singleton {
     property int timeToFull: 0
     // "power-saver" | "balanced" | "performance"
     property string profile: ""
+    function setProfile(name: string): void { throw new Error("Power.setProfile: not implemented"); }
 }

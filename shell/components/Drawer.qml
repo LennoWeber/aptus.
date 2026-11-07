@@ -13,6 +13,7 @@ Item {
 
     signal closeRequested()
 
-    // Esc ladder (05 §3): a Deck page → the Deck. True when it stepped back internally.
+    // Esc ladder (05 §3) for levels inside the drawer other than Deck pages (SurfaceManager pops
+    // MonitorState.deckPages itself). True when it stepped back internally.
     function back(): bool { return false; }
 }

@@ -13,8 +13,13 @@ Item {
     // Notch-mode id → Component (from qs.registry NotchModes, passed in by MonitorShell so the
     // notch never imports the registry).
     property var modeComponents: ({})
+    // Activity id → Component and card id → Component (qs.registry Activities, via MonitorShell).
+    property var activityComponents: ({})
+    property var cardComponents: ({})
     // The notch's part of the frame shape.
     readonly property BulgeSpec bulge: BulgeSpec {}
+    // The rest clock's rectangle in monitor coordinates (M-20 hand-off to Today).
+    readonly property rect clockRect: Qt.rect(0, 0, 0, 0)
     // Width the notch occupies inside the bar at rest (the bar keeps its zones clear of it).
     readonly property real restWidth: 0
     // The item whose area takes pointer input (bar band part plus the bulge), for the input mask.

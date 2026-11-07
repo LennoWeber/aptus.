@@ -27,8 +27,9 @@ Singleton {
     readonly property int morphIn: 380
     readonly property int morphOut: 300
     readonly property int introIn: 420
-    readonly property int theme: 400
-    readonly property int wallpaper: 600
+    // `ambient` (04 §2.1): the theme crossfade (M-30) and the wallpaper crossfade (M-28).
+    readonly property int ambientTheme: 400
+    readonly property int ambientWallpaper: 600
     readonly property int reducedCrossfade: 120
 
     // Curves (04 §2.2) as QML easing.bezierCurve lists [x1, y1, x2, y2, 1, 1].
@@ -61,7 +62,7 @@ Singleton {
     readonly property int staggerTotalMax: 110
     readonly property int digitRoll: 6
     readonly property real iconSwapScale: 0.8
-    readonly property int themeMidpoint: 200
+    readonly property int ambientThemeMidpoint: 200
 
     // Per-animation numbers of the M-xx catalogue (tokens.json motion.catalogue).
     readonly property var catalogue: ({})

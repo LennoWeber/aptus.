@@ -87,6 +87,8 @@ Scope {
 
     IpcHandler {
         target: "session"
+        // Answers "error: …" whenever the shell cannot lock right now (before S6, or Session fails),
+        // so `aptus msg session lock || hyprlock …` falls back (phase-1 decision 9).
         function lock(): string { throw new Error("ipc session.lock: not implemented"); }
         function logout(): string { throw new Error("ipc session.logout: not implemented"); }
         function reboot(): string { throw new Error("ipc session.reboot: not implemented"); }
@@ -102,6 +104,6 @@ Scope {
 
     IpcHandler {
         target: "settings"
-        function open(target: string): string { throw new Error("ipc settings.open: not implemented"); }
+        function open(pageOrKey: string): string { throw new Error("ipc settings.open: not implemented"); }
     }
 }

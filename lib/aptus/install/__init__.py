@@ -47,5 +47,5 @@ def apply(paths: Paths, actions: Sequence[Action]) -> None:
 
 
 def main(argv: Sequence[str]) -> int:
-    """install.sh [--uninstall] [--yes-to-base]: list, ask per group, apply."""
+    """install.sh [--uninstall]: list, ask per group, apply. Every group needs its own "y"."""
     raise NotImplementedError

@@ -16,6 +16,9 @@ Scope {
     required property ShellScreen modelData
     // Notch-mode id → Component, from qs.registry NotchModes (passed in by shell.qml).
     property var notchModes: ({})
+    // Activity and card tables, from qs.registry Activities (passed in by shell.qml).
+    property var activities: ({})
+    property var cards: ({})
     // 0 → 1 during the session intro (M-01).
     property real introProgress: 1
 
@@ -23,6 +26,6 @@ Scope {
     readonly property string name: modelData ? modelData.name : ""
     // This monitor's state in the SurfaceManager.
     readonly property MonitorState monitor: null
-    // Whether this monitor's shell layer takes the keyboard (an interactive surface is open).
+    // Whether this monitor's shell layer takes the keyboard (MonitorState.keyboard).
     readonly property bool keyboard: false
 }

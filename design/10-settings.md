@@ -43,9 +43,12 @@ The chosen images themselves are state (`wallpaper.json`), not settings.
 | `bar.clock.showDate` | bool | `true` | | `Sat 7 Nov` before the time |
 | `bar.tray.max` | int | `3` | 0–6 | 0 = everything in the overflow |
 | `bar.tray.hidden` | list<string> | `[]` | tray item ids | |
+| `bar.tray.order` | list<string> | `[]` | tray item ids | the order shown (dragged in Settings); items not listed follow in registration order |
 | `bar.tray.monitor` | enum | `primary` | `primary`, `all` | primary = the external monitor when one is connected, else eDP-1 |
 | `bar.battery.percent` | enum | `auto` | `auto`, `always`, `never` | auto: ≤ 30 %, or charging |
 | `bar.bluetooth` | enum | `connected` | `connected`, `always` | |
+| `deck.tiles` | list<enum> | `["wifi", "bluetooth", "dark", "dnd", "nightlight", "awake", "focus", "power"]` | those 8 ids, any order, any subset, each at most once | |
+| `deck.openPages` | bool | `false` | | clicking a status item opens its page directly |
 
 ## Notch and notifications
 
@@ -113,7 +116,7 @@ Calendar sources live in `~/.config/aptus/calendars.json` (0600), edited in the 
 | `focus.dailyGoal` | int | `240` | 0–720 (min) | 0 hides the goal ring |
 | `focus.endForMeetings` | bool | `false` | | |
 | `focus.quietBar` | bool | `true` | | quiet bar while focusing |
-| `dnd.schedule` | object/null | `null` | `{ "from": "22:00", "to": "07:00", "days": [1,2,3,4,5,6,7] }` | |
+| `dnd.schedule` | object/null | `null` | `{ "from": "22:00", "to": "07:00", "days": [1,2,3,4,5,6,7] }` | days 1–7 (Monday = 1), each at most once |
 
 ## Capture
 
@@ -155,8 +158,6 @@ Calendar sources live in `~/.config/aptus/calendars.json` (0600), edited in the 
 | `lock.showNotificationCount` | bool | `true` | | counts only, never content |
 | `lock.showMedia` | bool | `true` | | |
 | `lock.fingerprint` | bool | `false` | | needs an enrolled finger (P-22) |
-| `deck.tiles` | list<enum> | `["wifi", "bluetooth", "dark", "dnd", "nightlight", "awake", "focus", "power"]` | those 8 ids, any order, any subset | |
-| `deck.openPages` | bool | `false` | | clicking a status item opens its page directly |
 
 ## Apps and isolation
 
@@ -165,5 +166,5 @@ Calendar sources live in `~/.config/aptus/calendars.json` (0600), edited in the 
 | `isolation.bakeTargets` | list<enum> | `[]` | `spicetify`, `libreoffice` | opt-in; changes those apps in Umbriel too until switched back ([02](02-isolation.md) §4) |
 
 Validation rules beyond types: `idle.dimAfter < idle.lockAfter ≤ idle.screenOffAfter` (when
-non-zero); `focus.default ∈ focus.durations`; paths must be inside `$HOME`. A violation falls back
+non-zero); `focus.default ∈ focus.durations`; paths (also every entry of a `list<path>`) must be inside `$HOME`. A violation falls back
 to the default for the offending key and says so once.

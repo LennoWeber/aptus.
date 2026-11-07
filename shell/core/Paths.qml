@@ -39,6 +39,36 @@ Singleton {
     readonly property string introFlag: ""       // <runtime>/intro.<HYPRLAND_INSTANCE_SIGNATURE>
     readonly property string guardState: ""      // <runtime>/guard.state
     readonly property string clipChanged: ""     // <runtime>/clip.changed
+    readonly property string sessionStatus: ""   // <runtime>/session.json
+
+    // State (07 §9), one per owner.
+    readonly property string generatedLua: ""    // ~/.local/state/aptus/hypr/generated.lua
+    readonly property string bindsLocal: ""      // ~/.local/state/aptus/hypr/binds.local.lua (Binds)
+    readonly property string hyprlockConf: ""    // ~/.local/state/aptus/hyprlock.conf
+    readonly property string workspacesState: "" // ~/.local/state/aptus/workspaces.json (Hypr, S3)
+    readonly property string notificationsState: "" // ~/.local/state/aptus/notifications.json (S3)
+    readonly property string frecencyState: ""   // ~/.local/state/aptus/frecency.json (S4)
+    readonly property string clipboardDb: ""     // ~/.local/state/aptus/clipboard.db (S4)
+    readonly property string clipPins: ""        // ~/.local/state/aptus/clip-pins.json (S4)
+    readonly property string focusState: ""      // ~/.local/state/aptus/focus.json (S8)
+    readonly property string focusLog: ""        // ~/.local/state/aptus/focus-log.jsonl (S8)
+    readonly property string dndState: ""        // ~/.local/state/aptus/dnd.json (S8)
+    readonly property string timersState: ""     // ~/.local/state/aptus/timers.json (S8)
+    readonly property string agendaFile: ""      // ~/.local/state/aptus/agenda.json (S8)
+    readonly property string jotDraft: ""        // ~/.local/state/aptus/jot-draft.txt (S8)
+    readonly property string coloursState: ""    // ~/.local/state/aptus/colours.json (S9)
+
+    // Caches (07 §9), may be deleted at any time.
+    readonly property string notifCache: ""      // ~/.cache/aptus/notif (S3)
+    readonly property string clipCache: ""       // ~/.cache/aptus/clip (S4)
+    readonly property string wallThumbs: ""      // ~/.cache/aptus/wall-thumbs (S10)
+    readonly property string weatherCache: ""    // ~/.cache/aptus/weather.json (S8)
+
+    // Repo data.
+    readonly property string knownBinds: ""      // <repo>/shell/config/known-binds.json (S8)
+    readonly property string emojiFile: ""       // <repo>/shell/assets/emoji.json (S4)
+    readonly property string sounds: ""          // <repo>/shell/assets/sounds (S3, S8)
+    readonly property string fonts: ""           // <repo>/shell/assets/fonts
 
     // "~/x" → "<home>/x"; other paths unchanged.
     function expand(path: string): string { throw new Error("Paths.expand: not implemented"); }

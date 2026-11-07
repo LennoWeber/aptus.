@@ -29,12 +29,13 @@ class Plan:
     block_present: bool = False   # the aptus block was already there (nothing appended)
 
 
-# 09 §1: the Noctalia-specific lines (patterns over one line; a multi-line hl.bind is matched as
-# a statement by `statements`).
-LOCAL_RE = re.compile(r"^\s*local\s+(noctalia|menu|lock)\s*=")
-START_RE = re.compile(r"hl\.on\(\s*\"hyprland\.start\".*noctalia")
-BIND_CALL_RE = re.compile(r"\b(noctalia|menu|lock)\b")
-EXIT_BIND_RE = re.compile(r"hl\.bind\(.*\+\s*M\".*hl\.dsp\.exit\(\)")
+# 09 §1: the Noctalia-specific statements. The patterns apply to whole top-level statements
+# (`statements` joins a call spread over several lines; comments are skipped and never removed),
+# hence re.S: in Lenno's file the autostart spans three lines with `noctalia` on the middle one.
+LOCAL_RE = re.compile(r"^\s*local\s+(noctalia|menu|lock)\s*=", re.S)
+START_RE = re.compile(r"hl\.on\(\s*\"hyprland\.start\".*noctalia", re.S)
+BIND_CALL_RE = re.compile(r"^\s*hl\.bind\(.*\b(noctalia|menu|lock)\b", re.S)
+EXIT_BIND_RE = re.compile(r"^\s*hl\.bind\(.*\+\s*M\".*hl\.dsp\.exit\(\)", re.S)
 
 BLOCK = (BLOCK_BEGIN + "\n"
          "-- aptus v2 (~/Code/Projekte/aptus). Managed by install.sh; `install.sh --uninstall` removes it.\n"
@@ -44,7 +45,9 @@ BLOCK = (BLOCK_BEGIN + "\n"
 
 def statements(text: str) -> list[tuple[int, int, str]]:
     """Split Lua source into top-level statements: (first line, last line, text), 1-based, so a
-    bind spread over several lines is removed as a whole."""
+    bind spread over several lines is removed as a whole. Comment lines and comment blocks
+    (`--`, `--[[ … ]]`) are not statements (a commented-out autostart stays as it is); strings
+    are respected when counting brackets."""
     raise NotImplementedError
 
 

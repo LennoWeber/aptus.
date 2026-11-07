@@ -13,3 +13,11 @@ def test_unknown_level_is_info() -> None:
 
 def test_test_mode_log_file() -> None:
     raise NotImplementedError
+
+
+def test_journal_handler_outside_units() -> None:
+    raise NotImplementedError
+
+
+def test_no_journal_in_tests() -> None:
+    raise NotImplementedError

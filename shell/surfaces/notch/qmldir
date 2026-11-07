@@ -1,2 +1,4 @@
 module qs.surfaces.notch
 Notch 1.0 Notch.qml
+MediaActivity 1.0 MediaActivity.qml
+ProgressActivity 1.0 ProgressActivity.qml

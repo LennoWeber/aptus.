@@ -19,4 +19,6 @@ Singleton {
     // Keyboard light one level up or down (inert without an LED).
     function kbdStep(direction: int): void { throw new Error("Brightness.kbdStep: not implemented"); }
     function kbdToggle(): void { throw new Error("Brightness.kbdToggle: not implemented"); }
+    // Backlight 0..1 (Spotlight "Brightness 40", Deck slider).
+    function set(value: real): void { throw new Error("Brightness.set: not implemented"); }
 }

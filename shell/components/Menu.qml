@@ -5,7 +5,8 @@ import qs.core
 Item {
     id: root
 
-    // [{ label, glyph, risk: bool, enabled: bool, separator: bool, checked: bool, submenu: [...], id }]
+    // [{ id, label, glyph, keys: "Ctrl+Enter", risk: bool, confirm: "Press again to …" (inline confirm,
+    //    bar.md §3), enabled: bool, separator: bool, checked: bool, submenu: [...] }]
     property var model: []
     // The point the menu grows from (monitor-local).
     property real anchorX: 0

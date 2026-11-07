@@ -9,4 +9,6 @@ Singleton {
 
     property bool keepAwake: false
     property bool dimmed: false
+    // Keep awake (Deck tile, Spotlight Caffeine).
+    function setKeepAwake(on: bool): void { throw new Error("Idle.setKeepAwake: not implemented"); }
 }

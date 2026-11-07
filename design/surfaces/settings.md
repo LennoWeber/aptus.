@@ -42,7 +42,7 @@ prompts, and nothing that can only be changed by editing a file (editing the fil
 | Page | Sections and settings |
 |---|---|
 | **Appearance** | mode, accent (six swatches + `wallpaper`), glass, text size, contrast, reduce motion; wallpaper (thumbnail, *Change…* opens the gallery, fill mode, rotation, folder) |
-| **Bar & frame** | frame edges on/off, workspaces (shown, icons), window title, clock (date), tray (max, hidden apps list with drag order, monitor), battery %, Bluetooth item |
+| **Bar & frame** | frame edges on/off, workspaces (shown, icons), window title, clock (date), tray (max, order by drag, hidden apps, monitor), battery %, Bluetooth item; Deck (which tiles and their order, open pages directly) |
 | **Notch & alerts** | toast timeout, stack window, over-fullscreen policy, hover expand, allowlist (app picker), media players to ignore, history days/max, *Send test notification* |
 | **Spotlight** | Super tap, providers (switch and ranking boost per provider), pinned results, aliases (two-column editor), search engine, web shortcuts (editor), preview pane, file roots and excludes, hidden files, clipboard size and ignored apps, launch in scopes |
 | **Today & calendar** | calendars (§5), reminder lead time, refresh interval, week numbers, weather location (search) and units, jot file |
@@ -81,7 +81,7 @@ quiet "Reset this page…" (risk, confirms inline).
 
 ## 5. Calendars editor
 
-A list of sources: colour dot (menu of the six accents and two neutrals), name, kind (URL or file),
+A list of sources: colour dot (menu of the six accents and the two neutrals `ink.sec` and `ink.meta`), name, kind (URL or file),
 the address shown masked (`https://calendar.google.com/…/basic.ics` → host + "…"), an eye to reveal,
 last sync status ("Synced 2 min ago · 41 events", "Failed: 401 Unauthorized"), and a ⋯ menu (Edit,
 Sync now, Remove (risk)). *Add calendar* expands a form: name, URL or *Choose file…*, colour, and

@@ -35,4 +35,14 @@ TestCase {
     function test_serialise_sorted() { fail("not implemented"); }
 
     function test_visible_if() { fail("not implemented"); }
+
+    function test_unique_lists() { fail("not implemented"); }
+
+    function test_item_ranges() { fail("not implemented"); }
+
+    function test_must_exist() { fail("not implemented"); }
+
+    function test_list_path_inside_home() { fail("not implemented"); }
+
+    function test_migrate() { fail("not implemented"); }
 }

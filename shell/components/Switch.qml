@@ -6,7 +6,6 @@ Item {
     id: root
 
     property bool checked: false
-    property bool enabled: true
     property string accessibleName: ""
     property bool keyboardFocus: false
     signal toggled(bool checked)

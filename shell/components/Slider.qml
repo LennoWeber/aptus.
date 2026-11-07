@@ -13,7 +13,6 @@ Item {
     property string glyph: ""
     property var levelGlyphs: []
     property string valueText: ""
-    property bool enabled: true
     property string accessibleName: ""
     property bool keyboardFocus: false
     readonly property bool dragging: false

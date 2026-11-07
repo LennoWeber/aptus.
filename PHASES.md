@@ -233,3 +233,101 @@ through, `hyprctl configerrors` is empty, `install.sh` in a temporary `HOME` sho
   of the Lua in phase 7.
 - Checked: a property named `on` (Glyph, Tile, Wash, IconButton, Dnd) loads and lints cleanly
   in Qt 6.11.
+
+### Review of phases 2 and 3 (2026-11-07)
+
+Two fresh reviewers (phase-2 diff `234a4d3..af12051`, phase-3 diff `af12051..3cb08c8`). Both arrived
+after phase 3 was committed, so their fixes share one commit; structure fixes follow phase-2 rules,
+signature fixes phase-3 rules.
+
+**Phase 2: accepted and fixed**
+- `Bulge.top` shadowed Item's FINAL `top` (the frame would not load) → `barHeight`.
+- `enabled` redeclared in 8 components (lint warnings, broke disabling of children) → removed,
+  the inherited `enabled` is used.
+- Name clashes with QtQuick: the `Keys` service hid the `Keys` attached type, `Row` hid the
+  positioner → `Binds` service, `ListRow` component; rule in 07 §2: QtQuick.Controls only with a
+  namespace.
+- tokens.json held copies of settings (idle times, close timeout, history limits, clipboard size,
+  focus durations, slider steps, ranges) and of the supervisor policy → removed (the schema and
+  `supervise.py` own them). 124 surface numbers that duplicated `geometry`, `components`,
+  `motion.durations` or `motion.catalogue` removed after a check that every pair was equal; the
+  surface groups now hold only surface-specific numbers (512 → 369). `activityPriorities` and
+  `matchScores` are maps.
+- Same-file edits by parallel stages: `Paths.qml` now has every path of 07 §9 (with the owning
+  stage); an extension point for the notch: `Activity` (live activities) and `NotchCard` (result
+  cards shown as toasts with `payload.card`) base types, the `qs.registry` `Activities` table, and
+  stubs in each owner's folder (`notch/MediaActivity`, `notch/ProgressActivity` S3;
+  `focus/FocusActivity`, `focus/TimerActivity`, `today/MeetingActivity` S8;
+  `capture/RecordingActivity`, `capture/CaptureCard`, `capture/ColourCard` S9;
+  `session/StillOpenCard` S6). Service data shapes for what other stages read: Hypr workspaces/
+  special/urgent + window actions (S1 implements them), Audio devices and streams, Network list/
+  VPN/airplane, Bt devices, Power profiles, Focus state machine, Timers/Agenda/Progress item
+  shapes, Capture recording details and last capture, Binds overrides/conflicts/perform (S8 builds
+  them, S10 calls them), `Apps.iconFor` (owner S3 for the bar's icons, S4 for the rest).
+- Missing shared components → `Checkbox`, `RollingDigits`, `Ellipsis`, `ErrorLine`, `PagerDots`,
+  `Swatch` (03 §9 and tokens updated).
+- Shared-element interfaces: `Bar.pillRects` → `Overview.pillRects` (M-14), `Notch.clockRect` /
+  `NotchMode.clockRect` + `takesClock` (M-20), `CaptureOverlay.selection` + toast
+  `payload.flyFrom` (M-23); NotchMode flags `scrim`, `catchesOutside`, `sizeSpring`.
+- Spec updated: 07 §2 (layout, registry, module order, SettingsWindow/SwitcherStrip/KeysSheet/
+  JotSheet), 07 §5 (capture state `{ mode, args }`; cards and the peek are not interactive), 07 §6
+  (lid in Session, Binds, Switcher, Progress).
+- Spec contradictions decided: bar padding 8 from the frame edge = 14 from the screen edge
+  (bar.md wins, 03 §7 fixed); toast app icon 24 (notch.md wins, 03 §5 fixed); the capture overlay
+  lives in `aptus-shell` (one layer, so M-23's flight into the notch is possible; capture.md §3
+  fixed); `ambient` token name of 04 used (`Motion.ambientTheme/ambientWallpaper`); button
+  padding 12 and badge pill height 16 written into 03 §9.
+- Schema: `nightLight.temperature` has no `visibleIf` (the Deck turns night light on by hand);
+  `deck.tiles` unique; `dnd.schedule.days` 1–7, unique; `insideHome` also for `list<path>`;
+  `wallpaper.dir` `mustExist`; new `bar.tray.order` (settings.md's "drag order"); `deck.*` moved
+  to the Bar and frame section in 10 and settings.md §3. Re-checked: schema keys = 10's keys.
+- `paths.py`: `hypr_runtime` (the real Hyprland socket dir, also in tests), lease files, theme
+  `current`, generated/binds Lua, agenda, clipboard db, runtime flags, caches.
+- Smaller: `Tokens.accents`/`neutrals` (neutrals = ink.sec, ink.meta, settings.md §5),
+  `Tokens.wallpaperChroma`, `Config.v1File/pending/_backupV1`, Menu rows `keys`/`confirm`,
+  `Check.warn`.
+
+**Phase 2: rejected**
+- Rename the `on` properties: they load and lint cleanly in Qt 6.11 (checked) and read naturally.
+- `type.textScale.barHeight` duplicates the schema's derived `bar.height`: the geometry is a
+  design token; the schema entry only documents the derived value. `test_tokens` checks that both
+  are equal instead.
+- Literal defaults in `Tokens.qml`/`Motion.qml` are a phase-7 matter: every property is bound to
+  `raw` there, and a failed tokens.json load is logged as an error.
+
+**Phase 3: accepted and fixed**
+- Blocker: the root-level autouse fixture would have removed the real signature before the e2e
+  harness read it, and `hypr.signature` refused only on equality → fixture moved to
+  `tests/unit/conftest.py`, `tests/e2e/conftest.py` reads the real signature first and provides a
+  session `nested` fixture, `hypr.check_allowed` fails closed when the real signature is unknown and
+  runs on every request.
+- Locking could fail open: `qs ipc call` exits 0 for most errors (probe below) → `msg.classify`,
+  exit codes, a 2 s timeout; `session lock` answers `error: …` while the shell cannot lock;
+  09 §7 and 07 §10 updated in this commit.
+- `START_RE` missed Lenno's three-line autostart → statement-level patterns with `re.S`, comments
+  are never statements (a commented-out autostart stays).
+- `aptus logs` as specified matched nothing (journalctl ANDs `-t` with `-u`; checked) → two
+  queries merged by time; 07 §11 updated.
+- The `aptus-session` tag never reached the journal → `log.JournalHandler` (native socket) when not
+  under a unit; never in tests.
+- `paths.get()` cached across test HOMEs → not cached under `APTUS_TEST`.
+- Missing: `settingsFocused` state (+ `setSettingsFocused`, renamed to avoid the clash),
+  `post(…, key)` replacing in place and `update()`, `arbitrate(m, now, opts)` returning
+  `{ kind, entry }` with the fullscreen and pinned-card tiers, Deck page stack owned by the manager,
+  `config.js` `MIGRATIONS`/`migrate`, limits passed in instead of constants in `rules.js`.
+- Optional QML parameters: an omitted typed `string` arrives as `"undefined"` (probe) → optional
+  parameters of the manager API (and `Wallpaper.set`, `Focus.start`) are `var`.
+- Nits: TYPE_CHECKING imports in doctor; deps lists fixed (+ systemd-cat, journalctl, grim,
+  Papirus); `--yes-to-base` dropped; `Ipc settings.open(pageOrKey)`; rules.js field names equal
+  SurfaceManager's; `menu` removed from the surface ids; `NotchModes.ids` = `rules.NOTCH_MODES`;
+  `toggle` returns bool; `test_binds_lua.py`; `aptus dev on|off` is a flag the supervisor reads
+  (`supervise.shell_env`); more `tst_rules`/`tst_config` cases.
+- Reported: `install/__main__.py`, the conftest `sys.path` lines and `back(): bool { return false }`
+  are tiny wiring/behaviour in phase 3 (accepted as the contract defaults); the registry files
+  first appeared in phase 3 (phase 2 had only their qmldir entries).
+
+**Probe (phase-5 risks b and c, run early in a scratch shell with a private bus and runtime dir):**
+`qs ipc call` with too few arguments, an unknown function, a bad int or a throwing handler prints a
+message (or nothing) and exits **0**; with no instance it exits **255**; `qs ipc show` lists
+`function name(arg: type): type` per target. `aptus msg` therefore pads arguments from `show`,
+classifies the output, and treats an empty answer as an error.

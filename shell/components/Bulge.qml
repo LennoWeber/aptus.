@@ -10,8 +10,9 @@ Shape {
     property real frameWidth: 0
     property real frameHeight: 0
     // Thickness of the left/right/bottom edges and of the top band (the bar).
+    // (Not `top`: that is Item's FINAL anchor line.)
     property real edge: 0
-    property real top: 0
+    property real barHeight: 0
     // Radius of the content area's inner corners (03 §6.1: 18).
     property real innerRadius: 0
     // The bulges to cut in.

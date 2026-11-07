@@ -10,5 +10,4 @@ Rectangle {
     property bool pressed: false
     // accentWash instead of the ink washes ("on" tiles).
     property bool on: false
-    property bool enabled: true
 }

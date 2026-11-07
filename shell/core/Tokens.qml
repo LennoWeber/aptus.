@@ -16,6 +16,7 @@ Singleton {
     // and the glass rule.
     property real wallpaperHue: -1
     property real wallpaperLightness: -1
+    property real wallpaperChroma: -1
 
     // Resolution result.
     readonly property string mode: "dark"          // "dark" | "light"
@@ -94,7 +95,7 @@ Singleton {
     readonly property int s10: 48
 
     // Padding and gaps by context (03 §7).
-    readonly property int padBar: 12
+    readonly property int padBar: 8            // from the frame edge: content starts 14 px from the screen edge
     readonly property int gapBarItem: 8
     readonly property int gapBarZone: 16
     readonly property int padDrawer: 16
@@ -119,7 +120,7 @@ Singleton {
     readonly property int appIconRow: 20
     readonly property int appIconSpotlight: 28
     readonly property int appIconSwitcher: 32
-    readonly property int appIconToast: 48
+    readonly property int appIconToast: 24
     readonly property int appIconOverview: 48
 
     // Component dimensions (03 §9), as the objects of tokens.json "components".
@@ -129,7 +130,7 @@ Singleton {
     readonly property var switchToken: ({})
     readonly property var slider: ({})
     readonly property var segmented: ({})
-    readonly property var row: ({})
+    readonly property var listRow: ({})
     readonly property var field: ({})
     readonly property var keycap: ({})
     readonly property var ring: ({})
@@ -138,12 +139,22 @@ Singleton {
     readonly property var tooltip: ({})
     readonly property var badge: ({})
     readonly property var emptyState: ({})
+    readonly property var checkbox: ({})
+    readonly property var rollingDigits: ({})
+    readonly property var ellipsis: ({})
+    readonly property var pagerDots: ({})
+    readonly property var swatch: ({})
+
+    // Every accent in the current mode, in accentOrder: [{ name, label, colour }] (accent swatches),
+    // and the two neutrals (ink.sec, ink.meta) for calendar colours (settings.md §5).
+    readonly property var accents: []
+    readonly property var neutrals: []
 
     // Surface-specific numbers: tokens.json "surfaces" (surface → name → value).
     readonly property var surfaces: ({})
 
     // Resolve the palette (08 §3, core/js/resolve.js) from tokens, settings and the wallpaper,
-    // and apply it (the colour properties animate over Motion.theme, M-30).
+    // and apply it (the colour properties animate over Motion.ambientTheme, M-30).
     function resolveNow(): void { throw new Error("Tokens.resolveNow: not implemented"); }
     // Apply a resolution object (resolve.js result, or current/shell.json written outside).
     function apply(resolved: var): void { throw new Error("Tokens.apply: not implemented"); }

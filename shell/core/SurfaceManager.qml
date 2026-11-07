@@ -26,6 +26,10 @@ Singleton {
     // The settings window (one per session, not per monitor).
     property bool settingsOpen: false
     property var settingsArgs: ({})
+    // The settings window has keyboard focus (toggle semantics of settings.md §2).
+    property bool settingsFocused: false
+    // Timing limits for rules.js, from Tokens (toast.staleMs, event.maxAgeMs).
+    readonly property var limits: ({})
     // "monitor|surface" → function(): bool, registered by open surfaces for the Esc ladder.
     property var backHandlers: ({})
     // Source of passive entry ids.
@@ -36,23 +40,29 @@ Singleton {
     // Asks the settings window to focus itself (open but not focused, settings.md §2).
     signal settingsFocusRequested()
 
-    // ── API (07 §5; also over IPC). `monitor` "" means the active monitor. ──────────────────
+    // ── API (07 §5; also over IPC). Optional parameters are `var` and may be omitted: an
+    // omitted typed string parameter would arrive as "undefined" (Qt 6.11, phase-3 probe).
+    // `monitor` omitted or "" means the active monitor; `args` omitted means {}. ─────────────
     // Open a surface: a notch mode id, "card:<activity>", "deck", "overview", "capture",
     // "settings". Returns false when refused (locked) or queued (polkit open).
-    function open(surface: string, args: var, monitor: string): bool { throw new Error("SurfaceManager.open: not implemented"); }
-    function close(surface: string, monitor: string): void { throw new Error("SurfaceManager.close: not implemented"); }
+    function open(surface: string, args: var, monitor: var): bool { throw new Error("SurfaceManager.open: not implemented"); }
+    function close(surface: string, monitor: var): void { throw new Error("SurfaceManager.close: not implemented"); }
     // Its own key again closes it (05 §3 way out 3); the settings window is focused when open but
     // not focused (settings.md §2).
-    function toggle(surface: string, args: var, monitor: string): void { throw new Error("SurfaceManager.toggle: not implemented"); }
+    function toggle(surface: string, args: var, monitor: var): bool { throw new Error("SurfaceManager.toggle: not implemented"); }
     // The Esc ladder (05 §3): the menu, then the top surface's back handler, then the surface.
-    function back(monitor: string): void { throw new Error("SurfaceManager.back: not implemented"); }
-    // Passive content for the notch: kind "toast" | "osd" | "event". Returns the entry id.
-    function post(kind: string, payload: var, priority: int, monitor: string): int { throw new Error("SurfaceManager.post: not implemented"); }
+    function back(monitor: var): void { throw new Error("SurfaceManager.back: not implemented"); }
+    // Passive content for the notch: kind "toast" | "osd" | "event". A non-empty key replaces the
+    // entry with the same key in place (one OSD per kind, replaces_id). Returns the entry id.
+    // priority defaults to 0 (critical toasts pass 2, as notification urgency).
+    function post(kind: string, payload: var, priority: var, monitor: var, key: var): int { throw new Error("SurfaceManager.post: not implemented"); }
+    // Change a passive entry's payload in place (stack toast growing, OSD value change).
+    function update(id: int, payload: var, monitor: var): void { throw new Error("SurfaceManager.update: not implemented"); }
     // Remove a passive entry (toast timed out or dismissed, OSD faded).
-    function dismiss(id: int, monitor: string): void { throw new Error("SurfaceManager.dismiss: not implemented"); }
+    function dismiss(id: int, monitor: var): void { throw new Error("SurfaceManager.dismiss: not implemented"); }
     // JSON of every MonitorState and the session-wide state (IPC `shell state`, tests).
     function state(): string { throw new Error("SurfaceManager.state: not implemented"); }
-    function isOpen(surface: string, monitor: string): bool { throw new Error("SurfaceManager.isOpen: not implemented"); }
+    function isOpen(surface: string, monitor: var): bool { throw new Error("SurfaceManager.isOpen: not implemented"); }
     function monitorState(name: string): MonitorState { throw new Error("SurfaceManager.monitorState: not implemented"); }
 
     // Menus (03 §9): one per monitor, above every surface, closed first by Esc.
@@ -64,7 +74,7 @@ Singleton {
     function unregisterBack(monitor: string, surface: string): void { throw new Error("SurfaceManager.unregisterBack: not implemented"); }
 
     // The settings window reports its focus (toggle semantics of settings.md §2).
-    function settingsFocused(focused: bool): void { throw new Error("SurfaceManager.settingsFocused: not implemented"); }
+    function setSettingsFocused(focused: bool): void { throw new Error("SurfaceManager.setSettingsFocused: not implemented"); }
 
     // ── Internal ──────────────────────────────────────────────────────────────────────────
     // Keep `monitors` in step with Hypr.monitors (create, remove without animation).
@@ -73,5 +83,5 @@ Singleton {
     function _apply(result: var): void { throw new Error("SurfaceManager._apply: not implemented"); }
     // Plain-object snapshot of the current state for rules.js.
     function _snapshot(): var { throw new Error("SurfaceManager._snapshot: not implemented"); }
-    function _monitorFor(monitor: string): string { throw new Error("SurfaceManager._monitorFor: not implemented"); }
+    function _monitorFor(monitor: var): string { throw new Error("SurfaceManager._monitorFor: not implemented"); }
 }

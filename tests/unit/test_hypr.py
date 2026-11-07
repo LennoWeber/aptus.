@@ -19,5 +19,13 @@ def test_refuses_real_signature_in_tests() -> None:
     raise NotImplementedError
 
 
+def test_refuses_when_real_signature_unknown() -> None:
+    raise NotImplementedError
+
+
+def test_explicit_sig_is_checked() -> None:
+    raise NotImplementedError
+
+
 def test_dispatch_sends_lua() -> None:
     raise NotImplementedError

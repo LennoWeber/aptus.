@@ -56,16 +56,22 @@ aptus/
 │  └─ doctor/ (isolation.py, deps.py, config.py)
 ├─ shell/                       qs -p shell
 │  ├─ shell.qml                 root: ShellRoot, Variants over Quickshell.screens → MonitorShell
-│  ├─ core/                     Tokens, Motion, Config, Paths, Log, SurfaceManager, Ipc, Shortcuts, Format
+│  ├─ core/                     Tokens, Motion, Config, Paths, Log, Format, SurfaceManager, MonitorState,
+│  │                            js/ (pure logic: rules, config, colour, resolve, format, bulge, sun)
+│  ├─ components/               Bulge (frame/cove path), BulgeSpec, NotchMode, Drawer, Activity, ListRow,
+│  │                            List, Button, IconButton, Tile, Slider, Switch, Segmented, Checkbox, Field,
+│  │                            Keycap, Ring, Level, Menu, MenuHost, Tooltip, Badge, EmptyState, Glyph,
+│  │                            Label, Wash, FocusRing, AppIcon, Thumb, Scrim, RollingDigits, Ellipsis,
+│  │                            ErrorLine, PagerDots, Swatch
 │  ├─ services/                 one singleton per data source (§6)
-│  ├─ components/               Bulge (frame/cove path), Row, Button, Tile, Slider, Switch, Segmented,
-│  │                            Field, Keycap, Ring, Level, Menu, Tooltip, Badge, EmptyState, Glyph,
-│  │                            AppIcon, Thumb, List, Scrim
-│  ├─ surfaces/                 frame, bar, notch (rest, compact, toast, osd, event, cards), spotlight,
-│  │                            switcher, overview, deck (+ pages), today, focus, capture, lock, veil,
-│  │                            session, polkit, gallery, settings (window), keys, jot
-│  ├─ windows/                  MonitorShell.qml (the layers of one monitor), SettingsWindow.qml
-│  ├─ config/settings-schema.json
+│  ├─ surfaces/<name>/          one folder (QML module qs.surfaces.<name>) per surface, owned by one
+│  │                            stage: frame, wallpaper, bar, notch (rest, compact, toast, osd, event,
+│  │                            card host), spotlight, switcher (SwitcherStrip), overview, deck (+ pages),
+│  │                            today, focus, capture, lock (+ veil), session, polkit, gallery, settings
+│  │                            (SettingsWindow), keys (KeysSheet), jot (JotSheet)
+│  ├─ registry/                 Shortcuts, Ipc, NotchModes, Activities: the id → handler/component tables
+│  ├─ windows/                  MonitorShell.qml (the layers of one monitor)
+│  ├─ config/                   settings-schema.json, known-binds.json
 │  └─ assets/                   fonts/MaterialSymbolsRounded.ttf, emoji.json, sounds/*.oga, icons/
 ├─ theme/
 │  ├─ tokens.json               every token of 03-visual-language (the single source)
@@ -80,6 +86,12 @@ aptus/
 
 Every path the code uses comes from `paths.py` / `Paths.qml`, which resolve the XDG base
 directories once.
+
+QML module order (no import cycles): `core` ← `components` ← `services` ← `surfaces` ← `registry` ←
+`windows` ← `shell.qml`. Core gets service data through `Binding`s in `shell.qml`; a surface never
+imports the registry (the notch receives its mode and activity components as properties). Names are
+chosen so that nothing hides a QtQuick type (`ListRow`, the `Binds` service): `QtQuick.Controls`, if
+ever needed, is imported only with a namespace (`import QtQuick.Controls as QQC`).
 
 ## 3. Startup
 
@@ -138,11 +150,12 @@ closes anything.
 MonitorState {
   notch:     "rest" | "spotlight" | "switcher" | "today" | "session" | "polkit"
              | "gallery" | "jot" | "keys" | "keysPeek" | "focusPicker" | "card:<activity>"
-  passive:   queue of { kind: toast|osd|event, payload, priority, born }
+  passive:   queue of { id, kind: toast|osd|event, payload, priority, born }
   deck:      { open: bool, pages: [ "main", "wifi", … ] }
   overview:  bool
-  menu:      null | { anchor, model }
-  capture:   null | { mode: region|record|colour, frozen: [frames] }
+  menu:      null | { anchor, model, owner }
+  capture:   null | { mode: region|screen|window|record|colour, args }   (the frozen frames live in
+             the capture overlay, not in the state)
   fullscreen: bool          (from Hyprland events, per monitor)
   locked:    bool           (session-wide)
 }
@@ -167,6 +180,11 @@ Transition rules (enforced here, not in surfaces):
 | monitor removed | surfaces open on it | closed without animation |
 | active monitor changes | a notch mode open on the old one | closed (Spotlight rule); passive content stays |
 
+Cards and the Keys peek are notch states but not *interactive* surfaces: they do not queue toasts
+or catch outside clicks, and a pinned card yields to OSD, toasts and events (arbitration of
+[notch.md](surfaces/notch.md) §9). A card opened by click takes the keyboard (for `Tab`, `←/→` and
+its buttons); one opened by hover does not.
+
 Keyboard: when an interactive surface opens, `aptus-shell` on that monitor switches to
 `keyboardFocus: Exclusive`; on close back to `None`, and Hyprland returns focus to the window that
 had it. The manager records the previously focused window address for paste-back and for the away
@@ -179,13 +197,15 @@ Singletons in `shell/services/`. Each exposes properties (bindable) and methods;
 | Service | Responsibility | Source | Updates |
 |---|---|---|---|
 | `Hypr` | monitors, workspaces, toplevels, active window, fullscreen, urgent, special, submap | `Quickshell.Hyprland` + `rawEvent` | events |
+| `Switcher` | Alt+Tab MRU order, threshold, commit | `Hypr` | events |
+| `Progress` | progress activities (downloads, copies) from notification hints | `Notifications` | events |
 | `Apps` | desktop entries, icons, running-app lookup | `DesktopEntries` | on change |
 | `Audio` | sinks, sources, streams, volumes, mute | `Quickshell.Services.Pipewire` | events |
 | `Brightness` | eDP-1 backlight, keyboard LED if present | `/sys/class/backlight/*` (FileView watch), `brightnessctl` to write | events |
 | `NightLight` | temperature, schedule, sun times | `hyprsunset` via `hyprctl hyprsunset`; sunrise/sunset computed locally from `weather.location` (NOAA formula) | minute tick while scheduled |
 | `Network` | devices, Wi-Fi list, connect, VPN | `Quickshell.Networking` (P-13), `nmcli` | events |
 | `Bt` | adapter, devices, pairing | `Quickshell.Bluetooth` | events |
-| `Power` | battery, profile, lid, inhibitors | `Quickshell.Services.UPower`, logind D-Bus | events |
+| `Power` | battery, power profile | `Quickshell.Services.UPower`, `powerprofilesctl` | events |
 | `Media` | players, the active player rule | `Quickshell.Services.Mpris` | events |
 | `Notifications` | server, toasts, history, held queue, interruption policy | `Quickshell.Services.Notifications` | events |
 | `Clipboard` | history, pins, paste-back | `cliphist -db-path …`, `wl-copy`, `wtype` | on open + `aptus-clipd` signal file |
@@ -198,9 +218,9 @@ Singletons in `shell/services/`. Each exposes properties (bindable) and methods;
 | `Wallpaper` | resolution, thumbnails, analysis, rotation | `wallpaper.json`, `FolderListModel` | events |
 | `Theme` | mode, accent, glass, auto schedule, render requests | `Config`, `NightLight` sun times; runs `aptus-theme apply` | on change |
 | `Idle` | dim, lock, screen off, keep awake | `IdleMonitor`, `IdleInhibitor`, `systemd-inhibit` | events |
-| `Session` | lock state, PAM, fingerprint, logout path, polkit agent | `WlSessionLock`, `PamContext`, `PolkitAgent` | events |
+| `Session` | lock state, PAM, fingerprint, logout path, polkit agent, lid (logind inhibitor) | `WlSessionLock`, `PamContext`, `PolkitAgent`, logind D-Bus | events |
 | `Privacy` | mic, camera, screencast in use | Pipewire nodes, Hyprland `screencast` | events |
-| `Keys` | bind table, descriptions | `hyprctl binds -j` | `config.reloaded` |
+| `Binds` | bind table, descriptions, overrides (`binds.local.lua`), conflicts | `hyprctl binds -j`, `shell/config/known-binds.json` | `config.reloaded` |
 | `Jot` | inbox read/append/edit | `jot.file` (FileView) | file change |
 | `Frecency` | launch history, ranking | `frecency.json` | on use |
 | `Files` | recent files, search | `recently-used.xbel`, `plocate`, `fd` | on query |
@@ -304,8 +324,11 @@ a missing or corrupt file by using defaults and logging once.
   opens a terminal, `aptus logs` shows why", and retry every 30 s.
 - Binds that need the shell (`global aptus:*`) do nothing while it is down; window management,
   terminal and browser binds keep working. Locking is the exception: `Super+L` and
-  `XF86ScreenSaver` are bound to `aptus msg session lock || hyprlock -c <aptus hyprlock.conf>`, the only aptus bind that
-  forks a process, so locking works even with the shell down.
+  `XF86ScreenSaver` are bound to `aptus msg session lock || hyprlock -c <aptus hyprlock.conf> || hyprlock`,
+  the only aptus bind that forks a process, so locking works even with the shell down. `aptus msg`
+  exits non-zero when no shell runs, when it does not answer within 2 s, and when it answers
+  `error: …` (as `session lock` does while the shell has no lock screen); `qs ipc call` itself
+  exits 0 for most errors, so `aptus msg` reads its output.
 - Quickshell file watching is off in normal runs and on with `aptus dev` (live reload while
   developing, probe P-23).
 
@@ -314,9 +337,12 @@ a missing or corrupt file by using defaults and logging once.
 - Shell: `Log.qml` with categories (`surface`, `service.<name>`, `ipc`, `perf`) and levels; level
   from `APTUS_LOG` (default `info`) or `aptus msg shell log debug`. Goes to journald via the
   supervisor pipe, tag `aptus-shell`.
-- Tools: Python `logging` to stderr; inside units it reaches the journal with the unit name;
-  `aptus-session` uses tag `aptus-session`.
-- `aptus logs [-f] [component]` = `journalctl --user -t aptus-shell -t aptus-session -u 'aptus-*'`.
+- Tools: Python `logging` to stderr; inside units it reaches the journal with the unit name.
+- `aptus logs [-f] [component]`: the tags `aptus-shell`, `aptus-session`, `aptus-supervise` and the
+  units `aptus-*`, merged by time. journalctl ANDs `-t` with `-u`, so these are two queries
+  (`journalctl --user -t … -o json` and `journalctl --user -u 'aptus-*' -o json`).
+- `aptus-session` and `aptus-supervise` are started by Hyprland, not by a unit, so they write to
+  journald's socket themselves (`SYSLOG_IDENTIFIER`); inside units, stderr reaches the journal.
 - No log line ever contains notification bodies, clipboard content, passwords, calendar URLs or
   window titles above `debug`.
 
