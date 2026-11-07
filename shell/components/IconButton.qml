@@ -9,6 +9,9 @@ Item {
 
     property string glyph: ""
     property string tooltip: ""
+    // Disabled with a reason: faint, no wash, but hover stays so the tooltip says why (03 §8);
+    // use this instead of `enabled: false`, which also turns off hover.
+    property string disabledReason: ""
     // "bar" | "drawer"
     property string size: "drawer"
     property bool on: false

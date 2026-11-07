@@ -75,7 +75,8 @@ quiet "Reset this page…" (risk, confirms inline).
   (never deleted) and listed under About › "Unknown keys". Invalid values fall back to the default
   for that key only, with one toast ("settings.json: bar.tray.max must be 0–6 — using 3").
   A file that is not valid JSON is ignored as a whole (the last good values stay) with a toast that
-  names the line and column; the window shows a banner with *Open file*.
+  names the line and column (`config.js` locates the error itself: the JS engine's `JSON.parse`
+  gives no position); the window shows a banner with *Open file*.
 - **Keyboard.** `↑ ↓` in the sidebar change page; `Tab` moves into the content; inside, `Tab` walks
   controls, `Space` toggles, `← →` move segmented controls and sliders; `Ctrl+1…9` jump to pages.
 

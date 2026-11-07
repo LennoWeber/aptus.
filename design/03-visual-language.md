@@ -260,6 +260,30 @@ Base 4 px. Tokens: `s1` 2 · `s2` 4 · `s3` 6 · `s4` 8 · `s5` 12 · `s6` 16 ·
 | **Pager dots** | 6 px dots 6 apart, `ink.faint`, current `ink.sec` (notch cards, Deck media) |
 | **Swatch** | a 20 px colour dot; selected: a 2 px ring in `ink.main` 2 px outside; the six accents and the two neutrals `ink.sec` and `ink.meta` (accent setting, calendar colours, colour card) |
 
+Behaviour settled while building the library (S1), binding for every surface:
+- **Controlled inputs.** Switch, Checkbox, Segmented and Slider never write their own value; they
+  emit `toggled`/`selected`/`moved` and the owner writes the value back (a Slider shows its own
+  value only while dragging). `Field.text` is an alias of the input, so an owner's binding survives
+  typing; the caret does not blink; `Ctrl+Backspace` clears.
+- **Disabled with a reason.** Button, IconButton and Tile take `disabledReason`: faint, no wash,
+  but hover stays so the tooltip says why (`enabled: false` would kill hover).
+- **Filled controls** (primary button, an "on" tile or icon button): hover and pressed are
+  `onAccent` at the wash amounts over the accent; over `accentWash`, `ink.main` at the hover amount.
+- **Tile** content: glyph top-left, label `bodyStrong`, state line `micro` in `ink.meta`; padding
+  `padTile` horizontally and `s4` vertically (64 px holds no more). Labels are the short forms of
+  the Deck diagram (deck.md §3). Right click opens the page; a disabled tile still opens it.
+- **Menu.** Submenus open on click, `Enter` or `→`, never under a passing pointer (05 §4); hover
+  moves the current row; `↑ ↓` wrap and skip separators; a checked row ends in an accent `check`; a
+  risk row leads with a crit `warning`; key hints are `micro` `ink.meta` text; an inline confirm
+  row waits `spotlight.destructiveConfirmMs`. A press outside reaches what is under the pointer,
+  then the menu closes; focus returns where it was. Rows have radius 6 (12 − 6, concentric).
+- **Tooltip.** Centred below the target, above it when there is no room, `s2` gap, `s4` from the
+  window edges; hidden while the target is pressed.
+- **List** forwards keys through `navigate(key, modifiers)`, so a surface whose Field keeps the
+  focus (Spotlight) drives the list; the highlight follows on `spring.snappy`.
+- **Smaller points:** Badge shows "99+" above 99; AppIcon's letter fallback has radius size / 4;
+  a selected Thumb has the focus-ring geometry in `accent`; Ellipsis dots stand still.
+
 ## 10. Banned patterns
 
 From tacit's list, plus aptus's own:

@@ -10,6 +10,9 @@ var MIN_SIZE = 0.5
 
 function notImplemented(name) { throw new Error("bulge." + name + ": not implemented") }
 
+// A number for SVG path data (2 decimals).
+function num(n) { notImplemented("num") }
+
 // Sort by x, drop invisible ones, clamp into the content area, merge overlaps.
 function normalise(bulges, width, edge) { notImplemented("normalise") }
 // SVG path data of the frame band with the bulges: outer rectangle, then the inner outline.

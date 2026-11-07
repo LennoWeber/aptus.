@@ -167,4 +167,8 @@ Calendar sources live in `~/.config/aptus/calendars.json` (0600), edited in the 
 
 Validation rules beyond types: `idle.dimAfter < idle.lockAfter ≤ idle.screenOffAfter` (when
 non-zero); `focus.default ∈ focus.durations`; paths (also every entry of a `list<path>`) must be inside `$HOME`. A violation falls back
-to the default for the offending key and says so once.
+to the default for the offending key and says so once. In `settings-schema.json` these are the
+`rules` of kind `order`, `member` and `insideHome`. A key that is not settable (`derived`, such as
+`bar.height`) is ignored in the file with a problem line. `Config.set` refuses a value that breaks a
+rule and returns the message. `mustExist` (`wallpaper.dir`) is not checked when loading (QML has no
+synchronous file check); the settings window's folder picker checks it.

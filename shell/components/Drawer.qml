@@ -2,6 +2,8 @@
 import QtQuick
 
 Item {
+    // TODO(phase): content choreography (04 §3 rule 1) as in NotchMode, driven by `open`.
+
     property string monitorName: ""
     property bool open: false
     property var args: ({})

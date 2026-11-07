@@ -17,4 +17,13 @@ Item {
     // M-14: the workspace pills in monitor coordinates, [{ workspace, x, y, width, height }],
     // for the overview's shared-element morph.
     readonly property var pillRects: []
+
+    // How far the frame is slid out under a fullscreen window (Frame.hide, M-31); the bar follows.
+    property real hide: 0
+
+    // Private state.
+    // Content starts padBar from the frame edge (03 §7); the centre stays clear for the notch.
+    readonly property real _inset: 0
+    // Width of each side zone (left, right) around the notch.
+    readonly property real _sideWidth: 0
 }

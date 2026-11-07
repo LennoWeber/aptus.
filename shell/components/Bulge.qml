@@ -23,4 +23,13 @@ Shape {
     // Draw only the bulge bodies (shadow source) instead of the frame band.
     property bool bodiesOnly: false
     property color colour
+
+    // The 1 px frame line along the content area's outline (03 §6, Tokens.frameLine); 0 = none.
+    property color lineColour: "transparent"
+    property real lineWidth: 0
+
+    // Private state.
+    // The open bulges as plain objects for bulge.js (reading every field keeps the binding live).
+    readonly property var _specs: ({})
+    readonly property string _path: ""
 }

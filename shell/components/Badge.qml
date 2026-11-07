@@ -10,4 +10,11 @@ Item {
     // -1: a dot; ≥ 0: a count pill.
     property int count: -1
     property color colour
+
+    // Private state.
+    readonly property bool _dot: false
+    property real _pop: 1
+
+    // Private helpers.
+    function _popIn(): void { throw new Error("Badge._popIn: not implemented"); }
 }

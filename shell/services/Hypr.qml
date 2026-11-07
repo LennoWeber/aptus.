@@ -11,6 +11,8 @@ Singleton {
     //   (hasFullscreen per monitor's active workspace), toplevels (lastIpcObject after refreshToplevels).
     // TODO(phase): rawEvent for submap and fullscreen; dispatch() through Hyprland.dispatch (Lua
     //   expressions); the window actions are dispatches (S1); workspaces/urgent/special are S3's.
+    // TODO(phase): every Hyprland.refresh*() goes through _refresh() (startup, _windowEvents, monitor
+    //   events); monitors[].focused ← Hyprland.focusedMonitor (HyprlandMonitor.focused stays false).
 
     // Hyprland monitors: [{ name, x, y, width, height, scale, focused, activeWorkspace }]
     property var monitors: []
@@ -18,8 +20,8 @@ Singleton {
     property string focusedMonitor: ""
     // { address, class, title, monitor, workspace, floating, pinned, fullscreen } or null
     property var activeWindow: null
-    // monitor name → true while its active workspace has a fullscreen window
-    property var fullscreenMonitors: ({})
+    // names of the monitors whose active workspace has a fullscreen window (SurfaceManager input)
+    property var fullscreenMonitors: []
     // every mapped toplevel: { address, class, title, monitor, workspace, x, y, width, height, floating, pinned, fullscreen, focusHistoryId }
     property var windows: []
     // the current submap
@@ -53,4 +55,20 @@ Singleton {
     function renameWorkspace(id: int, name: string): void { throw new Error("Hypr.renameWorkspace: not implemented"); }
     // hyprctl reload (Spotlight "Reload Hyprland").
     function reload(): void { throw new Error("Hypr.reload: not implemented"); }
+
+    // Private state.
+    // lastIpcObject is filled by refreshToplevels; window events make it stale.
+    readonly property var _windowEvents: []
+    // Quickshell 0.3.2: two refresh*() calls in the same JS turn leave every list empty, and
+    // refreshMonitors() clears focusedMonitor until the next refreshWorkspaces(). So refreshes are
+    // queued, run one per tick, and a monitor refresh is always followed by a workspace refresh.
+    property var _pending: []
+
+    // Private helpers.
+    // A toplevel as the plain record above (from lastIpcObject; fresh after refreshToplevels).
+    function _client(t: var): var { throw new Error("Hypr._client: not implemented"); }
+    // The Lua window selector table: the active window for "", else the address; extra fields appended.
+    function _target(address: string, extra: var): string { throw new Error("Hypr._target: not implemented"); }
+    // Queue refreshes ("monitors", "workspaces", "toplevels"); see _pending.
+    function _refresh(kinds: var): void { throw new Error("Hypr._refresh: not implemented"); }
 }

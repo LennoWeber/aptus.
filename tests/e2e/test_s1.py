@@ -35,3 +35,7 @@ def test_configerrors_empty(nested: Nested) -> None:
 
 def test_screenshot(nested: Nested) -> None:
     raise NotImplementedError
+
+
+def test_no_deprecated_config(nested: Nested) -> None:
+    raise NotImplementedError

@@ -148,8 +148,10 @@ Window and workspace motion is Hyprland's and uses the same curves. Speeds are i
 
 ## 6. Theme crossfade (M-30)
 
-All colour tokens in the `Tokens` singleton are animated properties (`Behavior on color`), so every
-bound colour transitions together in one 400 ms pass. Changes that are not colours (icon theme,
+All colour tokens in the `Tokens` singleton are animated together: `Tokens` keeps the old and the
+new palette and blends every role by one shared progress (a single `NumberAnimation`), so every
+bound colour transitions in one 400 ms pass. (`Behavior` cannot be used here: inside a lazily
+created singleton it crashes Quickshell 0.3.2, found in S1.) Changes that are not colours (icon theme,
 `GRAD` axis) switch at the midpoint (200 ms), hidden by the crossfade. Apps are re-rendered after
 the shell has finished its own fade, so the CPU work never stutters the crossfade.
 

@@ -23,4 +23,8 @@ Item {
     property bool revealed: false
     // How far the frame is slid out (0 shown, 1 hidden), animated.
     property real hide: 0
+
+    // Current thicknesses: the intro grows them (M-01), fullscreen slides them out (M-31).
+    readonly property real edgeNow: 0
+    readonly property real barNow: 0
 }

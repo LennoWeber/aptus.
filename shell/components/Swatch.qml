@@ -12,4 +12,7 @@ Item {
     // Tooltip text (the accent's name).
     property string name: ""
     signal picked()
+
+    // Private state.
+    readonly property real _out: 0
 }

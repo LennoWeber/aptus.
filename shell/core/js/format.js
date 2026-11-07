@@ -10,6 +10,9 @@ var ELLIPSIS = "…"
 
 function notImplemented(name) { throw new Error("format." + name + ": not implemented") }
 
+// Private helpers.
+function pad2(n) { notImplemented("pad2") }
+
 function time(date) { notImplemented("time") }                  // "14:32"
 function dateShort(date) { notImplemented("dateShort") }        // "Sat 7 Nov"
 function dateLong(date) { notImplemented("dateLong") }          // "Saturday, 7 November"

@@ -18,6 +18,8 @@ class RestartPolicy:
 @dataclass
 class CrashLog:
     times: list[float]                            # monotonic times of recent crashes
+    streak: int = 0                               # crashes since the last run of ≥ crash_window s
+    started: float = 0.0                          # monotonic start of the current run
 
 
 # TODO(phase): qs stdout/stderr → `systemd-cat -t aptus-shell` (07 §10); under APTUS_TEST →
@@ -33,6 +35,8 @@ def shell_env(paths: Paths, env: Mapping[str, str]) -> dict[str, str]:
     raise NotImplementedError
 
 
+# TODO(phase): the delay index is `streak` (reset when the run lasted ≥ crash_window), not the crash
+#   count in the window, so crashes at 0, 6 and 12 s wait 0.5, 1 and 2 s (07 §10).
 def next_delay(policy: RestartPolicy, crashes: CrashLog, now: float) -> float:
     """Record a crash at `now` and return the wait before the next start: 0.5, 1, 2 s, then the
     slow retry once crash_limit crashes fall inside crash_window."""

@@ -19,6 +19,6 @@ function notImplemented(name) { throw new Error("resolve." + name + ": not imple
 function resolve(tokens, inputs) { notImplemented("resolve") }
 // Step 2 of 08 §3: the accent name for `accent` (the six, or the nearest hue for "wallpaper";
 // ties and low-chroma images keep currentAccent).
-function accentFor(tokens, accent, wallpaperHue, wallpaperChroma, currentAccent) { notImplemented("accentFor") }
+function accentFor(tokens, accent, wallpaperHue, wallpaperChroma, currentAccent, paletteName) { notImplemented("accentFor") }
 // Step 5: ground alpha for glass (0.86, 0.92 when the wallpaper's lightness is in the wrong half).
 function groundAlpha(tokens, glass, mode, wallpaperLightness) { notImplemented("groundAlpha") }

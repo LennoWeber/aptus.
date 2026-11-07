@@ -2,6 +2,9 @@
 through the gestures), descriptions well-formed, init.lua's gen defaults equal tokens.json."""
 from __future__ import annotations
 
+# TODO(phase): run hypr/binds.lua under /usr/bin/luajit with a stub `hl` that records bind() calls
+#   (no lua 5.4 is installed; 09's binds use no 5.4-only syntax).
+
 
 
 def test_every_shortcut_bound() -> None:

@@ -10,4 +10,7 @@ Item {
     property int count: 0
     property int current: 0
     signal picked(int index)
+
+    // Private state.
+    readonly property real _pitch: 0
 }

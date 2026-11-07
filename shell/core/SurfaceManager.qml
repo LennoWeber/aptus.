@@ -11,7 +11,10 @@ Singleton {
     // TODO(phase): MonitorState objects created with Component.createObject per Hypr monitor (syncMonitors).
     // TODO(phase): every API function = snapshot → rules.js → _apply; a Timer runs rules.expire while
     //   passive content waits (events 4 s, toasts 30 s).
-    // TODO(phase): react to activeMonitor (close notch modes on the old one) and locked (07 §5).
+    // TODO(phase): react to activeMonitor (close notch modes on the old one) and locked (07 §5);
+    //   both are bindings from shell.qml, never written here (rules.js tracks _lastActive).
+    // TODO(phase): fullscreenMonitors → rules.setFullscreen per changed monitor; a 500 ms Timer runs
+    //   rules.tick while _hasPassive (events age out without an operation).
     // TODO(phase): limits ← Tokens.surfaces (toast.staleMs, event.maxAgeMs, notch.pinnedCardTimeoutMs);
     //   optional parameters normalised (undefined/"" monitor → activeMonitor, args → {}, key → "").
 
@@ -91,4 +94,20 @@ Singleton {
     // Plain-object snapshot of the current state for rules.js.
     function _snapshot(): var { throw new Error("SurfaceManager._snapshot: not implemented"); }
     function _monitorFor(monitor: var): string { throw new Error("SurfaceManager._monitorFor: not implemented"); }
+
+    // Hyprland monitor names with a fullscreen window on their active workspace (bound from
+    // Hypr.fullscreenMonitors in shell.qml; applied through rules.setFullscreen, M-31).
+    property var fullscreenMonitors: []
+
+    // Private state.
+    // The active monitor as rules.js last saw it (the Spotlight rule needs the old one).
+    property string _lastActive: ""
+    // The MonitorState fields copied from a rules.js result, in order (_apply).
+    readonly property var _fields: []
+    // Any monitor has passive content (runs the expiry tick only then).
+    readonly property bool _hasPassive: false
+
+    // Private helpers.
+    // Tell rules.js about a new active monitor (setActive) when it differs from _lastActive.
+    function _syncActive(): void { throw new Error("SurfaceManager._syncActive: not implemented"); }
 }

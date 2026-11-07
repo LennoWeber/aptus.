@@ -32,6 +32,8 @@ Scope {
     // TODO(phase): away catcher: a click outside the open surface → SurfaceManager.close(monitor.top,
     //   name), then Hypr.focusWindow(Hypr.windowAt(…)) so the click reaches the window (05 §3).
     // TODO(phase): RecFrame { monitorName } (S9 fills it).
+    // TODO(phase): while a menu is open the mask covers the monitor (rules.interactive includes menus);
+    //   MenuHost above Deck and Overview; registerBack for "deck" and "overview" (their back()).
 
     // The screen (Variants model data).
     required property ShellScreen modelData

@@ -43,6 +43,8 @@ def describe(actions: Sequence[Action]) -> str:
     raise NotImplementedError
 
 
+# TODO(phase): apply refuses to write through a symlink (a test once overwrote <repo>/bin/aptus
+#   through ~/.local/bin/aptus); links are replaced, never written into.
 def apply(paths: Paths, actions: Sequence[Action]) -> None:
     """Carry out approved actions (backups first: hyprland.lua.<date> in install_state)."""
     raise NotImplementedError

@@ -60,7 +60,7 @@ error list means every name was accepted.
 | `hl.dsp.window.move({ direction = "up" })` | swaps the tiles |
 | `hl.dsp.window.move({ workspace = 3, follow = false })` | moves, focus stays |
 | `hl.dsp.focus({ workspace = "m+1" })` / `"m-1"` | next/previous *existing* workspace on the monitor |
-| `hl.dsp.workspace.toggle_special("scratch")` + workspace rule `on_created_empty` | the scratch terminal starts in `special:scratch` |
+| `hl.dsp.workspace.toggle_special("scratch")` + a `workspace.created` handler (the `on_created_empty` rule is deprecated in 0.57.1, S1) | the scratch terminal starts in `special:scratch` |
 | `hl.unbind("SUPER + C")` | removes the bind |
 | `hyprctl eval 'hl.config({ general = { col = { active_border = … } } })'` | applies at runtime (`getoption` shows the new gradient) |
 | bind options `release`, `long_press`, `transparent`, `locked`, `repeating`, `description` | accepted; `hyprctl binds -j` shows `release`, `longPress` and the description |

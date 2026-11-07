@@ -11,4 +11,7 @@ Item {
     property string accessibleName: ""
     property bool keyboardFocus: false
     signal toggled(bool checked)
+
+    // Private state.
+    readonly property real _inset: 0
 }

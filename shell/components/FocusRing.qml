@@ -10,4 +10,8 @@ Item {
     property Item target: null
     property real targetRadius: 0
     property bool shown: false
+
+    // Private state.
+    // Gap plus stroke: the ring's outer edge from the target's edge.
+    readonly property real _out: 0
 }

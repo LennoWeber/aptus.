@@ -35,3 +35,4 @@ Ellipsis 1.0 Ellipsis.qml
 ErrorLine 1.0 ErrorLine.qml
 PagerDots 1.0 PagerDots.qml
 Swatch 1.0 Swatch.qml
+singleton ComponentShared 1.0 ComponentShared.qml

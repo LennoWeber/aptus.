@@ -392,3 +392,105 @@ to fill); `TODO(phase)` marks wiring that has no placeholder body.
   `Hypr.fullscreenMonitors` in shell.qml, applied through `rules.setFullscreen`).
 - `Session.canLock` (false in the stub) so Ipc's `session.lock` answers without S6 editing Ipc.
 - `Bar.hide` (the frame's slide-out amount) for M-31.
+
+### Phase 5 · probe (2026-11-07, thrown away)
+
+**Done.** The whole of S1 implemented inside the placeholders and TODOs on a throw-away branch
+(`s1-probe` in a worktree under the session scratchpad; kept outside the repo as the reference
+patch for phase 7). Core, rules, config, tokens, services Hypr/Wallpaper, registry, frame, bar,
+wallpaper layer, MonitorShell, shell.qml, the Lua of 09, Python tools, the test harness; the
+component library by a helper agent.
+
+**Checked.** qmltestrunner: 106 tests pass (config 23, rules 35, bulge/colour/format/resolve/sun).
+pytest: unit tests pass (two binds tests skipped, see below). qmllint over all 109 QML files:
+0 warnings. Nested Hyprland (`APTUS_TEST=1`, temp HOME): the start chain hyprland.start →
+aptus-session → aptus-supervise → qs works; `pytest tests/e2e` 9/9 (shell starts, every
+GlobalShortcut listed, `aptus msg shell state`, surface open/back, reserve zone 32 px, mask
+click-through with kitty, configerrors empty, no deprecated config, screenshot); grim screenshots
+show wallpaper, frame edge, bar reserve and the inner coves; a new image in the wallpaper folder
+appears within ~2.5 s; the scratch terminal floats below the bar.
+
+**Problems found and their fixes (they shape phase 7):**
+- `Behavior` inside a lazily created singleton crashes qs 0.3.2 (SIGSEGV in
+  `QQmlData::deferData`). Tokens crossfades with one `NumberAnimation` on `_t` instead; spec 04 §6.
+- Quickshell.Hyprland: two `refresh*()` in the same JS turn leave every list empty, and
+  `refreshMonitors()` clears `focusedMonitor` until the next `refreshWorkspaces()`; the shell saw
+  no monitor at all. Hypr queues refreshes (`_pending`, `_refresh`), one per 15 ms tick, monitors
+  always followed by workspaces; `focused` comes from `Hyprland.focusedMonitor`. Spec 07 §6.
+- A lazy singleton starts with its bindings already evaluated, so `on<Prop>Changed` never fires
+  for the first value, and a handler can run before a binding on the same property updates.
+  Wallpaper lists the folder with `FolderListModel` (the spec's source) instead of `find`. Spec 07 §6.
+- Hyprland 0.57.1 deprecates the workspace rule `on_created_empty` (a notification on every
+  start). The scratch terminal starts from a `workspace.created` handler; verified that the
+  handler gets the workspace and that a reload drops old handlers. Spec 09 §5, probes.md.
+- V4's `JSON.parse` gives no error position; config.js scans for it itself (settings.md §4).
+- qmllint: GlobalShortcut needs scoped suppressions (its qmltypes lack the Quickshell
+  dependency); `.qmllint.ini` needs a `[Warnings]` section; Process.onExited's
+  `QProcess::ExitStatus` does not resolve, so `onRunningChanged`; inline components cannot see the
+  outer file's ids (WallpaperLayer uses two explicit Images).
+- A Python test wrote through the `~/.local/bin/aptus` link of a temp HOME into `<repo>/bin/aptus`
+  (restored); `install.apply` must refuse to write through links.
+
+**Gaps, by phase (filled in the same commit as this entry, each under its phase's rules):**
+- Phase 2 (structures): `config.load` result `migrated`; passive entries `shown`/`waited`;
+  `SurfaceManager.fullscreenMonitors` (list; `Hypr.fullscreenMonitors` becomes a list too),
+  `_lastActive`, `_fields`, `_hasPassive`; `Bar.hide`; `Frame.edgeNow`/`barNow`; `Config._v1Text`;
+  Tokens `_r`, `_autoMode`, `_themeMs`, `_from`, `_to`, `_t`, colour roles readonly (bound to
+  `_blend`); Motion `_m`, `_systemReduced`; Hypr `_windowEvents`, `_pending`; Wallpaper `_dir`;
+  Shortcuts `_routes`; WallpaperLayer `_aFront`, `_scale`, `_native`, `_hAlign`, `_vAlign`;
+  `Session.canLock`; `available` on Focus, Dnd, Capture, Jot (Ipc answers an error while false);
+  `CrashLog.streak`/`started`; MonitorState `id: root` + rules.js import; shell.qml's ShellRoot
+  with `introProgress`, `_startChecked`, `_ready` (it was comment-only). Components: a
+  `ComponentShared` singleton (glyph font loaded once from the repo, tooltip regrace clock, ink and
+  state-layer lookups; qmldir line); `MonitorState.menu` gains `anchorX/anchorY` and
+  `onTriggered(row)` (nothing carried the chosen row back; 07 §5); `Field.text` an alias of the
+  input; `Slider.glyphClicked()`; `disabledReason` on Button and IconButton (`enabled: false` kills
+  the hover the tooltip needs); Glyph becomes an Item with two Texts (glyph-swap crossfade, 04 §3
+  rule 6, also P-17's fallback); private state of every component (Menu, MenuHost, Tooltip, Tile,
+  Slider, Segmented, RollingDigits, …); tokens `surfaces.notch.cardWidth/cardHeightMin/cardHeights`
+  (notch.md §5's numbers had no token).
+- Phase 3 (signatures): config.js helpers (`isObj`, `clone`, `expand`, `insideHome`,
+  `insideHomeTypes`, `fail`, `okv`, `checkInt`, `inValues`, `checkShapeField`, `locateError`,
+  `errorPosition`, `sortedStringify`, public `deriveAll`, `TIME_RE`); `resolve.accentFor(…,
+  paletteName)`; rules.js helpers (`isCard` … `findEntry`), `tick`, a trailing `now` on
+  openMenu/closeMenu/addMonitor/removeMonitor/setActive/setLocked/setFullscreen/
+  setSettingsFocused, `expire(m, now, limits)`, arbitrate `opts.limits` (no `recording`);
+  `sun.eventMinutes`/`at`/`RAD`; `format.pad2`; `colour.round8`, public `colour.mix`;
+  `bulge.num`; QML helpers `Config._store`, `Paths._xdg`, `SurfaceManager._syncActive`, Tokens
+  `_colours`/`_shown`/`_mix`/`_blend`/`_updateAuto`, Hypr `_client`/`_target`/`_refresh`,
+  Wallpaper `_list`, Shortcuts `_activeNotch`/`_spotlightScope`, WallpaperLayer
+  `_modeFor`/`_load`/`_ready`; new tests `test_derived_follows_text_scale`,
+  `test_previous_window_recorded`, `test_logs_without_journalctl`, `test_dev_flag_shell_down`,
+  `test_crash_limit_without_marker_only_notifies`, `test_command_and_env`,
+  `test_no_deprecated_config`, `tst_components` (14 tests); `List.navigate(key, modifiers)`
+  (Spotlight's field keeps the focus and forwards keys); `Motion.catalogueMs(path, out)` (reduced
+  motion for catalogue durations); the component helpers. Conventions in the docs: "critical" = priority ≥ 2; menus count as
+  interactive but toasts queue only behind interactive notch modes, Overview and Capture; OSD is
+  suppressed under the Deck.
+- Phase 4 (TODOs): Tokens crossfade and mode `auto`; Hypr refresh queue and `focused`; Wallpaper
+  FolderListModel; Config backup `printErrors: false`, `set` refuses cross-rule breaks via
+  `_store`; SurfaceManager never writes `activeMonitor`/`locked`, fullscreen input and the
+  500 ms tick; Ipc `canLock`/`available` answers and the restart Process; Shortcuts lint
+  suppressions; shell.qml fullscreen binding; tests/run `QML_XHR_ALLOW_FILE_READ=1`;
+  `install.apply` never writes through links; supervise delay index = streak (the 2 s step is
+  reachable when crashes are spread out, e.g. 0, 6, 12 s: no spec change); nested.py removes a
+  left-over runtime dir; binds tests run under `/usr/bin/luajit` with a stub `hl`. Components:
+  NotchMode and Drawer own the content choreography (04 §3 rule 1); the hosts register back
+  handlers (Notch for modes, MonitorShell for Deck and Overview); the mask covers the monitor
+  while a menu is open; size defaults from tokens instead of literals (Glyph, AppIcon, Ring, Thumb,
+  Activity/NotchCard card heights); Button press scale from tokens (the TODO said 0.97, 03 says
+  0.98); Keycap `raised` (the TODO said sunken); `tests/qml/mock` for tst_components
+  (qmltestrunner cannot load the real Quickshell plugin).
+- Spec, settled where it was silent (03 §9 "Behaviour settled while building the library"):
+  controlled inputs, disabled-with-reason, filled-control washes, tile layout, menu and tooltip
+  behaviour, List key forwarding; Deck tile labels are the diagram's short forms (52 px beside the
+  chevron, deck.md §3).
+- Missed by the probe itself: Theme's S1 part (setMode/toggleMode/setAccent/setGlass write
+  Config; Super+T needs it) stayed a stub; phase 7 fills it.
+
+- Housekeeping: four `__pycache__/*.pyc` files were committed by mistake in phases 2–4; phase 7
+  removes them from the index together with the `.gitignore` TODO.
+
+**Rejected (with reason):** a public `aptus.schema` module and a stable `Check.id` for doctor
+(the schema test can import `doctor.config.validate`; check names `config: <key>` are stable).
+

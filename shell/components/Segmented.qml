@@ -12,4 +12,16 @@ Item {
     property var value
     property bool keyboardFocus: false
     signal selected(var value)
+
+    // Private state.
+    readonly property int _index: 0
+    readonly property real _inset: 0
+    readonly property real _padH: 0
+    // Natural width of every segment; extra width is shared evenly.
+    readonly property real _natural: 0
+    readonly property real _extra: 0
+    readonly property Item _current: null
+
+    // Private helpers.
+    function _pick(i: int): void { throw new Error("Segmented._pick: not implemented"); }
 }

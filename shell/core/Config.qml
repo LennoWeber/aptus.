@@ -12,7 +12,10 @@ Singleton {
     //   Paths.settingsFile (watchChanges) → config.js load; v1 file → backup to settings.json.v1 on first write.
     // TODO(phase): config.js migrate() on load (rewrite once when changed); keys in `pending` survive an
     //   outside change of the file (settings.md §9).
-    // TODO(phase): a 300 ms Timer debounces _save() (atomic write through FileView atomicWrites).
+    // TODO(phase): a 300 ms Timer debounces _save() (atomic write through FileView atomicWrites);
+    //   the backup FileView has printErrors false (a missing settings.json.v1 is normal).
+    // TODO(phase): set()/reset() go through _store(); set() refuses a value that breaks a cross rule
+    //   and returns its message (10 §validation); derived keys follow via config.js deriveAll.
 
     // The parsed schema: { version, pages, templates, keys, rules }.
     property var schema: ({})
@@ -58,4 +61,11 @@ Singleton {
     function _loadFile(text: string): void { throw new Error("Config._loadFile: not implemented"); }
     function _save(): void { throw new Error("Config._save: not implemented"); }
     function _backupV1(): void { throw new Error("Config._backupV1: not implemented"); }
+
+    // Private state.
+    // The text of a v1 settings.json, kept for the backup before the first write.
+    property string _v1Text: ""
+
+    // Private helpers.
+    function _store(key: string, value: var, next: var): void { throw new Error("Config._store: not implemented"); }
 }

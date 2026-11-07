@@ -10,6 +10,10 @@ Singleton {
     // TODO(phase): until S9 fills this service, each action method logs "not available yet"
     //   (category service.<name>) instead of throwing (phase-1 decision 6).
 
+    // False until S9 fills this service; while false, Ipc answers "error: capture is not available yet"
+    // instead of "ok" (aptus msg exits non-zero).
+    readonly property bool available: false
+
     // what is being recorded: "region" | "screen" | ""
     property string recordingKind: ""
     // "Region 1280 × 720" or the monitor name

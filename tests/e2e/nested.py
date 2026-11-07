@@ -29,6 +29,8 @@ class Nested:
         """Start Hyprland with tests/e2e/hyprland.lua; wait for its socket."""
         raise NotImplementedError
 
+    # TODO(phase): after the exit dispatch and the process-group kill, remove
+    #   $XDG_RUNTIME_DIR/hypr/<signature> if Hyprland left it (never the real signature).
     def stop(self) -> None:
         raise NotImplementedError
 

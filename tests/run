@@ -1,3 +1,6 @@
 # tests/run: every test level of 07 §13 that runs without hands.
 # TODO(phase): (mode 755) pytest tests/unit (system python3, or $APTUS_PYTEST), qmltestrunner on tests/qml
 #   (QT_QPA_PLATFORM=offscreen), tests/lint.sh; `tests/run e2e` adds pytest tests/e2e (nested Hyprland).
+# TODO(phase): qmltestrunner needs QML_XHR_ALLOW_FILE_READ=1 (tst_config reads the real schema).
+# TODO(phase): `-import tests/qml/mock` for tst_components: a mock Quickshell (iconPath, Widgets) and
+#   qs.core singletons that read theme/tokens.json, with qs.components linked to shell/components.

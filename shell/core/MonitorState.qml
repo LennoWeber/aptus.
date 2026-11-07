@@ -1,8 +1,11 @@
 // The surface state of one monitor (07-architecture §5). Only SurfaceManager writes it;
 // surfaces read it. One instance per Hyprland monitor name.
 import QtQuick
+import "js/rules.js" as Rules
 
 QtObject {
+    id: root
+
     // Hyprland monitor name ("eDP-1", "DP-1", …).
     required property string name
 
@@ -15,7 +18,8 @@ QtObject {
     property int notchSerial: 0
 
     // Passive content waiting for or shown by the notch:
-    // [{ id: int, kind: "toast" | "osd" | "event", key: string, payload: var, priority: int, born: ms }]
+    // [{ id: int, kind: "toast" | "osd" | "event", key: string, payload: var, priority: int, born: ms,
+    //   shown: bool, waited: bool }] (rules.js: waited = queued behind a blocking surface).
     // `key` replaces an entry of the same key (one OSD per kind, a notification's replaces_id).
     // Payload conventions: toast { notification } or { card: "capture" | "colour" | "stillOpen",
     // …card fields, flyFrom: {x,y,width,height} (M-23) }; osd { kind, value, label, device };
@@ -33,7 +37,9 @@ QtObject {
     property bool overview: false
     property var overviewArgs: ({})
 
-    // An open menu: { anchorX, anchorY, model: [rows], owner: string } in monitor coordinates.
+    // An open menu: { anchorX, anchorY, model: [rows], owner: string, onTriggered: function(row) } in
+    // monitor coordinates. MenuHost closes the menu, then calls onTriggered(row). An owner that
+    // toggles its own menu checks `menu.owner` on press (the outside press reaches it first).
     property var menu: null
 
     // Capture in progress: { mode: "region" | "screen" | "window" | "record" | "colour", args }.
@@ -48,8 +54,8 @@ QtObject {
     // True for one transition that must not animate (monitor removed, crash restore).
     property bool instant: false
 
-    // Derived: an interactive surface is open (away catcher, toasts queue). Cards and keysPeek are
-    // not interactive (07 §5).
+    // Derived: an interactive surface is open (away catcher). Cards and keysPeek are not
+    // interactive (07 §5). Derived properties bind to Rules.interactive/keyboard/top(root).
     readonly property bool interactive: false
     // Derived: the shell layer takes the keyboard (interactive, or a card opened by click).
     readonly property bool keyboard: false

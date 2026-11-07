@@ -81,4 +81,8 @@ Singleton {
     function url(path: string): string { throw new Error("Paths.url: not implemented"); }
     // Create a directory and its parents (Process `mkdir -p`); fire and forget.
     function ensureDir(path: string): void { throw new Error("Paths.ensureDir: not implemented"); }
+
+    // Private helpers.
+    // An XDG base directory: the variable when set (and, under APTUS_TEST, inside HOME), else HOME + rel.
+    function _xdg(name: string, rel: string): string { throw new Error("Paths._xdg: not implemented"); }
 }

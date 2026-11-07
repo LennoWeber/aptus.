@@ -13,6 +13,8 @@ Scope {
 
     // TODO(phase): Variants over `names` → GlobalShortcut { appid: "aptus"; name } with onPressed /
     //   onReleased → pressed()/released() (P-01: a Repeater needs an Item parent, Variants does not).
+    //   qmllint: file-level `disable import` plus a scoped `disable import unresolved-type required`
+    //   around GlobalShortcut (its qmltypes lack the Quickshell dependency); shell.qml wraps Shortcuts.
     // TODO(phase): routing of 07 §7: surfaces → SurfaceManager.toggle, overview-open/-close → open/close;
     //   the rest → service methods.
     // TODO(phase): super-tap ends a shown peek, else toggles Spotlight only while spotlight.superTap;
@@ -39,4 +41,14 @@ Scope {
     function pressed(name: string): void { throw new Error("Shortcuts.pressed: not implemented"); }
     // The key of a held shortcut went up (keys-peek ends the peek).
     function released(name: string): void { throw new Error("Shortcuts.released: not implemented"); }
+
+    // Private state.
+    // name → action (07 §7).
+    readonly property var _routes: ({})
+
+    // Private helpers.
+    // The notch mode open on the active monitor, "" none.
+    function _activeNotch(): string { throw new Error("Shortcuts._activeNotch: not implemented"); }
+    // Spotlight in a scope: the same key again closes it, another scope switches (07 §7).
+    function _spotlightScope(scope: string): void { throw new Error("Shortcuts._spotlightScope: not implemented"); }
 }

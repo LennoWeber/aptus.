@@ -25,3 +25,11 @@ def test_exit_zero_ends() -> None:
 
 def test_crash_limit_locks_when_marker() -> None:
     raise NotImplementedError
+
+
+def test_crash_limit_without_marker_only_notifies() -> None:
+    raise NotImplementedError
+
+
+def test_command_and_env() -> None:
+    raise NotImplementedError

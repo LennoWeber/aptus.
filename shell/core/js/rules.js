@@ -9,6 +9,10 @@
 //   pending: [req], previousWindow, currentWindow, settingsOpen, settingsArgs, settingsFocused,
 //   passiveSerial, limits: { toastStale, eventMaxAge, pinnedCardTimeout }, overFullscreen }
 // A request: { op: "open"|"close"|"toggle", surface, args, monitor }
+// A passive entry: { id, kind: "osd"|"toast"|"event", payload, priority, key, born, shown,
+//   waited } — waited: it queued behind a blocking surface (toastStale counts once it unblocks).
+//   A "critical" toast has priority ≥ 2 (freedesktop urgency); Notifications, Timers and Battery
+//   post critical toasts with priority 2.
 // Every operation returns { monitors: {name: state}, global, effects: [effect] } without
 // mutating its input. Effects: { kind: "opened"|"closed"|"refused"|"queued"|"settingsFocus",
 // surface, monitor }.
@@ -35,10 +39,34 @@ var LOCKED_ALLOWED_PASSIVE = ["osd"]
 
 function notImplemented(name) { throw new Error("rules." + name + ": not implemented") }
 
+// Private helpers. c: the working copy of one operation ({ monitors, global, effects }).
+function isCard(s) { notImplemented("isCard") }
+function isInteractiveMode(n) { notImplemented("isInteractiveMode") }
+function pinnedCard(m) { notImplemented("pinnedCard") }
+// Toasts queue, OSD and events are dropped (notch.md §9): an interactive notch mode, Overview, Capture.
+function blocksPassive(m) { notImplemented("blocksPassive") }
+function copyMonitor(m) { notImplemented("copyMonitor") }
+function begin(monitors, global) { notImplemented("begin") }
+function effect(c, kind, surface, monitor) { notImplemented("effect") }
+function finish(c, now) { notImplemented("finish") }
+function closeNotchOn(c, m) { notImplemented("closeNotchOn") }
+function closeDeckOn(c, m) { notImplemented("closeDeckOn") }
+function closeOverviewOn(c, m) { notImplemented("closeOverviewOn") }
+function closeMenuOn(c, m) { notImplemented("closeMenuOn") }
+function closeCapture(c) { notImplemented("closeCapture") }
+function flushPending(c) { notImplemented("flushPending") }
+function nowOr(now) { notImplemented("nowOr") }
+function monitorOf(c, req) { notImplemented("monitorOf") }
+function doOpen(c, req) { notImplemented("doOpen") }
+function doClose(c, req) { notImplemented("doClose") }
+function doToggle(c, req) { notImplemented("doToggle") }
+function findEntry(c, monitor, id) { notImplemented("findEntry") }
+
 function isNotchMode(surface) { notImplemented("isNotchMode") }
 function newMonitor(name) { notImplemented("newMonitor") }
 function newGlobal(limits) { notImplemented("newGlobal") }
-// Whether the monitor has an interactive surface open (away catcher, toasts queue).
+// Whether the monitor has an interactive surface open (away catcher). Includes menus; toasts
+// queue only behind an interactive notch mode, Overview and Capture (blocksPassive).
 function interactive(m) { notImplemented("interactive") }
 // Whether the shell layer takes the keyboard: interactive, or a card opened by click.
 function keyboard(m) { notImplemented("keyboard") }
@@ -62,22 +90,26 @@ function post(monitors, global, kind, payload, priority, monitor, key, now) { no
 function update(monitors, global, monitor, id, payload, now) { notImplemented("update") }
 function dismiss(monitors, global, monitor, id, now) { notImplemented("dismiss") }
 // notch.md §9 → { kind: "osd" | "toast" | "event" | "card" | "rest" | "hidden", entry }.
-// opts: { overFullscreen: "critical" | "none" | "all" (notch.overFullscreen), recording: bool }.
-// Under an interactive mode: OSD suppressed, events dropped, toasts queued (rest is reported).
-// Under a fullscreen window: "hidden" except what overFullscreen allows (critical toasts, OSD,
-// recording).
+// opts: { overFullscreen: "critical" | "none" | "all" (notch.overFullscreen), limits }.
+// Order: OSD (newest; not under the Deck, whose sliders move) > toast (highest priority, then
+// FIFO) > event > card > rest. Under an interactive mode: OSD suppressed, events dropped, toasts
+// queued (rest is reported). Under a fullscreen window: "hidden" except OSD and what
+// overFullscreen allows (critical: priority ≥ 2). The recording dot is the Notch's own drawing.
 function arbitrate(m, now, opts) { notImplemented("arbitrate") }
-// Drop expired events and toasts that waited too long behind an interactive mode.
-function expire(m, now) { notImplemented("expire") }
+// Drop events older than limits.eventMaxAge (unless shown) and waited toasts older than
+// limits.toastStale once nothing blocks them.
+function expire(m, now, limits) { notImplemented("expire") }
 
-function openMenu(monitors, global, monitor, menu) { notImplemented("openMenu") }
-function closeMenu(monitors, global, monitor) { notImplemented("closeMenu") }
+function openMenu(monitors, global, monitor, menu, now) { notImplemented("openMenu") }
+function closeMenu(monitors, global, monitor, now) { notImplemented("closeMenu") }
 
 // Environment changes.
-function addMonitor(monitors, global, name) { notImplemented("addMonitor") }
-function removeMonitor(monitors, global, name) { notImplemented("removeMonitor") }
-function setActive(monitors, global, name) { notImplemented("setActive") }
-function setLocked(monitors, global, locked) { notImplemented("setLocked") }
-function setFullscreen(monitors, global, name, fullscreen) { notImplemented("setFullscreen") }
+function addMonitor(monitors, global, name, now) { notImplemented("addMonitor") }
+function removeMonitor(monitors, global, name, now) { notImplemented("removeMonitor") }
+function setActive(monitors, global, name, now) { notImplemented("setActive") }
+function setLocked(monitors, global, locked, now) { notImplemented("setLocked") }
+function setFullscreen(monitors, global, name, fullscreen, now) { notImplemented("setFullscreen") }
 // The settings window reports whether it is focused (settings.md §2 toggle semantics).
-function setSettingsFocused(monitors, global, focused) { notImplemented("setSettingsFocused") }
+function setSettingsFocused(monitors, global, focused, now) { notImplemented("setSettingsFocused") }
+// Re-run expiry and arbitration without an operation (SurfaceManager's timer: events age out).
+function tick(monitors, global, now) { notImplemented("tick") }

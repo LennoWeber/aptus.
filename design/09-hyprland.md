@@ -195,11 +195,11 @@ hl.window_rule({
   idle_inhibit = "fullscreen",
 })
 
--- The scratch workspace starts its terminal on first use
-hl.workspace_rule({
-  workspace = "special:scratch",
-  on_created_empty = "ghostty --class=aptus.scratch",
-})
+-- The scratch workspace starts its terminal on first use (a workspace.created handler: the
+-- on_created_empty rule is deprecated in Hyprland 0.57)
+hl.on("workspace.created", function(ws)
+  if ws.name == "special:scratch" and ws.is_empty then hl.exec_cmd("ghostty --class=aptus.scratch") end
+end)
 ```
 
 `move` coordinates are relative to the monitor; 40 = bar 32 + gap 8, so the scratch terminal hangs

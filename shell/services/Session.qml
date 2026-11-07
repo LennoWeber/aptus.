@@ -22,4 +22,7 @@ Singleton {
     function poweroff(): void { throw new Error("Session.poweroff: not implemented"); }
     // Only while power.allowSuspend.
     function suspend(): void { throw new Error("Session.suspend: not implemented"); }
+
+    // The lock screen exists (S6); until then `session lock` answers an error so Super+L falls back.
+    property bool canLock: false
 }

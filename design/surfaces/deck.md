@@ -53,7 +53,9 @@ area has a page for the details.
 | Focus | `center_focus_strong` | "Off", "18 min left" | start 50 min / stop | duration menu |
 | Power | profile glyph | "Balanced" | cycle saver → balanced → performance | Power page |
 
-Order is fixed by default; `deck.tiles` reorders or hides them (8 slots, two rows).
+Tile labels are the short forms of the diagram above (Wi-Fi, BT, Dark, DND, Night, Awake, Focus,
+Power): beside the chevron a label has 52 px. Order is fixed by default; `deck.tiles` reorders or
+hides them (8 slots, two rows).
 
 ## 4. Sliders
 

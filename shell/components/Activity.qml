@@ -4,6 +4,8 @@
 import QtQuick
 
 QtObject {
+    // TODO(phase): cardHeight ← Tokens.surfaces.notch.cardHeights[activity] (notch.md §5), not 96.
+
     // Set by the host.
     property string monitorName: ""
     // The activity id ("media", "timer", "focus", "recording", "meeting", "progress").

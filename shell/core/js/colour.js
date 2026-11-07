@@ -4,6 +4,10 @@
 
 function notImplemented(name) { throw new Error("colour." + name + ": not implemented") }
 
+// Private helpers.
+// Round half away from zero and clamp to 0..255.
+function round8(x) { notImplemented("round8") }
+
 // "#rrggbb" → [r, g, b] in 0..255.
 function hexToRgb(hex) { notImplemented("hexToRgb") }
 // [r, g, b] in 0..255 (floats allowed) → "#rrggbb", rounded half away from zero and clamped.
@@ -24,3 +28,5 @@ function toward(from, to, t) { notImplemented("toward") }
 function hueDistance(a, b) { notImplemented("hueDistance") }
 // The OKLCH hue of a hex colour.
 function hue(hex) { notImplemented("hue") }
+// OKLab interpolation between two "#rrggbb" colours, t in 0..1 (Tokens' theme crossfade).
+function mix(a, b, t) { notImplemented("mix") }

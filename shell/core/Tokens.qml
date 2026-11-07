@@ -13,7 +13,10 @@ Singleton {
     // TODO(phase): textScale ← Config appearance.textScale; barHeight from raw type.textScale.barHeight
     //   (32/35/40) and `type` scaled by it; frameEdge ← Config frame.edge (the reserve zone follows).
     // TODO(phase): resolveNow() on Config appearance.* changes and on wallpaperHue/Lightness changes;
-    //   ColorAnimation Behaviors over Motion.theme on every colour (M-30).
+    //   the crossfade (M-30): _from ← _shown(), _to ← the new colours, one NumberAnimation on _t over
+    //   _themeMs; every role binds to _blend(role). No Behavior here (crashes a lazy singleton).
+    // TODO(phase): appearance.mode auto: _updateAuto() at start and from a Timer armed for the next
+    //   sunrise/sunset (sun.js, weather.location); glyphGrad switches at the crossfade midpoint.
     // TODO(phase): accents/neutrals from raw.accents + accentOrder for the current mode; wallpaperChroma
     //   into resolve.js (low-chroma images keep the current accent).
     // TODO(phase): watch Paths.themeCurrent + "/shell.json" for resolutions written outside (07 §7).
@@ -37,29 +40,29 @@ Singleton {
     readonly property bool highContrast: false
 
     // Colour roles (animated).
-    property color ground
-    property color raised
-    property color raisedHot
-    property color sunken
-    property color line
-    property color inkMain
-    property color inkSec
-    property color inkMeta
-    property color inkFaint
-    property color warn
-    property color crit
-    property color onAccent
-    property color accent
-    property color accentWash
-    property color washHover
-    property color washCurrent
-    property color washCurrentHover
-    property color washPressed
-    property color selectionBg
-    property color selectionFg
-    property color scrim
-    property color shadow
-    property color frameLine
+    readonly property color ground: "transparent"
+    readonly property color raised: "transparent"
+    readonly property color raisedHot: "transparent"
+    readonly property color sunken: "transparent"
+    readonly property color line: "transparent"
+    readonly property color inkMain: "transparent"
+    readonly property color inkSec: "transparent"
+    readonly property color inkMeta: "transparent"
+    readonly property color inkFaint: "transparent"
+    readonly property color warn: "transparent"
+    readonly property color crit: "transparent"
+    readonly property color onAccent: "transparent"
+    readonly property color accent: "transparent"
+    readonly property color accentWash: "transparent"
+    readonly property color washHover: "transparent"
+    readonly property color washCurrent: "transparent"
+    readonly property color washCurrentHover: "transparent"
+    readonly property color washPressed: "transparent"
+    readonly property color selectionBg: "transparent"
+    readonly property color selectionFg: "transparent"
+    readonly property color scrim: "transparent"
+    readonly property color shadow: "transparent"
+    readonly property color frameLine: "transparent"
     // Glyph GRAD axis for the mode (0 Ember, −25 Linen); switches at the crossfade midpoint.
     property int glyphGrad: 0
 
@@ -173,4 +176,31 @@ Singleton {
     // { family, pixelSize, weight, letterSpacing, lineHeight } of a type role ("body", "title", …)
     // after text scale.
     function font(role: string): var { throw new Error("Tokens.font: not implemented"); }
+
+    // Private state.
+    // The current resolution (resolve.js result); every derived property reads it.
+    property var _r: null
+    // The mode `auto` resolves to now (Linen from sunrise to sunset, 08 §3 step 1).
+    property string _autoMode: "dark"
+    // The crossfade duration (M-30), read from raw directly: Motion reads Tokens.raw, so Tokens
+    // cannot use Motion (singleton cycle).
+    readonly property int _themeMs: 0
+    // The crossfade (M-30): role → color before and after, and the progress between them. One
+    // NumberAnimation instead of a Behavior per colour: Behavior.animation is a deferred property,
+    // and deferred properties crash a lazily created singleton (probe finding).
+    property var _from: ({})
+    property var _to: ({})
+    property real _t: 1
+
+    // Private helpers.
+    // role → color of a resolution.
+    function _colours(r: var): var { throw new Error("Tokens._colours: not implemented"); }
+    // role → color as shown right now (mid-crossfade included), the start of the next fade.
+    function _shown(): var { throw new Error("Tokens._shown: not implemented"); }
+    // Linear mix of two colours (crossfade frames).
+    function _mix(a: color, b: color, t: real): color { throw new Error("Tokens._mix: not implemented"); }
+    // A role's colour at the crossfade progress _t (each readonly role binds to it).
+    function _blend(role: string): color { throw new Error("Tokens._blend: not implemented"); }
+    // Mode auto: set _autoMode from sun.js and arm the timer for the next sunrise/sunset.
+    function _updateAuto(): void { throw new Error("Tokens._updateAuto: not implemented"); }
 }

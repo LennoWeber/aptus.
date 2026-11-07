@@ -69,4 +69,6 @@ TestCase {
     function test_deck_page_push_pop() { fail("not implemented"); }
 
     function test_toggle_returns_state() { fail("not implemented"); }
+
+    function test_previous_window_recorded() { fail("not implemented"); }
 }

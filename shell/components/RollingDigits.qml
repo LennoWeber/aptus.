@@ -12,4 +12,14 @@ Item {
     // Type role of 03 §4 ("clock", "micro", "number", …).
     property string role: "body"
     property color colour
+
+    // Private state.
+    readonly property color _colour: "transparent"
+    readonly property real _rise: 0
+    // Rolls start after the first text is in place.
+    property bool _ready: false
+
+    // Private helpers.
+    // One model row per character, right-aligned: growth inserts and shrinking removes at the front.
+    function _sync(): void { throw new Error("RollingDigits._sync: not implemented"); }
 }

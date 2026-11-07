@@ -153,7 +153,8 @@ MonitorState {
   passive:   queue of { id, kind: toast|osd|event, payload, priority, born }
   deck:      { open: bool, pages: [ "main", "wifi", … ] }
   overview:  bool
-  menu:      null | { anchor, model, owner }
+  menu:      null | { anchorX, anchorY, model, owner, onTriggered(row) }   (MenuHost closes the
+             menu, then calls onTriggered; an owner that toggles its menu checks `owner` on press)
   capture:   null | { mode: region|screen|window|record|colour, args }   (the frozen frames live in
              the capture overlay, not in the state)
   fullscreen: bool          (from Hyprland events, per monitor)
@@ -226,6 +227,15 @@ Singletons in `shell/services/`. Each exposes properties (bindable) and methods;
 | `Files` | recent files, search | `recently-used.xbel`, `plocate`, `fd` | on query |
 | `Calc` | the persistent `aptus-calc` child | `Process` with stdin/stdout | on query |
 | `Lease` | isolation status for the bar's warning and the settings page | `lease/journal.json` (FileView, read-only) | file change |
+
+`Hypr` serialises `Hyprland.refresh*()`: Quickshell 0.3.2 empties every list when two refreshes run
+in the same JS turn, and `refreshMonitors()` clears `focusedMonitor` until the next
+`refreshWorkspaces()`. So refreshes are queued, one per 15 ms tick, and a monitor refresh is always
+followed by a workspace refresh (found in S1).
+
+Lazily created singletons start with their bindings already evaluated, so a service never relies on
+`on<Prop>Changed` for its first value (it also acts in `Component.onCompleted`), and no singleton
+uses `Behavior`.
 
 Network use, complete list: Open-Meteo forecast (only with a location), Open-Meteo geocoding (only
 while searching a location in settings), calendar URLs Lenno added. Nothing else ever leaves the

@@ -45,4 +45,6 @@ TestCase {
     function test_list_path_inside_home() { fail("not implemented"); }
 
     function test_migrate() { fail("not implemented"); }
+
+    function test_derived_follows_text_scale() { fail("not implemented"); }
 }

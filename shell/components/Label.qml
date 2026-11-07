@@ -13,4 +13,9 @@ Text {
     property string ink: "main"
     // Tabular figures (also forced by the clock, number and display tokens).
     property bool tabular: false
+
+    // Private state.
+    // Tokens.font(type): family (display from Tokens.displayFrom), size, weight, tracking, line.
+    readonly property var _font: ({})
+    readonly property bool _tabular: false
 }

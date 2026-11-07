@@ -20,4 +20,11 @@ Item {
     property bool strong: true
     signal activated()
     signal contextRequested(real x, real y)
+
+    // Private state.
+    readonly property bool _app: false
+    readonly property bool _hasLead: false
+    readonly property real _leadSize: 0
+    // A ListView delegate whose view draws a highlight (List) leaves the current wash to it.
+    readonly property bool _viewHighlights: false
 }

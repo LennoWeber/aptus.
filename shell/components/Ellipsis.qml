@@ -9,4 +9,7 @@ Item {
 
     // Loading; the dots appear only if it lasts longer than Motion's loadingDelay.
     property bool running: false
+
+    // Private state.
+    property bool _late: false
 }

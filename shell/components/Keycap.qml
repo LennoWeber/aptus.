@@ -5,7 +5,7 @@ import qs.core
 Item {
     id: root
 
-    // TODO(phase): a key label in a small sunken rect (Super written out, ⇧, arrow glyphs).
+    // TODO(phase): a key label in a small raised rect (03 §9) (Super written out, ⇧, arrow glyphs).
 
     property string text: ""
 }

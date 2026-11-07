@@ -13,8 +13,10 @@ Scope {
 
     // TODO(phase): each function forwards to SurfaceManager / services and answers "ok", JSON or
     //   "error: …"; never an empty answer (aptus msg treats empty output as a failure).
-    // TODO(phase): session.lock answers "error: no lock screen yet" while the lock screen is missing
-    //   (S6 fills it), so Super+L falls back to hyprlock.
+    // TODO(phase): session.lock answers "error: no lock screen yet" while !Session.canLock (S6 fills
+    //   it), so Super+L falls back to hyprlock; focus/dnd/capture/jot answer an error while !available.
+    // TODO(phase): shell.restart touches the restart flag with a Process, then Qt.quit() in
+    //   onRunningChanged (Process.onExited's QProcess::ExitStatus does not resolve for qmllint).
 
     // `aptus msg shell state` also lists service summaries; services add theirs here by name.
     function serviceSummary(): var { throw new Error("Ipc.serviceSummary: not implemented"); }

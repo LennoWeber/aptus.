@@ -9,8 +9,8 @@ Singleton {
 
     // TODO(phase): FileView on Paths.wallpaperState; pathFor() = preview[name] › monitors[name] ›
     //   byMode[Tokens.mode] › all › images[0] › "" (ground) (wallpaper.md §3).
-    // TODO(phase): images ← wallpaper.dir listed newest first (FolderListModel or `find -printf`),
-    //   re-read on change; set() writes wallpaper.json atomically.
+    // TODO(phase): images ← a FolderListModel on _dir (sortField Time, image nameFilters; it watches
+    //   the folder), _list() on count/status changes; set() writes wallpaper.json atomically.
 
     // the parsed wallpaper.json
     property var state: ({})
@@ -33,4 +33,12 @@ Singleton {
     function set(path: string, monitor: var): void { throw new Error("Wallpaper.set: not implemented"); }
     // The next image in wallpaper.dir for the active monitor (IPC `wallpaper next`; rotation is S10).
     function next(): void { throw new Error("Wallpaper.next: not implemented"); }
+
+    // Private state.
+    // wallpaper.dir, expanded (the folder FolderListModel watches).
+    readonly property string _dir: ""
+
+    // Private helpers.
+    // images ← the folder model, newest first.
+    function _list(): void { throw new Error("Wallpaper._list: not implemented"); }
 }

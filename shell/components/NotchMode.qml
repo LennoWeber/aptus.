@@ -3,6 +3,9 @@
 import QtQuick
 
 Item {
+    // TODO(phase): content choreography (04 §3 rule 1): content fades in from Motion.contentDelay rising
+    //   contentRise px; while !active it fades out over exitContentFade. Every mode inherits it.
+
     // Set by the host.
     property string monitorName: ""
     property var args: ({})

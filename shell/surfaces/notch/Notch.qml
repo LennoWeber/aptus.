@@ -6,6 +6,8 @@ import qs.components
 
 Item {
     id: root
+    // TODO(phase): register the open mode's back() with SurfaceManager.registerBack(monitor.name, mode, fn)
+    //   and unregister when it leaves (the host knows the surface id; the base type does not).
 
     property MonitorState monitor
     // 0 → 1 during the session intro (M-01); 1 otherwise.
