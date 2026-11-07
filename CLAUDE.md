@@ -43,6 +43,17 @@ as much as function.
   GIT_COMMITTER_EMAIL=mail@lenno.net`, ending with the Co-Authored-By line. Work on branch `v2`;
   push `v2` after each completed wave.
 
+## Skills and parallel work (standing instructions, no need to be asked)
+- `phasen-entwicklung`: every stage, all seven phases, never waiting for "weiter".
+- Parallel stages: Lenno has given standing permission to spawn subagents for v2. Run the waves of
+  `design/handoff-prompt.md` with one Agent per stage (`isolation: "worktree"`), merge them into
+  `v2` yourself. Mechanical sub-tasks may go to helpers with model sonnet and effort "lower".
+- `run`: launch the shell in a nested Hyprland to see a change working before calling it done.
+- After each wave: `code-review` at `high` on the wave's diff, fix the findings, then `simplify`.
+- `security-review` after the isolation work (lease, guard, recovery) and after the session work
+  (lock, PAM, polkit).
+- Never start `/code-review ultra` or `max` effort reviews yourself; only Lenno does that.
+
 ## Technical notes
 - Hyprland Lua API: `/usr/share/hypr/stubs/hl.meta.lua`; check with `hyprctl configerrors`;
   runtime changes with `hyprctl eval '<lua>'`.
