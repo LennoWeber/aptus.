@@ -1,0 +1,2 @@
+module qs.surfaces.polkit
+PolkitPrompt 1.0 PolkitPrompt.qml

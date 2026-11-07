@@ -1,0 +1,18 @@
+// IconButton: Icon-only button (03 §9): 28 (bar) or 32 (drawers), glyph 18, tooltip required.
+import QtQuick
+import qs.core
+
+Item {
+    id: root
+
+    property string glyph: ""
+    property string tooltip: ""
+    // "bar" | "drawer"
+    property string size: "drawer"
+    property bool on: false
+    property bool enabled: true
+    property bool keyboardFocus: false
+    signal clicked()
+    signal rightClicked()
+    signal middleClicked()
+}

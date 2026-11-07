@@ -1,0 +1,3 @@
+module qs.surfaces.capture
+CaptureOverlay 1.0 CaptureOverlay.qml
+RecFrame 1.0 RecFrame.qml

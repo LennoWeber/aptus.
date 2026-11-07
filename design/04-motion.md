@@ -100,7 +100,7 @@ frame-by-frame timelines where needed.
 | M-11 | Spotlight preview pane appears | width 640 → 920 `spring.gentle`, pane content fades in after 100 ms | 320 |
 | M-12 | Spotlight scope chip (prefix typed or scope hotkey) | chip slides in from the left inside the field, the query text shifts right with it | `small`, `standard` |
 | M-13 | switcher | strip grows from the notch (`spring.notch`); selection highlight moves with `spring.snappy`; quick Alt+Tab tap shows no UI at all | 380 / 240 |
-| M-14 | overview | the bar's lower edge drops to 320 px, workspace pills morph into the workspace cards (shared elements: each pill expands into its card), thumbnails fade in 80 ms later | 380 `spring.notch` / 260 out |
+| M-14 | overview | the bar's lower edge drops to 330 px, workspace pills morph into the workspace cards (shared elements: each pill expands into its card), thumbnails fade in 80 ms later | 380 `spring.notch` / 260 out |
 | M-15 | dragging a window in the overview | the thumbnail lifts (scale 1.04, shadow), follows the pointer 1:1; target workspace card shows `accentWash`; drop: thumbnail flies into its new slot (`standard` 220) | — |
 | M-16 | Deck opens | grows down from the bar at the top-right corner: height 0 → H (`enter` 280), coves grow, content rises 12 px and fades in from 60 ms | 280 / 200 |
 | M-17 | Deck page push / pop | new page slides in from the right 24 px + fade, old page slides 24 px left + fades, Deck height animates to the new page's height (`spring.gentle`) | `page` 300 / 220 |

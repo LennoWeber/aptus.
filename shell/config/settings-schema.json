@@ -1,0 +1,2318 @@
+{
+  "version": 2,
+  "pages": [
+    {
+      "id": "appearance",
+      "label": "Appearance",
+      "glyph": "palette"
+    },
+    {
+      "id": "bar",
+      "label": "Bar & frame",
+      "glyph": "toolbar"
+    },
+    {
+      "id": "notch",
+      "label": "Notch & alerts",
+      "glyph": "notifications"
+    },
+    {
+      "id": "spotlight",
+      "label": "Spotlight",
+      "glyph": "search"
+    },
+    {
+      "id": "today",
+      "label": "Today & calendar",
+      "glyph": "calendar_month"
+    },
+    {
+      "id": "focus",
+      "label": "Focus",
+      "glyph": "timer"
+    },
+    {
+      "id": "capture",
+      "label": "Capture",
+      "glyph": "screenshot_region"
+    },
+    {
+      "id": "sound",
+      "label": "Sound & display",
+      "glyph": "volume_up"
+    },
+    {
+      "id": "power",
+      "label": "Power & session",
+      "glyph": "power_settings_new"
+    },
+    {
+      "id": "keys",
+      "label": "Keys",
+      "glyph": "keyboard"
+    },
+    {
+      "id": "apps",
+      "label": "Apps & isolation",
+      "glyph": "apps"
+    },
+    {
+      "id": "about",
+      "label": "About",
+      "glyph": "info"
+    }
+  ],
+  "templates": [
+    {
+      "pattern": "spotlight.providers.<id>.enabled",
+      "ids": [
+        "apps",
+        "windows",
+        "actions",
+        "settings",
+        "calculator",
+        "files",
+        "clipboard",
+        "emoji",
+        "jot",
+        "timers",
+        "commands",
+        "workspaces",
+        "keys",
+        "web"
+      ]
+    },
+    {
+      "pattern": "spotlight.providers.<id>.boost",
+      "ids": [
+        "apps",
+        "windows",
+        "actions",
+        "settings",
+        "calculator",
+        "files",
+        "clipboard",
+        "emoji",
+        "jot",
+        "timers",
+        "commands",
+        "workspaces",
+        "keys",
+        "web"
+      ]
+    }
+  ],
+  "keys": {
+    "appearance.mode": {
+      "type": "enum",
+      "default": "dark",
+      "values": [
+        "dark",
+        "light",
+        "auto"
+      ],
+      "labels": {
+        "dark": "Dark",
+        "light": "Light",
+        "auto": "Auto"
+      },
+      "page": "appearance",
+      "section": "Look",
+      "label": "Mode",
+      "description": "Dark, light or following the sun",
+      "keywords": [
+        "dark",
+        "light",
+        "theme",
+        "sun"
+      ],
+      "notes": "`auto`: Linen from sunrise to sunset ([08](08-theming.md) §3)"
+    },
+    "appearance.accent": {
+      "type": "enum",
+      "default": "jade",
+      "values": [
+        "jade",
+        "apricot",
+        "sky",
+        "iris",
+        "rose",
+        "sand",
+        "wallpaper"
+      ],
+      "labels": {
+        "jade": "Jade",
+        "apricot": "Apricot",
+        "sky": "Sky",
+        "iris": "Iris",
+        "rose": "Rose",
+        "sand": "Sand",
+        "wallpaper": "From wallpaper"
+      },
+      "page": "appearance",
+      "section": "Look",
+      "label": "Accent",
+      "description": "Accent colour of the shell",
+      "keywords": [
+        "accent",
+        "colour",
+        "color",
+        "wallpaper"
+      ],
+      "notes": ""
+    },
+    "appearance.glass": {
+      "type": "bool",
+      "default": false,
+      "page": "appearance",
+      "section": "Look",
+      "label": "Glass",
+      "description": "Translucent blurred surfaces",
+      "keywords": [
+        "glass",
+        "blur",
+        "transparency"
+      ],
+      "notes": "Hyprland reload for the layer rule",
+      "reload": "hyprland"
+    },
+    "appearance.textScale": {
+      "type": "enum",
+      "default": 1,
+      "values": [
+        1,
+        1.1,
+        1.25
+      ],
+      "labels": {
+        "1": "100 %",
+        "1.1": "110 %",
+        "1.25": "125 %"
+      },
+      "page": "appearance",
+      "section": "Look",
+      "label": "Text size",
+      "description": "Scales all text; the bar height follows",
+      "keywords": [
+        "text",
+        "size",
+        "scale",
+        "font"
+      ],
+      "notes": "scales type tokens; `bar.height` follows"
+    },
+    "appearance.contrast": {
+      "type": "enum",
+      "default": "normal",
+      "values": [
+        "normal",
+        "high"
+      ],
+      "labels": {
+        "normal": "Normal",
+        "high": "High"
+      },
+      "page": "appearance",
+      "section": "Look",
+      "label": "Contrast",
+      "description": "Stronger text and borders",
+      "keywords": [
+        "contrast",
+        "accessibility"
+      ],
+      "notes": ""
+    },
+    "motion.reduce": {
+      "type": "enum",
+      "default": "auto",
+      "values": [
+        "auto",
+        "on",
+        "off"
+      ],
+      "labels": {
+        "auto": "Auto",
+        "on": "On",
+        "off": "Off"
+      },
+      "page": "appearance",
+      "section": "Motion",
+      "label": "Reduce motion",
+      "description": "Fewer and shorter animations",
+      "keywords": [
+        "motion",
+        "animation",
+        "reduce"
+      ],
+      "notes": "`auto` reads `enable-animations`"
+    },
+    "frame.edge": {
+      "type": "enum",
+      "default": 6,
+      "values": [
+        0,
+        6
+      ],
+      "labels": {
+        "0": "Hidden",
+        "6": "Shown"
+      },
+      "page": "bar",
+      "section": "Frame",
+      "label": "Frame edges",
+      "description": "Show the side and bottom edges of the frame",
+      "keywords": [
+        "frame",
+        "edge",
+        "border",
+        "gaps"
+      ],
+      "notes": "0 hides the side and bottom edges; gaps follow",
+      "reload": "hyprland"
+    },
+    "bar.height": {
+      "type": "derived",
+      "default": 32,
+      "values": [
+        32,
+        35,
+        40
+      ],
+      "from": "appearance.textScale",
+      "page": "bar",
+      "section": "Frame",
+      "label": "Bar height",
+      "description": "Follows the text size, not settable",
+      "keywords": [
+        "bar",
+        "height",
+        "size"
+      ],
+      "notes": "from `appearance.textScale`, not settable"
+    },
+    "wallpaper.dir": {
+      "type": "path",
+      "default": "~/Pictures/Wallpapers",
+      "page": "appearance",
+      "section": "Wallpaper",
+      "label": "Folder",
+      "description": "Folder with your wallpapers",
+      "keywords": [
+        "wallpaper",
+        "folder",
+        "directory"
+      ],
+      "notes": ""
+    },
+    "wallpaper.fill": {
+      "type": "enum",
+      "default": "fill",
+      "values": [
+        "fill",
+        "fit",
+        "center",
+        "tile"
+      ],
+      "labels": {
+        "fill": "Fill",
+        "fit": "Fit",
+        "center": "Center",
+        "tile": "Tile"
+      },
+      "page": "appearance",
+      "section": "Wallpaper",
+      "label": "Fill mode",
+      "description": "How the image fills the screen",
+      "keywords": [
+        "wallpaper",
+        "fill",
+        "fit",
+        "tile"
+      ],
+      "notes": ""
+    },
+    "wallpaper.focus": {
+      "type": "enum",
+      "default": "center",
+      "values": [
+        "center",
+        "top",
+        "bottom",
+        "left",
+        "right"
+      ],
+      "labels": {
+        "center": "Center",
+        "top": "Top",
+        "bottom": "Bottom",
+        "left": "Left",
+        "right": "Right"
+      },
+      "page": "appearance",
+      "section": "Wallpaper",
+      "label": "Crop anchor",
+      "description": "Which part stays visible when cropping",
+      "keywords": [
+        "wallpaper",
+        "crop",
+        "focus",
+        "anchor"
+      ],
+      "notes": "crop anchor for `fill`"
+    },
+    "wallpaper.rotate": {
+      "type": "enum",
+      "default": "off",
+      "values": [
+        "off",
+        "30m",
+        "1h",
+        "3h",
+        "daily"
+      ],
+      "labels": {
+        "off": "Off",
+        "30m": "Every 30 minutes",
+        "1h": "Every hour",
+        "3h": "Every 3 hours",
+        "daily": "Daily"
+      },
+      "page": "appearance",
+      "section": "Wallpaper",
+      "label": "Rotation",
+      "description": "Change the wallpaper automatically",
+      "keywords": [
+        "wallpaper",
+        "rotate",
+        "interval",
+        "slideshow"
+      ],
+      "notes": ""
+    },
+    "wallpaper.rotateFavourites": {
+      "type": "bool",
+      "default": false,
+      "page": "appearance",
+      "section": "Wallpaper",
+      "label": "Favourites only",
+      "description": "Rotate through favourites only",
+      "keywords": [
+        "wallpaper",
+        "favourites",
+        "rotate"
+      ],
+      "notes": "rotate through favourites only",
+      "visibleIf": {
+        "key": "wallpaper.rotate",
+        "notEquals": "off"
+      }
+    },
+    "bar.workspaces.show": {
+      "type": "enum",
+      "default": "used",
+      "values": [
+        "used",
+        "fixed"
+      ],
+      "labels": {
+        "used": "Used only",
+        "fixed": "Fixed set"
+      },
+      "page": "bar",
+      "section": "Workspaces",
+      "label": "Show workspaces",
+      "description": "Which workspaces appear in the bar",
+      "keywords": [
+        "workspaces",
+        "pills",
+        "fixed",
+        "used"
+      ],
+      "notes": ""
+    },
+    "bar.workspaces.icons": {
+      "type": "bool",
+      "default": true,
+      "page": "bar",
+      "section": "Workspaces",
+      "label": "App icons",
+      "description": "Show app icons in workspace pills",
+      "keywords": [
+        "workspaces",
+        "icons",
+        "pills"
+      ],
+      "notes": "app icons in pills"
+    },
+    "bar.title.show": {
+      "type": "bool",
+      "default": true,
+      "page": "bar",
+      "section": "Window title",
+      "label": "Show window title",
+      "description": "Show the active window title",
+      "keywords": [
+        "title",
+        "window",
+        "active"
+      ],
+      "notes": "active window title"
+    },
+    "bar.clock.showDate": {
+      "type": "bool",
+      "default": true,
+      "page": "bar",
+      "section": "Clock",
+      "label": "Show date",
+      "description": "Show the date before the time",
+      "keywords": [
+        "clock",
+        "date",
+        "time"
+      ],
+      "notes": "`Sat 7 Nov` before the time"
+    },
+    "bar.tray.max": {
+      "type": "int",
+      "default": 3,
+      "min": 0,
+      "max": 6,
+      "page": "bar",
+      "section": "Tray",
+      "label": "Visible tray items",
+      "description": "Items beyond this go to the overflow",
+      "keywords": [
+        "tray",
+        "icons",
+        "overflow",
+        "max"
+      ],
+      "notes": "0 = everything in the overflow"
+    },
+    "bar.tray.hidden": {
+      "type": "list",
+      "of": "string",
+      "default": [],
+      "page": "bar",
+      "section": "Tray",
+      "label": "Hidden tray items",
+      "description": "Tray items always kept in the overflow",
+      "keywords": [
+        "tray",
+        "hidden",
+        "icons"
+      ],
+      "notes": "tray item ids"
+    },
+    "bar.tray.monitor": {
+      "type": "enum",
+      "default": "primary",
+      "values": [
+        "primary",
+        "all"
+      ],
+      "labels": {
+        "primary": "Primary",
+        "all": "All monitors"
+      },
+      "page": "bar",
+      "section": "Tray",
+      "label": "Tray monitor",
+      "description": "Where the tray is shown",
+      "keywords": [
+        "tray",
+        "monitor",
+        "display"
+      ],
+      "notes": "primary = the external monitor when one is connected, else eDP-1"
+    },
+    "bar.battery.percent": {
+      "type": "enum",
+      "default": "auto",
+      "values": [
+        "auto",
+        "always",
+        "never"
+      ],
+      "labels": {
+        "auto": "Auto",
+        "always": "Always",
+        "never": "Never"
+      },
+      "page": "bar",
+      "section": "Status",
+      "label": "Battery percentage",
+      "description": "When to show the battery percentage",
+      "keywords": [
+        "battery",
+        "percent",
+        "charge"
+      ],
+      "notes": "auto: ≤ 30 %, or charging"
+    },
+    "bar.bluetooth": {
+      "type": "enum",
+      "default": "connected",
+      "values": [
+        "connected",
+        "always"
+      ],
+      "labels": {
+        "connected": "When connected",
+        "always": "Always"
+      },
+      "page": "bar",
+      "section": "Status",
+      "label": "Bluetooth item",
+      "description": "When to show the Bluetooth item",
+      "keywords": [
+        "bluetooth",
+        "status"
+      ],
+      "notes": ""
+    },
+    "notifications.timeout": {
+      "type": "enum|int",
+      "default": "auto",
+      "values": [
+        "auto"
+      ],
+      "labels": {
+        "auto": "Auto"
+      },
+      "min": 3,
+      "max": 30,
+      "unit": "s",
+      "page": "notch",
+      "section": "Notifications",
+      "label": "Toast timeout",
+      "description": "How long a toast stays on screen",
+      "keywords": [
+        "toast",
+        "timeout",
+        "duration"
+      ],
+      "notes": "auto = clamp(4 s + 40 ms × chars, 4–9 s)"
+    },
+    "notifications.stackWindow": {
+      "type": "int",
+      "default": 2,
+      "min": 0,
+      "max": 10,
+      "unit": "s",
+      "page": "notch",
+      "section": "Notifications",
+      "label": "Stack window",
+      "description": "Group bursts of notifications within this time",
+      "keywords": [
+        "stack",
+        "group",
+        "burst"
+      ],
+      "notes": "burst grouping window"
+    },
+    "notifications.allowlist": {
+      "type": "list",
+      "of": "string",
+      "default": [],
+      "page": "notch",
+      "section": "Notifications",
+      "label": "Allowed apps",
+      "description": "Apps that may interrupt do not disturb and focus",
+      "keywords": [
+        "allowlist",
+        "dnd",
+        "interrupt",
+        "apps"
+      ],
+      "notes": "may interrupt DND and focus"
+    },
+    "notifications.historyDays": {
+      "type": "int",
+      "default": 7,
+      "min": 1,
+      "max": 30,
+      "page": "notch",
+      "section": "History",
+      "label": "History days",
+      "description": "How long notifications are kept",
+      "keywords": [
+        "history",
+        "days",
+        "keep"
+      ],
+      "notes": ""
+    },
+    "notifications.historyMax": {
+      "type": "int",
+      "default": 200,
+      "min": 50,
+      "max": 1000,
+      "page": "notch",
+      "section": "History",
+      "label": "History size",
+      "description": "Maximum number of kept notifications",
+      "keywords": [
+        "history",
+        "max",
+        "limit"
+      ],
+      "notes": ""
+    },
+    "notch.overFullscreen": {
+      "type": "enum",
+      "default": "critical",
+      "values": [
+        "critical",
+        "none",
+        "all"
+      ],
+      "labels": {
+        "critical": "Critical only",
+        "none": "Nothing",
+        "all": "Everything"
+      },
+      "page": "notch",
+      "section": "Notch",
+      "label": "Over fullscreen",
+      "description": "What may appear over fullscreen windows",
+      "keywords": [
+        "fullscreen",
+        "notch",
+        "critical"
+      ],
+      "notes": ""
+    },
+    "notch.hoverExpand": {
+      "type": "bool",
+      "default": true,
+      "page": "notch",
+      "section": "Notch",
+      "label": "Expand on hover",
+      "description": "Resting on a live activity expands its card",
+      "keywords": [
+        "notch",
+        "hover",
+        "expand",
+        "activity"
+      ],
+      "notes": "resting on a live activity expands its card"
+    },
+    "media.ignore": {
+      "type": "list",
+      "of": "string",
+      "default": [],
+      "page": "notch",
+      "section": "Media",
+      "label": "Ignored players",
+      "description": "Media players that never become the active player",
+      "keywords": [
+        "media",
+        "players",
+        "mpris",
+        "ignore"
+      ],
+      "notes": "MPRIS identities; never the active player"
+    },
+    "timers.sound": {
+      "type": "bool",
+      "default": true,
+      "page": "notch",
+      "section": "Timers",
+      "label": "Timer sound",
+      "description": "Play a chime when a timer or alarm ends",
+      "keywords": [
+        "timer",
+        "alarm",
+        "sound",
+        "chime"
+      ],
+      "notes": "chime when a timer or alarm ends"
+    },
+    "spotlight.superTap": {
+      "type": "bool",
+      "default": true,
+      "page": "spotlight",
+      "section": "Opening",
+      "label": "Tap Super to open",
+      "description": "Tapping Super alone opens Spotlight",
+      "keywords": [
+        "super",
+        "key",
+        "tap",
+        "open"
+      ],
+      "notes": "tap Super alone opens Spotlight (P-02)"
+    },
+    "spotlight.superHoldKeys": {
+      "type": "bool",
+      "default": true,
+      "page": "spotlight",
+      "section": "Opening",
+      "label": "Hold Super for Keys",
+      "description": "Holding Super for 1 s peeks at Keys",
+      "keywords": [
+        "super",
+        "hold",
+        "keys",
+        "cheatsheet"
+      ],
+      "notes": "hold Super 1 s peeks at Keys"
+    },
+    "spotlight.pinned": {
+      "type": "list",
+      "of": "string",
+      "default": [],
+      "maxItems": 8,
+      "page": "spotlight",
+      "section": "Results",
+      "label": "Pinned apps",
+      "description": "Apps shown first when the query is empty",
+      "keywords": [
+        "pinned",
+        "apps",
+        "favourites"
+      ],
+      "notes": "desktop ids, ≤ 8; empty = the 8 most-used apps by frecency"
+    },
+    "spotlight.aliases": {
+      "type": "map",
+      "of": "string",
+      "default": {},
+      "page": "spotlight",
+      "section": "Results",
+      "label": "Aliases",
+      "description": "Short names that open an app",
+      "keywords": [
+        "alias",
+        "shortcut",
+        "apps"
+      ],
+      "notes": "alias → desktop id; e.g. `\"tb\": \"thunderbird.desktop\"`"
+    },
+    "spotlight.searchEngine": {
+      "type": "enum|string",
+      "default": "duckduckgo",
+      "values": [
+        "duckduckgo",
+        "startpage",
+        "google",
+        "brave",
+        "kagi"
+      ],
+      "labels": {
+        "duckduckgo": "DuckDuckGo",
+        "startpage": "Startpage",
+        "google": "Google",
+        "brave": "Brave",
+        "kagi": "Kagi"
+      },
+      "pattern": "%s",
+      "page": "spotlight",
+      "section": "Web",
+      "label": "Search engine",
+      "description": "Engine for web searches",
+      "keywords": [
+        "search",
+        "engine",
+        "web",
+        "url"
+      ],
+      "notes": "or a URL with `%s`"
+    },
+    "spotlight.webShortcuts": {
+      "type": "map",
+      "of": "string",
+      "default": {
+        "gh": "https://github.com/search?q=%s",
+        "yt": "https://www.youtube.com/results?search_query=%s",
+        "w": "https://en.wikipedia.org/w/index.php?search=%s",
+        "wd": "https://de.wikipedia.org/w/index.php?search=%s",
+        "aw": "https://wiki.archlinux.org/index.php?search=%s",
+        "fp": "https://packages.fedoraproject.org/search?query=%s",
+        "mdn": "https://developer.mozilla.org/en-US/search?q=%s",
+        "osm": "https://www.openstreetmap.org/search?query=%s",
+        "ddg": "https://duckduckgo.com/?q=%s"
+      },
+      "pattern": "%s",
+      "page": "spotlight",
+      "section": "Web",
+      "label": "Web shortcuts",
+      "description": "Keywords that search a site directly",
+      "keywords": [
+        "web",
+        "shortcuts",
+        "keyword",
+        "url"
+      ],
+      "notes": "keyword → URL with `%s`"
+    },
+    "spotlight.providers.apps.enabled": {
+      "type": "bool",
+      "default": true,
+      "page": "spotlight",
+      "section": "Providers",
+      "label": "Apps",
+      "description": "Include Apps results in Spotlight",
+      "keywords": [
+        "provider",
+        "enable",
+        "results",
+        "apps"
+      ],
+      "notes": "ids: `apps`, `windows`, `actions`, `settings`, `calculator`, `files`, `clipboard`, `emoji`, `jot`, `timers`, `commands`, `workspaces`, `keys`, `web`"
+    },
+    "spotlight.providers.apps.boost": {
+      "type": "int",
+      "default": 0,
+      "min": -2,
+      "max": 2,
+      "page": "spotlight",
+      "section": "Providers",
+      "label": "Apps ranking",
+      "description": "Rank Apps results higher or lower",
+      "keywords": [
+        "provider",
+        "ranking",
+        "boost",
+        "apps"
+      ],
+      "notes": "adds boost × 5 to the provider's `typeBias` ([spotlight.md](surfaces/spotlight.md) §6)"
+    },
+    "spotlight.providers.windows.enabled": {
+      "type": "bool",
+      "default": true,
+      "page": "spotlight",
+      "section": "Providers",
+      "label": "Windows",
+      "description": "Include Windows results in Spotlight",
+      "keywords": [
+        "provider",
+        "enable",
+        "results",
+        "windows"
+      ],
+      "notes": "ids: `apps`, `windows`, `actions`, `settings`, `calculator`, `files`, `clipboard`, `emoji`, `jot`, `timers`, `commands`, `workspaces`, `keys`, `web`"
+    },
+    "spotlight.providers.windows.boost": {
+      "type": "int",
+      "default": 0,
+      "min": -2,
+      "max": 2,
+      "page": "spotlight",
+      "section": "Providers",
+      "label": "Windows ranking",
+      "description": "Rank Windows results higher or lower",
+      "keywords": [
+        "provider",
+        "ranking",
+        "boost",
+        "windows"
+      ],
+      "notes": "adds boost × 5 to the provider's `typeBias` ([spotlight.md](surfaces/spotlight.md) §6)"
+    },
+    "spotlight.providers.actions.enabled": {
+      "type": "bool",
+      "default": true,
+      "page": "spotlight",
+      "section": "Providers",
+      "label": "Actions",
+      "description": "Include Actions results in Spotlight",
+      "keywords": [
+        "provider",
+        "enable",
+        "results",
+        "actions"
+      ],
+      "notes": "ids: `apps`, `windows`, `actions`, `settings`, `calculator`, `files`, `clipboard`, `emoji`, `jot`, `timers`, `commands`, `workspaces`, `keys`, `web`"
+    },
+    "spotlight.providers.actions.boost": {
+      "type": "int",
+      "default": 0,
+      "min": -2,
+      "max": 2,
+      "page": "spotlight",
+      "section": "Providers",
+      "label": "Actions ranking",
+      "description": "Rank Actions results higher or lower",
+      "keywords": [
+        "provider",
+        "ranking",
+        "boost",
+        "actions"
+      ],
+      "notes": "adds boost × 5 to the provider's `typeBias` ([spotlight.md](surfaces/spotlight.md) §6)"
+    },
+    "spotlight.providers.settings.enabled": {
+      "type": "bool",
+      "default": true,
+      "page": "spotlight",
+      "section": "Providers",
+      "label": "Settings",
+      "description": "Include Settings results in Spotlight",
+      "keywords": [
+        "provider",
+        "enable",
+        "results",
+        "settings"
+      ],
+      "notes": "ids: `apps`, `windows`, `actions`, `settings`, `calculator`, `files`, `clipboard`, `emoji`, `jot`, `timers`, `commands`, `workspaces`, `keys`, `web`"
+    },
+    "spotlight.providers.settings.boost": {
+      "type": "int",
+      "default": 0,
+      "min": -2,
+      "max": 2,
+      "page": "spotlight",
+      "section": "Providers",
+      "label": "Settings ranking",
+      "description": "Rank Settings results higher or lower",
+      "keywords": [
+        "provider",
+        "ranking",
+        "boost",
+        "settings"
+      ],
+      "notes": "adds boost × 5 to the provider's `typeBias` ([spotlight.md](surfaces/spotlight.md) §6)"
+    },
+    "spotlight.providers.calculator.enabled": {
+      "type": "bool",
+      "default": true,
+      "page": "spotlight",
+      "section": "Providers",
+      "label": "Calculator",
+      "description": "Include Calculator results in Spotlight",
+      "keywords": [
+        "provider",
+        "enable",
+        "results",
+        "calculator"
+      ],
+      "notes": "ids: `apps`, `windows`, `actions`, `settings`, `calculator`, `files`, `clipboard`, `emoji`, `jot`, `timers`, `commands`, `workspaces`, `keys`, `web`"
+    },
+    "spotlight.providers.calculator.boost": {
+      "type": "int",
+      "default": 0,
+      "min": -2,
+      "max": 2,
+      "page": "spotlight",
+      "section": "Providers",
+      "label": "Calculator ranking",
+      "description": "Rank Calculator results higher or lower",
+      "keywords": [
+        "provider",
+        "ranking",
+        "boost",
+        "calculator"
+      ],
+      "notes": "adds boost × 5 to the provider's `typeBias` ([spotlight.md](surfaces/spotlight.md) §6)"
+    },
+    "spotlight.providers.files.enabled": {
+      "type": "bool",
+      "default": true,
+      "page": "spotlight",
+      "section": "Providers",
+      "label": "Files",
+      "description": "Include Files results in Spotlight",
+      "keywords": [
+        "provider",
+        "enable",
+        "results",
+        "files"
+      ],
+      "notes": "ids: `apps`, `windows`, `actions`, `settings`, `calculator`, `files`, `clipboard`, `emoji`, `jot`, `timers`, `commands`, `workspaces`, `keys`, `web`"
+    },
+    "spotlight.providers.files.boost": {
+      "type": "int",
+      "default": 0,
+      "min": -2,
+      "max": 2,
+      "page": "spotlight",
+      "section": "Providers",
+      "label": "Files ranking",
+      "description": "Rank Files results higher or lower",
+      "keywords": [
+        "provider",
+        "ranking",
+        "boost",
+        "files"
+      ],
+      "notes": "adds boost × 5 to the provider's `typeBias` ([spotlight.md](surfaces/spotlight.md) §6)"
+    },
+    "spotlight.providers.clipboard.enabled": {
+      "type": "bool",
+      "default": true,
+      "page": "spotlight",
+      "section": "Providers",
+      "label": "Clipboard",
+      "description": "Include Clipboard results in Spotlight",
+      "keywords": [
+        "provider",
+        "enable",
+        "results",
+        "clipboard"
+      ],
+      "notes": "ids: `apps`, `windows`, `actions`, `settings`, `calculator`, `files`, `clipboard`, `emoji`, `jot`, `timers`, `commands`, `workspaces`, `keys`, `web`"
+    },
+    "spotlight.providers.clipboard.boost": {
+      "type": "int",
+      "default": 0,
+      "min": -2,
+      "max": 2,
+      "page": "spotlight",
+      "section": "Providers",
+      "label": "Clipboard ranking",
+      "description": "Rank Clipboard results higher or lower",
+      "keywords": [
+        "provider",
+        "ranking",
+        "boost",
+        "clipboard"
+      ],
+      "notes": "adds boost × 5 to the provider's `typeBias` ([spotlight.md](surfaces/spotlight.md) §6)"
+    },
+    "spotlight.providers.emoji.enabled": {
+      "type": "bool",
+      "default": true,
+      "page": "spotlight",
+      "section": "Providers",
+      "label": "Emoji",
+      "description": "Include Emoji results in Spotlight",
+      "keywords": [
+        "provider",
+        "enable",
+        "results",
+        "emoji"
+      ],
+      "notes": "ids: `apps`, `windows`, `actions`, `settings`, `calculator`, `files`, `clipboard`, `emoji`, `jot`, `timers`, `commands`, `workspaces`, `keys`, `web`"
+    },
+    "spotlight.providers.emoji.boost": {
+      "type": "int",
+      "default": 0,
+      "min": -2,
+      "max": 2,
+      "page": "spotlight",
+      "section": "Providers",
+      "label": "Emoji ranking",
+      "description": "Rank Emoji results higher or lower",
+      "keywords": [
+        "provider",
+        "ranking",
+        "boost",
+        "emoji"
+      ],
+      "notes": "adds boost × 5 to the provider's `typeBias` ([spotlight.md](surfaces/spotlight.md) §6)"
+    },
+    "spotlight.providers.jot.enabled": {
+      "type": "bool",
+      "default": true,
+      "page": "spotlight",
+      "section": "Providers",
+      "label": "Jot",
+      "description": "Include Jot results in Spotlight",
+      "keywords": [
+        "provider",
+        "enable",
+        "results",
+        "jot"
+      ],
+      "notes": "ids: `apps`, `windows`, `actions`, `settings`, `calculator`, `files`, `clipboard`, `emoji`, `jot`, `timers`, `commands`, `workspaces`, `keys`, `web`"
+    },
+    "spotlight.providers.jot.boost": {
+      "type": "int",
+      "default": 0,
+      "min": -2,
+      "max": 2,
+      "page": "spotlight",
+      "section": "Providers",
+      "label": "Jot ranking",
+      "description": "Rank Jot results higher or lower",
+      "keywords": [
+        "provider",
+        "ranking",
+        "boost",
+        "jot"
+      ],
+      "notes": "adds boost × 5 to the provider's `typeBias` ([spotlight.md](surfaces/spotlight.md) §6)"
+    },
+    "spotlight.providers.timers.enabled": {
+      "type": "bool",
+      "default": true,
+      "page": "spotlight",
+      "section": "Providers",
+      "label": "Timers",
+      "description": "Include Timers results in Spotlight",
+      "keywords": [
+        "provider",
+        "enable",
+        "results",
+        "timers"
+      ],
+      "notes": "ids: `apps`, `windows`, `actions`, `settings`, `calculator`, `files`, `clipboard`, `emoji`, `jot`, `timers`, `commands`, `workspaces`, `keys`, `web`"
+    },
+    "spotlight.providers.timers.boost": {
+      "type": "int",
+      "default": 0,
+      "min": -2,
+      "max": 2,
+      "page": "spotlight",
+      "section": "Providers",
+      "label": "Timers ranking",
+      "description": "Rank Timers results higher or lower",
+      "keywords": [
+        "provider",
+        "ranking",
+        "boost",
+        "timers"
+      ],
+      "notes": "adds boost × 5 to the provider's `typeBias` ([spotlight.md](surfaces/spotlight.md) §6)"
+    },
+    "spotlight.providers.commands.enabled": {
+      "type": "bool",
+      "default": true,
+      "page": "spotlight",
+      "section": "Providers",
+      "label": "Commands",
+      "description": "Include Commands results in Spotlight",
+      "keywords": [
+        "provider",
+        "enable",
+        "results",
+        "commands"
+      ],
+      "notes": "ids: `apps`, `windows`, `actions`, `settings`, `calculator`, `files`, `clipboard`, `emoji`, `jot`, `timers`, `commands`, `workspaces`, `keys`, `web`"
+    },
+    "spotlight.providers.commands.boost": {
+      "type": "int",
+      "default": 0,
+      "min": -2,
+      "max": 2,
+      "page": "spotlight",
+      "section": "Providers",
+      "label": "Commands ranking",
+      "description": "Rank Commands results higher or lower",
+      "keywords": [
+        "provider",
+        "ranking",
+        "boost",
+        "commands"
+      ],
+      "notes": "adds boost × 5 to the provider's `typeBias` ([spotlight.md](surfaces/spotlight.md) §6)"
+    },
+    "spotlight.providers.workspaces.enabled": {
+      "type": "bool",
+      "default": true,
+      "page": "spotlight",
+      "section": "Providers",
+      "label": "Workspaces",
+      "description": "Include Workspaces results in Spotlight",
+      "keywords": [
+        "provider",
+        "enable",
+        "results",
+        "workspaces"
+      ],
+      "notes": "ids: `apps`, `windows`, `actions`, `settings`, `calculator`, `files`, `clipboard`, `emoji`, `jot`, `timers`, `commands`, `workspaces`, `keys`, `web`"
+    },
+    "spotlight.providers.workspaces.boost": {
+      "type": "int",
+      "default": 0,
+      "min": -2,
+      "max": 2,
+      "page": "spotlight",
+      "section": "Providers",
+      "label": "Workspaces ranking",
+      "description": "Rank Workspaces results higher or lower",
+      "keywords": [
+        "provider",
+        "ranking",
+        "boost",
+        "workspaces"
+      ],
+      "notes": "adds boost × 5 to the provider's `typeBias` ([spotlight.md](surfaces/spotlight.md) §6)"
+    },
+    "spotlight.providers.keys.enabled": {
+      "type": "bool",
+      "default": true,
+      "page": "spotlight",
+      "section": "Providers",
+      "label": "Keys",
+      "description": "Include Keys results in Spotlight",
+      "keywords": [
+        "provider",
+        "enable",
+        "results",
+        "keys"
+      ],
+      "notes": "ids: `apps`, `windows`, `actions`, `settings`, `calculator`, `files`, `clipboard`, `emoji`, `jot`, `timers`, `commands`, `workspaces`, `keys`, `web`"
+    },
+    "spotlight.providers.keys.boost": {
+      "type": "int",
+      "default": 0,
+      "min": -2,
+      "max": 2,
+      "page": "spotlight",
+      "section": "Providers",
+      "label": "Keys ranking",
+      "description": "Rank Keys results higher or lower",
+      "keywords": [
+        "provider",
+        "ranking",
+        "boost",
+        "keys"
+      ],
+      "notes": "adds boost × 5 to the provider's `typeBias` ([spotlight.md](surfaces/spotlight.md) §6)"
+    },
+    "spotlight.providers.web.enabled": {
+      "type": "bool",
+      "default": true,
+      "page": "spotlight",
+      "section": "Providers",
+      "label": "Web",
+      "description": "Include Web results in Spotlight",
+      "keywords": [
+        "provider",
+        "enable",
+        "results",
+        "web"
+      ],
+      "notes": "ids: `apps`, `windows`, `actions`, `settings`, `calculator`, `files`, `clipboard`, `emoji`, `jot`, `timers`, `commands`, `workspaces`, `keys`, `web`"
+    },
+    "spotlight.providers.web.boost": {
+      "type": "int",
+      "default": 0,
+      "min": -2,
+      "max": 2,
+      "page": "spotlight",
+      "section": "Providers",
+      "label": "Web ranking",
+      "description": "Rank Web results higher or lower",
+      "keywords": [
+        "provider",
+        "ranking",
+        "boost",
+        "web"
+      ],
+      "notes": "adds boost × 5 to the provider's `typeBias` ([spotlight.md](surfaces/spotlight.md) §6)"
+    },
+    "spotlight.preview": {
+      "type": "bool",
+      "default": true,
+      "page": "spotlight",
+      "section": "Results",
+      "label": "Preview pane",
+      "description": "Show a preview when the selection has one",
+      "keywords": [
+        "preview",
+        "pane"
+      ],
+      "notes": "preview pane when the selection has one"
+    },
+    "files.roots": {
+      "type": "list",
+      "of": "path",
+      "default": [
+        "~"
+      ],
+      "page": "spotlight",
+      "section": "Files",
+      "label": "Search folders",
+      "description": "Folders searched for files",
+      "keywords": [
+        "files",
+        "folders",
+        "roots"
+      ],
+      "notes": ""
+    },
+    "files.exclude": {
+      "type": "list",
+      "of": "string",
+      "default": [
+        "~/.cache",
+        "~/.local/share/Trash",
+        "~/.var",
+        "~/.steam",
+        "node_modules",
+        ".git"
+      ],
+      "page": "spotlight",
+      "section": "Files",
+      "label": "Excluded",
+      "description": "Paths or folder names left out of file search",
+      "keywords": [
+        "files",
+        "exclude",
+        "ignore"
+      ],
+      "notes": "paths or folder names"
+    },
+    "files.showHidden": {
+      "type": "bool",
+      "default": false,
+      "page": "spotlight",
+      "section": "Files",
+      "label": "Hidden files",
+      "description": "Include hidden files in results",
+      "keywords": [
+        "files",
+        "hidden",
+        "dotfiles"
+      ],
+      "notes": ""
+    },
+    "clipboard.maxItems": {
+      "type": "int",
+      "default": 500,
+      "min": 50,
+      "max": 5000,
+      "page": "spotlight",
+      "section": "Clipboard",
+      "label": "History size",
+      "description": "Maximum number of clipboard entries",
+      "keywords": [
+        "clipboard",
+        "history",
+        "size"
+      ],
+      "notes": ""
+    },
+    "clipboard.ignoreClasses": {
+      "type": "list",
+      "of": "string",
+      "default": [
+        "org.keepassxc.KeePassXC",
+        "Bitwarden"
+      ],
+      "page": "spotlight",
+      "section": "Clipboard",
+      "label": "Ignored apps",
+      "description": "Window classes whose copies are never stored",
+      "keywords": [
+        "clipboard",
+        "ignore",
+        "password"
+      ],
+      "notes": "window classes; never stored"
+    },
+    "clipboard.terminalClasses": {
+      "type": "list",
+      "of": "string",
+      "default": [
+        "kitty",
+        "com.mitchellh.ghostty",
+        "foot",
+        "Alacritty",
+        "aptus.scratch"
+      ],
+      "page": "spotlight",
+      "section": "Clipboard",
+      "label": "Terminal apps",
+      "description": "Window classes that paste with Ctrl+Shift+V",
+      "keywords": [
+        "clipboard",
+        "terminal",
+        "paste"
+      ],
+      "notes": "window classes; paste with `Ctrl+Shift+V`"
+    },
+    "apps.launchInScopes": {
+      "type": "bool",
+      "default": true,
+      "page": "spotlight",
+      "section": "Launching",
+      "label": "Launch in scopes",
+      "description": "Run each launched app in its own systemd scope",
+      "keywords": [
+        "launch",
+        "scope",
+        "systemd",
+        "apps"
+      ],
+      "notes": "`systemd-run --scope` per launched app"
+    },
+    "switcher.scope": {
+      "type": "enum",
+      "default": "monitor",
+      "values": [
+        "monitor",
+        "all"
+      ],
+      "labels": {
+        "monitor": "This monitor",
+        "all": "All monitors"
+      },
+      "page": "spotlight",
+      "section": "Launching",
+      "label": "Switcher scope",
+      "description": "Which windows the switcher lists",
+      "keywords": [
+        "switcher",
+        "windows",
+        "monitor",
+        "alt-tab"
+      ],
+      "notes": ""
+    },
+    "today.weekNumbers": {
+      "type": "bool",
+      "default": true,
+      "page": "today",
+      "section": "Calendar",
+      "label": "Week numbers",
+      "description": "Show week numbers in the calendar",
+      "keywords": [
+        "calendar",
+        "week",
+        "numbers"
+      ],
+      "notes": ""
+    },
+    "calendar.remindBefore": {
+      "type": "int",
+      "default": 10,
+      "min": 0,
+      "max": 60,
+      "unit": "min",
+      "page": "today",
+      "section": "Calendar",
+      "label": "Remind before",
+      "description": "Minutes before an event to remind you",
+      "keywords": [
+        "calendar",
+        "reminder",
+        "lead"
+      ],
+      "notes": "0 = only at start"
+    },
+    "calendar.refreshMinutes": {
+      "type": "int",
+      "default": 10,
+      "min": 5,
+      "max": 120,
+      "unit": "min",
+      "page": "today",
+      "section": "Calendar",
+      "label": "Refresh interval",
+      "description": "How often calendars are re-read",
+      "keywords": [
+        "calendar",
+        "refresh",
+        "sync"
+      ],
+      "notes": ""
+    },
+    "weather.location": {
+      "type": "object",
+      "default": {
+        "name": "Berlin, Germany",
+        "lat": 52.52,
+        "lon": 13.405
+      },
+      "nullable": true,
+      "shape": {
+        "name": "string",
+        "lat": "number",
+        "lon": "number"
+      },
+      "page": "today",
+      "section": "Weather",
+      "label": "Location",
+      "description": "Place used for weather and sun times",
+      "keywords": [
+        "weather",
+        "location",
+        "city"
+      ],
+      "notes": "set by search (D-21); `null` = no weather, sun times 07:00/19:00"
+    },
+    "weather.units": {
+      "type": "enum",
+      "default": "metric",
+      "values": [
+        "metric",
+        "imperial"
+      ],
+      "labels": {
+        "metric": "Metric",
+        "imperial": "Imperial"
+      },
+      "page": "today",
+      "section": "Weather",
+      "label": "Units",
+      "description": "Units for temperature and wind",
+      "keywords": [
+        "weather",
+        "units",
+        "metric",
+        "imperial"
+      ],
+      "notes": ""
+    },
+    "jot.file": {
+      "type": "path",
+      "default": "~/Notes/inbox.md",
+      "page": "today",
+      "section": "Jot",
+      "label": "Jot file",
+      "description": "Markdown file that receives jots",
+      "keywords": [
+        "jot",
+        "notes",
+        "file",
+        "inbox"
+      ],
+      "notes": "created when missing"
+    },
+    "jot.attachmentsDir": {
+      "type": "string",
+      "default": "attachments",
+      "page": "today",
+      "section": "Jot",
+      "label": "Attachments folder",
+      "description": "Folder for attachments, next to the jot file",
+      "keywords": [
+        "jot",
+        "attachments",
+        "folder"
+      ],
+      "notes": "relative to the jot file's folder"
+    },
+    "jot.dateHeadings": {
+      "type": "bool",
+      "default": true,
+      "page": "today",
+      "section": "Jot",
+      "label": "Date headings",
+      "description": "Group jots under date headings",
+      "keywords": [
+        "jot",
+        "date",
+        "headings"
+      ],
+      "notes": "`## Sat 7 Nov 2026` headings"
+    },
+    "focus.durations": {
+      "type": "list",
+      "of": "int",
+      "default": [
+        25,
+        50,
+        90
+      ],
+      "minItems": 3,
+      "maxItems": 3,
+      "min": 5,
+      "max": 240,
+      "unit": "min",
+      "page": "focus",
+      "section": "Sessions",
+      "label": "Durations",
+      "description": "The three session lengths in the picker",
+      "keywords": [
+        "focus",
+        "durations",
+        "minutes"
+      ],
+      "notes": "the picker's segments; three values, 5–240"
+    },
+    "focus.default": {
+      "type": "int",
+      "default": 50,
+      "unit": "min",
+      "page": "focus",
+      "section": "Sessions",
+      "label": "Default duration",
+      "description": "Length preselected in the picker",
+      "keywords": [
+        "focus",
+        "default",
+        "duration"
+      ],
+      "notes": "one of `focus.durations`"
+    },
+    "focus.breakMinutes": {
+      "type": "int",
+      "default": 10,
+      "min": 1,
+      "max": 60,
+      "unit": "min",
+      "page": "focus",
+      "section": "Sessions",
+      "label": "Break length",
+      "description": "Length of the break after a session",
+      "keywords": [
+        "focus",
+        "break",
+        "length"
+      ],
+      "notes": ""
+    },
+    "focus.autoBreak": {
+      "type": "bool",
+      "default": false,
+      "page": "focus",
+      "section": "Sessions",
+      "label": "Auto break",
+      "description": "Start the break without asking",
+      "keywords": [
+        "focus",
+        "break",
+        "auto"
+      ],
+      "notes": "start the break without asking"
+    },
+    "focus.sound": {
+      "type": "bool",
+      "default": true,
+      "page": "focus",
+      "section": "Sessions",
+      "label": "Sound",
+      "description": "Chime at the end of a session",
+      "keywords": [
+        "focus",
+        "sound",
+        "chime"
+      ],
+      "notes": "chime at the end"
+    },
+    "focus.dailyGoal": {
+      "type": "int",
+      "default": 240,
+      "min": 0,
+      "max": 720,
+      "unit": "min",
+      "page": "focus",
+      "section": "Sessions",
+      "label": "Daily goal",
+      "description": "Focus minutes per day",
+      "keywords": [
+        "focus",
+        "goal",
+        "daily",
+        "ring"
+      ],
+      "notes": "0 hides the goal ring"
+    },
+    "focus.endForMeetings": {
+      "type": "bool",
+      "default": false,
+      "page": "focus",
+      "section": "Behaviour",
+      "label": "End for meetings",
+      "description": "End focus when a meeting starts",
+      "keywords": [
+        "focus",
+        "meetings",
+        "calendar"
+      ],
+      "notes": ""
+    },
+    "focus.quietBar": {
+      "type": "bool",
+      "default": true,
+      "page": "focus",
+      "section": "Behaviour",
+      "label": "Quiet bar",
+      "description": "Quiet the bar while focusing",
+      "keywords": [
+        "focus",
+        "quiet",
+        "bar"
+      ],
+      "notes": "quiet bar while focusing"
+    },
+    "dnd.schedule": {
+      "type": "object",
+      "default": null,
+      "nullable": true,
+      "shape": {
+        "from": "time",
+        "to": "time",
+        "days": "list<int>"
+      },
+      "page": "focus",
+      "section": "Do not disturb",
+      "label": "Schedule",
+      "description": "Turn do not disturb on automatically",
+      "keywords": [
+        "dnd",
+        "schedule",
+        "quiet",
+        "hours"
+      ],
+      "notes": "`{ \"from\": \"22:00\", \"to\": \"07:00\", \"days\": [1,2,3,4,5,6,7] }`"
+    },
+    "capture.dir": {
+      "type": "path",
+      "default": "~/Pictures/Screenshots",
+      "page": "capture",
+      "section": "Folders",
+      "label": "Screenshot folder",
+      "description": "Where screenshots are saved",
+      "keywords": [
+        "screenshot",
+        "folder",
+        "directory"
+      ],
+      "notes": "created when missing"
+    },
+    "capture.recordDir": {
+      "type": "path",
+      "default": "~/Videos/Recordings",
+      "page": "capture",
+      "section": "Folders",
+      "label": "Recording folder",
+      "description": "Where recordings are saved",
+      "keywords": [
+        "recording",
+        "folder",
+        "video"
+      ],
+      "notes": "created when missing"
+    },
+    "capture.fileName": {
+      "type": "string",
+      "default": "Screenshot %Y-%m-%d %H-%M-%S",
+      "page": "capture",
+      "section": "Files",
+      "label": "File name",
+      "description": "strftime pattern for screenshot names",
+      "keywords": [
+        "filename",
+        "pattern",
+        "strftime"
+      ],
+      "notes": "strftime pattern; recordings use `Recording …`"
+    },
+    "capture.copy": {
+      "type": "bool",
+      "default": true,
+      "page": "capture",
+      "section": "Screenshots",
+      "label": "Copy to clipboard",
+      "description": "Copy screenshots to the clipboard",
+      "keywords": [
+        "screenshot",
+        "copy",
+        "clipboard"
+      ],
+      "notes": "copy screenshots to the clipboard"
+    },
+    "capture.countdown": {
+      "type": "bool",
+      "default": false,
+      "page": "capture",
+      "section": "Recording",
+      "label": "Countdown",
+      "description": "Count 3-2-1 before recording",
+      "keywords": [
+        "record",
+        "countdown"
+      ],
+      "notes": "3-2-1 before recording"
+    },
+    "capture.recordAudio": {
+      "type": "enum",
+      "default": "none",
+      "values": [
+        "none",
+        "system",
+        "mic",
+        "both"
+      ],
+      "labels": {
+        "none": "None",
+        "system": "System",
+        "mic": "Microphone",
+        "both": "Both"
+      },
+      "page": "capture",
+      "section": "Recording",
+      "label": "Record audio",
+      "description": "Audio sources included in recordings",
+      "keywords": [
+        "record",
+        "audio",
+        "microphone",
+        "system"
+      ],
+      "notes": ""
+    },
+    "capture.colourFormat": {
+      "type": "enum",
+      "default": "hex",
+      "values": [
+        "hex",
+        "rgb",
+        "hsl",
+        "oklch"
+      ],
+      "labels": {
+        "hex": "Hex",
+        "rgb": "RGB",
+        "hsl": "HSL",
+        "oklch": "OKLCH"
+      },
+      "page": "capture",
+      "section": "Screenshots",
+      "label": "Colour format",
+      "description": "Format for picked colours",
+      "keywords": [
+        "colour",
+        "color",
+        "picker",
+        "format"
+      ],
+      "notes": ""
+    },
+    "capture.includeShell": {
+      "type": "bool",
+      "default": false,
+      "page": "capture",
+      "section": "Screenshots",
+      "label": "Include shell",
+      "description": "Keep open shell surfaces in screenshots",
+      "keywords": [
+        "screenshot",
+        "shell",
+        "include"
+      ],
+      "notes": "keep open shell surfaces in screenshots"
+    },
+    "audio.step": {
+      "type": "int",
+      "default": 5,
+      "min": 1,
+      "max": 10,
+      "unit": "%",
+      "page": "sound",
+      "section": "Volume",
+      "label": "Volume step",
+      "description": "Change per key press",
+      "keywords": [
+        "volume",
+        "step"
+      ],
+      "notes": "`Shift` = 1 %"
+    },
+    "audio.allowBoost": {
+      "type": "bool",
+      "default": false,
+      "page": "sound",
+      "section": "Volume",
+      "label": "Allow boost",
+      "description": "Allow volume up to 150 %",
+      "keywords": [
+        "volume",
+        "boost",
+        "overamplify"
+      ],
+      "notes": "volume up to 150 %"
+    },
+    "brightness.step": {
+      "type": "int",
+      "default": 5,
+      "min": 1,
+      "max": 10,
+      "unit": "%",
+      "page": "sound",
+      "section": "Brightness",
+      "label": "Brightness step",
+      "description": "Change per key press",
+      "keywords": [
+        "brightness",
+        "step"
+      ],
+      "notes": "never below 1 %"
+    },
+    "nightLight.schedule": {
+      "type": "enum",
+      "default": "off",
+      "values": [
+        "off",
+        "sunset",
+        "custom"
+      ],
+      "labels": {
+        "off": "Off",
+        "sunset": "Sunset to sunrise",
+        "custom": "Custom"
+      },
+      "page": "sound",
+      "section": "Night light",
+      "label": "Schedule",
+      "description": "When the night light is on",
+      "keywords": [
+        "night",
+        "light",
+        "schedule",
+        "sunset"
+      ],
+      "notes": "needs `hyprsunset`"
+    },
+    "nightLight.temperature": {
+      "type": "int",
+      "default": 4000,
+      "min": 2500,
+      "max": 6000,
+      "unit": "K",
+      "page": "sound",
+      "section": "Night light",
+      "label": "Temperature",
+      "description": "Colour temperature of the night light",
+      "keywords": [
+        "night",
+        "light",
+        "temperature",
+        "warm"
+      ],
+      "notes": "",
+      "visibleIf": {
+        "key": "nightLight.schedule",
+        "notEquals": "off"
+      }
+    },
+    "nightLight.from": {
+      "type": "time",
+      "default": "20:00",
+      "page": "sound",
+      "section": "Night light",
+      "label": "From",
+      "description": "Start time of the custom schedule",
+      "keywords": [
+        "night",
+        "light",
+        "start"
+      ],
+      "notes": "for `custom`",
+      "visibleIf": {
+        "key": "nightLight.schedule",
+        "equals": "custom"
+      }
+    },
+    "nightLight.to": {
+      "type": "time",
+      "default": "07:00",
+      "page": "sound",
+      "section": "Night light",
+      "label": "To",
+      "description": "End time of the custom schedule",
+      "keywords": [
+        "night",
+        "light",
+        "end"
+      ],
+      "notes": "for `custom`",
+      "visibleIf": {
+        "key": "nightLight.schedule",
+        "equals": "custom"
+      }
+    },
+    "idle.dimAfter": {
+      "type": "int",
+      "default": 270,
+      "min": 30,
+      "max": 3600,
+      "unit": "s",
+      "zeroMeans": "never",
+      "page": "power",
+      "section": "Idle",
+      "label": "Dim after",
+      "description": "Dim the screen after this idle time",
+      "keywords": [
+        "idle",
+        "dim",
+        "screen"
+      ],
+      "notes": "must be < `idle.lockAfter`"
+    },
+    "idle.lockAfter": {
+      "type": "int",
+      "default": 300,
+      "min": 60,
+      "max": 7200,
+      "unit": "s",
+      "zeroMeans": "never",
+      "page": "power",
+      "section": "Idle",
+      "label": "Lock after",
+      "description": "Lock the session after this idle time",
+      "keywords": [
+        "idle",
+        "lock"
+      ],
+      "notes": ""
+    },
+    "idle.screenOffAfter": {
+      "type": "int",
+      "default": 600,
+      "min": 60,
+      "max": 7200,
+      "unit": "s",
+      "zeroMeans": "never",
+      "page": "power",
+      "section": "Idle",
+      "label": "Screen off after",
+      "description": "Turn the screen off after this idle time",
+      "keywords": [
+        "idle",
+        "screen",
+        "off",
+        "dpms"
+      ],
+      "notes": ""
+    },
+    "idle.lockedScreenOffAfter": {
+      "type": "int",
+      "default": 60,
+      "min": 10,
+      "max": 600,
+      "unit": "s",
+      "page": "power",
+      "section": "Idle",
+      "label": "Screen off while locked",
+      "description": "Turn the screen off sooner when locked",
+      "keywords": [
+        "idle",
+        "locked",
+        "screen",
+        "off"
+      ],
+      "notes": ""
+    },
+    "power.lidAction": {
+      "type": "enum",
+      "default": "lock",
+      "values": [
+        "lock",
+        "suspend"
+      ],
+      "labels": {
+        "lock": "Lock",
+        "suspend": "Suspend"
+      },
+      "page": "power",
+      "section": "Lid",
+      "label": "Lid action",
+      "description": "What closing the lid does",
+      "keywords": [
+        "lid",
+        "close",
+        "lock",
+        "suspend"
+      ],
+      "notes": "D-01"
+    },
+    "power.lidDocked": {
+      "type": "enum",
+      "default": "disable-internal",
+      "values": [
+        "disable-internal",
+        "keep-on"
+      ],
+      "labels": {
+        "disable-internal": "Turn off internal display",
+        "keep-on": "Keep on"
+      },
+      "page": "power",
+      "section": "Lid",
+      "label": "Lid when docked",
+      "description": "What happens to the internal display when docked",
+      "keywords": [
+        "lid",
+        "docked",
+        "external",
+        "monitor"
+      ],
+      "notes": "applies with `power.lidAction = lock` and an external monitor connected",
+      "visibleIf": {
+        "key": "power.lidAction",
+        "equals": "lock"
+      }
+    },
+    "power.allowSuspend": {
+      "type": "bool",
+      "default": false,
+      "page": "power",
+      "section": "Session",
+      "label": "Allow suspend",
+      "description": "Show Suspend in the power sheet and Spotlight",
+      "keywords": [
+        "suspend",
+        "sleep",
+        "power"
+      ],
+      "notes": "shows Suspend in the sheet and Spotlight"
+    },
+    "session.closeTimeout": {
+      "type": "int",
+      "default": 6,
+      "min": 2,
+      "max": 30,
+      "unit": "s",
+      "page": "power",
+      "section": "Session",
+      "label": "Close timeout",
+      "description": "Wait this long for apps to close on logout",
+      "keywords": [
+        "logout",
+        "close",
+        "timeout"
+      ],
+      "notes": "graceful logout"
+    },
+    "lock.showNotificationCount": {
+      "type": "bool",
+      "default": true,
+      "page": "power",
+      "section": "Lock screen",
+      "label": "Notification count",
+      "description": "Show the notification count on the lock screen",
+      "keywords": [
+        "lock",
+        "notifications",
+        "count"
+      ],
+      "notes": "counts only, never content"
+    },
+    "lock.showMedia": {
+      "type": "bool",
+      "default": true,
+      "page": "power",
+      "section": "Lock screen",
+      "label": "Media",
+      "description": "Show the playing track on the lock screen",
+      "keywords": [
+        "lock",
+        "media",
+        "player"
+      ],
+      "notes": ""
+    },
+    "lock.fingerprint": {
+      "type": "bool",
+      "default": false,
+      "page": "power",
+      "section": "Lock screen",
+      "label": "Fingerprint",
+      "description": "Unlock with a fingerprint",
+      "keywords": [
+        "lock",
+        "fingerprint",
+        "unlock"
+      ],
+      "notes": "needs an enrolled finger (P-22)"
+    },
+    "deck.tiles": {
+      "type": "list",
+      "of": "enum",
+      "default": [
+        "wifi",
+        "bluetooth",
+        "dark",
+        "dnd",
+        "nightlight",
+        "awake",
+        "focus",
+        "power"
+      ],
+      "values": [
+        "wifi",
+        "bluetooth",
+        "dark",
+        "dnd",
+        "nightlight",
+        "awake",
+        "focus",
+        "power"
+      ],
+      "labels": {
+        "wifi": "Wi-Fi",
+        "bluetooth": "Bluetooth",
+        "dark": "Dark mode",
+        "dnd": "Do not disturb",
+        "nightlight": "Night light",
+        "awake": "Keep awake",
+        "focus": "Focus",
+        "power": "Power"
+      },
+      "page": "bar",
+      "section": "Deck",
+      "label": "Deck tiles",
+      "description": "Quick tiles shown in the deck",
+      "keywords": [
+        "deck",
+        "tiles",
+        "quick",
+        "settings"
+      ],
+      "notes": "those 8 ids, any order, any subset"
+    },
+    "deck.openPages": {
+      "type": "bool",
+      "default": false,
+      "page": "bar",
+      "section": "Deck",
+      "label": "Open pages directly",
+      "description": "Clicking a status item opens its page directly",
+      "keywords": [
+        "deck",
+        "status",
+        "click",
+        "page"
+      ],
+      "notes": "clicking a status item opens its page directly"
+    },
+    "isolation.bakeTargets": {
+      "type": "list",
+      "of": "enum",
+      "default": [],
+      "values": [
+        "spicetify",
+        "libreoffice"
+      ],
+      "labels": {
+        "spicetify": "Spotify (Spicetify)",
+        "libreoffice": "LibreOffice"
+      },
+      "page": "apps",
+      "section": "Bake opt-ins",
+      "label": "Bake targets",
+      "description": "Apps whose settings aptus writes into the shared config",
+      "keywords": [
+        "bake",
+        "spicetify",
+        "libreoffice",
+        "umbriel"
+      ],
+      "notes": "opt-in; changes those apps in Umbriel too until switched back ([02](02-isolation.md) §4)"
+    }
+  },
+  "rules": [
+    {
+      "kind": "order",
+      "keys": [
+        "idle.dimAfter",
+        "idle.lockAfter",
+        "idle.screenOffAfter"
+      ],
+      "relations": [
+        "<",
+        "<="
+      ],
+      "ignoreZero": true
+    },
+    {
+      "kind": "member",
+      "key": "focus.default",
+      "of": "focus.durations"
+    },
+    {
+      "kind": "insideHome",
+      "types": [
+        "path"
+      ]
+    }
+  ]
+}

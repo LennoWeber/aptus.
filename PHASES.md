@@ -151,3 +151,37 @@ every name of 07 §7, `aptus msg shell state` returns JSON, `aptus msg surface o
 `back` change the state as 07 §5 says, the reserve layer reserves 32 px, the mask lets clicks
 through, `hyprctl configerrors` is empty, `install.sh` in a temporary `HOME` shows the
 `hyprland.lua` diff and installs only after "y".
+
+### Phase 2 · structures (2026-11-07)
+
+**Done.**
+- `theme/tokens.json`: palettes Ember/Linen with every role, ANSI 16 (08 §3), six accents with
+  Papirus and GNOME names, washes, contrast-high and glass amounts, frame line, shadow; type
+  families, scale, text-scale steps; glyph and app-icon sizes; geometry, spacing, paddings;
+  component dimensions of 03 §9; motion durations, curves, springs, choreography, the M-xx
+  catalogue numbers; app fonts and cursor; `surfaces` (512 surface-specific numbers from every
+  surface document, extracted by a helper and checked here).
+- `shell/config/settings-schema.json`: all 120 keys of 10-settings (92 + 28 expanded provider
+  keys) with type, default, values/labels, range, page, section, label, description, keywords,
+  `visibleIf`, notes; pages; templates; cross-key rules. Checked mechanically against the
+  10-settings tables: no key missing or extra, every default equal.
+- QML types: `MonitorState`, `BulgeSpec`, `NotchMode`, `Drawer`; property declarations of
+  `Tokens`, `Motion`, `Config`, `Paths`, `Log`, `Format`, `SurfaceManager`; 30 service stubs
+  (owner stage in each header); 28 component types; 21 surface root types; module `qmldir`s
+  (`qs.core`, `qs.components`, `qs.services`, `qs.surfaces.<name>`, `qs.registry`,
+  `qs.windows`).
+- Python: `Paths` dataclass, `Mode`/`StartReport`, `RestartPolicy`/`CrashLog`, `Check`,
+  `Removal`/`Plan`, `HyprError`/`RefusedInstance`.
+- Material Symbols Rounded (variable, Apache 2.0) in `shell/assets/fonts/` with its licence.
+
+**Changes to the plan found while writing.**
+- Module order core ← components ← services ← surfaces ← registry ← windows ← shell.qml, to
+  avoid import cycles: `Shortcuts`, `Ipc`, `NotchModes` moved from `qs.core` to `qs.registry`;
+  core gets service data through `Binding`s in `shell.qml` (`Tokens.wallpaperHue`,
+  `SurfaceManager.activeMonitor/currentWindow/locked`); `Notch` receives the mode components as
+  `modeComponents` instead of importing the registry.
+- Surface types that would collide with service singletons are named `SwitcherStrip`,
+  `KeysSheet`, `JotSheet`.
+- The lid state moved from `Power` to `Session`, so no file has two owners in the same wave.
+- Spec fix: the overview's drop height is 330 px (overview.md §2, from its card layout);
+  04-motion M-14 said 320 and is corrected.

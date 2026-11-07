@@ -1,0 +1,20 @@
+pragma Singleton
+// Wallpaper: wallpaper.json, resolution per monitor.
+// Owner: S1 (resolution, drawing), S10 (gallery, thumbnails, analysis, rotation). Stub until its stage fills it.
+import QtQuick
+import Quickshell
+
+Singleton {
+    id: root
+
+    // the parsed wallpaper.json
+    property var state: ({})
+    // images in wallpaper.dir, newest first: [{ path, mtime }]
+    property var images: []
+    // monitor name → path shown as a live preview (gallery), overrides resolution
+    property var preview: ({})
+    // chroma-weighted hue of the active monitor's image, -1 unknown (S10)
+    property real hue: -1
+    // mean OKLab lightness, -1 unknown (S10)
+    property real lightness: -1
+}

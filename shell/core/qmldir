@@ -1,0 +1,9 @@
+module qs.core
+singleton Tokens 1.0 Tokens.qml
+singleton Motion 1.0 Motion.qml
+singleton Config 1.0 Config.qml
+singleton Paths 1.0 Paths.qml
+singleton Log 1.0 Log.qml
+singleton Format 1.0 Format.qml
+singleton SurfaceManager 1.0 SurfaceManager.qml
+MonitorState 1.0 MonitorState.qml
