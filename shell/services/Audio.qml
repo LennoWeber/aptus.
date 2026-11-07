@@ -15,4 +15,9 @@ Singleton {
     property string sinkName: ""
     // Pipewire bound
     property bool ready: false
+
+    // Volume step for the hardware keys: direction ±1, fine = 1 % instead of audio.step (shows the OSD).
+    function stepVolume(direction: int, fine: bool): void { throw new Error("Audio.stepVolume: not implemented"); }
+    function toggleMute(): void { throw new Error("Audio.toggleMute: not implemented"); }
+    function toggleMicMute(): void { throw new Error("Audio.toggleMicMute: not implemented"); }
 }

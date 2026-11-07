@@ -6,6 +6,7 @@ $HOME/.aptus-run, so a test with a temporary HOME can never write outside it.
 """
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -52,3 +53,23 @@ class Paths:
     restart_flag: Path         # <runtime>/restart
     dev_flag: Path             # <runtime>/dev
     guard_state: Path          # <runtime>/guard.state
+
+
+ENV_TEST = "APTUS_TEST"
+TEST_RUNTIME = ".aptus-run"     # $HOME/.aptus-run in tests
+
+
+def resolve(env: Mapping[str, str] | None = None) -> Paths:
+    """Resolve every path from `env` (default os.environ). Under APTUS_TEST=1 an XDG variable
+    pointing outside HOME is ignored and the runtime directory is $HOME/.aptus-run."""
+    raise NotImplementedError
+
+
+def get() -> Paths:
+    """The paths of this process (resolved once)."""
+    raise NotImplementedError
+
+
+def inside(path: Path, root: Path) -> bool:
+    """Whether `path` (resolved, symlinks followed) is `root` or below it."""
+    raise NotImplementedError

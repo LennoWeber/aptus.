@@ -16,4 +16,7 @@ Singleton {
     property int held: 0
     // aptus owns org.freedesktop.Notifications
     property bool serverActive: false
+
+    // IPC `notch toast <json>` (test only): a fake notification through the real interruption policy.
+    function inject(payload: var): void { throw new Error("Notifications.inject: not implemented"); }
 }

@@ -65,4 +65,12 @@ Singleton {
 
     // Per-animation numbers of the M-xx catalogue (tokens.json motion.catalogue).
     readonly property var catalogue: ({})
+
+    // A duration in ms, honouring reduced motion (moves become the 120 ms crossfade, 04 §5).
+    // name: a key of the durations table ("drawer", "notch", …); out: the exit duration.
+    function ms(name: string, out: bool): int { throw new Error("Motion.ms: not implemented"); }
+    // bezierCurve list for a curve name ("standard" | "enter" | "exit" | "linear").
+    function curve(name: string): var { throw new Error("Motion.curve: not implemented"); }
+    // { spring, damping, mass, epsilon } for a SpringAnimation ("notch" | "snappy" | "gentle").
+    function spring(name: string): var { throw new Error("Motion.spring: not implemented"); }
 }

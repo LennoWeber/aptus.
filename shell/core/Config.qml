@@ -27,4 +27,23 @@ Singleton {
 
     signal settingChanged(string key)
     signal settingInvalid(string key, string message)
+
+    // The effective value of a key (reads `revision`, so bindings follow every change).
+    function get(key: string): var { throw new Error("Config.get: not implemented"); }
+    // Set and persist a value (debounced 300 ms, atomic). Returns "" or the validation message.
+    function set(key: string, value: var): string { throw new Error("Config.set: not implemented"); }
+    // Back to the default (removes the key from settings.json).
+    function reset(key: string): void { throw new Error("Config.reset: not implemented"); }
+    // Reset every key of a settings page (settings.md §4 "Reset page").
+    function resetPage(page: string): void { throw new Error("Config.resetPage: not implemented"); }
+    // Validate without storing: { ok, value, message }.
+    function validate(key: string, value: var): var { throw new Error("Config.validate: not implemented"); }
+    // The schema entry of a key, or null.
+    function entry(key: string): var { throw new Error("Config.entry: not implemented"); }
+    // Re-read settings.json (IPC `shell reloadConfig`, file changed outside the shell).
+    function reload(): void { throw new Error("Config.reload: not implemented"); }
+
+    function _loadSchema(): void { throw new Error("Config._loadSchema: not implemented"); }
+    function _loadFile(text: string): void { throw new Error("Config._loadFile: not implemented"); }
+    function _save(): void { throw new Error("Config._save: not implemented"); }
 }

@@ -185,3 +185,51 @@ through, `hyprctl configerrors` is empty, `install.sh` in a temporary `HOME` sho
 - The lid state moved from `Power` to `Session`, so no file has two owners in the same wave.
 - Spec fix: the overview's drop height is 330 px (overview.md §2, from its card layout);
   04-motion M-14 said 320 and is corrected.
+
+### Phase 3 · signatures (2026-11-07)
+
+**Done** (placeholder bodies throw / `raise NotImplementedError`; nothing is called yet):
+- `shell/core/js/`: `colour.js` (sRGB ↔ OKLab/OKLCH, `over`, `toward`, hue distance),
+  `resolve.js` (08 §3: `resolve`, `accentFor`, `groundAlpha`, the role order), `rules.js`
+  (07 §5 / 05 §2–§3 as pure functions over plain state: open/close/toggle/back, post/dismiss/
+  arbitrate/expire, menus, monitor add/remove/active, lock, fullscreen, settings focus; surface id
+  lists and the 30 s / 4 s constants), `config.js` (defaults, validate, crossCheck, load,
+  serialise, equal, visible), `format.js` (03 §4), `bulge.js` (normalise, framePath,
+  bodiesPath), `sun.js` (NOAA times, modeAt, nextChange; 07:00/19:00 fallback).
+- QML singletons: `SurfaceManager` (open/close/toggle/back/post/dismiss/state/isOpen/
+  monitorState, menus, back handlers, settings focus, syncMonitors and internals), `Config`
+  (get/set/reset/resetPage/validate/entry/reload), `Tokens` (resolveNow/apply/alpha/font),
+  `Motion` (ms/curve/spring), `Log`, `Format` (wrappers), `Paths` (expand/insideHome/url/
+  ensureDir).
+- `qs.registry`: `Shortcuts` (the 44 names of 07 §7, pressed/released), `NotchModes` (ids,
+  component()), `Ipc` (every target and function of 07 §7 as `IpcHandler`s).
+- Service action methods the registries call: Hypr (dispatch, focusWindow, windowAt, monitor),
+  Wallpaper (pathFor, set, next), Audio, Brightness, Media, Switcher, Session, Theme, Focus, Dnd,
+  Capture, Jot, Notifications.inject. Other services get their methods from their own stage.
+- Components: `NotchMode.back()`/`Drawer.back()` (default false: the contract's real default),
+  `Menu.moveCurrent/triggerCurrent`, `Field.forceFocus/selectAll/clear`.
+- `hypr/init.lua` (generated-value defaults), `hypr/binds.lua` (`G`, `bind`, `LOCK`,
+  `overrides`, `unbound`, `L`, `R`).
+- Python: `paths.resolve/get/inside`, `atomic.write_bytes/write_text/write_json/fsync_dir/
+  symlink`, `log.level_from_env/setup`, `hypr.signature/socket_path/request/request_json/
+  dispatch/eval_lua/notify/config_errors`, `msg.parse_show/build/call/main` + `ALIASES`,
+  `cli.parser/cmd_logs/cmd_dev/main`, `session.check_environment/start/write_status/
+  exec_supervisor/stop/main`, `supervise.shell_command/next_delay/crashed_out/on_crash_limit/
+  run/main`, `doctor.run/render/main`, `doctor.config.check/validate`, `doctor.deps.check` with
+  the package lists, `install.v1_leftovers/plan/plan_uninstall/describe/apply/main` +
+  `install/__main__.py`, `install.hyprlua.statements/plan_install/plan_uninstall/diff/
+  removed_lua/parse_removed` + the removal patterns and the block text.
+- Test skeletons: `tests/conftest.py` (temp-HOME fixture), 13 `tests/unit/test_*.py`, 7
+  `tests/qml/tst_*.qml`, `tests/e2e/nested.py` (harness API), `tests/e2e/test_s1.py`;
+  `tests/e2e/vpointer.py` moved unchanged from the S0 probe (already working code).
+
+**Reported (gaps of earlier phases, filled here because the signatures need them).**
+- Phase 2 missed `windows/MonitorShell.qml` (its `qmldir` entry existed) and the
+  `install.Action` record; both added with properties/fields only.
+- `dnd for <duration>`: `for` is reserved in JavaScript, so the `IpcHandler` function is
+  `forDuration` and `aptus msg` maps the name (`msg.ALIASES`); 07 §7 updated.
+- Phase-1 decision 9 (lock never fails open) lands in `binds.lua`'s `LOCK`
+  (`aptus msg session lock || hyprlock -c <conf> || hyprlock`); 09 §7 is updated with the rest
+  of the Lua in phase 7.
+- Checked: a property named `on` (Glyph, Tile, Wash, IconButton, Dnd) loads and lints cleanly
+  in Qt 6.11.

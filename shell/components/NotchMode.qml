@@ -21,4 +21,8 @@ Item {
 
     // Ask the host to close this mode (Esc at the last level, activation that leaves the shell).
     signal closeRequested()
+
+    // Esc ladder (05 §3): step back one level inside the mode (a scope, a day view, a page).
+    // Return true when it did; false lets SurfaceManager close the mode.
+    function back(): bool { return false; }
 }

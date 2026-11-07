@@ -245,7 +245,7 @@ Quickshell `GlobalShortcut { appid: "aptus"; name: … }`; Hyprland binds `hl.ds
 | `theme` | `mode dark|light|auto|toggle`, `accent <name>`, `glass on|off` |
 | `wallpaper` | `set <path> [monitor]`, `next` |
 | `focus` | `start <minutes> [intent]`, `stop`, `pause`, `resume`, `extend <minutes>` |
-| `dnd` | `on`, `off`, `for <duration>`, `until <HH:MM>` |
+| `dnd` | `on`, `off`, `for <duration>` (the handler function is `forDuration`, since `for` is reserved in JavaScript; `aptus msg` maps the name), `until <HH:MM>` |
 | `capture` | `region`, `screen`, `window`, `record`, `stop`, `colour` |
 | `session` | `lock`, `logout`, `reboot`, `poweroff`, `sheet` |
 | `jot` | `add <text>`, `todo <text>` |

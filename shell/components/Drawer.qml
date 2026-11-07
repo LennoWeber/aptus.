@@ -12,4 +12,7 @@ Item {
     readonly property BulgeSpec bulge: BulgeSpec {}
 
     signal closeRequested()
+
+    // Esc ladder (05 §3): a Deck page → the Deck. True when it stepped back internally.
+    function back(): bool { return false; }
 }

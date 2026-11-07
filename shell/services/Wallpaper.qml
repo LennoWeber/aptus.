@@ -17,4 +17,11 @@ Singleton {
     property real hue: -1
     // mean OKLab lightness, -1 unknown (S10)
     property real lightness: -1
+
+    // The image a monitor shows: the gallery preview, else wallpaper.json's per-monitor path, else the default, else "" (surfaces/wallpaper.md §1).
+    function pathFor(monitor: string): string { throw new Error("Wallpaper.pathFor: not implemented"); }
+    // Set the wallpaper of one monitor, or of every monitor when monitor is "" (IPC `wallpaper set`).
+    function set(path: string, monitor: string): void { throw new Error("Wallpaper.set: not implemented"); }
+    // The next image in wallpaper.dir for the active monitor (IPC `wallpaper next`; rotation is S10).
+    function next(): void { throw new Error("Wallpaper.next: not implemented"); }
 }

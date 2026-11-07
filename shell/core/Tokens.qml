@@ -141,4 +141,15 @@ Singleton {
 
     // Surface-specific numbers: tokens.json "surfaces" (surface → name → value).
     readonly property var surfaces: ({})
+
+    // Resolve the palette (08 §3, core/js/resolve.js) from tokens, settings and the wallpaper,
+    // and apply it (the colour properties animate over Motion.theme, M-30).
+    function resolveNow(): void { throw new Error("Tokens.resolveNow: not implemented"); }
+    // Apply a resolution object (resolve.js result, or current/shell.json written outside).
+    function apply(resolved: var): void { throw new Error("Tokens.apply: not implemented"); }
+    // A colour with alpha (wash layers, scrim, shadow).
+    function alpha(c: color, a: real): color { throw new Error("Tokens.alpha: not implemented"); }
+    // { family, pixelSize, weight, letterSpacing, lineHeight } of a type role ("body", "title", …)
+    // after text scale.
+    function font(role: string): var { throw new Error("Tokens.font: not implemented"); }
 }

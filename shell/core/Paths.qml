@@ -39,4 +39,13 @@ Singleton {
     readonly property string introFlag: ""       // <runtime>/intro.<HYPRLAND_INSTANCE_SIGNATURE>
     readonly property string guardState: ""      // <runtime>/guard.state
     readonly property string clipChanged: ""     // <runtime>/clip.changed
+
+    // "~/x" → "<home>/x"; other paths unchanged.
+    function expand(path: string): string { throw new Error("Paths.expand: not implemented"); }
+    // Whether a path (after expand) is inside HOME (the insideHome rule of the schema).
+    function insideHome(path: string): bool { throw new Error("Paths.insideHome: not implemented"); }
+    // "file://" URL for Image sources and FileView paths.
+    function url(path: string): string { throw new Error("Paths.url: not implemented"); }
+    // Create a directory and its parents (Process `mkdir -p`); fire and forget.
+    function ensureDir(path: string): void { throw new Error("Paths.ensureDir: not implemented"); }
 }

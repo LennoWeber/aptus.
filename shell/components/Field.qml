@@ -14,4 +14,8 @@ Item {
     readonly property Item input: null
     signal accepted()
     signal edited(string text)
+
+    function forceFocus(): void { throw new Error("Field.forceFocus: not implemented"); }
+    function selectAll(): void { throw new Error("Field.selectAll: not implemented"); }
+    function clear(): void { throw new Error("Field.clear: not implemented"); }
 }

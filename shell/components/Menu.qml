@@ -13,4 +13,8 @@ Item {
     property int currentIndex: -1
     signal triggered(var row)
     signal dismissed()
+
+    // Keyboard: ↑ ↓ move (skipping separators and disabled rows), Enter triggers.
+    function moveCurrent(delta: int): void { throw new Error("Menu.moveCurrent: not implemented"); }
+    function triggerCurrent(): void { throw new Error("Menu.triggerCurrent: not implemented"); }
 }

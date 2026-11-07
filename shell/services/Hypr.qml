@@ -21,4 +21,13 @@ Singleton {
     property string submap: ""
     // HYPRLAND_INSTANCE_SIGNATURE of this session
     property string signature: ""
+
+    // Run a dispatcher, given as the Lua expression Hyprland 0.57 takes ("hl.dsp.focus({ window = 'address:0x…' })").
+    function dispatch(lua: string): void { throw new Error("Hypr.dispatch: not implemented"); }
+    // Focus a window by address (the away catcher's focus replay, Switcher, Overview).
+    function focusWindow(address: string): void { throw new Error("Hypr.focusWindow: not implemented"); }
+    // The topmost mapped window under a monitor-local point, or null (away catcher).
+    function windowAt(monitor: string, x: real, y: real): var { throw new Error("Hypr.windowAt: not implemented"); }
+    // The monitor record for a name, or null.
+    function monitor(name: string): var { throw new Error("Hypr.monitor: not implemented"); }
 }

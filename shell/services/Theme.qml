@@ -10,4 +10,12 @@ Singleton {
     // JSON summary of the last aptus-theme apply
     property string lastApply: ""
     property bool applying: false
+
+    // appearance.mode: "dark" | "light" | "auto".
+    function setMode(mode: string): void { throw new Error("Theme.setMode: not implemented"); }
+    // Light ↔ dark, always explicit (Super+T).
+    function toggleMode(): void { throw new Error("Theme.toggleMode: not implemented"); }
+    // appearance.accent: one of the six or "wallpaper".
+    function setAccent(name: string): void { throw new Error("Theme.setAccent: not implemented"); }
+    function setGlass(on: bool): void { throw new Error("Theme.setGlass: not implemented"); }
 }
