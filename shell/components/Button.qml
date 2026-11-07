@@ -5,6 +5,8 @@ import qs.core
 Item {
     id: root
 
+    // TODO(phase): label + optional glyph, kinds plain/primary/risk, press scale 0.97 (M-xx press), Wash, FocusRing.
+
     property string text: ""
     // "primary" | "plain" | "quiet" | "risk"
     property string variant: "plain"

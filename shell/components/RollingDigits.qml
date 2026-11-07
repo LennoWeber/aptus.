@@ -5,6 +5,8 @@ import qs.core
 Item {
     id: root
 
+    // TODO(phase): one Text per character; changed digits roll (old rises and fades, new rises from below, fade 160).
+
     // The text to show ("14:32", "64 %"); characters that are not digits never roll.
     property string text: ""
     // Type role of 03 §4 ("clock", "micro", "number", …).

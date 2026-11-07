@@ -5,6 +5,8 @@ import qs.core
 Item {
     id: root
 
+    // TODO(phase): track, fill, thumb, level glyphs, drag + wheel + keyboard; emits moved().
+
     property real value: 0
     property real from: 0
     property real to: 1

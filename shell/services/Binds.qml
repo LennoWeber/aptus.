@@ -7,6 +7,9 @@ import Quickshell
 Singleton {
     id: root
 
+    // TODO(phase): until S8 fills this service, each action method logs "not available yet"
+    //   (category service.<name>) instead of throwing (phase-1 decision 6).
+
     // [{ id, chord, defaultChord, group, description, hidden: bool, aptus: bool, changed: bool,
     //    dispatcher, arg }] — aptus binds carry their id from the description, others are described
     //    from shell/config/known-binds.json

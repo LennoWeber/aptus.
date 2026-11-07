@@ -9,6 +9,8 @@ import Quickshell
 Singleton {
     id: root
 
+    // TODO(phase): the two Component tables over the stage stubs (MediaActivity, …, StillOpenCard).
+
     // Live activities, in notch.md §4 order.
     readonly property var activityIds: ["recording", "timer", "meeting", "focus", "media", "progress"]
     // id → Component of an Activity (MediaActivity, ProgressActivity, FocusActivity,

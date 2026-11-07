@@ -5,5 +5,7 @@ import qs.core
 Item {
     id: root
 
+    // TODO(phase): shows Menu for monitor.menu; dismissed → SurfaceManager.closeMenu.
+
     property MonitorState monitor
 }

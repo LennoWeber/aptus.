@@ -8,6 +8,9 @@ import qs.core
 PanelWindow {
     id: root
 
+    // TODO(phase): Background layer, namespace aptus-wallpaper, all edges, exclusiveZone -1, no input
+    //   (empty mask); two Images (current, next) with the M-28 crossfade; fill modes fill/fit/center; colour ground under it.
+
     required property string monitorName
     // The image being shown and the one decoding behind it (M-28 crossfade).
     property string source: ""

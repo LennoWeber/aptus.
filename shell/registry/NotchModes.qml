@@ -9,6 +9,9 @@ import "../core/js/rules.js" as Rules
 Singleton {
     id: root
 
+    // TODO(phase): one Component per id wrapping Spotlight, SwitcherStrip, Today, SessionSheet,
+    //   PolkitPrompt, Gallery, JotSheet, KeysSheet (also keysPeek), FocusPicker.
+
     // The interactive and passive notch modes ("card:<activity>" cards belong to the notch itself).
     readonly property var ids: Rules.NOTCH_MODES
 

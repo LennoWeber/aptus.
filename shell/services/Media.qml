@@ -7,6 +7,9 @@ import Quickshell
 Singleton {
     id: root
 
+    // TODO(phase): until S3 fills this service, each action method logs "not available yet"
+    //   (category service.<name>) instead of throwing (phase-1 decision 6).
+
     property var players: []
     // the active MprisPlayer or null
     property var active: null

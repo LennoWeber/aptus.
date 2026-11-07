@@ -7,6 +7,9 @@ import Quickshell
 Singleton {
     id: root
 
+    // TODO(phase): until S3/S5 fills this service, each action method logs "not available yet"
+    //   (category service.<name>) instead of throwing (phase-1 decision 6).
+
     // the Wi-Fi list (S5): [{ ssid, strength, secure: bool, known: bool, active: bool }]
     property var networks: []
     // [{ name, active: bool }]

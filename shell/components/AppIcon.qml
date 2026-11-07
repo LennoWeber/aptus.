@@ -5,6 +5,8 @@ import qs.core
 Item {
     id: root
 
+    // TODO(phase): IconImage from the icon theme with a letter fallback.
+
     property string icon: ""
     property string name: ""
     property real size: 20

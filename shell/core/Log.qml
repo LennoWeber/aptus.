@@ -9,6 +9,9 @@ import Quickshell
 Singleton {
     id: root
 
+    // TODO(phase): level from APTUS_LOG; write() prints "<level> <category>: <message>" with
+    //   console.info/warn/error (the supervisor pipes stdout/stderr to journald).
+
     // 0 debug, 1 info, 2 warn, 3 error.
     property int level: 1
     readonly property var levelNames: ["debug", "info", "warn", "error"]

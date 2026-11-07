@@ -7,6 +7,9 @@ import Quickshell
 Singleton {
     id: root
 
+    // TODO(phase): until S8 fills this service, each action method logs "not available yet"
+    //   (category service.<name>) instead of throwing (phase-1 decision 6).
+
     // [{ id, label, kind: "timer" | "alarm" | "stopwatch", endsAt: Date | null, startedAt: Date,
     //    durationMs, paused: bool, remainingMs, ringing: bool }]
     property var timers: []

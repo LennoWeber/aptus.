@@ -5,6 +5,8 @@ import qs.core
 Item {
     id: root
 
+    // TODO(phase): 600 ms delay, 0 ms within 1 s of another (shared timestamp), M-32 fade.
+
     property Item target: null
     property string text: ""
     property bool active: false

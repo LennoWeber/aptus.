@@ -8,3 +8,7 @@ local gen = {
   frame_edge = 6, window_gap = 8, glass = false, reduce_motion = false,
 }
 local path = state .. "generated.lua"
+-- TODO(phase): load generated.lua over the defaults (pcall(dofile); a broken file → notification,
+--   defaults stay); package.loaded["aptus.gen"] = gen.
+-- TODO(phase): require aptus.env, aptus.look, aptus.motion, aptus.rules, aptus.binds (09 §2).
+-- TODO(phase): hl.on("hyprland.start") → ~/.local/bin/aptus-session start.

@@ -5,6 +5,8 @@ import qs.core
 Item {
     id: root
 
+    // TODO(phase): TextInput in a sunken rounded rect, accent caret, placeholder in ink.faint, password mode.
+
     property string text: ""
     property string placeholder: ""
     // Spotlight size (52 high, field type).

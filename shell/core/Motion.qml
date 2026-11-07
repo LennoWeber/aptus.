@@ -8,6 +8,9 @@ import Quickshell
 Singleton {
     id: root
 
+    // TODO(phase): every number from Tokens.raw.motion; reduced ← Config motion.reduce (auto: gsettings
+    //   org.gnome.desktop.interface enable-animations, read once through a Process).
+
     // motion.reduce resolved ("auto" reads org.gnome.desktop.interface enable-animations).
     readonly property bool reduced: false
 

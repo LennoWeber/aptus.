@@ -1,0 +1,2 @@
+-- aptus rules (09-hyprland §5)
+-- TODO(phase): the Lua of 09-hyprland §5, verbatim (P-03 verified every name).

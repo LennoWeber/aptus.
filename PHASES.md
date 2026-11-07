@@ -331,3 +331,24 @@ signature fixes phase-3 rules.
 message (or nothing) and exits **0**; with no instance it exits **255**; `qs ipc show` lists
 `function name(arg: type): type` per target. `aptus msg` therefore pads arguments from `show`,
 classifies the output, and treats an empty answer as an error.
+
+### Phase 4 · TODO markers (2026-11-07)
+
+**Done** (comments only, 108 `TODO(phase)` markers in 85 files; no code):
+- Wiring places that exist only as comment files so far: `shell/shell.qml` (watchFiles, Bindings
+  into core, monitor sync, MonitorShell per screen with the registry tables, Shortcuts/Ipc/Lock/
+  SettingsWindow, start order with the locked marker and the intro flag), `hypr/{env,look,motion,
+  rules}.lua` (09 §3–§6 verbatim), `bin/{aptus,aptus-session,aptus-supervise}` (launchers),
+  `install.sh`, `tests/run`, `tests/lint.sh`, `tests/e2e/hyprland.lua`, `.qmllint.ini`.
+- In the S1 stubs: `MonitorShell` (the three layers, mask/away catcher/keyboard, the surface stack
+  with the registry tables, RecFrame), core singletons (tokens/schema/settings FileViews, palette
+  resolution and M-30 Behaviors, accents/chroma, migrations and pending keys, debounce, rules.js
+  plumbing, limits from tokens, optional-argument normalisation), registries (Variants of
+  GlobalShortcuts and the routing table, NotchModes and Activities component tables, Ipc answers
+  and the lock fallback), `Hypr` and `Wallpaper` (implemented in S1), the "not available yet"
+  bodies of every other service's action methods, every component of 03 §9, `Frame`, `Bar`,
+  `WallpaperLayer`, `hypr/init.lua` and `hypr/binds.lua`.
+- Docs: `README.md` (v2 rewrite) and `CLAUDE.md` (status lines).
+
+**Nothing missing from phases 2–3 was found while marking.** (The review fixes of `d09b302`
+already covered the gaps.)

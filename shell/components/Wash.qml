@@ -5,6 +5,8 @@ import qs.core
 Rectangle {
     id: root
 
+    // TODO(phase): rounded Rectangle in Tokens.washHover/washPressed/washCurrent by state, 120 ms colour Behavior.
+
     property bool hovered: false
     property bool current: false
     property bool pressed: false

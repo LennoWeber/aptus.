@@ -5,6 +5,8 @@ import qs.core
 Item {
     id: root
 
+    // TODO(phase): Label in ink.sec plus a plain Button "Retry" when retry.
+
     // What happened and what to do ("Could not reach Open-Meteo. Check the connection.").
     property string text: ""
     // Show the Retry button.

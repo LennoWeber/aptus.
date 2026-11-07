@@ -7,6 +7,10 @@ import qs.components
 Item {
     id: root
 
+    // TODO(phase): Bulge { bulges, frameWidth/Height, edge: Tokens.frameEdge × introProgress, top: bar
+    //   height } in Tokens.ground (groundAlpha with glass), a 1 px frameLine, the drawer shadow from bodiesOnly.
+    // TODO(phase): hide follows `hidden && !revealed` over Motion surface timings (M-31).
+
     property MonitorState monitor
     // The drawers' bulges (BulgeSpec), drawn as dents in the content area's outline.
     property list<BulgeSpec> bulges

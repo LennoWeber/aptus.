@@ -6,6 +6,9 @@ import qs.core
 Shape {
     id: root
 
+    // TODO(phase): ShapePath with PathSvg from bulge.js framePath / bodiesPath (fillRule OddEvenFill),
+    //   re-evaluated when any BulgeSpec changes.
+
     // Monitor-local size of the area the frame surrounds.
     property real frameWidth: 0
     property real frameHeight: 0

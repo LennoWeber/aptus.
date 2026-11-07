@@ -5,6 +5,9 @@ import qs.core
 Text {
     id: root
 
+    // TODO(phase): Material Symbols Rounded from Paths.assets (FontLoader), font.variableAxes FILL/wght animated
+    //   (P-17 in S3; until then the static axes).
+
     // The symbol name (ligature), e.g. "wifi".
     property string name: ""
     property real size: 18

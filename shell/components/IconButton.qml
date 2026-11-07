@@ -5,6 +5,8 @@ import qs.core
 Item {
     id: root
 
+    // TODO(phase): Glyph in a square with Wash and Tooltip (every icon-only control has one).
+
     property string glyph: ""
     property string tooltip: ""
     // "bar" | "drawer"

@@ -5,6 +5,8 @@ import qs.core
 Item {
     id: root
 
+    // TODO(phase): 2 px accent ring outside the target's radius, only for keyboard focus.
+
     property Item target: null
     property real targetRadius: 0
     property bool shown: false

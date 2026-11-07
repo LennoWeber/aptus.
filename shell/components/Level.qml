@@ -5,6 +5,8 @@ import qs.core
 Item {
     id: root
 
+    // TODO(phase): a horizontal level bar (battery, volume OSD).
+
     // 0..max
     property real value: 0
     property real max: 1

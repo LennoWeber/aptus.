@@ -7,6 +7,9 @@ import Quickshell
 Singleton {
     id: root
 
+    // TODO(phase): setMode/toggleMode/setAccent/setGlass write Config (appearance.*), which
+    //   re-resolves Tokens; aptus-theme apply arrives with S2.
+
     // JSON summary of the last aptus-theme apply
     property string lastApply: ""
     property bool applying: false

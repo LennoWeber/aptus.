@@ -12,6 +12,20 @@ import qs.components
 Scope {
     id: root
 
+    // TODO(phase): monitor ← SurfaceManager.monitorState(name); keyboard ← monitor.keyboard.
+    // TODO(phase): WallpaperLayer { monitorName; source: Wallpaper.pathFor(name) } (Background, aptus-wallpaper).
+    // TODO(phase): aptus-reserve: PanelWindow on Top, anchored top/left/right, height and exclusiveZone
+    //   = Tokens.barHeight, empty mask, no keyboard (07 §4).
+    // TODO(phase): aptus-shell: PanelWindow on Overlay, all edges, ExclusionMode.Ignore, keyboardFocus
+    //   Exclusive ↔ None from `keyboard`; mask = bar + notch + open drawers, whole monitor while interactive
+    //   (away catcher), a 2 px top strip under a fullscreen window (P-11).
+    // TODO(phase): inside it, bottom to top: Frame { bulges: notch, deck, overview }, Bar, Notch
+    //   { modeComponents: notchModes; activityComponents: activities; cardComponents: cards },
+    //   Deck, Overview { pillRects: bar.pillRects }, MenuHost, CaptureOverlay (top, exclusive).
+    // TODO(phase): away catcher: a click outside the open surface → SurfaceManager.back-to-close and
+    //   Hypr.focusWindow(Hypr.windowAt(...)) so the click reaches the window (05 §3).
+    // TODO(phase): RecFrame { monitorName } (S9 fills it).
+
     // The screen (Variants model data).
     required property ShellScreen modelData
     // Notch-mode id → Component, from qs.registry NotchModes (passed in by shell.qml).

@@ -8,6 +8,14 @@ import Quickshell
 Singleton {
     id: root
 
+    // TODO(phase): FileView on Paths.tokensFile (blockLoading) → raw; every geometry/type/component
+    //   property reads raw instead of its literal default.
+    // TODO(phase): resolveNow() on Config appearance.* changes and on wallpaperHue/Lightness changes;
+    //   ColorAnimation Behaviors over Motion.theme on every colour (M-30).
+    // TODO(phase): accents/neutrals from raw.accents + accentOrder for the current mode; wallpaperChroma
+    //   into resolve.js (low-chroma images keep the current accent).
+    // TODO(phase): watch Paths.themeCurrent + "/shell.json" for resolutions written outside (07 §7).
+
     // The parsed theme/tokens.json.
     property var raw: ({})
 

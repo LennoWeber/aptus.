@@ -5,6 +5,8 @@ import qs.core
 Item {
     id: root
 
+    // TODO(phase): the Deck tile of 03 §9: glyph, title, subtitle, on state in accentWash, chevron for pages.
+
     property string glyph: ""
     property string label: ""
     property string stateText: ""

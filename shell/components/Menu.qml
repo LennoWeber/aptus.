@@ -5,6 +5,8 @@ import qs.core
 Item {
     id: root
 
+    // TODO(phase): raised rect with rows/separators/submenus, grows from the anchor (M-33), keyboard handling.
+
     // [{ id, label, glyph, keys: "Ctrl+Enter", risk: bool, confirm: "Press again to …" (inline confirm,
     //    bar.md §3), enabled: bool, separator: bool, checked: bool, submenu: [...] }]
     property var model: []

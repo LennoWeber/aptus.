@@ -7,6 +7,9 @@ import Quickshell
 Singleton {
     id: root
 
+    // TODO(phase): until S3/S5 fills this service, each action method logs "not available yet"
+    //   (category service.<name>) instead of throwing (phase-1 decision 6).
+
     // [{ address, name, icon, paired: bool, connected: bool, battery: int (-1 unknown) }]
     property var devices: []
 

@@ -8,6 +8,13 @@ import Quickshell
 Singleton {
     id: root
 
+    // TODO(phase): MonitorState objects created with Component.createObject per Hypr monitor (syncMonitors).
+    // TODO(phase): every API function = snapshot → rules.js → _apply; a Timer runs rules.expire while
+    //   passive content waits (events 4 s, toasts 30 s).
+    // TODO(phase): react to activeMonitor (close notch modes on the old one) and locked (07 §5).
+    // TODO(phase): limits ← Tokens.surfaces (toast.staleMs, event.maxAgeMs, notch.pinnedCardTimeoutMs);
+    //   optional parameters normalised (undefined/"" monitor → activeMonitor, args → {}, key → "").
+
     // Hyprland monitor name → MonitorState.
     property var monitors: ({})
     // The focused monitor (from Hypr, wired by shell.qml); notch modes, Deck, toasts open here.

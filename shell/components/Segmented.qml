@@ -5,6 +5,8 @@ import qs.core
 Item {
     id: root
 
+    // TODO(phase): options with the raised indicator sliding on the snappy spring; ←/→ when focused.
+
     // [{ value, label }]
     property var options: []
     property var value

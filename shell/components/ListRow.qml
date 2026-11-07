@@ -5,6 +5,8 @@ import qs.core
 Item {
     id: root
 
+    // TODO(phase): the list row of 03 §9: icon, title, subtitle, trailing; current wash; 05 §5 mouse rules.
+
     property string glyph: ""
     // App icon name instead of a glyph.
     property string icon: ""

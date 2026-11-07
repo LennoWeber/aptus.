@@ -11,6 +11,10 @@ import qs.services
 Scope {
     id: root
 
+    // TODO(phase): each function forwards to SurfaceManager / services and answers "ok", JSON or
+    //   "error: …"; never an empty answer (aptus msg treats empty output as a failure). session.lock
+    //   answers "error: no lock screen yet" until Session can lock (S6), so Super+L falls back.
+
     // `aptus msg shell state` also lists service summaries; services add theirs here by name.
     function serviceSummary(): var { throw new Error("Ipc.serviceSummary: not implemented"); }
     // Parse an optional JSON argument ("" → {}); null when invalid.

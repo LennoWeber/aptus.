@@ -7,6 +7,9 @@ import Quickshell
 Singleton {
     id: root
 
+    // TODO(phase): FileView on Paths.wallpaperState; pathFor() = preview › per-monitor path › default
+    //   (surfaces/wallpaper.md §1); set() writes wallpaper.json atomically.
+
     // the parsed wallpaper.json
     property var state: ({})
     // images in wallpaper.dir, newest first: [{ path, mtime }]

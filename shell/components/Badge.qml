@@ -5,6 +5,8 @@ import qs.core
 Item {
     id: root
 
+    // TODO(phase): count/dot badge in accent with onAccent text.
+
     // -1: a dot; ≥ 0: a count pill.
     property int count: -1
     property color colour

@@ -1,3 +1,4 @@
+<!-- TODO(phase): rewrite for v2 (11 §4.5): what aptus is, install.sh, aptus dev, tests/run, the design/ index. -->
 # shell.
 
 A desktop shell for Fedora and Hyprland, built with [Quickshell](https://quickshell.org) (QML). Light, quiet, made

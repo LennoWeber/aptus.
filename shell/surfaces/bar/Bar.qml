@@ -6,6 +6,9 @@ import qs.core
 Item {
     id: root
 
+    // TODO(phase): static skeleton: band height Tokens.barHeight, left/centre/right zones with
+    //   padBar and gapBarZone, the centre kept clear for notchWidth; slides down with introProgress.
+
     property MonitorState monitor
     property real introProgress: 1
     // The notch's rest width; the left and right zones stay clear of it.

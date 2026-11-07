@@ -11,6 +11,11 @@ import qs.services
 Scope {
     id: root
 
+    // TODO(phase): Variants over `names` → GlobalShortcut { appid: "aptus"; name } with onPressed /
+    //   onReleased → pressed()/released() (P-01: a Repeater needs an Item parent, Variants does not).
+    // TODO(phase): routing table of 07 §7: surfaces → SurfaceManager.toggle; super-tap ends a peek or
+    //   toggles Spotlight; keys-peek opens keysPeek (spotlight.superHoldKeys); the rest → service methods.
+
     // The names, in the order of 07 §7.
     readonly property var names: [
         "spotlight", "spotlight-clipboard", "spotlight-emoji",

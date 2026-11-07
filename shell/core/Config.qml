@@ -8,6 +8,12 @@ import Quickshell.Io
 Singleton {
     id: root
 
+    // TODO(phase): FileView on Paths.schemaFile (blockLoading) → schema, defaults; FileView on
+    //   Paths.settingsFile (watchChanges) → config.js load; v1 file → backup to settings.json.v1 on first write.
+    // TODO(phase): config.js migrate() on load (rewrite once when changed); keys in `pending` survive an
+    //   outside change of the file (settings.md §9).
+    // TODO(phase): a 300 ms Timer debounces _save() (atomic write through FileView atomicWrites).
+
     // The parsed schema: { version, pages, templates, keys, rules }.
     property var schema: ({})
     // key → default value.

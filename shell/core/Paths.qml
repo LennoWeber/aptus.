@@ -7,6 +7,9 @@ import Quickshell
 Singleton {
     id: root
 
+    // TODO(phase): resolve every property once from Quickshell.env (XDG_* defaults; under APTUS_TEST=1
+    //   XDG_* outside HOME are ignored and runtime is $HOME/.aptus-run/aptus); repo from Quickshell.shellDir.
+
     readonly property bool test: false
     readonly property bool dev: false
     readonly property string home: ""

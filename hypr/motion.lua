@@ -1,0 +1,2 @@
+-- aptus motion (09-hyprland §6)
+-- TODO(phase): the Lua of 09-hyprland §6, verbatim (P-03 verified every name).

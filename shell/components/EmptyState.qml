@@ -5,6 +5,8 @@ import qs.core
 Item {
     id: root
 
+    // TODO(phase): glyph + title + body centred, glyphEmpty size.
+
     property string glyph: ""
     property string text: ""
     property string actionText: ""

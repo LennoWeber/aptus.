@@ -5,5 +5,7 @@ import qs.core
 Rectangle {
     id: root
 
+    // TODO(phase): full-area Rectangle in Tokens.scrim, fades in/out.
+
     property bool shown: false
 }

@@ -7,6 +7,9 @@ import Quickshell
 Singleton {
     id: root
 
+    // TODO(phase): until S9 fills this service, each action method logs "not available yet"
+    //   (category service.<name>) instead of throwing (phase-1 decision 6).
+
     // what is being recorded: "region" | "screen" | ""
     property string recordingKind: ""
     // "Region 1280 × 720" or the monitor name

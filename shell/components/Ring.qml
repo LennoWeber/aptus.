@@ -6,6 +6,8 @@ import qs.core
 Item {
     id: root
 
+    // TODO(phase): a progress ring (Shape arc) for timers and focus.
+
     // 0..1
     property real progress: 0
     property real thickness: 2

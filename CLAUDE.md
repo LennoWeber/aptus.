@@ -1,3 +1,4 @@
+<!-- TODO(phase): the S1 status lines (PHASES.md/README.md now describe v2). -->
 # aptus v2: working rules for Claude
 
 aptus v2 is a desktop shell for Lenno's **Hyprland** session on a ThinkPad P1 Gen 2 (Fedora 44,
