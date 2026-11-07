@@ -6,6 +6,7 @@ moved to ~/.local/state/aptus-v1-backup/<date>/, never deleted.
 """
 from __future__ import annotations
 
+import os
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -20,6 +21,44 @@ class Action:
     target: Path | None = None  # link target, or where a moved file goes
     detail: str = ""           # one line for the listing
     approval: str = ""         # the question group it belongs to ("" = part of the base install)
+
+
+KINDS = ("mkdir", "link", "move", "edit-hyprland")
+
+
+def check_action(paths: Paths, action: Action) -> None:
+    """Invariant: no action leaves HOME, changes anything inside the repo (also not through a
+    link), or touches Umbriel's or Noctalia's files; moves go only to the v1 backup or the install
+    state (uninstall keeps the scope mirrors there), a link points into the repo (target None removes
+    it), and the only edited file is ~/.config/hypr/hyprland.lua (02 §2, CLAUDE.md).
+    Raises RuntimeError("install invariant: …")."""
+    def real(p: Path) -> str:      # the parent resolved, the last component itself (a link stays a link)
+        return os.path.join(os.path.realpath(p.parent), p.name)
+
+    def under(p: str, root: Path) -> bool:
+        r = os.path.realpath(root)
+        return p == r or p.startswith(r + os.sep)
+
+    def refuse(why: str) -> None:
+        raise RuntimeError(f"install invariant: {action.kind} {action.path}: {why}")
+
+    if action.kind not in KINDS:
+        refuse("unknown kind")
+    where = real(action.path)
+    if not under(where, paths.home):
+        refuse("outside HOME")
+    if under(where, paths.repo):
+        refuse("inside the repository")
+    for protected in (paths.config_home / "umbriel", paths.state_home / "noctalia"):
+        if under(where, protected):
+            refuse("Umbriel or Noctalia files")
+    if action.kind == "edit-hyprland" and action.path != paths.hyprland_lua:
+        refuse("not hyprland.lua")
+    if action.kind == "move" and (action.target is None or not (under(real(action.target), paths.v1_backup)
+                                                              or under(real(action.target), paths.install_state))):
+        refuse("a move outside the v1 backup and the install state")
+    if action.kind == "link" and action.target is not None and not under(os.path.realpath(action.target), paths.repo):
+        refuse("a link that does not point into the repository")
 
 
 def v1_leftovers(paths: Paths) -> list[Path]:
@@ -47,6 +86,8 @@ def describe(actions: Sequence[Action]) -> str:
 #   through ~/.local/bin/aptus); links are replaced, never written into.
 def apply(paths: Paths, actions: Sequence[Action]) -> None:
     """Carry out approved actions (backups first: hyprland.lua.<date> in install_state)."""
+    for action in actions:
+        check_action(paths, action)
     raise NotImplementedError
 
 

@@ -33,3 +33,14 @@ def test_crash_limit_without_marker_only_notifies() -> None:
 
 def test_command_and_env() -> None:
     raise NotImplementedError
+
+
+def test_policy_rejects_nonsense() -> None:
+    import pytest
+    from aptus.supervise import RestartPolicy
+    RestartPolicy()
+    for bad in (dict(delays=()), dict(delays=(0.5, 0.0)), dict(crash_limit=0), dict(crash_window=0),
+                dict(slow_retry=-1)):
+        with pytest.raises(ValueError, match="supervise invariant"):
+            RestartPolicy(**bad)
+

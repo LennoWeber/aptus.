@@ -14,6 +14,12 @@ class RestartPolicy:
     crash_limit: int = 3                          # … switch to the slow retry
     slow_retry: float = 30.0
 
+    def __post_init__(self) -> None:
+        # Invariant: a policy that could spin (no delay, zero window) or never give up is a bug.
+        if (not self.delays or any(d <= 0 for d in self.delays) or self.crash_limit < 1
+                or self.crash_window <= 0 or self.slow_retry <= 0):
+            raise ValueError(f"supervise invariant: bad restart policy {self}")
+
 
 @dataclass
 class CrashLog:
@@ -40,6 +46,8 @@ def shell_env(paths: Paths, env: Mapping[str, str]) -> dict[str, str]:
 def next_delay(policy: RestartPolicy, crashes: CrashLog, now: float) -> float:
     """Record a crash at `now` and return the wait before the next start: 0.5, 1, 2 s, then the
     slow retry once crash_limit crashes fall inside crash_window."""
+    if crashes.streak < 0 or now < crashes.started:
+        raise ValueError("supervise invariant: negative streak or a crash before the run started")
     raise NotImplementedError
 
 

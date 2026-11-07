@@ -71,4 +71,40 @@ TestCase {
     function test_toggle_returns_state() { fail("not implemented"); }
 
     function test_previous_window_recorded() { fail("not implemented"); }
+
+    // Invariants (phase 6): checkState rejects states no operation may produce.
+    function test_invariants_reject_broken_state() {
+        function mon(name, o) {
+            var m = { name: name, notch: "rest", deckPages: ["main"], deck: false, overview: false,
+                      menu: null, capture: null, passive: [] }
+            for (var k in o) m[k] = o[k]
+            return m
+        }
+        function glob(o) {
+            var g = { locked: false, polkitMonitor: "", pending: [], settingsOpen: false,
+                      settingsFocused: false, passiveSerial: 0 }
+            for (var k in o) g[k] = o[k]
+            return g
+        }
+        function bad(monitors, global, why) {
+            var thrown = ""
+            try { Lib.checkState(monitors, global) } catch (e) { thrown = String(e) }
+            verify(thrown.indexOf("rules invariant") >= 0, why + ": " + thrown)
+        }
+        Lib.checkState({ A: mon("A", {}) }, glob({}))
+        bad({ A: mon("B", {}) }, glob({}), "key ≠ name")
+        bad({ A: mon("A", { notch: "nonsense" }) }, glob({}), "unknown notch")
+        bad({ A: mon("A", { deck: true, notch: "spotlight" }) }, glob({}), "deck + mode")
+        bad({ A: mon("A", { overview: true, deck: true }) }, glob({}), "overview + deck")
+        bad({ A: mon("A", { capture: {} }), B: mon("B", {}) }, glob({}), "capture on one monitor")
+        bad({ A: mon("A", { notch: "polkit" }) }, glob({}), "polkit without polkitMonitor")
+        bad({ A: mon("A", {}) }, glob({ pending: [{ op: "open", surface: "deck" }] }), "queue without polkit")
+        bad({ A: mon("A", { menu: {} }) }, glob({ locked: true }), "menu while locked")
+        bad({ A: mon("A", { passive: [{ id: 1, kind: "toast" }, { id: 1, kind: "osd" }] }) }, glob({ passiveSerial: 2 }), "id twice")
+        bad({ A: mon("A", {}) }, glob({ settingsFocused: true }), "focused but closed")
+    }
+
+    // The last monitor holding polkit goes away: the queue behind it is dropped (found by the
+    // phase-6 invariants: nothing is left to replay it onto).
+    function test_last_polkit_monitor_removed_drops_queue() { fail("not implemented"); }
 }

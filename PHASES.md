@@ -514,3 +514,40 @@ syntax errors; tokens.json valid. **Fixed:**
   with the public properties; Bulge's reference fixed and its new properties logged; Hypr
   `_windowEvents` comment; 0.57.1 in 09; shell.qml keeps only the imports its structure uses;
   TODOs no longer glued to `id: root`; blank lines in test_binds_lua.py.
+
+### Phase 6 · invariants (2026-11-07)
+
+**Done** (assertions only; placeholders keep their bodies after the checks, no TODO removed):
+- `rules.js`: `checkState(monitors, global)` and `checkRequest(req)` (thrown as "rules invariant:
+  …"): monitor key = name; a legal notch state; the Deck stack starts with `main`; Overview alone
+  (no Deck, notch at rest); never the Deck with an interactive notch mode; capture on all monitors
+  or none and never under a menu; no menu or capture while locked; polkit on at most one monitor
+  and exactly the one `polkitMonitor` names; queued requests only while polkit is open; settings
+  focused ⇒ open; passive kinds legal, ids unique and ≤ `passiveSerial`, keys unique. Every
+  public operation checks its input; a TODO makes `finish()` check every result.
+- `config.js`: `checkSchema` before every schema use, `checkSerialise` (no `"v"`, no key both an
+  override and unknown), `load` takes a string.
+- `resolve.js`: `checkInputs` (mode already resolved from `auto`, a known accent or `wallpaper`,
+  a known contrast).
+- `install`: `check_action` before `apply` does anything: no action outside HOME, inside the repo
+  (also through a link), or in Umbriel's/Noctalia's files; moves only into the v1 backup or the
+  install state; links only into the repo; only `hyprland.lua` is edited.
+- `supervise`: `RestartPolicy` refuses a policy that could spin or never give up; `next_delay`
+  refuses a negative streak or a crash before the run started.
+- Tests: `test_invariants_reject_broken_state` (runs now, passes), `test_policy_rejects_nonsense`
+  and `test_check_action_refuses` (their fixture needs `paths.get`, so they run in phase 7; the same
+  checks ran by hand: the policy refuses 5/5 bad ones).
+
+**Checked against the probe** (scratch copies of the probe's libraries with the checks added):
+rules with `checkState` after every operation: 34/35 tests pass; the failure is a real bug the
+invariant found: when the last monitor that holds polkit goes away, the requests queued behind
+polkit stay forever (nothing to replay them onto). Phase 7 drops the queue then
+(`test_last_polkit_monitor_removed_drops_queue`). config 23/23 and resolve 12/12 with the
+preconditions (one candidate invariant, "the current accent is known", was dropped: the probe
+falls back on purpose, the value can come from a resolution written outside). `check_action`
+accepts all 14 actions of the probe's install plan with v1 leftovers and the 5 of its uninstall
+plan, and refuses a write through a link into the repo and a move out of `~/.config/umbriel`.
+
+**Not asserted, on purpose:** Tokens.apply's input (current/shell.json comes from outside, so it is
+validated and ignored when malformed, not asserted); `activeMonitor ∈ monitors` (Hyprland can
+report the focus before the monitor list).

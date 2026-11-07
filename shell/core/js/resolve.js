@@ -11,12 +11,22 @@ var ROLES = ["ground", "raised", "raisedHot", "sunken", "line",
 
 function notImplemented(name) { throw new Error("resolve." + name + ": not implemented") }
 
+// Invariants: Tokens resolves `auto` to a mode before calling and Config has validated the enums,
+// so anything else is a caller bug ("resolve invariant: …").
+function invariant(cond, message) { if (!cond) throw new Error("resolve invariant: " + message) }
+function checkInputs(tokens, inputs) {
+    invariant(tokens && tokens.palettes && tokens.accents, "tokens without palettes or accents")
+    invariant(inputs.mode === "dark" || inputs.mode === "light", "mode " + inputs.mode + " (auto is resolved by Tokens)")
+    invariant(inputs.accent === "wallpaper" || inputs.accent in tokens.accents, "unknown accent " + inputs.accent)
+    invariant(inputs.contrast === "normal" || inputs.contrast === "high", "contrast " + inputs.contrast)
+}
+
 // inputs: { mode: "dark"|"light", accent: name|"wallpaper", contrast: "normal"|"high",
 //           glass: bool, wallpaperHue: deg|-1, wallpaperChroma: number|-1,
 //           wallpaperLightness: 0..1|-1, currentAccent: name }
 // → { mode, palette, accentName, highContrast, glass, groundAlpha, papirus, gnomeAccent,
 //     roles: { <role>: "#rrggbb" | number }, ansi: [16 × "#rrggbb"], glyphGrad }
-function resolve(tokens, inputs) { notImplemented("resolve") }
+function resolve(tokens, inputs) { checkInputs(tokens, inputs); notImplemented("resolve") }
 // Step 2 of 08 §3: the accent name for `accent` (the six, or the nearest hue for "wallpaper";
 // ties and low-chroma images keep currentAccent).
 function accentFor(tokens, accent, wallpaperHue, wallpaperChroma, currentAccent, paletteName) { notImplemented("accentFor") }

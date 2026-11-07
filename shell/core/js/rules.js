@@ -39,6 +39,59 @@ var LOCKED_ALLOWED_PASSIVE = ["osd"]
 
 function notImplemented(name) { throw new Error("rules." + name + ": not implemented") }
 
+// Invariants.
+// States that must never exist. Thrown as "rules invariant: …" (a bug, never user input). Every
+// public operation checks its input; finish() checks every result (TODO below), so a bug is caught
+// at the operation that made it and SurfaceManager never applies a broken state.
+function invariant(cond, message) { if (!cond) throw new Error("rules invariant: " + message) }
+function legalNotch(n) {
+    if (n === "rest" || NOTCH_MODES.indexOf(n) >= 0) return true
+    return n.indexOf(CARD_PREFIX) === 0 && ACTIVITIES.indexOf(n.substr(CARD_PREFIX.length)) >= 0
+}
+function interactiveNotch(n) { return NOTCH_MODES.indexOf(n) >= 0 && PASSIVE_MODES.indexOf(n) < 0 }
+function checkState(monitors, global) {
+    invariant(monitors && typeof monitors === "object", "monitors is not a map")
+    invariant(global && typeof global === "object", "global is missing")
+    var names = Object.keys(monitors)
+    var captured = 0, polkit = []
+    for (var i = 0; i < names.length; i++) {
+        var m = monitors[names[i]]
+        invariant(m && m.name === names[i], "monitor key " + names[i] + " ≠ its name")
+        invariant(legalNotch(m.notch), names[i] + ": unknown notch state " + m.notch)
+        invariant(Array.isArray(m.deckPages) && m.deckPages.length > 0 && m.deckPages[0] === "main",
+                  names[i] + ": the Deck stack must start with main")
+        invariant(!(m.overview && (m.deck || m.notch !== "rest")), names[i] + ": Overview open beside another surface")
+        invariant(!(m.deck && interactiveNotch(m.notch)), names[i] + ": Deck and an interactive notch mode both open")
+        if (m.capture) captured++
+        if (m.notch === "polkit") polkit.push(names[i])
+        invariant(!(m.capture && m.menu), names[i] + ": a menu open under capture")
+        invariant(!(global.locked && (m.menu || m.capture)), names[i] + ": menu or capture while locked")
+        invariant(Array.isArray(m.passive), names[i] + ": passive is not a list")
+        var ids = {}, keys = {}
+        for (var j = 0; j < m.passive.length; j++) {
+            var e = m.passive[j]
+            invariant(PASSIVE_KINDS.indexOf(e.kind) >= 0, names[i] + ": unknown passive kind " + e.kind)
+            invariant(!ids[e.id], names[i] + ": passive id " + e.id + " twice")
+            ids[e.id] = true
+            invariant(e.id <= global.passiveSerial, names[i] + ": passive id beyond passiveSerial")
+            if (e.key) {
+                invariant(!keys[e.key], names[i] + ": passive key " + e.key + " twice")
+                keys[e.key] = true
+            }
+        }
+    }
+    invariant(captured === 0 || captured === names.length, "capture open on some monitors only")
+    invariant(polkit.length <= 1, "polkit open on " + polkit.length + " monitors")
+    invariant((global.polkitMonitor === "") === (polkit.length === 0)
+              && (polkit.length === 0 || polkit[0] === global.polkitMonitor), "polkitMonitor ≠ the polkit notch")
+    invariant(global.pending.length === 0 || global.polkitMonitor !== "", "requests queued without polkit")
+    invariant(!global.settingsFocused || global.settingsOpen, "settings focused but not open")
+}
+// A request's shape (open/close/toggle).
+function checkRequest(req) {
+    invariant(req && typeof req.surface === "string" && req.surface !== "", "request without a surface")
+}
+
 // Private helpers. c: the working copy of one operation ({ monitors, global, effects }).
 function isCard(s) { notImplemented("isCard") }
 function isInteractiveMode(n) { notImplemented("isInteractiveMode") }
@@ -48,6 +101,7 @@ function blocksPassive(m) { notImplemented("blocksPassive") }
 function copyMonitor(m) { notImplemented("copyMonitor") }
 function begin(monitors, global) { notImplemented("begin") }
 function effect(c, kind, surface, monitor) { notImplemented("effect") }
+// TODO(phase): finish() runs checkState(c.monitors, c.global) on its result before returning.
 function finish(c, now) { notImplemented("finish") }
 function closeNotchOn(c, m) { notImplemented("closeNotchOn") }
 function closeDeckOn(c, m) { notImplemented("closeDeckOn") }
@@ -74,21 +128,21 @@ function keyboard(m) { notImplemented("keyboard") }
 function top(m) { notImplemented("top") }
 function isOpen(m, global, surface) { notImplemented("isOpen") }
 
-function open(monitors, global, req, now) { notImplemented("open") }
-function close(monitors, global, req, now) { notImplemented("close") }
-function toggle(monitors, global, req, now) { notImplemented("toggle") }
+function open(monitors, global, req, now) { checkState(monitors, global); checkRequest(req); notImplemented("open") }
+function close(monitors, global, req, now) { checkState(monitors, global); checkRequest(req); notImplemented("close") }
+function toggle(monitors, global, req, now) { checkState(monitors, global); checkRequest(req); notImplemented("toggle") }
 // The Esc ladder (05 §3): close the menu, else pop a Deck page, else ask the top surface's back
 // handler (backResult: true when it stepped back internally), else close the top surface.
 // open("deck", { page }) pushes a page; opening the Deck when it is open with a page replaces the
 // stack with ["main", page].
-function back(monitors, global, monitor, backResult, now) { notImplemented("back") }
+function back(monitors, global, monitor, backResult, now) { checkState(monitors, global); notImplemented("back") }
 
 // Passive content: queue it and arbitrate. A non-empty key replaces the entry with that key in
 // place (keeps its id and position, resets born). → also { id } of the entry.
-function post(monitors, global, kind, payload, priority, monitor, key, now) { notImplemented("post") }
+function post(monitors, global, kind, payload, priority, monitor, key, now) { checkState(monitors, global); notImplemented("post") }
 // Change an entry's payload in place (stack toast, OSD value).
-function update(monitors, global, monitor, id, payload, now) { notImplemented("update") }
-function dismiss(monitors, global, monitor, id, now) { notImplemented("dismiss") }
+function update(monitors, global, monitor, id, payload, now) { checkState(monitors, global); notImplemented("update") }
+function dismiss(monitors, global, monitor, id, now) { checkState(monitors, global); notImplemented("dismiss") }
 // notch.md §9 → { kind: "osd" | "toast" | "event" | "card" | "rest" | "hidden", entry }.
 // opts: { overFullscreen: "critical" | "none" | "all" (notch.overFullscreen), limits }.
 // Order: OSD (newest; also while the Deck is open, 05 §2) > toast (highest priority, then
@@ -100,16 +154,16 @@ function arbitrate(m, now, opts) { notImplemented("arbitrate") }
 // limits.toastStale once nothing blocks them.
 function expire(m, now, limits) { notImplemented("expire") }
 
-function openMenu(monitors, global, monitor, menu, now) { notImplemented("openMenu") }
-function closeMenu(monitors, global, monitor, now) { notImplemented("closeMenu") }
+function openMenu(monitors, global, monitor, menu, now) { checkState(monitors, global); notImplemented("openMenu") }
+function closeMenu(monitors, global, monitor, now) { checkState(monitors, global); notImplemented("closeMenu") }
 
 // Environment changes.
-function addMonitor(monitors, global, name, now) { notImplemented("addMonitor") }
-function removeMonitor(monitors, global, name, now) { notImplemented("removeMonitor") }
-function setActive(monitors, global, name, now) { notImplemented("setActive") }
-function setLocked(monitors, global, locked, now) { notImplemented("setLocked") }
-function setFullscreen(monitors, global, name, fullscreen, now) { notImplemented("setFullscreen") }
+function addMonitor(monitors, global, name, now) { checkState(monitors, global); notImplemented("addMonitor") }
+function removeMonitor(monitors, global, name, now) { checkState(monitors, global); notImplemented("removeMonitor") }
+function setActive(monitors, global, name, now) { checkState(monitors, global); notImplemented("setActive") }
+function setLocked(monitors, global, locked, now) { checkState(monitors, global); notImplemented("setLocked") }
+function setFullscreen(monitors, global, name, fullscreen, now) { checkState(monitors, global); notImplemented("setFullscreen") }
 // The settings window reports whether it is focused (settings.md §2 toggle semantics).
-function setSettingsFocused(monitors, global, focused, now) { notImplemented("setSettingsFocused") }
+function setSettingsFocused(monitors, global, focused, now) { checkState(monitors, global); notImplemented("setSettingsFocused") }
 // Re-run expiry and arbitration without an operation (SurfaceManager's timer: events age out).
-function tick(monitors, global, now) { notImplemented("tick") }
+function tick(monitors, global, now) { checkState(monitors, global); notImplemented("tick") }
