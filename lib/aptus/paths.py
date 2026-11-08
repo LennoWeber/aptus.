@@ -6,6 +6,8 @@ $HOME/.aptus-run, so a test with a temporary HOME can never write outside it.
 """
 from __future__ import annotations
 
+import os
+import pwd
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -80,15 +82,77 @@ TEST_RUNTIME = ".aptus-run"     # $HOME/.aptus-run in tests
 def resolve(env: Mapping[str, str] | None = None) -> Paths:
     """Resolve every path from `env` (default os.environ). Under APTUS_TEST=1 an XDG variable
     pointing outside HOME is ignored and the runtime directory is $HOME/.aptus-run."""
-    raise NotImplementedError
+    env = os.environ if env is None else env
+    test = env.get(ENV_TEST) == "1"
+    home = Path(env.get("HOME") or pwd.getpwuid(os.getuid()).pw_dir)
+
+    def xdg(name: str, default: Path) -> Path:
+        value = env.get(name, "")
+        if not value or not os.path.isabs(value):      # the XDG spec ignores relative values
+            return default
+        p = Path(value)
+        if test and not inside(p, home):
+            return default
+        return p
+
+    real_runtime = Path(env.get("XDG_RUNTIME_DIR") or f"/run/user/{os.getuid()}")
+    config_home = xdg("XDG_CONFIG_HOME", home / ".config")
+    state_home = xdg("XDG_STATE_HOME", home / ".local" / "state")
+    cache_home = xdg("XDG_CACHE_HOME", home / ".cache")
+    data_home = xdg("XDG_DATA_HOME", home / ".local" / "share")
+    runtime_home = home / TEST_RUNTIME if test else real_runtime
+
+    config = config_home / "aptus"
+    state = state_home / "aptus"
+    cache = cache_home / "aptus"
+    runtime = runtime_home / "aptus"
+    repo = Path(__file__).resolve().parents[2]
+    lease = state / "lease"
+    theme = state / "theme"
+    hypr_state = state / "hypr"
+    hypr_config_dir = config_home / "hypr"
+    return Paths(
+        test=test, home=home,
+        config_home=config_home, state_home=state_home, cache_home=cache_home,
+        data_home=data_home, runtime_home=runtime_home,
+        hypr_runtime=real_runtime / "hypr",
+        config=config, state=state, cache=cache, runtime=runtime,
+        repo=repo, bin=repo / "bin", shell=repo / "shell", hypr_repo=repo / "hypr",
+        tokens=repo / "theme" / "tokens.json",
+        schema=repo / "shell" / "config" / "settings-schema.json",
+        settings=config / "settings.json", calendars=config / "calendars.json",
+        lease=lease, lease_lock=lease / "lock", lease_journal=lease / "journal.json",
+        lease_slots=lease / "slots", lease_conflicts=lease / "conflicts",
+        lease_history=lease / "history",
+        theme=theme, theme_current=theme / "current",
+        scope=state / "scope", hypr_state=hypr_state,
+        generated_lua=hypr_state / "generated.lua", binds_local=hypr_state / "binds.local.lua",
+        agenda=state / "agenda.json", clipboard_db=state / "clipboard.db",
+        hyprlock_conf=state / "hyprlock.conf", locked_marker=state / "locked",
+        install_state=state / "install", v1_backup=state_home / "aptus-v1-backup",
+        local_bin=home / ".local" / "bin",
+        hypr_config_dir=hypr_config_dir, hyprland_lua=hypr_config_dir / "hyprland.lua",
+        hypr_aptus_link=hypr_config_dir / "aptus",
+        systemd_user=config_home / "systemd" / "user",
+        restart_flag=runtime / "restart", dev_flag=runtime / "dev",
+        guard_state=runtime / "guard.state", clip_changed=runtime / "clip.changed",
+        session_status=runtime / "session.json", intro_flag_prefix=runtime / "intro.",
+        cache_bat=cache / "bat", cache_agenda_http=cache / "agenda-http",
+    )
 
 
 def get() -> Paths:
     """The paths of this process: resolved once normally; under APTUS_TEST=1 resolved on every
     call (the test fixture changes HOME per test, a cache would outlive it)."""
-    raise NotImplementedError
+    if os.environ.get(ENV_TEST) == "1":
+        return resolve()
+    cached = getattr(get, "cached", None)
+    if cached is None:
+        cached = resolve()
+        get.cached = cached        # type: ignore[attr-defined]
+    return cached
 
 
 def inside(path: Path, root: Path) -> bool:
     """Whether `path` (resolved, symlinks followed) is `root` or below it."""
-    raise NotImplementedError
+    return Path(path).resolve().is_relative_to(Path(root).resolve())

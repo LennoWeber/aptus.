@@ -3,12 +3,10 @@ pragma Singleton
 // Owner: S8. Stub until its stage fills it.
 import QtQuick
 import Quickshell
+import qs.core
 
 Singleton {
     id: root
-
-    // TODO(phase): until S8 fills this service, each action method logs "not available yet"
-    //   (category service.<name>) instead of throwing (phase-1 decision 6).
 
     // False until S8 fills this service; while false, Ipc answers "error: focus is not available yet"
     // instead of "ok" (aptus msg exits non-zero).
@@ -30,12 +28,12 @@ Singleton {
     property var startedAt: null
 
     // Super+Shift+F: the focus picker, or the focus card while a session runs (surfaces/focus.md §1).
-    function shortcut(): void { throw new Error("Focus.shortcut: not implemented"); }
-    function start(minutes: int, intent: var): void { throw new Error("Focus.start: not implemented"); }
-    function stop(): void { throw new Error("Focus.stop: not implemented"); }
-    function pause(): void { throw new Error("Focus.pause: not implemented"); }
-    function resume(): void { throw new Error("Focus.resume: not implemented"); }
-    function extend(minutes: int): void { throw new Error("Focus.extend: not implemented"); }
+    function shortcut(): void { Log.info("service.focus", "shortcut: not available yet"); }
+    function start(minutes: int, intent: var): void { Log.info("service.focus", "start: not available yet"); }
+    function stop(): void { Log.info("service.focus", "stop: not available yet"); }
+    function pause(): void { Log.info("service.focus", "pause: not available yet"); }
+    function resume(): void { Log.info("service.focus", "resume: not available yet"); }
+    function extend(minutes: int): void { Log.info("service.focus", "extend: not available yet"); }
     // Super+Shift+B (surfaces/focus.md §4).
-    function toggleQuietBar(): void { throw new Error("Focus.toggleQuietBar: not implemented"); }
+    function toggleQuietBar(): void { Log.info("service.focus", "toggleQuietBar: not available yet"); }
 }

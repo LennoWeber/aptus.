@@ -1,5 +1,6 @@
 module qs.components
 BulgeSpec 1.0 BulgeSpec.qml
+Choreographed 1.0 Choreographed.qml
 NotchMode 1.0 NotchMode.qml
 Drawer 1.0 Drawer.qml
 Bulge 1.0 Bulge.qml

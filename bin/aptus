@@ -1,3 +1,10 @@
+#!/usr/bin/python3 -I
 # aptus: thin launcher into lib/aptus (07 §2).
-# TODO(phase): #!/usr/bin/python3 -I (mode 755); put <repo>/lib (from this file's real path) on sys.path;
-#   sys.exit(aptus.cli.main(sys.argv[1:])).
+import os
+import sys
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), "lib"))
+
+import aptus.cli  # noqa: E402
+
+sys.exit(aptus.cli.main(sys.argv[1:]))

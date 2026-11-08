@@ -3,15 +3,13 @@ pragma Singleton
 // Owner: S6. Stub until its stage fills it.
 import QtQuick
 import Quickshell
+import qs.core
 
 Singleton {
     id: root
 
-    // TODO(phase): until S6 fills this service, each action method logs "not available yet"
-    //   (category service.<name>) instead of throwing (phase-1 decision 6).
-
     property bool keepAwake: false
     property bool dimmed: false
     // Keep awake (Deck tile, Spotlight Caffeine).
-    function setKeepAwake(on: bool): void { throw new Error("Idle.setKeepAwake: not implemented"); }
+    function setKeepAwake(on: bool): void { Log.info("service.idle", "setKeepAwake: not available yet"); }
 }

@@ -1,0 +1,3 @@
+module Quickshell.Widgets
+IconImage 0.0 IconImage.qml
+ClippingRectangle 0.0 ClippingRectangle.qml

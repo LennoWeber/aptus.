@@ -9,18 +9,26 @@ import Quickshell
 Singleton {
     id: root
 
-    // TODO(phase): level from APTUS_LOG; write() prints "<level> <category>: <message>" with
-    //   console.info/warn/error (the supervisor pipes stdout/stderr to journald).
-
     // 0 debug, 1 info, 2 warn, 3 error.
-    property int level: 1
+    property int level: Math.max(0, levelNames.indexOf(String(Quickshell.env("APTUS_LOG") || "info")))
     readonly property var levelNames: ["debug", "info", "warn", "error"]
 
-    function debug(category: string, message: string): void { throw new Error("Log.debug: not implemented"); }
-    function info(category: string, message: string): void { throw new Error("Log.info: not implemented"); }
-    function warn(category: string, message: string): void { throw new Error("Log.warn: not implemented"); }
-    function error(category: string, message: string): void { throw new Error("Log.error: not implemented"); }
+    function debug(category: string, message: string): void { write(0, category, message); }
+    function info(category: string, message: string): void { write(1, category, message); }
+    function warn(category: string, message: string): void { write(2, category, message); }
+    function error(category: string, message: string): void { write(3, category, message); }
     // IPC `shell log <level>`: "debug" | "info" | "warn" | "error"; false for an unknown name.
-    function setLevel(name: string): bool { throw new Error("Log.setLevel: not implemented"); }
-    function write(lvl: int, category: string, message: string): void { throw new Error("Log.write: not implemented"); }
+    function setLevel(name: string): bool {
+        const i = levelNames.indexOf(name);
+        if (i < 0) return false;
+        level = i;
+        return true;
+    }
+    function write(lvl: int, category: string, message: string): void {
+        if (lvl < level) return;
+        const line = levelNames[lvl] + " " + category + ": " + message;
+        if (lvl >= 3) console.error(line);
+        else if (lvl === 2) console.warn(line);
+        else console.info(line);
+    }
 }

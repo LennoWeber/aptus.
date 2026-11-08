@@ -3,12 +3,10 @@ pragma Singleton
 // Owner: S3 (status), S5 (Wi-Fi pages, VPN). Stub until its stage fills it.
 import QtQuick
 import Quickshell
+import qs.core
 
 Singleton {
     id: root
-
-    // TODO(phase): until S3/S5 fills this service, each action method logs "not available yet"
-    //   (category service.<name>) instead of throwing (phase-1 decision 6).
 
     // the Wi-Fi list (S5): [{ ssid, strength, secure: bool, known: bool, active: bool }]
     property var networks: []
@@ -25,10 +23,10 @@ Singleton {
     property int strength: 0
     property bool vpnActive: false
     property string vpnName: ""
-    function setWifiEnabled(on: bool): void { throw new Error("Network.setWifiEnabled: not implemented"); }
-    function setAirplane(on: bool): void { throw new Error("Network.setAirplane: not implemented"); }
-    function connectVpn(name: string): void { throw new Error("Network.connectVpn: not implemented"); }
-    function disconnectVpn(): void { throw new Error("Network.disconnectVpn: not implemented"); }
+    function setWifiEnabled(on: bool): void { Log.info("service.network", "setWifiEnabled: not available yet"); }
+    function setAirplane(on: bool): void { Log.info("service.network", "setAirplane: not available yet"); }
+    function connectVpn(name: string): void { Log.info("service.network", "connectVpn: not available yet"); }
+    function disconnectVpn(): void { Log.info("service.network", "disconnectVpn: not available yet"); }
     // Connect to a network; password "" for known or open ones.
-    function connect(ssid: string, password: string): void { throw new Error("Network.connect: not implemented"); }
+    function connect(ssid: string, password: string): void { Log.info("service.network", "connect: not available yet"); }
 }

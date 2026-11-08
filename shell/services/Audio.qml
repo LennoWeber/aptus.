@@ -3,12 +3,10 @@ pragma Singleton
 // Owner: S3 (S5 extends for the Deck). Stub until its stage fills it.
 import QtQuick
 import Quickshell
+import qs.core
 
 Singleton {
     id: root
-
-    // TODO(phase): until S3 fills this service, each action method logs "not available yet"
-    //   (category service.<name>) instead of throwing (phase-1 decision 6).
 
     // default sink volume 0..1.5
     property real volume: 0
@@ -26,13 +24,13 @@ Singleton {
     property var streams: []
 
     // Volume step for the hardware keys: direction ±1, fine = 1 % instead of audio.step (shows the OSD).
-    function stepVolume(direction: int, fine: bool): void { throw new Error("Audio.stepVolume: not implemented"); }
-    function toggleMute(): void { throw new Error("Audio.toggleMute: not implemented"); }
-    function toggleMicMute(): void { throw new Error("Audio.toggleMicMute: not implemented"); }
-    function setVolume(volume: real): void { throw new Error("Audio.setVolume: not implemented"); }
-    function setMuted(muted: bool): void { throw new Error("Audio.setMuted: not implemented"); }
-    function setMicMuted(muted: bool): void { throw new Error("Audio.setMicMuted: not implemented"); }
-    function setDefaultSink(id: int): void { throw new Error("Audio.setDefaultSink: not implemented"); }
-    function setDefaultSource(id: int): void { throw new Error("Audio.setDefaultSource: not implemented"); }
-    function setStreamVolume(id: int, volume: real): void { throw new Error("Audio.setStreamVolume: not implemented"); }
+    function stepVolume(direction: int, fine: bool): void { Log.info("service.audio", "stepVolume: not available yet"); }
+    function toggleMute(): void { Log.info("service.audio", "toggleMute: not available yet"); }
+    function toggleMicMute(): void { Log.info("service.audio", "toggleMicMute: not available yet"); }
+    function setVolume(volume: real): void { Log.info("service.audio", "setVolume: not available yet"); }
+    function setMuted(muted: bool): void { Log.info("service.audio", "setMuted: not available yet"); }
+    function setMicMuted(muted: bool): void { Log.info("service.audio", "setMicMuted: not available yet"); }
+    function setDefaultSink(id: int): void { Log.info("service.audio", "setDefaultSink: not available yet"); }
+    function setDefaultSource(id: int): void { Log.info("service.audio", "setDefaultSource: not available yet"); }
+    function setStreamVolume(id: int, volume: real): void { Log.info("service.audio", "setStreamVolume: not available yet"); }
 }

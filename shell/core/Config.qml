@@ -1,21 +1,14 @@
 pragma Singleton
+pragma ComponentBehavior: Bound
 // Settings (07-architecture §8, 10-settings): defaults from shell/config/settings-schema.json,
 // overrides from ~/.config/aptus/settings.json (only values that differ from the defaults).
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import "js/config.js" as Lib
 
 Singleton {
     id: root
-
-    // TODO(phase): FileView on Paths.schemaFile (blockLoading) → schema, defaults; FileView on
-    //   Paths.settingsFile (watchChanges) → config.js load; v1 file → backup to settings.json.v1 on first write.
-    // TODO(phase): config.js migrate() on load (rewrite once when changed); keys in `pending` survive an
-    //   outside change of the file (settings.md §9).
-    // TODO(phase): a 300 ms Timer debounces _save() (atomic write through FileView atomicWrites);
-    //   the backup FileView has printErrors false (a missing settings.json.v1 is normal).
-    // TODO(phase): set()/reset() go through _store(); set() refuses a value that breaks a cross rule
-    //   and returns its message (10 §validation); derived keys follow via config.js deriveAll.
 
     // The parsed schema: { version, pages, templates, keys, rules }.
     property var schema: ({})
@@ -43,33 +36,143 @@ Singleton {
     signal settingInvalid(string key, string message)
 
     // The effective value of a key (reads `revision`, so bindings follow every change).
-    function get(key: string): var { throw new Error("Config.get: not implemented"); }
+    function get(key: string): var {
+        root.revision;
+        return root.values[key];
+    }
     // Set and persist a value (debounced 300 ms, atomic). Returns "" or the validation message.
-    function set(key: string, value: var): string { throw new Error("Config.set: not implemented"); }
+    function set(key: string, value: var): string {
+        const e = entry(key);
+        if (!e) return "unknown setting";
+        const r = Lib.validate(schema, key, value, Paths.home, null);
+        if (!r.ok) { settingInvalid(key, r.message); return r.message; }
+        const next = Object.assign({}, values);
+        next[key] = r.value;
+        Lib.deriveAll(schema, next);
+        const cross = Lib.crossCheck(schema, next);
+        if (cross.length) { settingInvalid(key, cross[0].message); return cross[0].message; }
+        _store(key, r.value, next);
+        return "";
+    }
     // Back to the default (removes the key from settings.json).
-    function reset(key: string): void { throw new Error("Config.reset: not implemented"); }
+    function reset(key: string): void {
+        const e = entry(key);
+        if (!e || e.type === "derived") return;
+        const next = Object.assign({}, values);
+        next[key] = JSON.parse(JSON.stringify(e["default"]));
+        Lib.deriveAll(schema, next);
+        _store(key, next[key], next);
+    }
     // Reset every key of a settings page (settings.md §4 "Reset page").
-    function resetPage(page: string): void { throw new Error("Config.resetPage: not implemented"); }
+    function resetPage(page: string): void {
+        for (const k in schema.keys) if (schema.keys[k].page === page) reset(k);
+    }
     // Validate without storing: { ok, value, message }.
-    function validate(key: string, value: var): var { throw new Error("Config.validate: not implemented"); }
+    function validate(key: string, value: var): var { return Lib.validate(schema, key, value, Paths.home, null); }
     // The schema entry of a key, or null.
-    function entry(key: string): var { throw new Error("Config.entry: not implemented"); }
+    function entry(key: string): var { return schema.keys && schema.keys[key] ? schema.keys[key] : null; }
     // Re-read settings.json (IPC `shell reloadConfig`, file changed outside the shell).
-    function reload(): void { throw new Error("Config.reload: not implemented"); }
+    function reload(): void { settingsView.reload(); }
 
-    function _loadSchema(): void { throw new Error("Config._loadSchema: not implemented"); }
-    function _loadFile(text: string): void { throw new Error("Config._loadFile: not implemented"); }
-    function _save(): void { throw new Error("Config._save: not implemented"); }
-    function _backupV1(): void { throw new Error("Config._backupV1: not implemented"); }
+    function _loadSchema(): void {
+        try {
+            schema = JSON.parse(schemaView.text());
+        } catch (e) {
+            Log.error("config", "settings-schema.json: " + e);
+            schema = { keys: {}, rules: [] };
+        }
+        defaults = Lib.defaults(schema);
+        const v = Lib.defaults(schema);
+        Lib.deriveAll(schema, v);
+        values = v;
+        revision++;
+    }
+    function _loadFile(text: string): void {
+        const r = Lib.load(schema, text, Paths.home, null);
+        fileError = r.ok ? "" : r.error;
+        if (!r.ok) Log.warn("config", "settings.json: " + r.error + " (defaults in use)");
+        v1File = r.v1;
+        if (r.v1) { _v1Text = text; Log.info("config", "settings.json is a v1 file: ignored"); }
+        // keys set in this session but not written yet survive an outside change (settings.md §9)
+        for (const k in pending) {
+            r.values[k] = pending[k];
+            if (Lib.equal(pending[k], schema.keys[k]["default"])) delete r.overrides[k]; else r.overrides[k] = pending[k];
+        }
+        Lib.deriveAll(schema, r.values);
+        for (const p of r.problems) { Log.warn("config", p.key + ": " + p.message); settingInvalid(p.key, p.message); }
+        const old = values;
+        overrides = r.overrides;
+        unknown = r.unknown;
+        values = r.values;
+        revision++;
+        const wasLoaded = loaded;
+        loaded = true;
+        if (wasLoaded) for (const k in r.values) if (!Lib.equal(old[k], r.values[k])) settingChanged(k);
+        if (r.migrated) saveTimer.restart();
+    }
+    function _save(): void {
+        if (v1File) _backupV1();
+        Paths.ensureDir(Paths.config);
+        settingsView.setText(Lib.serialise(overrides, unknown));
+        pending = {};
+    }
+    function _backupV1(): void {
+        backupView.setText(_v1Text);
+        v1File = false;
+        Log.info("config", "v1 settings backed up to settings.json.v1");
+    }
 
-    // Private state.
     // The text of a v1 settings.json, kept for the backup before the first write.
     property string _v1Text: ""
 
-    // Private helpers.
     // Commit one change: `value` becomes the override of `key` (removed when it equals the
     // default, which is how reset() goes through here), `next` the complete validated value map
     // (derived keys included); marks the key pending, emits settingChanged per changed key, starts
     // the save debounce.
-    function _store(key: string, value: var, next: var): void { throw new Error("Config._store: not implemented"); }
+    function _store(key: string, value: var, next: var): void {
+        const o = Object.assign({}, overrides);
+        if (Lib.equal(value, schema.keys[key]["default"])) delete o[key]; else o[key] = value;
+        const p = Object.assign({}, pending);
+        p[key] = value;
+        const old = values;
+        overrides = o;
+        pending = p;
+        values = next;
+        revision++;
+        for (const k in next) if (!Lib.equal(old[k], next[k])) settingChanged(k);
+        saveTimer.restart();
+    }
+
+    FileView {
+        id: schemaView
+        path: Paths.schemaFile
+        blockLoading: true
+        onLoaded: root._loadSchema()
+        onLoadFailed: error => Log.error("config", "settings-schema.json: " + FileViewError.toString(error))
+    }
+    FileView {
+        id: settingsView
+        path: root.schema.keys ? Paths.settingsFile : ""
+        blockLoading: true
+        watchChanges: true
+        atomicWrites: true
+        printErrors: false
+        onFileChanged: reload()
+        onLoaded: root._loadFile(text())
+        onLoadFailed: error => {
+            if (error !== FileViewError.FileNotFound) root.fileError = FileViewError.toString(error);
+            root._loadFile("");
+        }
+    }
+    FileView {
+        id: backupView
+        path: Paths.settingsFile + ".v1"
+        atomicWrites: true
+        printErrors: false
+    }
+    Timer {
+        id: saveTimer
+        interval: 300
+        onTriggered: root._save()
+    }
 }

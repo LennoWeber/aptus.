@@ -3,12 +3,10 @@ pragma Singleton
 // Owner: S9. Stub until its stage fills it.
 import QtQuick
 import Quickshell
+import qs.core
 
 Singleton {
     id: root
-
-    // TODO(phase): until S9 fills this service, each action method logs "not available yet"
-    //   (category service.<name>) instead of throwing (phase-1 decision 6).
 
     // False until S9 fills this service; while false, Ipc answers "error: capture is not available yet"
     // instead of "ok" (aptus msg exits non-zero).
@@ -26,15 +24,15 @@ Singleton {
     // Date
     property var recordingSince: null
 
-    function region(): void { throw new Error("Capture.region: not implemented"); }
-    function screen(): void { throw new Error("Capture.screen: not implemented"); }
-    function window(): void { throw new Error("Capture.window: not implemented"); }
+    function region(): void { Log.info("service.capture", "region: not available yet"); }
+    function screen(): void { Log.info("service.capture", "screen: not available yet"); }
+    function window(): void { Log.info("service.capture", "window: not available yet"); }
     // Start a recording, or stop the running one.
-    function record(): void { throw new Error("Capture.record: not implemented"); }
+    function record(): void { Log.info("service.capture", "record: not available yet"); }
     // Stop the running recording.
-    function stop(): void { throw new Error("Capture.stop: not implemented"); }
-    function colour(): void { throw new Error("Capture.colour: not implemented"); }
+    function stop(): void { Log.info("service.capture", "stop: not available yet"); }
+    function colour(): void { Log.info("service.capture", "colour: not available yet"); }
     // Record the whole active monitor.
-    function recordScreen(): void { throw new Error("Capture.recordScreen: not implemented"); }
-    function setRecordingMic(on: bool): void { throw new Error("Capture.setRecordingMic: not implemented"); }
+    function recordScreen(): void { Log.info("service.capture", "recordScreen: not available yet"); }
+    function setRecordingMic(on: bool): void { Log.info("service.capture", "setRecordingMic: not available yet"); }
 }

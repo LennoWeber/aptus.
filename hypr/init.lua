@@ -1,4 +1,4 @@
--- aptus: entry point, loaded from the marked block at the end of hyprland.lua (09-hyprland §2)
+-- aptus: entry point, loaded from the marked block at the end of hyprland.lua
 local home  = os.getenv("HOME")
 local state = home .. "/.local/state/aptus/hypr/"
 
@@ -8,7 +8,24 @@ local gen = {
   frame_edge = 6, window_gap = 8, glass = false, reduce_motion = false,
 }
 local path = state .. "generated.lua"
--- TODO(phase): load generated.lua over the defaults (pcall(dofile); a broken file → notification,
---   defaults stay); package.loaded["aptus.gen"] = gen.
--- TODO(phase): require aptus.env, aptus.look, aptus.motion, aptus.rules, aptus.binds (09 §2).
--- TODO(phase): hl.on("hyprland.start") → ~/.local/bin/aptus-session start.
+local f = io.open(path, "r")
+if f then
+  f:close()
+  local ok, t = pcall(dofile, path)
+  if ok and type(t) == "table" then
+    for k, v in pairs(t) do gen[k] = v end
+  else
+    hl.notification.create({ text = "aptus: generated.lua failed to load, using defaults", timeout = 8000 })
+  end
+end
+package.loaded["aptus.gen"] = gen
+
+require("aptus.env")
+require("aptus.look")
+require("aptus.motion")
+require("aptus.rules")
+require("aptus.binds")
+
+hl.on("hyprland.start", function()
+  hl.exec_cmd(home .. "/.local/bin/aptus-session start")
+end)

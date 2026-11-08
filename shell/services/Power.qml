@@ -3,12 +3,10 @@ pragma Singleton
 // Owner: S3 (battery), S5 (profiles). Stub until its stage fills it.
 import QtQuick
 import Quickshell
+import qs.core
 
 Singleton {
     id: root
-
-    // TODO(phase): until S3/S5 fills this service, each action method logs "not available yet"
-    //   (category service.<name>) instead of throwing (phase-1 decision 6).
 
     // profiles this machine offers ("power-saver", "balanced", "performance")
     property var profiles: []
@@ -23,5 +21,5 @@ Singleton {
     property int timeToFull: 0
     // "power-saver" | "balanced" | "performance"
     property string profile: ""
-    function setProfile(name: string): void { throw new Error("Power.setProfile: not implemented"); }
+    function setProfile(name: string): void { Log.info("service.power", "setProfile: not available yet"); }
 }

@@ -1,4 +1,3 @@
-<!-- TODO(phase): the S1 status lines (PHASES.md/README.md now describe v2). -->
 # aptus v2: working rules for Claude
 
 aptus v2 is a desktop shell for Lenno's **Hyprland** session on a ThinkPad P1 Gen 2 (Fedora 44,
@@ -10,8 +9,8 @@ as much as function.
 - `design/README.md`, then `01-vision`, `02-isolation` (the most important one), `05-interaction`,
   `07-architecture`, `11-roadmap`. Read a surface document before working on that surface.
 - `design/handoff-prompt.md`: the implementation brief (stages, waves, skills, rules).
-- `PHASES.md`: the v2 work log (from stage S1 on). Until S1 rewrites them, `PHASES.md`,
-  `HANDOFF.md` and the root `README.md` still describe v1; do not follow them.
+- `PHASES.md`: the v2 work log (status table at the top, one section per stage and phase).
+  `README.md`: what aptus is, install, use, `tests/run`.
 
 ## Never
 - Change anything Umbriel or Noctalia uses, except through the lease protocol in
@@ -60,7 +59,7 @@ as much as function.
   runtime changes with `hyprctl eval '<lua>'`.
 - QML: `pragma ComponentBehavior: Bound` in files with nested components; never name a property
   `signal`; enum value names must not collide with another enum's values in the same type (a v1
-  bug). Target: `qmllint` with 0 warnings (S1 adds the lint script).
+  bug). Target: `qmllint` with 0 warnings (`tests/lint.sh`, part of `tests/run`).
 - Python tools: system `python3`, stdlib plus `python3-icalendar` and `python3-dateutil`; tests
   with `pytest`.
 - GPUs: `renderD128` is the Intel i915 (use it for VAAPI); `renderD129` is NVIDIA and should stay

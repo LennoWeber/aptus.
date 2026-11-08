@@ -1,6 +1,9 @@
 """`aptus doctor deps`: the packages of 11-roadmap §5 and the forbidden ones of 02 §9."""
 from __future__ import annotations
 
+import shutil
+import subprocess
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -25,4 +28,39 @@ ICON_THEMES: tuple[str, ...] = ("Papirus", "Papirus-Dark")
 
 
 def check() -> list[Check]:
-    raise NotImplementedError
+    from . import Check
+    from ..paths import get
+
+    checks: list[Check] = []
+    for command, why in REQUIRED:
+        found = shutil.which(command)
+        checks.append(Check(f"deps: {command}", bool(found), "" if found else f"missing ({why})"))
+    for command in OPTIONAL:
+        if not shutil.which(command):
+            checks.append(Check(f"deps: {command}", True, "not installed (optional)", warn=True))
+        else:
+            checks.append(Check(f"deps: {command}", True))
+    if shutil.which("rpm"):
+        for package in FORBIDDEN_PACKAGES:
+            done = subprocess.run(["rpm", "-q", "--quiet", package], capture_output=True)
+            checks.append(Check(f"deps: no {package}", done.returncode != 0,
+                                "" if done.returncode else "installed, but never for aptus (02 §9)"))
+    else:
+        checks.append(Check("deps: forbidden packages", True, "rpm not found, not checked",
+                            warn=True))
+    families: set[str] = set()
+    try:
+        done = subprocess.run(["fc-list", ":", "family"], capture_output=True, text=True)
+        for line in done.stdout.splitlines():
+            families.update(name.strip() for name in line.split(",") if name.strip())
+    except FileNotFoundError:
+        pass
+    for font in FONTS:
+        checks.append(Check(f"deps: font {font}", font in families,
+                            "" if font in families else "missing (a system font, see 11 §5)"))
+    roots = [Path("/usr/share/icons"), get().data_home / "icons"]
+    for theme in ICON_THEMES:
+        found = any((root / theme / "index.theme").is_file() for root in roots)
+        checks.append(Check(f"deps: icon theme {theme}", found,
+                            "" if found else "missing (papirus-icon-theme)"))
+    return checks

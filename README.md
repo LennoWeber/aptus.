@@ -1,105 +1,74 @@
-<!-- TODO(phase): rewrite for v2 (11 §4.5): what aptus is, install.sh, aptus dev, tests/run, the design/ index. -->
-# shell.
+# aptus
 
-A desktop shell for Fedora and Hyprland, built with [Quickshell](https://quickshell.org) (QML). Light, quiet, made
-for a 2-in-1 laptop: everything works with keyboard, mouse and touch. Technical name: `aptus`.
+A desktop shell for the **Hyprland** session on a ThinkPad P1 Gen 2 (Fedora 44, Hyprland 0.57 with
+Lua config, Quickshell 0.3.2 / Qt 6.11). One quiet frame around the screen, a notch that grows into
+Spotlight, Today, the Switcher and toasts, a Deck of quick settings, an Overview, capture, focus
+sessions, a lock screen and a settings app. Everything works with keyboard, mouse and touch.
 
-Status: usable, still changing. Plan and decisions: [PHASES.md](PHASES.md).
+This is **aptus v2**, a complete rewrite. v1 lives on as the tag `v1-final`. The Umbriel session
+keeps Noctalia exactly as it is: nothing aptus does reaches it (see
+[design/02-isolation.md](design/02-isolation.md)).
 
-![Control center](docs/screenshots/control-center.png)
+Status: being built in stages S0–S11 ([design/11-roadmap.md](design/11-roadmap.md)); the work log is
+[PHASES.md](PHASES.md).
 
-![Launcher with a system action](docs/screenshots/launcher.png)
+## Design
 
-## What is in it
+`design/` is the full specification and the source of truth for the code. Start with
+[design/README.md](design/README.md); the most important document is
+[02-isolation](design/02-isolation.md).
 
-- **Bar** with workspaces, window title, status icons, clock; dropdowns for sound, network, Bluetooth, battery, night light, calendar.
-- **Control center** (blurred overlay with tiles): sound, display, network, Bluetooth, power profile, caffeine, focus, VPN, hotspot, capture, timer, weather, media, calendar, system monitor.
-- **Launcher** with five modes: apps, calculator and system actions (`wifi off`, `timer 10m`, `lock screen`), web search (optional suggestions), settings, AI (docked chat panel for command-line AI tools), clipboard history.
-- **Settings app** with draft, save, a 15 second confirmation and an external watchdog that restores the old file if the shell dies.
-  Bar and island each have a *Glass* switch (`bar.glass`, `island.glass`): a see-through fill with the picture behind it blurred.
-  The island grows when something shows (`island.morph`: *spring*, *calm* or *off*) and never gets narrower than at rest. `island.style` picks *aptus* (light, solid), *phone* (pure black, like the iPhone island) or *glass* (dark see-through glass with a lit edge).
-  The sidebar is grouped (Look, Desktop, Apps, System); every page has a short description and sub-headings, and search results say where a setting lives (`Dock › Apps`).
-- **Dock** (Settings → Dock, off by default): kept apps and open windows, looks *glass*, *solid* and *minimal*, zoom under the pointer, a hop while an app starts, a size slider (`dock.iconSize`, 32 to 96), optional space reservation like the bar (`dock.reserveSpace`) and auto-hide. The kept apps are edited in the settings (order, remove, add from the installed apps) or with a right click on an icon.
-- **Lock screen** (PAM), **greeter** for greetd, idle policy: lock after 5 minutes, screen off after 10. **Never suspend or hibernate.**
-- **Touch and tablet mode:** edge swipes, bar hides in tablet mode, screen follows the orientation sensor, built-in on-screen keyboard.
-- **Wallpaper** drawn by the shell, with a picker; **power menu** (lock, log out, restart, shut down).
-
-## Requirements
-
-Fedora, Hyprland 0.56+ (Lua config), Quickshell 0.3.2+, plus the packages in `packages/aptus-dnf.txt` (grouped: required, session,
-backup, optional). `bin/aptus-packages` reads that list and only prints; it never installs:
-
-```sh
-bin/aptus-packages check                              # per group: all installed, or what is missing
-bin/aptus-packages command required session backup   # the sudo dnf command for what is missing
-```
+| Document | What it answers |
+|---|---|
+| [01 Vision](design/01-vision.md) | what aptus is for, the principles |
+| [02 Isolation](design/02-isolation.md) | how Hyprland gets aptus's look while Umbriel stays Noctalia's |
+| [03 Visual language](design/03-visual-language.md) | every colour, type, icon, geometry and state token |
+| [04 Motion](design/04-motion.md) | durations, curves, springs, choreography, the animation catalogue |
+| [05 Interaction](design/05-interaction.md) | surfaces, focus, the Esc ladder, keymap, multi-monitor |
+| [surfaces/](design/surfaces/) | one document per surface |
+| [07 Architecture](design/07-architecture.md) | processes, startup, QML structure, services, IPC, tests |
+| [08 Theming](design/08-theming.md) | palette resolution and every app target |
+| [09 Hyprland](design/09-hyprland.md) | the Lua profile: look, animations, rules, binds |
+| [10 Settings](design/10-settings.md) | every setting key |
+| [11 Roadmap](design/11-roadmap.md) | probes, stages, acceptance, migration from v1 |
+| [12 Decisions](design/12-decisions.md) | decision log |
 
 ## Install
 
 ```sh
-./install.sh --dry-run        # show what it would do
-./install.sh                  # installs missing packages (asks, sudo dnf), links the config, adds the Hyprland block (asks first, makes a backup)
-./install.sh --copr           # also offer the COPR lionheartp/Hyprland for packages Fedora does not have (asks first)
-./install.sh --greeter        # optional: replace the login screen (asks, backs up /etc/greetd/config.toml)
-./install.sh --uninstall      # remove the links and the Hyprland block, put back the files they replaced (asks)
-./install.sh --uninstall-greeter
+./install.sh               # lists every change outside the repo, asks per group, then applies
+./install.sh --uninstall   # the reverse (links removed, removed lines put back on request)
 ```
 
-`--yes` answers the questions with yes except the COPR, which needs `--copr`. Packages are never removed by the uninstall.
+`install.sh` creates aptus's folders, links `~/.config/hypr/aptus` → `hypr/` and
+`~/.local/bin/aptus*` → `bin/`, moves v1 leftovers (never deletes them) to
+`~/.local/state/aptus-v1-backup/<date>/`, and edits `~/.config/hypr/hyprland.lua` only after showing
+the diff (a backup goes to `~/.local/state/aptus/install/` first). It never installs packages, fonts,
+autostart entries or system files and never needs root.
 
-aptus is meant as the main shell. With the user's `shell-switch` it starts at login; a second shell (Noctalia) stays installed
-as a backup and takes over if aptus does not come up. The window look (a little transparency, strong blur) is in `hypr/aptus-look.lua`;
-the installer copies it to `~/.local/state/aptus/hyprland-look.lua` again whenever it changed.
+## Use
 
-Start with `aptus`. Send commands to the running shell with `aptus msg <command>`, for example
-`aptus msg panel-toggle control-center`, `aptus msg session lock`, `aptus msg tablet-toggle`.
-
-## Colours for the apps
-
-Themes: **Super+T** opens a small picker with eight themes, and pressing it again (or the arrow keys) moves on; the shell shows each at once, **Enter** keeps it (the apps follow then), **Esc** goes back. The setting is `appearance.theme`, also in the settings app:
-
-| Theme | Look |
-|---|---|
-| `light`, `dark` | the neutral palettes (default `light`) |
-| `ocean`, `forest`, `dusk` | dark, tinted slate blue, fir green, indigo, each with one accent |
-| `sand`, `sky` | light, warm cream with terracotta, cool ice blue with royal blue |
-| `wallpaper` | made from the colours of the current wallpaper (`appearance.wallpaperTone`: `auto` follows its brightness, or `light`, `dark`) |
-| `auto` | light, or dark while the night light runs |
-
-The shell fades over 300 ms and repaints all apps in the background (`aptus-theme-apps --theme <id> --all --quiet`). `aptus msg theme-mode-set ocean` sets a theme from a script, `aptus msg theme-next 1` steps through them. The wallpaper theme is made by `bin/aptus-wallpaper-theme PICTURE` (Pillow) into `~/.local/state/aptus/wallpaper-theme.json`.
-
-Wallpaper: `wallpaper.fit` is `fill` (default, covers and crops), `fit` (whole picture, bars in the theme colour), `stretch`, `center` (original size) or `tile`; it applies to the desktop, the lock screen and the login screen. With the aptus login screen installed (`./install.sh --greeter`), the login screen shows your desktop wallpaper and keeps it in step by itself (`appearance.loginWallpaper`, default on). The polkit rule that allows this without a password is installed with the greeter; run the installer again after updating if the login picture does not follow.
-
-`aptus-theme-apps` paints the programs around the shell with the same palette (`theme/tokens.json`, light or dark, templates in `theme/apps`):
-
-```
-aptus-theme-apps                    # kitty, ghostty, GTK, Qt, btop, zathura, gsettings (light)
-aptus-theme-apps --mode dark --all  # everything, dark
-aptus-theme-apps --only starship,zen --dry-run
+```sh
+aptus msg <target> <function> [args…]   # talk to the running shell, e.g. aptus msg shell state
+aptus logs [-f] [component]             # the journal of the shell, the session tools and units
+aptus doctor [config|deps]              # check settings and dependencies
+aptus dev on|off                        # live reload of the shell while editing QML
 ```
 
-`--all` adds Starship (`~/.config/starship/aptus.toml`, selected by fish through `STARSHIP_CONFIG`), fish, Neovim (`colorscheme aptus`), yazi, fastfetch (`~/.config/fastfetch/aptus-config.jsonc`, used by the `fastfetch` alias in fish), cava, window borders, hyprlock, Zen and Thunderbird (`userChrome.css`, `userContent.css`; start Thunderbird once so it has a profile) and a Spicetify theme (set `light` or `dark` and applied by the script; restart Spotify to see it). Zen and Thunderbird follow the system colour scheme, which the script sets with gsettings; restart the browser once after the first run. Replaced files are kept as `NAME.before-aptus`; nothing is installed.
+## Develop
 
-## Keys (defaults)
+```sh
+tests/run          # pytest tests/unit, qmltestrunner on tests/qml, tests/lint.sh (qmllint, 0 warnings)
+tests/run e2e      # the same plus the nested-Hyprland end-to-end tests
+```
 
-| Key | Action |
-|---|---|
-| Mod+Space or Mod+D | launcher |
-| Mod+A / Mod+Shift+B / Mod+Shift+C | AI / web / clipboard mode |
-| Mod+L | lock |
-| Mod+X | power menu |
-| Mod+W | wallpaper picker |
+Tests never touch the real home: unit tests run with `APTUS_TEST=1` and a temporary `HOME`, the
+end-to-end tests in a nested Hyprland with its own `HOME` and session bus. Set `APTUS_PYTEST` to use
+another pytest (e.g. `APTUS_PYTEST="venv/bin/python -m pytest"`).
 
-## Safety
-
-- If the shell dies while the screen is locked, it stays locked. Switch to a console with Ctrl+Alt+F3, log in and start the shell again.
-- The greeter installer keeps your old greetd config as `config.toml.before-aptus`; the way back is in the installer output.
-- A settings change that is not confirmed within 15 seconds is reverted.
-
-## Layout
-
-`shell/` QML shell, `greeter/` login screen, `config/` defaults, `theme/` design values, `bin/` helper scripts, `hypr/` Hyprland snippets.
-Lint: `./aptus-lint.sh` (qmllint, target 0 warnings).
+Layout: `shell/` (QML: `core/`, `components/`, `services/`, `surfaces/`, `registry/`, `windows/`),
+`lib/aptus/` (the Python session tools behind `bin/`), `hypr/` (the Lua profile), `theme/tokens.json`
+(every visual token), `tests/`.
 
 ## License
 

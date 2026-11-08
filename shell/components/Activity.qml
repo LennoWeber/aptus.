@@ -2,10 +2,9 @@
 // clock and its card (420 wide) when expanded. The Notch instantiates every registered activity
 // once per monitor and shows, per slot, the live one with the highest priority.
 import QtQuick
+import qs.core
 
 QtObject {
-    // TODO(phase): cardHeight ← Tokens.surfaces.notch.cardHeights[activity] (notch.md §5), not 96.
-
     // Set by the host.
     property string monitorName: ""
     // The activity id ("media", "timer", "focus", "recording", "meeting", "progress").
@@ -19,7 +18,11 @@ QtObject {
     // The compact look (its implicitWidth is the slot width) and the card content.
     property Component compact: null
     property Component card: null
-    property real cardHeight: 96
+    // The card's height for this activity (tokens surfaces.notch.cardHeights, notch.md §5).
+    property real cardHeight: {
+        const n = Tokens.surfaces.notch;
+        return n && n.cardHeights && n.cardHeights[activity] !== undefined ? n.cardHeights[activity] : (n ? n.resultCardHeight : 0);
+    }
     // Right-click menu rows (Menu model) and what the middle click does (notch.md §4).
     property var menu: []
     // A changed value nudges the compact look once (M-35-style pulse), e.g. a timer that starts ringing.

@@ -5,8 +5,6 @@ import qs.core
 Text {
     id: root
 
-    // TODO(phase): Text with Tokens.font(role), ink colour by tone, elide right; display family from displayFrom.
-
     // "micro" | "bar" | "clock" | "body" | "bodyStrong" | "title" | "field" | "heading" | "number" | "display"
     property string type: "body"
     // "main" | "sec" | "meta" | "faint" | "accent" | "warn" | "crit" | "onAccent"
@@ -14,8 +12,19 @@ Text {
     // Tabular figures (also forced by the clock, number and display tokens).
     property bool tabular: false
 
-    // Private state.
     // Tokens.font(type): family (display from Tokens.displayFrom), size, weight, tracking, line.
-    readonly property var _font: ({})
-    readonly property bool _tabular: false
+    readonly property var _font: Tokens.font(type)
+    readonly property bool _tabular: tabular || !!(Tokens.type[type] && Tokens.type[type].tabular)
+
+    color: ComponentShared.ink(ink)
+    font.family: _font.family
+    font.pixelSize: _font.pixelSize
+    font.weight: _font.weight
+    font.letterSpacing: _font.letterSpacing
+    font.features: _tabular ? { "tnum": 1 } : ({})
+    lineHeightMode: Text.FixedHeight
+    lineHeight: _font.lineHeight
+    verticalAlignment: Text.AlignVCenter
+    elide: Text.ElideRight
+    textFormat: Text.PlainText
 }

@@ -11,106 +11,197 @@ import qs.services
 Scope {
     id: root
 
-    // TODO(phase): each function forwards to SurfaceManager / services and answers "ok", JSON or
-    //   "error: …"; never an empty answer (aptus msg treats empty output as a failure).
-    // TODO(phase): session.lock answers "error: no lock screen yet" while !Session.canLock (S6 fills
-    //   it), so Super+L falls back to hyprlock; focus/dnd/capture/jot answer an error while !available.
-    // TODO(phase): shell.restart touches the restart flag with a Process, then Qt.quit() in
-    //   onRunningChanged (Process.onExited's QProcess::ExitStatus does not resolve for qmllint).
-
     // `aptus msg shell state` also lists service summaries; services add theirs here by name.
-    function serviceSummary(): var { throw new Error("Ipc.serviceSummary: not implemented"); }
+    function serviceSummary(): var {
+        return {
+            config: { loaded: Config.loaded, fileError: Config.fileError, v1File: Config.v1File },
+            tokens: { mode: Tokens.mode, palette: Tokens.palette, accent: Tokens.accentName, glass: Tokens.glass },
+            hypr: { focusedMonitor: Hypr.focusedMonitor, monitors: Hypr.monitors.map(m => m.name),
+                    windows: Hypr.windows.length, submap: Hypr.submap },
+            wallpaper: { monitors: Hypr.monitors.map(m => ({ name: m.name, path: Wallpaper.pathFor(m.name) })),
+                         images: Wallpaper.images.length },
+            session: { locked: Session.locked, canLock: Session.canLock }
+        };
+    }
+    // The answer of a service's IPC functions until its stage fills it (07 §7: never an empty answer).
+    function notYet(name: string): string { return "error: " + name + " is not available yet"; }
     // Parse an optional JSON argument ("" → {}); null when invalid.
-    function parseArgs(json: string): var { throw new Error("Ipc.parseArgs: not implemented"); }
+    function parseArgs(json: string): var {
+        if (json === undefined || json === null || json === "" || json === "undefined") return {};
+        try {
+            const v = JSON.parse(json);
+            return v !== null && typeof v === "object" && !Array.isArray(v) ? v : null;
+        } catch (e) {
+            return null;
+        }
+    }
 
     IpcHandler {
         target: "shell"
-        function state(): string { throw new Error("ipc shell.state: not implemented"); }
-        function restart(): string { throw new Error("ipc shell.restart: not implemented"); }
-        function reloadConfig(): string { throw new Error("ipc shell.reloadConfig: not implemented"); }
-        function log(level: string): string { throw new Error("ipc shell.log: not implemented"); }
+        function state(): string {
+            const s = JSON.parse(SurfaceManager.state());
+            s.services = root.serviceSummary();
+            return JSON.stringify(s);
+        }
+        function restart(): string {
+            restartTouch.running = true;
+            return "ok";
+        }
+        function reloadConfig(): string { Config.reload(); return "ok"; }
+        function log(level: string): string { return Log.setLevel(level) ? "ok" : "error: level is debug, info, warn or error"; }
     }
 
     IpcHandler {
         target: "surface"
-        function open(name: string, args: string): string { throw new Error("ipc surface.open: not implemented"); }
-        function close(name: string): string { throw new Error("ipc surface.close: not implemented"); }
-        function toggle(name: string): string { throw new Error("ipc surface.toggle: not implemented"); }
-        function back(): string { throw new Error("ipc surface.back: not implemented"); }
+        function open(name: string, args: string): string {
+            const a = root.parseArgs(args);
+            if (a === null) return "error: args must be a JSON object";
+            return SurfaceManager.open(name, a) ? "ok" : "error: " + name + " not opened (locked, behind polkit, or unknown)";
+        }
+        function close(name: string): string { SurfaceManager.close(name); return "ok"; }
+        function toggle(name: string): string { return SurfaceManager.toggle(name) ? "open" : "closed"; }
+        function back(): string { SurfaceManager.back(); return "ok"; }
     }
 
     IpcHandler {
         target: "spotlight"
-        function open(query: string, scope: string): string { throw new Error("ipc spotlight.open: not implemented"); }
+        function open(query: string, scope: string): string {
+            return SurfaceManager.open("spotlight", { query: query || "", scope: scope || "" }) ? "ok" : "error: spotlight not opened";
+        }
     }
 
     IpcHandler {
         target: "notch"
-        function event(text: string, glyph: string): string { throw new Error("ipc notch.event: not implemented"); }
-        function toast(json: string): string { throw new Error("ipc notch.toast: not implemented"); }
+        function event(text: string, glyph: string): string {
+            if (!text) return "error: text missing";
+            return SurfaceManager.post("event", { text: text, glyph: glyph || "info" }) > 0 ? "ok" : "error: event dropped";
+        }
+        function toast(json: string): string {
+            const a = root.parseArgs(json);
+            if (a === null) return "error: toast must be a JSON object";
+            Notifications.inject(a);
+            return "ok";
+        }
     }
 
     IpcHandler {
         target: "theme"
-        function mode(value: string): string { throw new Error("ipc theme.mode: not implemented"); }
-        function accent(name: string): string { throw new Error("ipc theme.accent: not implemented"); }
-        function glass(value: string): string { throw new Error("ipc theme.glass: not implemented"); }
+        function mode(value: string): string {
+            if (value === "toggle") { Theme.toggleMode(); return "ok"; }
+            if (["dark", "light", "auto"].indexOf(value) < 0) return "error: mode is dark, light, auto or toggle";
+            Theme.setMode(value);
+            return "ok";
+        }
+        function accent(name: string): string {
+            const e = Config.entry("appearance.accent");
+            if (!e || e.values.indexOf(name) < 0) return "error: accent is one of " + (e ? e.values.join(", ") : "");
+            Theme.setAccent(name);
+            return "ok";
+        }
+        function glass(value: string): string {
+            if (value !== "on" && value !== "off") return "error: glass is on or off";
+            Theme.setGlass(value === "on");
+            return "ok";
+        }
     }
 
     IpcHandler {
         target: "wallpaper"
-        function set(path: string, monitor: string): string { throw new Error("ipc wallpaper.set: not implemented"); }
-        function next(): string { throw new Error("ipc wallpaper.next: not implemented"); }
+        function set(path: string, monitor: string): string {
+            if (!path) return "error: path missing";
+            if (!Paths.insideHome(path)) return "error: the image must be inside your home folder";
+            Wallpaper.set(path, monitor || "");
+            return "ok";
+        }
+        function next(): string { Wallpaper.next(); return "ok"; }
     }
 
     IpcHandler {
         target: "focus"
-        function start(minutes: string, intent: string): string { throw new Error("ipc focus.start: not implemented"); }
-        function stop(): string { throw new Error("ipc focus.stop: not implemented"); }
-        function pause(): string { throw new Error("ipc focus.pause: not implemented"); }
-        function resume(): string { throw new Error("ipc focus.resume: not implemented"); }
-        function extend(minutes: string): string { throw new Error("ipc focus.extend: not implemented"); }
+        function start(minutes: string, intent: string): string {
+            if (!Focus.available) return root.notYet("focus");
+            const m = parseInt(minutes);
+            if (!(m >= 1 && m <= 600)) return "error: minutes must be 1–600";
+            Focus.start(m, intent || null);
+            return "ok";
+        }
+        function stop(): string { if (!Focus.available) return root.notYet("focus"); Focus.stop(); return "ok"; }
+        function pause(): string { if (!Focus.available) return root.notYet("focus"); Focus.pause(); return "ok"; }
+        function resume(): string { if (!Focus.available) return root.notYet("focus"); Focus.resume(); return "ok"; }
+        function extend(minutes: string): string {
+            if (!Focus.available) return root.notYet("focus");
+            const m = parseInt(minutes);
+            if (!(m >= 1 && m <= 240)) return "error: minutes must be 1–240";
+            Focus.extend(m);
+            return "ok";
+        }
     }
 
     IpcHandler {
         target: "dnd"
-        function on(): string { throw new Error("ipc dnd.on: not implemented"); }
-        function off(): string { throw new Error("ipc dnd.off: not implemented"); }
+        function on(): string { if (!Dnd.available) return root.notYet("dnd"); Dnd.turnOn(); return "ok"; }
+        function off(): string { if (!Dnd.available) return root.notYet("dnd"); Dnd.turnOff(); return "ok"; }
         // `aptus msg dnd for <duration>`: "for" is reserved in JavaScript, so aptus msg maps it to
         // forDuration. Duration: "90m", "1h", "1h30m", "45" (minutes).
-        function forDuration(duration: string): string { throw new Error("ipc dnd.forDuration: not implemented"); }
-        function until(hhmm: string): string { throw new Error("ipc dnd.until: not implemented"); }
+        function forDuration(duration: string): string {
+            if (!Dnd.available) return root.notYet("dnd");
+            const m = /^(?:(\d+)h)?(?:(\d+)m?)?$/.exec(String(duration).trim());
+            const secs = m && (m[1] || m[2]) ? (parseInt(m[1] || "0") * 60 + parseInt(m[2] || "0")) * 60 : 0;
+            if (secs <= 0) return "error: duration like 90m, 1h, 1h30m or 45";
+            Dnd.forSeconds(secs);
+            return "ok";
+        }
+        function until(hhmm: string): string {
+            if (!Dnd.available) return root.notYet("dnd");
+            if (!/^([01][0-9]|2[0-3]):[0-5][0-9]$/.test(hhmm)) return "error: time like 07:30";
+            Dnd.untilTime(hhmm);
+            return "ok";
+        }
     }
 
     IpcHandler {
         target: "capture"
-        function region(): string { throw new Error("ipc capture.region: not implemented"); }
-        function screen(): string { throw new Error("ipc capture.screen: not implemented"); }
-        function window(): string { throw new Error("ipc capture.window: not implemented"); }
-        function record(): string { throw new Error("ipc capture.record: not implemented"); }
-        function stop(): string { throw new Error("ipc capture.stop: not implemented"); }
-        function colour(): string { throw new Error("ipc capture.colour: not implemented"); }
+        function region(): string { if (!Capture.available) return root.notYet("capture"); Capture.region(); return "ok"; }
+        function screen(): string { if (!Capture.available) return root.notYet("capture"); Capture.screen(); return "ok"; }
+        function window(): string { if (!Capture.available) return root.notYet("capture"); Capture.window(); return "ok"; }
+        function record(): string { if (!Capture.available) return root.notYet("capture"); Capture.record(); return "ok"; }
+        function stop(): string { if (!Capture.available) return root.notYet("capture"); Capture.stop(); return "ok"; }
+        function colour(): string { if (!Capture.available) return root.notYet("capture"); Capture.colour(); return "ok"; }
     }
 
     IpcHandler {
         target: "session"
         // Answers "error: …" whenever the shell cannot lock right now (before S6, or Session fails),
         // so `aptus msg session lock || hyprlock …` falls back (phase-1 decision 9).
-        function lock(): string { throw new Error("ipc session.lock: not implemented"); }
-        function logout(): string { throw new Error("ipc session.logout: not implemented"); }
-        function reboot(): string { throw new Error("ipc session.reboot: not implemented"); }
-        function poweroff(): string { throw new Error("ipc session.poweroff: not implemented"); }
-        function sheet(): string { throw new Error("ipc session.sheet: not implemented"); }
+        function lock(): string {
+            if (!Session.canLock) return "error: no lock screen yet";
+            try { Session.lock(); } catch (e) { return "error: " + e; }
+            return "ok";
+        }
+        function logout(): string { Session.logout(); return "ok"; }
+        function reboot(): string { Session.reboot(); return "ok"; }
+        function poweroff(): string { Session.poweroff(); return "ok"; }
+        function sheet(): string { return SurfaceManager.toggle("session") ? "open" : "closed"; }
     }
 
     IpcHandler {
         target: "jot"
-        function add(text: string): string { throw new Error("ipc jot.add: not implemented"); }
-        function todo(text: string): string { throw new Error("ipc jot.todo: not implemented"); }
+        function add(text: string): string { if (!Jot.available) return root.notYet("jot"); if (!text) return "error: text missing"; Jot.add(text); return "ok"; }
+        function todo(text: string): string { if (!Jot.available) return root.notYet("jot"); if (!text) return "error: text missing"; Jot.todo(text); return "ok"; }
     }
 
     IpcHandler {
         target: "settings"
-        function open(pageOrKey: string): string { throw new Error("ipc settings.open: not implemented"); }
+        function open(pageOrKey: string): string {
+            const a = !pageOrKey ? {} : (Config.entry(pageOrKey) ? { key: pageOrKey } : { page: pageOrKey });
+            return SurfaceManager.open("settings", a) ? "ok" : "error: settings not opened";
+        }
+    }
+
+    // `shell restart`: the restart flag makes the supervisor start the shell again at once (07 §10).
+    Process {
+        id: restartTouch
+        command: ["sh", "-c", "mkdir -p \"$(dirname \"$1\")\" && touch \"$1\"", "sh", Paths.restartFlag]
+        onRunningChanged: if (!running) Qt.callLater(Qt.quit)
     }
 }

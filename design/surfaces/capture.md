@@ -94,8 +94,12 @@ edges. Selections cannot cross monitors; a drag reaching another monitor clamps 
 
 ## 7. Edge cases
 
-- Capture while a menu or Spotlight is open: they close first (one frame), then the freeze happens,
-  so they are not in the image unless `capture.includeShell` is on.
+- Capture while a menu, Spotlight or another interactive notch mode, the Deck or Overview is open:
+  they close first (one frame), then the freeze happens, so they are not in the image. With
+  `capture.includeShell` on they stay open and are part of the image. Passive notch content (toasts,
+  OSD, cards) stays either way. Capture never opens beside the polkit prompt: it queues behind it,
+  and a polkit request during the selection cancels the selection.
+- A monitor connected during the selection cancels it (as `Esc`); one disconnected simply drops out.
 - Multi-monitor with different scales: each monitor's frozen frame at its own scale; regions are cut
   in that monitor's native pixels.
 - A protected surface (DRM video): it is whatever the compositor gives (black); no error.

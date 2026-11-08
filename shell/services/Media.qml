@@ -3,19 +3,17 @@ pragma Singleton
 // Owner: S3. Stub until its stage fills it.
 import QtQuick
 import Quickshell
+import qs.core
 
 Singleton {
     id: root
-
-    // TODO(phase): until S3 fills this service, each action method logs "not available yet"
-    //   (category service.<name>) instead of throwing (phase-1 decision 6).
 
     property var players: []
     // the active MprisPlayer or null
     property var active: null
 
     // The active player (05 §7 rule): play/pause, next, previous.
-    function toggle(): void { throw new Error("Media.toggle: not implemented"); }
-    function next(): void { throw new Error("Media.next: not implemented"); }
-    function previous(): void { throw new Error("Media.previous: not implemented"); }
+    function toggle(): void { Log.info("service.media", "toggle: not available yet"); }
+    function next(): void { Log.info("service.media", "next: not available yet"); }
+    function previous(): void { Log.info("service.media", "previous: not available yet"); }
 }

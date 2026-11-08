@@ -3,20 +3,18 @@ pragma Singleton
 // Owner: S8. Stub until its stage fills it.
 import QtQuick
 import Quickshell
+import qs.core
 
 Singleton {
     id: root
-
-    // TODO(phase): until S8 fills this service, each action method logs "not available yet"
-    //   (category service.<name>) instead of throwing (phase-1 decision 6).
 
     // [{ id, label, kind: "timer" | "alarm" | "stopwatch", endsAt: Date | null, startedAt: Date,
     //    durationMs, paused: bool, remainingMs, ringing: bool }]
     property var timers: []
     // the timer that rings now, or null
     property var ringing: null
-    function add(label: string, durationMs: real): void { throw new Error("Timers.add: not implemented"); }
-    function stop(id: string): void { throw new Error("Timers.stop: not implemented"); }
-    function extend(id: string, ms: real): void { throw new Error("Timers.extend: not implemented"); }
-    function togglePause(id: string): void { throw new Error("Timers.togglePause: not implemented"); }
+    function add(label: string, durationMs: real): void { Log.info("service.timers", "add: not available yet"); }
+    function stop(id: string): void { Log.info("service.timers", "stop: not available yet"); }
+    function extend(id: string, ms: real): void { Log.info("service.timers", "extend: not available yet"); }
+    function togglePause(id: string): void { Log.info("service.timers", "togglePause: not available yet"); }
 }

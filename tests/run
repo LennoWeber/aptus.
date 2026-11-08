@@ -1,6 +1,40 @@
+#!/usr/bin/bash
 # tests/run: every test level of 07 §13 that runs without hands.
-# TODO(phase): (mode 755) pytest tests/unit (system python3, or $APTUS_PYTEST), qmltestrunner on tests/qml
-#   (QT_QPA_PLATFORM=offscreen), tests/lint.sh; `tests/run e2e` adds pytest tests/e2e (nested Hyprland).
-# TODO(phase): qmltestrunner needs QML_XHR_ALLOW_FILE_READ=1 (tst_config reads the real schema).
-# TODO(phase): `-import tests/qml/mock` for tst_components: a mock Quickshell (iconPath, Widgets) and
-#   qs.core singletons that read theme/tokens.json, with qs.components linked to shell/components.
+#   tests/run       pytest tests/unit, qmltestrunner on tests/qml, tests/lint.sh
+#   tests/run e2e   the same plus pytest tests/e2e (nested Hyprland)
+# pytest: $APTUS_PYTEST (e.g. a venv's "python -m pytest") or the system python3 -m pytest.
+set -uo pipefail
+
+repo="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
+cd "$repo"
+read -r -a pytest <<< "${APTUS_PYTEST:-python3 -m pytest}"
+failed=()
+
+echo "== pytest tests/unit"
+"${pytest[@]}" -q tests/unit || failed+=("unit")
+
+echo "== qmltestrunner tests/qml"
+# tst_components imports test doubles of Quickshell and qs.core (tests/qml/mkmock.py); Tokens reads
+# tokens.json through a file XHR.
+mock="$(mktemp -d)"
+trap 'rm -rf "$mock"' EXIT
+if python3 tests/qml/mkmock.py "$mock/import"; then
+    QML_XHR_ALLOW_FILE_READ=1 QT_QPA_PLATFORM=offscreen /usr/lib64/qt6/bin/qmltestrunner \
+        -import "$mock/import" -input tests/qml || failed+=("qml")
+else
+    failed+=("qml")
+fi
+
+echo "== tests/lint.sh"
+bash tests/lint.sh || failed+=("lint")
+
+if [[ "${1:-}" == "e2e" ]]; then
+    echo "== pytest tests/e2e"
+    "${pytest[@]}" -q tests/e2e || failed+=("e2e")
+fi
+
+if (( ${#failed[@]} )); then
+    echo "FAILED: ${failed[*]}"
+    exit 1
+fi
+echo "all passed"

@@ -8,23 +8,39 @@ import qs.core
 QtObject {
     id: root
 
-    // TODO(phase): a FontLoader on Paths.fonts + "/MaterialSymbolsRounded.ttf" (the repo's copy; no
-    //   font is installed, CLAUDE.md); glyphFamily ← its name once Ready.
-
     // The family name of the loaded Material Symbols Rounded (Tokens.fontGlyph until loaded).
-    readonly property string glyphFamily: ""
-    // The FontLoader (a QtObject has no default property, so it sits in a property).
-    property FontLoader _glyphFont: null
+    readonly property string glyphFamily: _glyphFont.status === FontLoader.Ready ? _glyphFont.name : Tokens.fontGlyph
     // Tooltips currently visible and when the last one hid (ms since epoch).
     property int tooltipsVisible: 0
     property real tooltipHiddenAt: 0
 
     // The colour of an ink name: "main" | "sec" | "meta" | "faint" | "accent" | "warn" | "crit" | "onAccent".
-    function ink(name: string): color { throw new Error("ComponentShared.ink: not implemented"); }
+    function ink(name: string): color {
+        switch (name) {
+        case "sec": return Tokens.inkSec;
+        case "meta": return Tokens.inkMeta;
+        case "faint": return Tokens.inkFaint;
+        case "accent": return Tokens.accent;
+        case "warn": return Tokens.warn;
+        case "crit": return Tokens.crit;
+        case "onAccent": return Tokens.onAccent;
+        default: return Tokens.inkMain;
+        }
+    }
     // A state layer over a base colour (03 §2.3): `over` at the wash amount ("hover" | "current" |
     // "currentHover" | "pressed") composited on `base`. For bases without a resolved wash token
     // (accent fills, accentWash).
-    function layer(base: color, over: color, amount: string): color { throw new Error("ComponentShared.layer: not implemented"); }
+    function layer(base: color, over: color, amount: string): color {
+        const w = Tokens.raw.washes;
+        return Qt.tint(base, Qt.alpha(over, w && w[amount] !== undefined ? w[amount] : 0));
+    }
     // Whether a tooltip may show without its delay (another is visible or hid within the regrace).
-    function tooltipWarm(): bool { throw new Error("ComponentShared.tooltipWarm: not implemented"); }
+    function tooltipWarm(): bool {
+        return tooltipsVisible > 0 || Date.now() - tooltipHiddenAt < (Tokens.tooltip.regrace || 0);
+    }
+
+    // The FontLoader (a QtObject has no default property, so it sits in a property).
+    property FontLoader _glyphFont: FontLoader {
+        source: Paths.url(Paths.fonts + "/MaterialSymbolsRounded.ttf")
+    }
 }

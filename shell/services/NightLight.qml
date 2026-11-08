@@ -3,12 +3,10 @@ pragma Singleton
 // Owner: S5. Stub until its stage fills it.
 import QtQuick
 import Quickshell
+import qs.core
 
 Singleton {
     id: root
-
-    // TODO(phase): until S5 fills this service, each action method logs "not available yet"
-    //   (category service.<name>) instead of throwing (phase-1 decision 6).
 
     property bool active: false
     // K, 0 = identity
@@ -17,6 +15,6 @@ Singleton {
     property var sunrise: null
     // Date of today's sunset
     property var sunset: null
-    function setActive(on: bool): void { throw new Error("NightLight.setActive: not implemented"); }
-    function setTemperature(kelvin: int): void { throw new Error("NightLight.setTemperature: not implemented"); }
+    function setActive(on: bool): void { Log.info("service.nightlight", "setActive: not available yet"); }
+    function setTemperature(kelvin: int): void { Log.info("service.nightlight", "setTemperature: not available yet"); }
 }

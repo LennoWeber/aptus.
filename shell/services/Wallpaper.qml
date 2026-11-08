@@ -1,16 +1,15 @@
 pragma Singleton
+pragma ComponentBehavior: Bound
 // Wallpaper: wallpaper.json, resolution per monitor.
 // Owner: S1 (resolution, drawing), S10 (gallery, thumbnails, analysis, rotation). Stub until its stage fills it.
 import QtQuick
 import Quickshell
+import Quickshell.Io
+import Qt.labs.folderlistmodel
+import qs.core
 
 Singleton {
     id: root
-
-    // TODO(phase): FileView on Paths.wallpaperState; pathFor() = preview[name] › monitors[name] ›
-    //   byMode[Tokens.mode] › all › images[0] › "" (ground) (wallpaper.md §3).
-    // TODO(phase): images ← a FolderListModel on _dir (sortField Time, image nameFilters; it watches
-    //   the folder), _list() on count/status changes; set() writes wallpaper.json atomically.
 
     // the parsed wallpaper.json
     property var state: ({})
@@ -28,17 +27,67 @@ Singleton {
 
     // The image a monitor shows (wallpaper.md §3): the gallery preview, else monitors[name], byMode,
     // all, the newest image in wallpaper.dir, else "" (plain ground).
-    function pathFor(monitor: string): string { throw new Error("Wallpaper.pathFor: not implemented"); }
+    function pathFor(monitor: string): string {
+        const st = state || {};
+        if (preview[monitor]) return preview[monitor];
+        if (st.monitors && st.monitors[monitor]) return st.monitors[monitor];
+        if (st.byMode && st.byMode[Tokens.mode]) return st.byMode[Tokens.mode];
+        if (st.all) return st.all;
+        return images.length ? images[0].path : "";
+    }
     // Set the wallpaper of one monitor, or of every monitor when monitor is "" (IPC `wallpaper set`).
-    function set(path: string, monitor: var): void { throw new Error("Wallpaper.set: not implemented"); }
+    function set(path: string, monitor: var): void {
+        const st = JSON.parse(JSON.stringify(state || {}));
+        st.v = 1;
+        st.monitors = st.monitors || {};
+        const p = Paths.expand(String(path));
+        if (monitor) st.monitors[String(monitor)] = p;
+        else { st.all = p; st.monitors = {}; }
+        state = st;
+        Paths.ensureDir(Paths.state);
+        stateView.setText(JSON.stringify(st, null, 2) + "\n");
+    }
     // The next image in wallpaper.dir for the active monitor (IPC `wallpaper next`; rotation is S10).
-    function next(): void { throw new Error("Wallpaper.next: not implemented"); }
+    function next(): void {
+        if (!images.length) return;
+        const mon = Hypr.focusedMonitor;
+        const cur = pathFor(mon);
+        const i = images.findIndex(im => im.path === cur);
+        const n = images[(i + 1) % images.length].path;
+        set(n, state && state.monitors && state.monitors[mon] ? mon : "");
+    }
 
-    // Private state.
     // wallpaper.dir, expanded (the folder FolderListModel watches).
-    readonly property string _dir: ""
+    readonly property string _dir: Config.loaded ? Paths.expand(Config.get("wallpaper.dir")) : ""
 
-    // Private helpers.
+    FileView {
+        id: stateView
+        path: Paths.wallpaperState
+        watchChanges: true
+        atomicWrites: true
+        printErrors: false
+        onFileChanged: reload()
+        onLoaded: {
+            try { root.state = JSON.parse(text()); } catch (e) { Log.warn("service.wallpaper", "wallpaper.json: " + e); }
+        }
+    }
+    // wallpaper.dir, newest first (the first start shows the newest image, wallpaper.md §3).
+    // The folder, watched (wallpaper.md §6): newest first; images follows every change.
+    FolderListModel {
+        id: folder
+        folder: root._dir !== "" ? Paths.url(root._dir) : ""
+        showDirs: false
+        caseSensitive: false
+        sortField: FolderListModel.Time
+        nameFilters: ["*.jpg", "*.jpeg", "*.png", "*.webp", "*.avif"]
+        onCountChanged: root._list()
+        onStatusChanged: root._list()
+    }
     // images ← the folder model, newest first.
-    function _list(): void { throw new Error("Wallpaper._list: not implemented"); }
+    function _list(): void {
+        const out = [];
+        for (let i = 0; i < folder.count; i++)
+            out.push({ path: String(folder.get(i, "filePath")), mtime: folder.get(i, "fileModified").getTime() });
+        images = out;
+    }
 }

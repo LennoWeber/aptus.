@@ -1,8 +1,9 @@
-// Base type of the docked drawers that are not notch modes (Deck, Overview).
+// Base type of the docked drawers that are not notch modes (Deck, Overview). The content
+// choreography of Choreographed (04 §3 rule 1) follows `open`.
 import QtQuick
 
-Item {
-    // TODO(phase): content choreography (04 §3 rule 1) as in NotchMode, driven by `open`.
+Choreographed {
+    shown: open
 
     property string monitorName: ""
     property bool open: false

@@ -5,7 +5,6 @@ import "js/rules.js" as Rules
 
 QtObject {
     id: root
-
     // Hyprland monitor name ("eDP-1", "DP-1", …).
     required property string name
 
@@ -19,7 +18,7 @@ QtObject {
 
     // Passive content waiting for or shown by the notch:
     // [{ id: int, kind: "toast" | "osd" | "event", key: string, payload: var, priority: int, born: ms,
-    //   shown: bool, waited: bool }] (rules.js: waited = queued behind a blocking surface).
+    //   waited: bool }] (rules.js: waited = queued behind a blocking surface).
     // `key` replaces an entry of the same key (one OSD per kind, a notification's replaces_id).
     // Payload conventions: toast { notification } or { card: "capture" | "colour" | "stillOpen",
     // …card fields, flyFrom: {x,y,width,height} (M-23) }; osd { kind, value, label, device };
@@ -54,11 +53,11 @@ QtObject {
     // True for one transition that must not animate (monitor removed, crash restore).
     property bool instant: false
 
-    // Derived: an interactive surface is open (away catcher). Cards and keysPeek are not
-    // interactive (07 §5). Derived properties bind to Rules.interactive/keyboard/top(root).
-    readonly property bool interactive: false
+    // Derived: an interactive surface is open (away catcher, toasts queue). Cards and keysPeek are
+    // not interactive (07 §5). Derived properties bind to Rules.interactive/keyboard/top(root).
+    readonly property bool interactive: Rules.interactive(root)
     // Derived: the shell layer takes the keyboard (interactive, or a card opened by click).
-    readonly property bool keyboard: false
+    readonly property bool keyboard: Rules.keyboard(root)
     // Derived: the open surface that Esc/back acts on first ("" when none).
-    readonly property string top: ""
+    readonly property string top: Rules.top(root)
 }

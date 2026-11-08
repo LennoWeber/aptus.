@@ -6,12 +6,18 @@ moved to ~/.local/state/aptus-v1-backup/<date>/, never deleted.
 """
 from __future__ import annotations
 
+import json
 import os
+import shutil
+import sys
+import time
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
-from ..paths import Paths
+from .. import atomic
+from ..paths import Paths, get, inside
+from . import hyprlua
 
 
 @dataclass(frozen=True)
@@ -28,69 +34,255 @@ KINDS = ("mkdir", "link", "move", "edit-hyprland")
 
 def check_action(paths: Paths, action: Action) -> None:
     """Invariant: no action leaves HOME, changes anything inside the repo (also not through a
-    link), or touches Umbriel's or Noctalia's files; moves go only to the v1 backup or the install
-    state (uninstall keeps the scope mirrors there), a link points into the repo (target None removes
-    it), and the only edited file is ~/.config/hypr/hyprland.lua (02 §2, CLAUDE.md).
-    Raises RuntimeError("install invariant: …")."""
-    def real(p: Path) -> str:      # the parent resolved, the last component itself (a link stays a link)
-        return os.path.join(os.path.realpath(p.parent), p.name)
+    link), or touches Umbriel's or Noctalia's files, autostart, fonts or user units other than
+    aptus-recover.service; moves go only to the v1 backup or the install state (uninstall keeps the
+    scope mirrors there), a link points into the repo (target None removes it), and the only edited
+    file is ~/.config/hypr/hyprland.lua, its backups in the install state (02 §2, CLAUDE.md).
+    A pre-flight check of the plan; apply() still refuses at run time to replace a real file by a
+    link or to move onto something that exists. Raises RuntimeError("install invariant: …")."""
+    def refuse(why: str) -> None:
+        raise RuntimeError(f"install invariant: {action.kind} {action.path}: {why}")
+
+    def real(p: Path, follow: bool = False) -> str:
+        # absolute, no "..": the parent resolved, the last component itself unless `follow`
+        # (a link stays a link, but a file that is edited is the file the link leads to)
+        if not p.is_absolute() or ".." in p.parts:
+            refuse(f"{p} is not an absolute, normalised path")
+        return os.path.realpath(p) if follow else os.path.join(os.path.realpath(p.parent), p.name)
 
     def under(p: str, root: Path) -> bool:
         r = os.path.realpath(root)
         return p == r or p.startswith(r + os.sep)
 
-    def refuse(why: str) -> None:
-        raise RuntimeError(f"install invariant: {action.kind} {action.path}: {why}")
-
     if action.kind not in KINDS:
         refuse("unknown kind")
-    where = real(action.path)
-    if not under(where, paths.home):
-        refuse("outside HOME")
+    where = real(action.path, follow=action.kind == "edit-hyprland")
     if under(where, paths.repo):
         refuse("inside the repository")
-    for protected in (paths.config_home / "umbriel", paths.state_home / "noctalia"):
+    if not under(where, paths.home):
+        refuse("outside HOME")
+    for protected in (paths.config_home / "umbriel", paths.config_home / "noctalia",
+                      paths.state_home / "noctalia"):
         if under(where, protected):
             refuse("Umbriel or Noctalia files")
-    if action.kind == "edit-hyprland" and action.path != paths.hyprland_lua:
-        refuse("not hyprland.lua")
+    for protected in (paths.config_home / "autostart", paths.data_home / "fonts"):
+        if under(where, protected):
+            refuse("an autostart entry or a font (CLAUDE.md)")
+    if under(where, paths.systemd_user) and where != real(paths.systemd_user / "aptus-recover.service"):
+        refuse("a user unit other than aptus-recover.service")
+    # TODO(S2): refuse the leased slots too, once aptus-lease has its slot table (02 §5).
+    if action.kind == "edit-hyprland" and (action.path != paths.hyprland_lua or (
+            action.target is not None and not under(real(action.target), paths.install_state))):
+        refuse("not hyprland.lua, or its removed lines outside the install state")
     if action.kind == "move" and (action.target is None or not (under(real(action.target), paths.v1_backup)
                                                               or under(real(action.target), paths.install_state))):
         refuse("a move outside the v1 backup and the install state")
-    if action.kind == "link" and action.target is not None and not under(os.path.realpath(action.target), paths.repo):
+    if action.kind == "link" and action.target is not None and not under(real(action.target, follow=True),
+                                                                       paths.repo):
         refuse("a link that does not point into the repository")
 
 
 def v1_leftovers(paths: Paths) -> list[Path]:
     """The v1 files of 11 §4.3 that exist (symlinks into the old repo count even if dangling)."""
-    raise NotImplementedError
+    found: list[Path] = []
+    candidates = [paths.config / "config", paths.config / "hypr", paths.config / "theme"]
+    candidates += [paths.state / n for n in ("color-mode", "hyprland-colors.lua",
+                                              "hyprland-look.lua", "hyprland-look.lua.before",
+                                              "login-wallpaper", "wallpaper", "snapshots")]
+    candidates += [paths.local_bin / n for n in ("aptus-ai-usage", "aptus-packages",
+                                                  "aptus-settings-watchdog", "aptus-theme-apps")]
+    for path in candidates:
+        if os.path.lexists(path):
+            found.append(path)
+    # v1's settings.json has no "v" key; a v2 file (or one that does not parse) stays.
+    try:
+        settings = json.loads(paths.settings.read_text(encoding="utf-8"))
+        if isinstance(settings, dict) and "v" not in settings:
+            found.append(paths.settings)
+    except (OSError, ValueError):
+        pass
+    return found
 
 
-# TODO(phase): ~/.config/hypr is a stow link into ~/dotfiles: plan() shows the resolved path of the
-#   aptus link (an untracked file in the dotfiles repo) and asks for it as its own group.
 def plan(paths: Paths) -> list[Action]:
     """Directories (state, scope mirrors, ~/.local/bin), links (~/.config/hypr/aptus → hypr/,
     ~/.local/bin/aptus* → bin/), v1 leftovers to move, the hyprland.lua edit."""
-    raise NotImplementedError
+    actions: list[Action] = []
+    for d in (paths.config, paths.state, paths.install_state, paths.hypr_state, paths.scope,
+              paths.scope / "kitty", paths.scope / "yazi", paths.local_bin, paths.hypr_config_dir):
+        if not d.is_dir():
+            actions.append(Action("mkdir", d, detail="create"))
+    links = [(paths.hypr_aptus_link, paths.hypr_repo)]
+    links += [(paths.local_bin / f.name, f) for f in sorted(paths.bin.iterdir())
+              if f.name.startswith("aptus") and f.is_file()]
+    stamp = time.strftime("%Y-%m-%d")
+    backup = paths.v1_backup / stamp
+    for link, target in links:
+        if link.is_symlink() and Path(os.readlink(link)) == target:
+            continue
+        if link.is_symlink():
+            actions.append(Action("link", link, target,
+                                  detail=f"re-point (was → {os.readlink(link)})"))
+            continue
+        if os.path.lexists(link):        # a real file or folder: moved aside, never replaced
+            actions.append(Action("move", link, backup / link.relative_to(paths.home),
+                                  detail="in the way of the link", approval="v1"))
+        actions.append(Action("link", link, target, detail="create"))
+    for leftover in v1_leftovers(paths):
+        actions.append(Action("move", leftover, backup / leftover.relative_to(paths.home),
+                              detail="v1 leftover", approval="v1"))
+    if paths.hyprland_lua.is_file():
+        edit = hyprlua.plan_install(paths.hyprland_lua.read_text(encoding="utf-8"))
+        if edit.new_text != edit.original:
+            actions.append(Action(
+                "edit-hyprland", paths.hyprland_lua,
+                detail=(f"remove {len(edit.removals)} Noctalia line(s)"
+                        + ("" if edit.block_present else ", append the aptus block")),
+                approval="hyprland"))
+    return actions
 
 
 def plan_uninstall(paths: Paths) -> list[Action]:
-    raise NotImplementedError
+    # Action has no "remove" kind: a link action without target removes the link, and a folder
+    # aptus filled (scope mirrors) is moved into install_state instead of being deleted.
+    actions: list[Action] = []
+    links = [paths.hypr_aptus_link] + [paths.local_bin / f.name for f in sorted(paths.bin.iterdir())
+                                       if f.name.startswith("aptus")]
+    for link in links:
+        if link.is_symlink() and inside(link.parent / os.readlink(link), paths.repo):
+            actions.append(Action("link", link, None, detail="remove the link into the repo"))
+    if paths.scope.exists():
+        actions.append(Action("move", paths.scope,
+                              paths.install_state / f"uninstalled-{time.strftime('%Y-%m-%d')}" / "scope",
+                              detail="scope mirrors (02 §11)"))
+    if paths.hyprland_lua.is_file():
+        text = paths.hyprland_lua.read_text(encoding="utf-8")
+        removed_file = paths.install_state / "removed.lua"
+        removed = (hyprlua.parse_removed(removed_file.read_text(encoding="utf-8"))
+                   if removed_file.is_file() else [])
+        if hyprlua.BLOCK_BEGIN in text.splitlines():
+            actions.append(Action("edit-hyprland", paths.hyprland_lua, removed_file,
+                                  detail="remove the aptus block", approval="hyprland"))
+        if removed:
+            actions.append(Action("edit-hyprland", paths.hyprland_lua, removed_file,
+                                  detail=f"put back the {len(removed)} Noctalia line(s) install removed",
+                                  approval="restore"))
+    return actions
 
 
 def describe(actions: Sequence[Action]) -> str:
-    raise NotImplementedError
+    home = str(Path.home())
+
+    def short(p: Path | None) -> str:
+        s = str(p)
+        return "~" + s[len(home):] if s == home or s.startswith(home + "/") else s
+
+    out = []
+    for a in actions:
+        if a.kind == "link" and a.target is None:
+            out.append(f"  unlink {short(a.path)}  ({a.detail})")
+        elif a.kind in ("link", "move"):
+            arrow = "→" if a.kind == "link" else "⇒"
+            out.append(f"  {a.kind:<6} {short(a.path)} {arrow} {short(a.target)}  ({a.detail})")
+        elif a.kind == "edit-hyprland":
+            out.append(f"  edit   {short(a.path)}  ({a.detail})")
+        else:
+            out.append(f"  {a.kind:<6} {short(a.path)}  ({a.detail})")
+    return "\n".join(out)
 
 
-# TODO(phase): apply refuses to write through a symlink (a test once overwrote <repo>/bin/aptus
-#   through ~/.local/bin/aptus); links are replaced, never written into.
 def apply(paths: Paths, actions: Sequence[Action]) -> None:
     """Carry out approved actions (backups first: hyprland.lua.<date> in install_state)."""
+    stamp = time.strftime("%Y-%m-%d-%H%M%S")
+    restore = any(a.kind == "edit-hyprland" and a.approval == "restore" for a in actions)
+    edited = False
     for action in actions:
         check_action(paths, action)
-    raise NotImplementedError
+    for a in actions:
+        if a.kind == "mkdir":
+            a.path.mkdir(parents=True, exist_ok=True)
+        elif a.kind == "link" and a.target is None:
+            if a.path.is_symlink():
+                a.path.unlink()
+        elif a.kind == "link":
+            if os.path.lexists(a.path) and not a.path.is_symlink():
+                raise FileExistsError(f"{a.path} is in the way of the link (not moved aside)")
+            a.path.parent.mkdir(parents=True, exist_ok=True)
+            atomic.symlink(a.target, a.path)
+        elif a.kind == "move":
+            if os.path.lexists(a.target):
+                raise FileExistsError(f"{a.target} exists already; nothing was moved")
+            a.target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.move(str(a.path), str(a.target))
+        elif a.kind == "edit-hyprland" and not edited:
+            edited = True                     # remove-block and restore are one edit
+            text = a.path.read_text(encoding="utf-8")
+            paths.install_state.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(a.path, paths.install_state / f"hyprland.lua.{stamp}")
+            removed_file = paths.install_state / "removed.lua"
+            if a.target is None:              # install
+                edit = hyprlua.plan_install(text)
+                if edit.removals:
+                    if removed_file.exists():
+                        removed_file.rename(paths.install_state / f"removed.lua.{stamp}")
+                    atomic.write_text(removed_file, hyprlua.removed_lua(edit.removals))
+            else:                             # uninstall, optionally putting the lines back
+                removed = (hyprlua.parse_removed(removed_file.read_text(encoding="utf-8"))
+                           if removed_file.is_file() else [])
+                edit = hyprlua.plan_uninstall(text, removed, restore)
+            atomic.write_text(a.path, edit.new_text)
 
 
 def main(argv: Sequence[str]) -> int:
     """install.sh [--uninstall]: list, ask per group, apply. Every group needs its own "y"."""
-    raise NotImplementedError
+    args = list(argv)
+    if args not in ([], ["--uninstall"]):
+        print("usage: install.sh [--uninstall]", file=sys.stderr)
+        return 2
+    p = get()
+    uninstall = args == ["--uninstall"]
+    actions = plan_uninstall(p) if uninstall else plan(p)
+    if not actions:
+        print("Nothing to do.")
+        return 0
+    titles = {"": "Uninstall: links and scope mirrors" if uninstall else
+              "Base install: folders and links into the repo",
+              "v1": "Move v1 leftovers (never deleted) to " + str(p.v1_backup),
+              "hyprland": "Edit ~/.config/hypr/hyprland.lua (backup first)",
+              "restore": "Put the removed Noctalia lines back into hyprland.lua"}
+    approved: list[Action] = []
+    text = p.hyprland_lua.read_text(encoding="utf-8") if p.hyprland_lua.is_file() else ""
+    for group in ("", "v1", "hyprland", "restore"):
+        members = [a for a in actions if a.approval == group]
+        if not members:
+            continue
+        if group == "restore" and any(a.approval == "hyprland" for a in actions) \
+                and not any(a.approval == "hyprland" for a in approved):
+            continue                          # putting lines back implies removing the block
+        print(f"\n{titles[group]}:")
+        print(describe(members))
+        if group == "hyprland" and not uninstall:
+            print(hyprlua.diff(hyprlua.plan_install(text)))
+        elif group in ("hyprland", "restore"):
+            removed_file = p.install_state / "removed.lua"
+            removed = (hyprlua.parse_removed(removed_file.read_text(encoding="utf-8"))
+                       if removed_file.is_file() else [])
+            base = hyprlua.plan_uninstall(text, removed, False)
+            shown = base if group == "hyprland" else hyprlua.Plan(
+                original=base.new_text,
+                new_text=hyprlua.plan_uninstall(text, removed, True).new_text)
+            print(hyprlua.diff(shown))
+        try:
+            answer = input("Apply? [y/N] ").strip().lower()
+        except EOFError:
+            answer = ""
+        if answer in ("y", "yes"):
+            approved += members
+        else:
+            print("Skipped.")
+    if not approved:
+        print("\nNothing changed.")
+        return 0
+    apply(p, approved)
+    print("\nDone.")
+    return 0

@@ -14,7 +14,7 @@ The work log for aptus v2, from stage S0 on. The v1 log is in the `v1-final` tag
 | Wave | Stages | State |
 |---|---|---|
 | 0 | S0 probes | P-01, P-03, P-11, P-23 pass; P-14 half; the rest run with their stage |
-| 1 | S1 Foundation | next |
+| 1 | S1 Foundation | phases 1–7 done; wave-1 review next |
 | 2 | S2 Isolation ‖ S3 Bar and notch | — |
 | 3 | S4 Spotlight ‖ S5 Deck ‖ S6 Session ‖ S7 Windows | — |
 | 4 | S8 Time and attention ‖ S9 Capture ‖ S10 Settings and gallery | — |
@@ -455,7 +455,8 @@ appears within ~2.5 s; the scratch terminal floats below the bar.
   paletteName)`; rules.js helpers (`isCard` … `findEntry`), `tick`, a trailing `now` on
   openMenu/closeMenu/addMonitor/removeMonitor/setActive/setLocked/setFullscreen/
   setSettingsFocused, `expire(m, now, limits)`, arbitrate `opts.limits` (no `recording`);
-  `sun.eventMinutes`/`at`/`RAD`; `format.pad2`; `colour.round8` (the probe's OKLab `colour.mix` is not kept: Tokens blends linearly, nothing else used it);
+  `sun.eventMinutes`/`at`/`RAD`; `format.pad2`; `colour.round8`, public `colour.mix` (OKLab; `over`/`toward` build on it, Tokens' crossfade
+  blends linearly);
   `bulge.num`; QML helpers `Config._store`, `Paths._xdg`, `SurfaceManager._syncActive`, Tokens
   `_colours`/`_shown`/`_mix`/`_blend`/`_updateAuto`, Hypr `_client`/`_target`/`_refresh`,
   Wallpaper `_list`, Shortcuts `_activeNotch`/`_spotlightScope`, WallpaperLayer
@@ -506,7 +507,8 @@ syntax errors; tokens.json valid. **Fixed:**
 - Toasts also queue behind Overview and Capture: written into 07 §5 and notch.md §9 (the spec
   named only interactive notch modes).
 - 07 §5 passive entry gains `key`, `shown`, `waited`; Tokens comments name `_themeMs`, not Motion;
-  one blend for the crossfade (linear, Tokens._mix), the unused OKLab `colour.mix` dropped.
+  one blend for the crossfade (linear, Tokens._mix). (The review fix also dropped `colour.mix`
+  as unused; phase 7 found `over`/`toward` use it and restored it.)
 - ComponentShared gets `_glyphFont` (a QtObject has no default property for a FontLoader child).
 - `cardHeightMin` → `resultCardHeight` (Progress cards are 80, so "min" was wrong).
 - Ring/Thumb TODOs name `thickness`/`radius`; `fullscreenMonitors` moved to SurfaceManager's public
@@ -551,3 +553,75 @@ plan, and refuses a write through a link into the repo and a move out of `~/.con
 **Not asserted, on purpose:** Tokens.apply's input (current/shell.json comes from outside, so it is
 validated and ignored when malformed, not asserted); `activeMonitor ∈ monitors` (Hyprland can
 report the focus before the monitor list).
+
+### Review of phase 6 (fresh reviewer, diff `d881f03..86ce7e5`; fixed in phase 7)
+
+| Finding | Resolution |
+|---|---|
+| "Overview ⇒ notch at rest" has no spec rule behind it (polkit is "above everything") | Kept: "Overview alone" (05 §2) and the code close Overview when an interactive mode opens; the rule is now a row of 07 §5. Cards and the Keys peek are refused under Overview. |
+| "locked ⇒ no menu or capture" has no spec rule | Kept and specified (07 §5 row "lock"): lock closes menus and Capture at once, everything else stays under the lock. |
+| Capture "all monitors or none" breaks on a hot-plugged monitor | Real bug (`addMonitor` would have thrown). A monitor added during the selection cancels it (07 §5, capture.md §7); a removed one drops out. Test added. |
+| Missing: capture beside Spotlight/notch modes, polkit in the queue, queue entries unchecked | Added. Capture now closes menus, interactive notch modes, Deck and Overview first unless `includeShell` (capture.md §7, made explicit); never beside polkit; the queue holds no polkit request and every entry passes `checkRequest`. |
+| `~/.config/noctalia`, autostart, fonts, user units not protected | Added to `check_action` (leased slots: `TODO(S2)`, the slot table is S2's). |
+| A link onto a real file, a move onto an existing target | Already refused by `apply()` at run time; `check_action` is the plan check, where the file in the way still exists (plan() moves it first), so it cannot refuse there. Documented. |
+| `edit-hyprland`'s removed-lines file not bound to the install state | Added. |
+| `..` gets around the HOME check; relative link targets resolve against the cwd | Fixed: paths must be absolute and normalised. |
+| An edit writes through a hyprland.lua link | Fixed: edits resolve the full path (a link into the repo is refused). |
+| Queue drop on polkit-monitor removal not in the spec | Added to 07 §5: the prompt moves to the active monitor, the queue stays; with no monitor left the request is cancelled and the queue dropped. |
+| Non-string notch → TypeError, not an invariant | Fixed (`legalNotch` uses `isCard`, which checks the type). |
+| A bad state wedges SurfaceManager | Rejected: `finish()` checks every result before SurfaceManager applies it, so a broken state is never stored; a throwing operation leaves the old state. |
+| supervise comment says "never give up" | Fixed. |
+| Only one valid baseline in the tests; reasons not pinned | 7 allowed states and 15 more forbidden ones in `tst_rules`; `test_check_action_refuses` pins each reason (18 cases, plus the `..`, prefix-sibling, relative and link cases). |
+
+### Phase 7 · implementation (2026-11-07/08)
+
+**How:** the phase-5 probe (branch `s1-probe`, kept as a reference, never merged) was squash-merged
+onto phase 6, every conflict taken from the probe; then everything phase 5 and 6 decided that the
+probe lacked was applied on top:
+- JS libraries: probe bodies under phase 6's checks (`finish()` now runs `checkState` on every
+  result); the decisions of the phase-6 review above; `colour.mix` kept (used by `over`/`toward`).
+- Python: `check_action` runs over the whole plan before `apply()` does anything; the supervisor's
+  delay follows the crash streak (crashes at 0, 6, 12 s wait 0.5, 1, 2 s; a run of ≥ 10 s starts a
+  new streak), the slow retry still counts crashes in the window; `crashes.started` set per start.
+- QML: `Hypr.fullscreenMonitors` is a list (bound directly, and also applied to a monitor that
+  appears later); `Session.canLock` readonly; `available` flags on Focus, Dnd, Capture, Jot with Ipc
+  answering "error: <x> is not available yet"; Theme's setters write Config (S1 part, logs a
+  refusal); Glyph is an Item with two Texts and the swap crossfade (0.8 → 1, plain crossfade with
+  reduced motion); `disabledReason` on Button and IconButton (faint, no wash, no click, tooltip says
+  why); `Motion.catalogueMs(path, out)` used by Menu, MenuHost, Scrim, Ellipsis, Frame, MonitorShell;
+  card heights from `surfaces.notch.cardHeights`/`resultCardHeight`; MonitorShell registers the
+  Deck's and Overview's `back()`; Notch's back registration is `TODO(S3)`, Tokens' `shell.json`
+  watch `TODO(S2)`.
+- **New type phase 5 did not find:** `components/Choreographed.qml`, the base of NotchMode and
+  Drawer for the content choreography of 04 §3 rule 1 (content from 60 ms over `fade`, rising
+  8 px; on exit out first over 100 ms; a plain crossfade with reduced motion). One base instead of
+  the same states/transitions in both.
+- Tests and tooling: `tests/lint.sh` (qmllint over shell/ incl. the JS libraries, `--max-warnings
+  0`; checked that a warning fails it); `tests/qml/mkmock.py` builds the import dir qmltestrunner
+  needs (own minimal Quickshell doubles, qs.core doubles, the real components, Tokens/Motion without
+  their Quickshell parts) and `tests/run` uses it; `tst_components` ported from the probe's smoke
+  tests (14 functions plus Glyph swap, `disabledReason`, choreography); `test_binds_lua` runs
+  `hypr/binds.lua` under luajit with a stub `hl` (every route bound, lock through exec with its
+  fallback, hardware keys `locked`, each chord unbound once before its first bind, overrides
+  apply); `nested.py stop` removes a killed nested session's runtime dir (never the real one).
+- Repo: `README.md` rewritten for v2 (11 §4.5); `CLAUDE.md` status lines; `.gitignore`
+  (`__pycache__/`, `.pytest_cache/`, v1's lint file dropped); tracked `.pyc` files removed; main's
+  doc comments restored where the probe had dropped or weakened them.
+- Spec, same commit: 07 §5 four rows (interactive mode vs Overview, lock, polkit monitor removed,
+  monitor added during Capture); capture.md §7 (what closes before the freeze, `includeShell`,
+  polkit, hot-plug).
+
+**Checked:**
+- `tests/run`: pytest 88 passed; qmltestrunner 131 passed (rules 41, components 19, the rest
+  unchanged); lint 117 files, 0 warnings.
+- `pytest tests/e2e` in a nested Hyprland: 9/9 (start, global shortcuts listed, state JSON, open +
+  back, reserve zone, mask click-through, `configerrors` empty, no deprecated options, screenshot).
+- By hand in a nested session: `shell state` lists the services; `theme mode light` switches the
+  frame to Linen through Config (screenshot), back to dark; `focus stop` and `capture region`
+  answer "error: … is not available yet"; `surface open deck` + `surface back` closes the Deck
+  through the registered back step; no warnings in the shell log except the portal app-ID notice
+  of the nested session.
+- No `TODO(phase)` left; remaining TODOs name their stage.
+
+**Open:** Deck, Overview, notch modes are their stages' stubs, so the choreography is covered by
+tests, not seen on screen yet. The physical-key check of P-01 stays for Lenno's hands-on round.

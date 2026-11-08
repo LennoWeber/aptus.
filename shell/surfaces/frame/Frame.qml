@@ -3,14 +3,10 @@
 import QtQuick
 import qs.core
 import qs.components
+import QtQuick.Effects
 
 Item {
     id: root
-
-    // TODO(phase): Bulge { bulges, frameWidth/Height, edge: Tokens.frameEdge × introProgress, barHeight,
-    //   innerRadius: Tokens.frameInnerRadius } in ground (groundAlpha), 1 px frameLine, drawer shadow.
-    // TODO(phase): hide → 1 while `hidden && !revealed`, else 0, over M-31's catalogue
-    //   fullscreen.out (exit 180) and fullscreen.in (enter 240), not the surface timings.
 
     property MonitorState monitor
     // The drawers' bulges (BulgeSpec), drawn as dents in the content area's outline.
@@ -22,9 +18,58 @@ Item {
     // The hot edge brought the bar back over the fullscreen window.
     property bool revealed: false
     // How far the frame is slid out (0 shown, 1 hidden), animated.
-    property real hide: 0
+    property real hide: hidden && !revealed ? 1 : 0
+    Behavior on hide {
+        id: hideBehavior
+        NumberAnimation {
+            // M-31: out with `exit` 180, back with `enter` 240
+            duration: Motion.catalogueMs("fullscreen", hideBehavior.targetValue > 0.5)
+            easing.type: Easing.BezierSpline
+            easing.bezierCurve: hideBehavior.targetValue > 0.5 ? Motion.exit : Motion.enter
+        }
+    }
 
     // Current thicknesses: the intro grows them (M-01), fullscreen slides them out (M-31).
-    readonly property real edgeNow: 0
-    readonly property real barNow: 0
+    readonly property real edgeNow: Tokens.frameEdge * introProgress * (1 - hide)
+    readonly property real barNow: Tokens.barHeight * introProgress * (1 - hide)
+
+    opacity: 1 - hide
+
+    // The drawer shadow: the open bulge bodies in the shadow colour, blurred and offset (03 §6).
+    // (A blurred copy instead of MultiEffect's shadow, which would also draw the bodies themselves
+    // and show through glass.)
+    Bulge {
+        id: bodies
+        visible: false
+        frameWidth: root.width
+        frameHeight: root.height
+        edge: root.edgeNow
+        barHeight: root.barNow
+        innerRadius: Tokens.frameInnerRadius
+        bulges: root.bulges
+        bodiesOnly: true
+        colour: Tokens.shadow
+    }
+    MultiEffect {
+        source: bodies
+        width: bodies.width
+        height: bodies.height
+        y: Tokens.shadowOffsetY
+        visible: bodies._specs.length > 0
+        blurEnabled: true
+        blur: 1
+        blurMax: Tokens.shadowBlur
+        autoPaddingEnabled: true
+    }
+    Bulge {
+        frameWidth: root.width
+        frameHeight: root.height
+        edge: root.edgeNow
+        barHeight: root.barNow
+        innerRadius: Tokens.frameInnerRadius
+        bulges: root.bulges
+        colour: Tokens.alpha(Tokens.ground, Tokens.groundAlpha)
+        lineColour: Tokens.frameLine
+        lineWidth: Tokens.frameLineWidth
+    }
 }

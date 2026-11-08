@@ -174,11 +174,15 @@ Transition rules (enforced here, not in surfaces):
 | open a notch mode | the Deck is open | Deck closes (exit), notch mode opens (hero) |
 | open the Deck | an interactive notch mode is open | that mode closes, Deck opens |
 | open Overview | anything | everything else closes first (exit timelines run concurrently) |
+| open an interactive notch mode | Overview is open | Overview closes, the mode opens ("Overview alone"); cards and the Keys peek are refused |
 | open anything | locked | refused, except media keys/OSD, which render on the lock surface |
+| lock | a menu or Capture is open | they close at once (a recording stops and saves first, [session.md](surfaces/session.md) §1); everything else stays open under the lock |
 | open anything except polkit | polkit open | queued until polkit closes |
 | post a toast | an interactive notch mode, Overview or Capture is open | queued; shown on close if younger than 30 s, else Today only |
 | post an OSD | anything | OSD wins over toasts (toast pauses its timer and resumes) |
 | monitor removed | surfaces open on it | closed without animation |
+| monitor removed | the polkit prompt is on it | the prompt moves to the active monitor without animation and the queue stays; with no monitor left the request is cancelled and the queue is dropped |
+| monitor added | Capture is open | the selection is cancelled (as `Esc`): the new monitor has no frozen frame |
 | active monitor changes | a notch mode open on the old one | closed (Spotlight rule); passive content stays |
 
 Cards and the Keys peek are notch states but not *interactive* surfaces: they do not queue toasts
