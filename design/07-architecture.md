@@ -183,7 +183,7 @@ Transition rules (enforced here, not in surfaces):
 | monitor removed | surfaces open on it | closed without animation |
 | monitor removed | the polkit prompt is on it | the prompt moves to the active monitor without animation and the queue stays; with no monitor left the request is cancelled and the queue is dropped |
 | monitor added | Capture is open | the selection is cancelled (as `Esc`): the new monitor has no frozen frame |
-| active monitor changes | a notch mode open on the old one | closed (Spotlight rule); passive content stays |
+| active monitor changes | a notch mode or a card open on the old one | closed (Spotlight rule; cards show only on the active monitor, [05](05-interaction.md) §7); passive content (toasts, OSD, events) stays |
 
 Cards and the Keys peek are notch states but not *interactive* surfaces: they do not queue toasts
 or catch outside clicks, and a pinned card yields to OSD, toasts and events (arbitration of

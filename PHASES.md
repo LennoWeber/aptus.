@@ -650,3 +650,21 @@ tests, not seen on screen yet. The physical-key check of P-01 stays for Lenno's 
 **Checked:** `tests/run`: pytest 93 passed, qmltestrunner 154 passed (rules 44, components 19,
 config 24, configsingleton 7, surfacemanager 7, tokens 5, the rest unchanged), lint 117 files,
 0 warnings; `pytest tests/e2e`: 10/10. Each new test was run against the old code once and failed.
+
+### Wave-1 review (`/code-review high`, diff `f579932..a1ffada`)
+
+| Finding | Resolution |
+|---|---|
+| A second `install.sh` with new removals replaces `removed.lua`, so uninstall loses the first install's Noctalia lines | Fixed: the record grows (the old one is kept as `removed.lua.<stamp>`); a line removed again replaces its old entry, so it is put back once. `test_second_install_keeps_earlier_removals`; `test_uninstall_plan` caught the double-restore case on the way. |
+| `wallpaper next` without an own image on the focused monitor wipes every monitor's own image (and is hidden behind `byMode`) | Fixed per wallpaper.md §6: `next` changes `all` only, monitors with their own image keep it (`byMode` still wins, as the resolution order says). e2e `test_wallpaper_next_keeps_monitor_images`. |
+| A key used by two kinds (OSD "volume", toast "volume") throws in `finish()` | Fixed: `post()` coalesces per kind and key, so the invariant is per kind too. Test extended (failed before). |
+| The hyprland.lua edit replaces a symlinked hyprland.lua with a copy | Fixed: read, back up and write the file the link leads to (the one `check_action` checked). `test_edit_follows_a_link`. Lenno's file is a plain file today. |
+| `Config._save()` races `Paths.ensureDir` (fire-and-forget mkdir) | Rejected as a bug: Quickshell 0.3.2's FileView creates missing folders on write (tested: `setText` into `a/b/x.json` under a fresh folder saves). `ensureDir` was redundant and is removed (Config, Wallpaper, Paths, the mock). |
+| `shell restart` quits even when the flag was not written; the supervisor then ends | Fixed: the flag is written through a FileView and the shell quits on `saved` only (a failure is logged, the shell keeps running). No `sh` any more. e2e `test_shell_restart`. |
+| `_apply` reassigns `passive`, `passiveTop`, `deckPages` on every operation (the 500 ms tick) | Fixed: fields are compared by content two levels deep (payloads and menu callbacks by reference). `test_unchanged_fields_fire_nothing` (failed before). |
+| `setActive` closes activity cards on the old monitor, but "passive content stays" | Rejected: cards show only on the active monitor (05 §7); "passive content" in 07 §5 is the toast/OSD/event queue. Made explicit in the 07 §5 row and the code comment; a test covers the card case. |
+| Without `XDG_RUNTIME_DIR`, Paths.qml and paths.py disagree on the runtime folder | Fixed: paths.py falls back to `$HOME/.aptus-run` as Paths.qml does (QML cannot know the uid); Hyprland's sockets stay under `/run/user/<uid>`. `test_paths` updated. |
+| M-28's wallpaper scale 1.02 is a literal | Fixed: `motion.catalogue.wallpaper.scaleFrom` (1 with reduced motion). |
+
+**Checked:** `tests/run`: pytest 95, qmltestrunner 155, lint 117 files 0 warnings; `pytest
+tests/e2e`: 12/12.

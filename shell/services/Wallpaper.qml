@@ -35,26 +35,30 @@ Singleton {
         if (st.all) return st.all;
         return images.length ? images[0].path : "";
     }
-    // Set the wallpaper of one monitor, or of every monitor when monitor is "" (IPC `wallpaper set`).
+    // Set the wallpaper of one monitor, or of every monitor when monitor is "" (IPC `wallpaper set`;
+    // own images of single monitors are dropped then).
     function set(path: string, monitor: var): void {
         const st = JSON.parse(JSON.stringify(state || {}));
-        st.v = 1;
-        st.monitors = st.monitors || {};
         const p = Paths.expand(String(path));
-        if (monitor) st.monitors[String(monitor)] = p;
+        if (monitor) { st.monitors = st.monitors || {}; st.monitors[String(monitor)] = p; }
         else { st.all = p; st.monitors = {}; }
-        state = st;
-        Paths.ensureDir(Paths.state);
-        stateView.setText(JSON.stringify(st, null, 2) + "\n");
+        _write(st);
     }
-    // The next image in wallpaper.dir for the active monitor (IPC `wallpaper next`; rotation is S10).
+    // The next image in wallpaper.dir after `all` (IPC `wallpaper next`, Spotlight "Next
+    // wallpaper"): like a rotation step it changes `all` only, monitors with their own image keep
+    // it (wallpaper.md §6; the shuffled rotation order is S10's).
     function next(): void {
         if (!images.length) return;
-        const mon = Hypr.focusedMonitor;
-        const cur = pathFor(mon);
-        const i = images.findIndex(im => im.path === cur);
-        const n = images[(i + 1) % images.length].path;
-        set(n, state && state.monitors && state.monitors[mon] ? mon : "");
+        const st = JSON.parse(JSON.stringify(state || {}));
+        const i = images.findIndex(im => im.path === (st.all || images[0].path));
+        st.all = images[(i + 1) % images.length].path;
+        _write(st);
+    }
+    // Store and persist wallpaper.json (FileView creates a missing folder itself).
+    function _write(st: var): void {
+        st.v = 1;
+        state = st;
+        stateView.setText(JSON.stringify(st, null, 2) + "\n");
     }
 
     // wallpaper.dir, expanded (the folder FolderListModel watches).

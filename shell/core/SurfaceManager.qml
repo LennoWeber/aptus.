@@ -192,7 +192,7 @@ Singleton {
             }
             const src = result.monitors[n];
             // args before the mode, so a surface reacting to `notch` sees its new args
-            for (const f of _fields) if (m[f] !== src[f]) m[f] = src[f];
+            for (const f of _fields) if (!_same(m[f], src[f])) m[f] = src[f];
         }
         for (const n in map) if (!(n in result.monitors)) {
             if (!changed) { map = Object.assign({}, map); changed = true; }
@@ -206,6 +206,21 @@ Singleton {
             else if (e.kind === "settingsFocus") settingsFocusRequested();
             else Log.info("surface", e.kind + " " + e.surface + (e.monitor ? " on " + e.monitor : ""));
         }
+    }
+    // rules.js copies passive, deckPages and builds passiveTop anew on every operation: compare
+    // plain objects and arrays by content, two levels deep (a passive entry's payload, a menu's
+    // callback by reference), so an unchanged field fires no change signal (the 500 ms tick).
+    function _same(a: var, b: var): bool {
+        return _sameAt(a, b, 2);
+    }
+    function _sameAt(a: var, b: var, depth: int): bool {
+        if (a === b) return true;
+        if (depth === 0 || !a || !b || typeof a !== "object" || typeof b !== "object"
+                || Array.isArray(a) !== Array.isArray(b)) return false;
+        const ka = Object.keys(a), kb = Object.keys(b);
+        if (ka.length !== kb.length) return false;
+        for (const k of ka) if (!(k in b) || !_sameAt(a[k], b[k], depth - 1)) return false;
+        return true;
     }
     // Plain-object snapshot of the current state for rules.js.
     function _snapshot(): var {

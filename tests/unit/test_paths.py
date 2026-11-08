@@ -19,7 +19,9 @@ def test_xdg_defaults() -> None:
     assert p.state_home == home / ".local/state"
     assert p.cache_home == home / ".cache"
     assert p.data_home == home / ".local/share"
-    assert p.runtime_home == Path(f"/run/user/{os.getuid()}")
+    # no XDG_RUNTIME_DIR: the flags go where Paths.qml puts them (it cannot know the uid)
+    assert p.runtime_home == home / ".aptus-run"
+    assert p.hypr_runtime == Path(f"/run/user/{os.getuid()}/hypr")
     assert p.config == home / ".config/aptus"
     assert p.state == home / ".local/state/aptus"
     assert p.settings == home / ".config/aptus/settings.json"
@@ -27,7 +29,7 @@ def test_xdg_defaults() -> None:
     assert p.hyprland_lua == home / ".config/hypr/hyprland.lua"
     assert p.hypr_aptus_link == home / ".config/hypr/aptus"
     assert p.v1_backup == home / ".local/state/aptus-v1-backup"
-    assert p.runtime == Path(f"/run/user/{os.getuid()}/aptus")
+    assert p.runtime == home / ".aptus-run/aptus"
     assert p.restart_flag == p.runtime / "restart"
     assert p.intro_flag_prefix == p.runtime / "intro."
 

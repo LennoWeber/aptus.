@@ -154,6 +154,10 @@ TestCase {
         r = o(r, "polkit")
         r = R.setActive(r.monitors, r.global, "A", 1000)
         compare(r.monitors.B.notch, "polkit")       // polkit stays
+        // a card closes too: cards show only on the active monitor (05 §7)
+        r = o(fresh(), "card:timer", { pinned: true })
+        r = R.setActive(r.monitors, r.global, "B", 1000)
+        compare(r.monitors.A.notch, "rest")
     }
     function test_back_ladder_menu_first() {
         var r = o(fresh(), "spotlight")
@@ -281,6 +285,10 @@ TestCase {
         compare(r.monitors.A.passive[0].born, 1500)
         r = p(r, "osd", { value: 1 }, 0, 1600, "brightness")
         verify(r.id !== id)
+        // the same key in another kind is another entry (it does not throw)
+        r = p(r, "toast", { text: "Volume" }, 1, 1700, "volume")
+        verify(r.id !== id)
+        compare(r.monitors.A.passive.filter(e => e.key === "volume").length, 2)
     }
     function test_update_payload() {
         var r = p(fresh(), "toast", { count: 1 }, 1, 1000)

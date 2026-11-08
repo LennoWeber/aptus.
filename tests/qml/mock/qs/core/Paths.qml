@@ -10,5 +10,4 @@ QtObject {
     readonly property string settingsFile: config + "/settings.json"
     function url(path: string): string { return path === "" ? "" : "file://" + path; }
     function expand(path: string): string { return path; }
-    function ensureDir(path: string): void {}
 }

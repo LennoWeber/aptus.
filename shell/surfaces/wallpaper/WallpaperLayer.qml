@@ -43,7 +43,8 @@ PanelWindow {
         if ((_aFront ? imgA : imgB).source.toString() === url) return;
         const back = _aFront ? imgB : imgA;
         back.opacity = 0;
-        back.scale = 1.02;
+        // M-28: the new image settles from motion.catalogue.wallpaper.scaleFrom (none when reduced)
+        back.scale = Motion.reduced ? 1 : (Motion.catalogue.wallpaper ? Motion.catalogue.wallpaper.scaleFrom : 1);
         back.source = url;
     }
     // The back image finished decoding: fade it in, then swap _aFront.

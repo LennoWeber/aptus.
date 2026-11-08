@@ -19,6 +19,24 @@ TestCase {
         SurfaceManager.closeMenu("A");
     }
 
+    SignalSpy { id: passiveSpy; signalName: "passiveChanged" }
+    SignalSpy { id: topSpy; signalName: "passiveTopChanged" }
+    SignalSpy { id: pagesSpy; signalName: "deckPagesChanged" }
+
+    function test_unchanged_fields_fire_nothing() {
+        verify(SurfaceManager.post("toast", { text: "x" }, 1, "A", "") > 0);
+        const m = SurfaceManager.monitors["A"];
+        for (const spy of [passiveSpy, topSpy, pagesSpy]) { spy.target = m; spy.clear(); }
+        SurfaceManager.close("overview", "B");                         // an operation that changes nothing on A
+        compare(passiveSpy.count, 0);
+        compare(topSpy.count, 0);
+        compare(pagesSpy.count, 0);
+        verify(SurfaceManager.post("toast", { text: "y" }, 1, "A", "") > 0);
+        compare(passiveSpy.count, 1, "a real change still arrives");
+        for (const e of m.passive.slice()) SurfaceManager.dismiss(e.id, "A");
+        compare(m.passive.length, 0);
+    }
+
     function test_lock_closes_menu_and_keeps_working() {
         SurfaceManager.openMenu("A", { anchorX: 0, anchorY: 0, owner: "t", model: [{ label: "X" }] });
         verify(SurfaceManager.monitors["A"].menu !== null);

@@ -2,7 +2,8 @@
 
 Resolved once from the environment. Under APTUS_TEST=1 every XDG directory is derived from HOME
 (inherited XDG_* variables that point outside HOME are ignored) and runtime flags live in
-$HOME/.aptus-run, so a test with a temporary HOME can never write outside it.
+$HOME/.aptus-run, so a test with a temporary HOME can never write outside it (also without
+XDG_RUNTIME_DIR, as in shell/core/Paths.qml).
 """
 from __future__ import annotations
 
@@ -76,7 +77,7 @@ class Paths:
 
 
 ENV_TEST = "APTUS_TEST"
-TEST_RUNTIME = ".aptus-run"     # $HOME/.aptus-run in tests
+TEST_RUNTIME = ".aptus-run"     # $HOME/.aptus-run in tests and without XDG_RUNTIME_DIR
 
 
 def resolve(env: Mapping[str, str] | None = None) -> Paths:
@@ -100,7 +101,9 @@ def resolve(env: Mapping[str, str] | None = None) -> Paths:
     state_home = xdg("XDG_STATE_HOME", home / ".local" / "state")
     cache_home = xdg("XDG_CACHE_HOME", home / ".cache")
     data_home = xdg("XDG_DATA_HOME", home / ".local" / "share")
-    runtime_home = home / TEST_RUNTIME if test else real_runtime
+    # without XDG_RUNTIME_DIR the flags go to $HOME/.aptus-run, as in Paths.qml (which cannot
+    # know the uid), so the shell, the supervisor and the CLI always agree on them
+    runtime_home = home / TEST_RUNTIME if test or not env.get("XDG_RUNTIME_DIR") else real_runtime
 
     config = config_home / "aptus"
     state = state_home / "aptus"

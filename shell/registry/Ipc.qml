@@ -44,7 +44,7 @@ Scope {
             return JSON.stringify(s);
         }
         function restart(): string {
-            restartTouch.running = true;
+            restartFlag.setText("restart\n");
             return "ok";
         }
         function reloadConfig(): string { Config.reload(); return "ok"; }
@@ -207,9 +207,13 @@ Scope {
     }
 
     // `shell restart`: the restart flag makes the supervisor start the shell again at once (07 §10).
-    Process {
-        id: restartTouch
-        command: ["sh", "-c", "mkdir -p \"$(dirname \"$1\")\" && touch \"$1\"", "sh", Paths.restartFlag]
-        onRunningChanged: if (!running) Qt.callLater(Qt.quit)
+    // The shell quits only once the flag is written: an exit 0 without it ends the supervisor.
+    FileView {
+        id: restartFlag
+        path: Paths.restartFlag
+        printErrors: false
+        onSaved: Qt.callLater(Qt.quit)
+        onSaveFailed: error => Log.error("ipc", "shell restart: the restart flag could not be written ("
+                                         + FileViewError.toString(error) + "); the shell keeps running")
     }
 }

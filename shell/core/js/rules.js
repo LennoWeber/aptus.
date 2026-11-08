@@ -74,8 +74,9 @@ function checkState(monitors, global) {
             ids[e.id] = true
             invariant(e.id <= global.passiveSerial, names[i] + ": passive id beyond passiveSerial")
             if (e.key) {
-                invariant(!keys[e.key], names[i] + ": passive key " + e.key + " twice")
-                keys[e.key] = true
+                // a key coalesces entries of one kind (post() replaces in place): unique per kind
+                invariant(!keys[e.kind + ":" + e.key], names[i] + ": passive " + e.kind + " key " + e.key + " twice")
+                keys[e.kind + ":" + e.key] = true
             }
         }
     }
@@ -468,7 +469,8 @@ function setActive(monitors, global, name, now) {
     var c = begin(monitors, global), g = c.global
     if (g.activeMonitor !== name && c.monitors[name]) {
         var old = c.monitors[g.activeMonitor]
-        // the Spotlight rule (07 §5): a notch mode on the old monitor closes; passive content stays
+        // the Spotlight rule (07 §5): a notch mode on the old monitor closes, a card too (cards
+        // only on the active monitor, 05 §7); passive content (toasts, OSD, events) stays
         if (old && old.notch !== "rest" && old.notch !== "polkit") { closeMenuOn(c, old); closeNotchOn(c, old) }
         g.activeMonitor = name
     }

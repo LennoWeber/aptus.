@@ -85,3 +85,48 @@ def test_no_deprecated_config(nested: Nested) -> None:
 def test_screenshot(nested: Nested) -> None:
     out = nested.screenshot(nested.root / "s1.png")
     assert out.stat().st_size > 1000
+
+
+def test_wallpaper_next_keeps_monitor_images(nested: Nested) -> None:
+    # `wallpaper next` changes `all` only; a monitor's own image stays (wallpaper.md §6).
+    from nested import write_test_png
+    walls = nested.home / "Pictures" / "Wallpapers"
+    write_test_png(walls / "second.png", 320, 180)
+    state = nested.home / ".local" / "state" / "aptus" / "wallpaper.json"
+    mon = nested.state()["global"]["activeMonitor"]
+    own = str(walls / "test.png")
+    assert nested.msg("wallpaper", "set", own, mon) == "ok"
+    nested.wait_for(lambda: state.exists() and json.loads(state.read_text()).get("monitors", {}).get(mon) == own)
+    assert nested.msg("wallpaper", "next") == "ok"
+    nested.wait_for(lambda: json.loads(state.read_text()).get("all"))
+    st = json.loads(state.read_text())
+    assert st["monitors"] == {mon: own}
+    assert st["all"] in (own, str(walls / "second.png"))
+
+
+def test_shell_restart(nested: Nested) -> None:
+    # `shell restart` writes the flag, quits, and the supervisor starts the shell at once (07 §10).
+    from nested import test_processes
+
+    def shells() -> set[int]:
+        out = set()
+        for pid in test_processes(nested.home):
+            try:
+                if Path(f"/proc/{pid}/comm").read_text().strip() in ("qs", "quickshell"):
+                    out.add(pid)
+            except OSError:
+                pass
+        return out
+
+    before = shells()
+    assert before
+    assert nested.msg("shell", "restart") == "ok"
+    nested.wait_for(lambda: shells() and not (shells() & before), 10)
+
+    def answers() -> bool:
+        try:
+            return nested.state()["services"]["config"]["loaded"]
+        except Exception:
+            return False
+    nested.wait_for(answers, 10)
+    assert not (nested.home / ".aptus-run" / "aptus" / "restart").exists()   # the supervisor took it

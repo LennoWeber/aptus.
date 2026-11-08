@@ -251,3 +251,34 @@ def test_restore_happens_once() -> None:
     assert list(p.install_state.glob("removed.lua.restored-*"))
     # a second uninstall has nothing to put back (no duplicate Noctalia lines)
     assert not any(a.approval == "restore" for a in install.plan_uninstall(p))
+
+
+def test_second_install_keeps_earlier_removals() -> None:
+    p = get()
+    p.hyprland_lua.parent.mkdir(parents=True)
+    p.hyprland_lua.write_text(NOCT_LUA)
+    install.apply(p, install.plan(p))
+    first = hyprlua.parse_removed((p.install_state / "removed.lua").read_text())
+    # a Noctalia line comes back (an edit in Umbriel days) and install.sh runs again
+    later = 'hl.bind("SUPER + L", hl.dsp.exec_cmd(lock))\n'
+    p.hyprland_lua.write_text(p.hyprland_lua.read_text() + later)
+    install.apply(p, [a for a in install.plan(p) if a.kind == "edit-hyprland"])
+    record = hyprlua.parse_removed((p.install_state / "removed.lua").read_text())
+    assert record[:len(first)] == first and len(record) == len(first) + 1
+    assert list(p.install_state.glob("removed.lua.2*"))                  # the old record kept
+    install.apply(p, [a for a in install.plan_uninstall(p) if a.kind == "edit-hyprland"])
+    text = p.hyprland_lua.read_text()
+    for line in NOCT_LUA.splitlines() + [later.strip()]:
+        assert text.count(line) == 1, line                              # the first removals too, once
+
+
+def test_edit_follows_a_link() -> None:
+    p = get()
+    dot = p.home / "dotfiles" / "hypr" / "hyprland.lua"
+    dot.parent.mkdir(parents=True)
+    dot.write_text(NOCT_LUA)
+    p.hyprland_lua.parent.mkdir(parents=True)
+    os.symlink(dot, p.hyprland_lua)
+    install.apply(p, install.plan(p))
+    assert p.hyprland_lua.is_symlink() and p.hyprland_lua.resolve() == dot.resolve()
+    assert hyprlua.BLOCK_BEGIN in dot.read_text() and "noctalia" not in dot.read_text()

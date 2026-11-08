@@ -113,7 +113,6 @@ Singleton {
     }
     function _save(): void {
         if (v1File) _backupV1();
-        Paths.ensureDir(Paths.config);
         settingsView.setText(Lib.serialise(overrides, unknown));
         pending = {};
     }

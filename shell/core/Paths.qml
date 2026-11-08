@@ -25,7 +25,7 @@ Singleton {
     readonly property string config: configHome + "/aptus"          // ~/.config/aptus
     readonly property string state: stateHome + "/aptus"           // ~/.local/state/aptus
     readonly property string cache: cacheHome + "/aptus"           // ~/.cache/aptus
-    readonly property string runtime: (test || !Quickshell.env("XDG_RUNTIME_DIR") ? home + "/.aptus-run" : String(Quickshell.env("XDG_RUNTIME_DIR")).replace(/\/+$/, "")) + "/aptus"         // $XDG_RUNTIME_DIR/aptus ($HOME/.aptus-run/aptus in tests)
+    readonly property string runtime: (test || !Quickshell.env("XDG_RUNTIME_DIR") ? home + "/.aptus-run" : String(Quickshell.env("XDG_RUNTIME_DIR")).replace(/\/+$/, "")) + "/aptus"         // $XDG_RUNTIME_DIR/aptus ($HOME/.aptus-run/aptus in tests and without XDG_RUNTIME_DIR, as paths.py)
 
     readonly property string shellDir: String(Quickshell.shellDir).replace(/\/+$/, "")        // <repo>/shell
     readonly property string repo: shellDir.replace(/\/[^/]*$/, "")            // <repo>
@@ -99,6 +99,4 @@ Singleton {
         if (path === "") return "";
         return "file://" + expand(path).split("/").map(encodeURIComponent).join("/");
     }
-    // Create a directory and its parents (Process `mkdir -p`); fire and forget.
-    function ensureDir(path: string): void { Quickshell.execDetached(["mkdir", "-p", expand(path)]); }
 }

@@ -227,21 +227,30 @@ def apply(paths: Paths, actions: Sequence[Action]) -> None:
             shutil.move(str(a.path), str(a.target))
         elif a.kind == "edit-hyprland" and not edited:
             edited = True                     # remove-block and restore are one edit
-            text = a.path.read_text(encoding="utf-8")
+            # the file a link leads to (check_action checked that one): writing the link's own
+            # path would replace the link with a copy
+            lua = a.path.resolve()
+            text = lua.read_text(encoding="utf-8")
             paths.install_state.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(a.path, paths.install_state / f"hyprland.lua.{stamp}")
+            shutil.copy2(lua, paths.install_state / f"hyprland.lua.{stamp}")
             removed_file = paths.install_state / "removed.lua"
             if a.target is None:              # install
                 edit = hyprlua.plan_install(text)
                 if edit.removals:
+                    # a later install adds to the record, so the lines of the first stay
+                    # restorable; a line removed again replaces its old entry (its anchor is the
+                    # current file's), so it is put back once
+                    again = {r.text for r in edit.removals}
+                    earlier = [r for r in (hyprlua.parse_removed(removed_file.read_text(encoding="utf-8"))
+                                           if removed_file.is_file() else []) if r.text not in again]
                     if removed_file.exists():
-                        removed_file.rename(paths.install_state / f"removed.lua.{stamp}")
-                    atomic.write_text(removed_file, hyprlua.removed_lua(edit.removals))
+                        shutil.copy2(removed_file, paths.install_state / f"removed.lua.{stamp}")
+                    atomic.write_text(removed_file, hyprlua.removed_lua(earlier + edit.removals))
             else:                             # uninstall, optionally putting the lines back
                 removed = (hyprlua.parse_removed(removed_file.read_text(encoding="utf-8"))
                            if removed_file.is_file() else [])
                 edit = hyprlua.plan_uninstall(text, removed, restore)
-            atomic.write_text(a.path, edit.new_text)
+            atomic.write_text(lua, edit.new_text)
             if a.target is not None and restore and removed_file.exists():
                 # put back once: a later uninstall must not offer the same lines again
                 removed_file.rename(paths.install_state / f"removed.lua.restored-{stamp}")
