@@ -25,6 +25,19 @@ TestCase {
         }
         compare(d["focus.durations"], [25, 50, 90])
     }
+    // The shared case list (tests/fixtures/validate-cases.json): the same messages as aptus doctor.
+    function test_shared_cases() {
+        var xhr = new XMLHttpRequest()
+        xhr.open("GET", Qt.resolvedUrl("../fixtures/validate-cases.json"), false)
+        xhr.send()
+        var f = JSON.parse(xhr.responseText)
+        for (var i = 0; i < f.cases.length; i++) {
+            var c = f.cases[i], r = Lib.validate(schema, c[0], c[1], f.home, null)
+            var label = schema.keys[c[0]].label || c[0]
+            var msg = r.ok ? null : r.message.replace(new RegExp("^" + label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + ":? "), "")
+            compare(msg, c[2], c[0] + " = " + JSON.stringify(c[1]))
+        }
+    }
     function test_type_checks() {
         verify(!v("appearance.glass", 1).ok)
         verify(v("appearance.glass", true).ok)

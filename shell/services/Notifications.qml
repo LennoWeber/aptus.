@@ -8,6 +8,10 @@ import qs.core
 Singleton {
     id: root
 
+    // False until S3 fills this service; while false, Ipc answers "error: notifications is not
+    // available yet" instead of "ok" (aptus msg exits non-zero).
+    readonly property bool available: false
+
     // Today's list, newest first (≤ notifications.historyMax)
     property var history: []
     property int unread: 0

@@ -191,27 +191,38 @@ def describe(actions: Sequence[Action]) -> str:
     return "\n".join(out)
 
 
+ORDER = {"mkdir": 0, "move": 1, "link": 2, "edit-hyprland": 3}
+
+
 def apply(paths: Paths, actions: Sequence[Action]) -> None:
-    """Carry out approved actions (backups first: hyprland.lua.<date> in install_state)."""
+    """Carry out approved actions (backups first: hyprland.lua.<date> in install_state).
+
+    Everything is checked before anything changes: the invariant of every action, a real file in
+    the way of a link that no approved move clears, a move onto something that exists. Then the
+    actions run folders → moves → links → the hyprland.lua edit, so a file in the way is moved
+    aside before its link is made."""
     stamp = time.strftime("%Y-%m-%d-%H%M%S")
     restore = any(a.kind == "edit-hyprland" and a.approval == "restore" for a in actions)
-    edited = False
     for action in actions:
         check_action(paths, action)
+    moved = {a.path for a in actions if a.kind == "move"}
     for a in actions:
+        if a.kind == "link" and a.target is not None and os.path.lexists(a.path) \
+                and not a.path.is_symlink() and a.path not in moved:
+            raise FileExistsError(f"{a.path} is in the way of the link and is not moved aside; nothing changed")
+        if a.kind == "move" and os.path.lexists(a.target):
+            raise FileExistsError(f"{a.target} exists already; nothing changed")
+    edited = False
+    for a in sorted(actions, key=lambda a: ORDER[a.kind]):
         if a.kind == "mkdir":
             a.path.mkdir(parents=True, exist_ok=True)
         elif a.kind == "link" and a.target is None:
             if a.path.is_symlink():
                 a.path.unlink()
         elif a.kind == "link":
-            if os.path.lexists(a.path) and not a.path.is_symlink():
-                raise FileExistsError(f"{a.path} is in the way of the link (not moved aside)")
             a.path.parent.mkdir(parents=True, exist_ok=True)
             atomic.symlink(a.target, a.path)
         elif a.kind == "move":
-            if os.path.lexists(a.target):
-                raise FileExistsError(f"{a.target} exists already; nothing was moved")
             a.target.parent.mkdir(parents=True, exist_ok=True)
             shutil.move(str(a.path), str(a.target))
         elif a.kind == "edit-hyprland" and not edited:
@@ -231,6 +242,17 @@ def apply(paths: Paths, actions: Sequence[Action]) -> None:
                            if removed_file.is_file() else [])
                 edit = hyprlua.plan_uninstall(text, removed, restore)
             atomic.write_text(a.path, edit.new_text)
+            if a.target is not None and restore and removed_file.exists():
+                # put back once: a later uninstall must not offer the same lines again
+                removed_file.rename(paths.install_state / f"removed.lua.restored-{stamp}")
+
+
+def _aptus_linked(paths: Paths, approved: Sequence[Action]) -> bool:
+    """~/.config/hypr/aptus points into the repo now, or an approved action makes it so."""
+    link = paths.hypr_aptus_link
+    if link.is_symlink() and inside(link.parent / os.readlink(link), paths.repo):
+        return True
+    return any(a.kind == "link" and a.path == link and a.target is not None for a in approved)
 
 
 def main(argv: Sequence[str]) -> int:
@@ -259,6 +281,10 @@ def main(argv: Sequence[str]) -> int:
         if group == "restore" and any(a.approval == "hyprland" for a in actions) \
                 and not any(a.approval == "hyprland" for a in approved):
             continue                          # putting lines back implies removing the block
+        if group == "hyprland" and not uninstall and not _aptus_linked(p, approved):
+            print(f"\n{titles[group]}: skipped, the block requires ~/.config/hypr/aptus, which is"
+                  " not linked (the base install was declined).")
+            continue
         print(f"\n{titles[group]}:")
         print(describe(members))
         if group == "hyprland" and not uninstall:
@@ -280,6 +306,13 @@ def main(argv: Sequence[str]) -> int:
             approved += members
         else:
             print("Skipped.")
+    # a link whose way is blocked by a file the declined v1 group would have moved aside is left out
+    cleared = {a.path for a in approved if a.kind == "move"}
+    blocked = [a for a in approved if a.kind == "link" and a.target is not None and os.path.lexists(a.path)
+               and not a.path.is_symlink() and a.path not in cleared]
+    for a in blocked:
+        print(f"Left out: the link {a.path} (a file is in the way and its move was declined).")
+    approved = [a for a in approved if a not in blocked]
     if not approved:
         print("\nNothing changed.")
         return 0

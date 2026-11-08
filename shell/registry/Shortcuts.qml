@@ -30,6 +30,18 @@ Scope {
         "media-toggle", "media-next", "media-prev"
     ]
 
+    // Surfaces whose stage has not built them yet: their shortcuts only log, so an empty surface
+    // never takes the keyboard with nothing on screen (IPC still opens them, for tests). Each stage
+    // removes its own line.
+    readonly property var notBuilt: [
+        "spotlight",                            // S4
+        "deck",                                 // S5
+        "session",                              // S6
+        "overview",                             // S7
+        "today", "jot", "keys", "keysPeek",     // S8
+        "gallery", "settings"                   // S10
+    ]
+
     // A shortcut fired (the bind's key went down; for `release` binds, up).
     function pressed(name: string): void {
         Log.debug("shortcut", name);
@@ -42,6 +54,12 @@ Scope {
         if (name === "keys-peek" && _activeNotch() === "keysPeek") SurfaceManager.close("keysPeek");
     }
 
+    // False (and a log line) for a surface in notBuilt.
+    function _built(surface: string): bool {
+        if (notBuilt.indexOf(surface) < 0) return true;
+        Log.info("shortcut", surface + ": not available yet");
+        return false;
+    }
     // The notch mode open on the active monitor, "" none.
     function _activeNotch(): string {
         const m = SurfaceManager.monitorState(SurfaceManager.activeMonitor);
@@ -51,7 +69,7 @@ Scope {
     function _spotlightScope(scope: string): void {
         const m = SurfaceManager.monitorState(SurfaceManager.activeMonitor);
         if (m && m.notch === "spotlight" && (m.notchArgs.scope || "") === scope) SurfaceManager.close("spotlight");
-        else SurfaceManager.open("spotlight", { scope: scope });
+        else if (_built("spotlight")) SurfaceManager.open("spotlight", { scope: scope });
     }
 
     // name → action (07 §7).
@@ -64,20 +82,20 @@ Scope {
             if (_activeNotch() === "keysPeek") SurfaceManager.close("keysPeek");
             else if (Config.get("spotlight.superTap")) _spotlightScope("");
         },
-        "keys-peek": () => { if (Config.get("spotlight.superHoldKeys")) SurfaceManager.open("keysPeek", { peek: true }); },
-        "overview": () => SurfaceManager.toggle("overview"),
-        "overview-open": () => SurfaceManager.open("overview"),
+        "keys-peek": () => { if (Config.get("spotlight.superHoldKeys") && _built("keysPeek")) SurfaceManager.open("keysPeek", { peek: true }); },
+        "overview": () => _built("overview") && SurfaceManager.toggle("overview"),
+        "overview-open": () => _built("overview") && SurfaceManager.open("overview"),
         "overview-close": () => SurfaceManager.close("overview"),
         "switcher-next": () => Switcher.next(),
         "switcher-prev": () => Switcher.previous(),
         "switcher-commit": () => Switcher.commit(),
-        "deck": () => SurfaceManager.toggle("deck"),
-        "today": () => SurfaceManager.toggle("today"),
-        "jot": () => SurfaceManager.toggle("jot"),
-        "keys": () => SurfaceManager.toggle("keys"),
-        "gallery": () => SurfaceManager.toggle("gallery"),
-        "session": () => SurfaceManager.toggle("session"),
-        "settings": () => SurfaceManager.toggle("settings"),
+        "deck": () => _built("deck") && SurfaceManager.toggle("deck"),
+        "today": () => _built("today") && SurfaceManager.toggle("today"),
+        "jot": () => _built("jot") && SurfaceManager.toggle("jot"),
+        "keys": () => _built("keys") && SurfaceManager.toggle("keys"),
+        "gallery": () => _built("gallery") && SurfaceManager.toggle("gallery"),
+        "session": () => _built("session") && SurfaceManager.toggle("session"),
+        "settings": () => _built("settings") && SurfaceManager.toggle("settings"),
         "lock": () => Session.lock(),
         "logout": () => Session.logout(),
         "theme-toggle": () => Theme.toggleMode(),

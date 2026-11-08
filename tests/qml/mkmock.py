@@ -1,6 +1,8 @@
 """Build the import dir for qmltestrunner (tests/run): qmltestrunner cannot load the Quickshell
-plugin, so tst_components imports test doubles of Quickshell and qs.core from here, plus the real
-qs.components, core/js, MonitorState, and Tokens/Motion with their Quickshell parts taken out.
+plugin, so the tests import test doubles of Quickshell (incl. a Quickshell.Io FileView that reads
+through XHR and writes to memory) and of Log, Paths and Format from here, plus the real
+qs.components, core/js, MonitorState, and Config, Tokens, Motion and SurfaceManager made
+independent of the Quickshell plugin.
 
     python3 tests/qml/mkmock.py <out-dir>
 """
@@ -15,9 +17,12 @@ REPO = Path(__file__).resolve().parents[2]
 MOCK = Path(__file__).resolve().parent / "mock"
 
 
-def strip_quickshell(text: str) -> str:
-    """A core singleton without Quickshell: no Quickshell imports, `Singleton {` → `Item {`."""
-    text = text.replace("import Quickshell.Io\n", "").replace("import Quickshell\n", "")
+def strip_quickshell(text: str, keep_io: bool = False) -> str:
+    """A core singleton without the Quickshell plugin: `Singleton {` → `Item {`, no Quickshell
+    import (Quickshell.Io stays with keep_io: the mock module provides FileView)."""
+    if not keep_io:
+        text = text.replace("import Quickshell.Io\n", "")
+    text = text.replace("import Quickshell\n", "")
     return re.sub(r"\nSingleton \{", "\nItem {", text, count=1)
 
 
@@ -64,6 +69,10 @@ def build(out: Path) -> None:
     core = out / "qs" / "core"
     (core / "Tokens.qml").write_text(tokens_qml(), encoding="utf-8")
     (core / "Motion.qml").write_text(motion_qml(), encoding="utf-8")
+    (core / "Config.qml").write_text(
+        strip_quickshell((REPO / "shell/core/Config.qml").read_text(encoding="utf-8"), keep_io=True), encoding="utf-8")
+    (core / "SurfaceManager.qml").write_text(
+        strip_quickshell((REPO / "shell/core/SurfaceManager.qml").read_text(encoding="utf-8")), encoding="utf-8")
     paths = core / "Paths.qml"
     paths.write_text(paths.read_text(encoding="utf-8").replace("@REPO@", str(REPO)), encoding="utf-8")
     (core / "MonitorState.qml").symlink_to(REPO / "shell/core/MonitorState.qml")

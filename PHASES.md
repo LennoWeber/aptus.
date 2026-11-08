@@ -625,3 +625,28 @@ probe lacked was applied on top:
 
 **Open:** Deck, Overview, notch modes are their stages' stubs, so the choreography is covered by
 tests, not seen on screen yet. The physical-key check of P-01 stays for Lenno's hands-on round.
+
+### Review of phase 7 (fresh reviewer, diff `86ce7e5..18f9c29`; fixed in "phase 7: review fixes")
+
+| Finding | Resolution |
+|---|---|
+| Locking throws: `onLockedChanged` snapshots `locked: true` before rules.js has seen the lock, so `checkState` refuses the closing menu/Capture | Fixed: SurfaceManager keeps `_lastLocked` (the lock state as rules.js last saw it) for the snapshot. `tst_surfacemanager` (new, 7 tests) fails without it. |
+| A submenu fills the whole monitor (Loader with `anchors.fill` resizes it) and gets the parent's space wrong | Fixed: the submenu Loader is placed at 0,0 without anchors; `_space`/`_spaceV` are writable and passed through `setSource`. Test fails with the old code. |
+| `install.sh` can stop halfway: a link fails on a file whose move was declined, a move onto an existing target fails after earlier steps ran | Fixed: `apply()` checks the whole plan first (every blocked link has an approved move, no move target exists), then runs in the order mkdir → move → link → edit (`ORDER`). `main()` leaves out a link whose blocking file stays, and skips the hyprland group when `~/.config/hypr/aptus` is not linked (`_aptus_linked`). Tests added. |
+| A second polkit request opens on the focused monitor beside the first; a polkit monitor removed while locked keeps a queue nobody replays | Fixed in rules.js: a new request replaces the shown one where it is; with no monitor to move to (or locked) the request is cancelled and the queue dropped (as 07 §5 says). Tests added. |
+| No Esc in the shell's own windows; shortcuts of unbuilt surfaces grab the keyboard with nothing on screen; Super+M does nothing | Fixed: MonitorShell's content item takes focus and routes Esc to `SurfaceManager.back()` (e2e `test_escape_closes_mode` types Escape into the nested session; fails without the handler). `Shortcuts.notBuilt` (one line per stage, each stage removes its own) makes those shortcuts log "not available yet"; IPC still opens them for tests. `Session.logout()` falls back to `hl.dsp.exit()`. |
+| `restore` can run twice and put the removed lines back twice | Fixed: after a restore `removed.lua` is renamed `removed.lua.restored-<stamp>`. Test added. |
+| The supervisor leaves the slow retry after one more crash outside the window and shows the crash notice again | Fixed: `CrashLog.slow_from` keeps the slow retry until a run of ≥ 10 s; the notice fires once per slow streak. Tests added. |
+| `Config.reset()`/`resetPage()` skip the cross-key rules (a reset can leave `focus.default` outside the durations, dimAfter > lockAfter) | Fixed: both go through `_resetKeys`, which cross-checks the whole result and refuses like `set()`; they return "" or the message. `tst_configsingleton` (new) covers it and fails without the check. |
+| No QML test covers SurfaceManager.qml, Config.qml or Tokens.qml | Added: the mock import dir now generates the real SurfaceManager and Config (a `Quickshell.Io` double: FileView reads through XHR, writes stay in memory; FileViewError) and the real Tokens; `tst_surfacemanager`, `tst_configsingleton`, `tst_tokens`. |
+| e2e `configerrors` passes when hyprctl gives no JSON | Fixed: `None` fails. |
+| IPC answers "ok" for things that did nothing (`notch toast` without Notifications, reboot/poweroff without logind, a refused theme value) | Fixed: `Notifications.available`, `Session.canPower`; Theme's setters return the refusal and Ipc answers "error: …". |
+| `aptus doctor config` words problems differently from the shell and rejects `60.0` for whole numbers | Fixed: the shell's wording without the label; integral floats are whole numbers (JSON has one number type). `tests/fixtures/validate-cases.json` (33 cases) is checked against both `doctor/config.py` (pytest) and `config.js` (`tst_config`). |
+| Tokens restarts the 400 ms crossfade on every appearance setting, even when the palette does not change | Fixed: an unchanged resolution starts no crossfade (`tst_tokens` fails without the guard). |
+| `now` defaults handled per call site; `pinnedCardTimeout` missing from the limits | `nowOr` moved into `finish()` and `post()` (test added). `pinnedCardTimeout` is S3's (pinned cards are), marked `TODO(S3)`. |
+| `WallpaperLayer` sets `sourceSize: undefined` | Rejected: `sourceSize` is resettable, `undefined` resets it; no warning in the shell log. |
+| New APIs not reported | Reported here: `Ipc.notYet`; `SurfaceManager._syncFullscreen`, `_lastLocked`; `Shortcuts.notBuilt`, `_built`; `Session.canPower`, the logout fallback; `Notifications.available`; Theme setters → string; `Config.reset`/`resetPage` → string, `_resetKeys`; Menu `_space`/`_spaceV` writable; install `ORDER`, `_aptus_linked`; `CrashLog.slow_from`; `Nested.key`, `nested.py` as a script (`python3 tests/e2e/nested.py`: a nested session with the shell until Ctrl+C). |
+
+**Checked:** `tests/run`: pytest 93 passed, qmltestrunner 154 passed (rules 44, components 19,
+config 24, configsingleton 7, surfacemanager 7, tokens 5, the rest unchanged), lint 117 files,
+0 warnings; `pytest tests/e2e`: 10/10. Each new test was run against the old code once and failed.

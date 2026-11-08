@@ -4,12 +4,15 @@ from __future__ import annotations
 import json
 import shutil
 import subprocess
+from pathlib import Path
 
 import pytest
 
 from aptus import doctor
 from aptus.doctor import config as dconfig, deps
 from aptus.paths import get
+
+REPO = Path(__file__).resolve().parents[2]
 
 
 def write_settings(data: object) -> None:
@@ -85,3 +88,18 @@ def test_deps_lists_missing(monkeypatch: pytest.MonkeyPatch) -> None:
     assert "warn deps: ddcutil" in text
     unknown = doctor.run(["nope"], get())
     assert not unknown[0].ok
+
+
+def test_messages_match_the_shell() -> None:
+    # The shared case list; tests/qml/tst_config.qml checks config.js against the same file.
+    cases = json.loads((REPO / "tests" / "fixtures" / "validate-cases.json").read_text(encoding="utf-8"))
+    schema = json.loads((REPO / "shell" / "config" / "settings-schema.json").read_text(encoding="utf-8"))
+    for key, value, message in cases["cases"]:
+        assert dconfig.validate(schema, key, value, cases["home"]) == message, (key, value)
+
+
+def test_cross_rule_messages() -> None:
+    write_settings({"v": 2, "focus.durations": [30, 60, 120], "idle.dimAfter": 600, "idle.lockAfter": 300})
+    detail = {c.name: c.detail for c in failures(dconfig.check(get()))}
+    assert detail["config: focus.default"] == "must be one of 30, 60, 120; the default is used"
+    assert detail["config: idle.lockAfter"] == "must be later than Dim after (600); the default is used"

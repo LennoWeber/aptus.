@@ -90,6 +90,9 @@ Scope {
         Item {
             id: content
             anchors.fill: parent
+            // The Esc ladder (05 §3): an Esc no surface took steps back on this monitor.
+            focus: true
+            Keys.onEscapePressed: SurfaceManager.back(root.name)
 
             // Away catcher: a click outside the open surface closes it and focuses the window under
             // the pointer, so closing never costs an extra click (05 §3).

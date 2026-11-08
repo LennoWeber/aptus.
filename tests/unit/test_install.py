@@ -94,8 +94,13 @@ def test_moves_not_deletes() -> None:
     (p.local_bin / "aptus").write_text("old script")
     plan = [a for a in install.plan(p) if a.path == p.local_bin / "aptus"]
     assert [a.kind for a in plan] == ["move", "link"]
-    with pytest.raises(FileExistsError):
+    with pytest.raises(FileExistsError, match="nothing changed"):
         install.apply(p, plan[1:])
+    assert (p.local_bin / "aptus").read_text() == "old script"
+    # given link first (as the groups are approved), the move still runs before the link
+    install.apply(p, [plan[1], plan[0]])
+    assert (p.local_bin / "aptus").is_symlink()
+    assert next(f for f in p.v1_backup.rglob("aptus") if f.is_file()).read_text() == "old script"
 
 
 def test_nothing_without_approval(monkeypatch: pytest.MonkeyPatch,
@@ -105,12 +110,23 @@ def test_nothing_without_approval(monkeypatch: pytest.MonkeyPatch,
     p.hyprland_lua.parent.mkdir(parents=True)
     p.hyprland_lua.write_text(NOCT_LUA)
     before = snapshot(p.home)
-    answers = iter(["n", "", "no", "maybe"])
+    answers = iter(["n", ""])
     monkeypatch.setattr(builtins, "input", lambda prompt="": next(answers))
     assert install.main([]) == 0
     out = capsys.readouterr().out
-    assert "Nothing changed." in out and "+require" in out       # the diff is shown first
+    # without the aptus link the block would break hyprland.lua: not even offered
+    assert "Nothing changed." in out and "skipped, the block requires" in out
     assert snapshot(p.home) == before
+    answers = iter(["y", "n", "no"])
+    monkeypatch.setattr(builtins, "input", lambda prompt="": next(answers))
+    p.hyprland_lua.write_text(NOCT_LUA)
+    before_lua = p.hyprland_lua.read_text()
+    assert install.main([]) == 0
+    out = capsys.readouterr().out
+    assert "+require" in out and p.hyprland_lua.read_text() == before_lua    # the diff is shown first
+    for leftover in (p.config / "config", p.state / "color-mode"):
+        assert os.path.lexists(leftover)                                     # v1 declined: not moved
+    before = snapshot(p.home)
     monkeypatch.setattr(builtins, "input", lambda prompt="": (_ for _ in ()).throw(EOFError))
     assert install.main([]) == 0 and snapshot(p.home) == before
     assert install.main(["--bogus"]) == 2
@@ -118,7 +134,7 @@ def test_nothing_without_approval(monkeypatch: pytest.MonkeyPatch,
     asked: list[str] = []
     monkeypatch.setattr(builtins, "input", lambda prompt="": asked.append(prompt) or "y")
     assert install.main([]) == 0
-    assert len(asked) == 3                                        # base, v1, hyprland
+    assert len(asked) == 2                                        # v1, hyprland (base done above)
     text = p.hyprland_lua.read_text()
     assert hyprlua.BLOCK_BEGIN in text and "noctalia" not in text.split(hyprlua.BLOCK_BEGIN)[0]
     assert len(list(p.install_state.glob("hyprland.lua.*"))) == 1          # backup first
@@ -200,3 +216,38 @@ def test_check_action_refuses() -> None:
     with pytest.raises(RuntimeError, match="install invariant"):
         install.apply(p, [Action("mkdir", p.state), Action("mkdir", Path("/tmp/elsewhere"))])
     assert not p.state.exists()                 # nothing ran: the whole plan is checked first
+
+
+def test_declined_v1_leaves_the_blocked_link_out(monkeypatch: pytest.MonkeyPatch,
+                                                 capsys: pytest.CaptureFixture[str]) -> None:
+    """A real file in the way of a link: approving everything moves it and links; declining the
+    v1 group leaves only that link out, the rest of the install happens."""
+    p = get()
+    p.local_bin.mkdir(parents=True)
+    (p.local_bin / "aptus").write_text("old script")
+    p.hyprland_lua.parent.mkdir(parents=True)
+    p.hyprland_lua.write_text(NOCT_LUA)
+    answers = iter(["y", "n", "y"])
+    monkeypatch.setattr(builtins, "input", lambda prompt="": next(answers))
+    assert install.main([]) == 0
+    out = capsys.readouterr().out
+    assert "Left out: the link" in out and "Done." in out
+    assert (p.local_bin / "aptus").read_text() == "old script"
+    assert p.hypr_aptus_link.is_symlink() and hyprlua.BLOCK_BEGIN in p.hyprland_lua.read_text()
+    monkeypatch.setattr(builtins, "input", lambda prompt="": "y")
+    assert install.main([]) == 0
+    assert (p.local_bin / "aptus").is_symlink()
+    assert next(f for f in p.v1_backup.rglob("aptus") if f.is_file()).read_text() == "old script"
+
+
+def test_restore_happens_once() -> None:
+    p = get()
+    p.hyprland_lua.parent.mkdir(parents=True)
+    p.hyprland_lua.write_text(NOCT_LUA)
+    install.apply(p, install.plan(p))
+    install.apply(p, install.plan_uninstall(p))
+    assert p.hyprland_lua.read_text() == NOCT_LUA
+    assert not (p.install_state / "removed.lua").exists()
+    assert list(p.install_state.glob("removed.lua.restored-*"))
+    # a second uninstall has nothing to put back (no duplicate Noctalia lines)
+    assert not any(a.approval == "restore" for a in install.plan_uninstall(p))

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+import time
 from pathlib import Path
 
 from nested import Nested
@@ -44,6 +45,16 @@ def test_surface_open_back(nested: Nested) -> None:
     assert nested.state()["monitors"][mon]["deck"] is False
 
 
+def test_escape_closes_mode(nested: Nested) -> None:
+    # Esc reaches the shell through the keyboard focus of the open mode (05 §3), not a bind.
+    assert nested.msg("surface", "open", "spotlight") == "ok"
+    mon = nested.state()["global"]["activeMonitor"]
+    nested.wait_for(lambda: nested.state()["monitors"][mon]["keyboard"] is True)
+    time.sleep(0.2)                                            # the layer takes the keyboard focus
+    nested.key("Escape")
+    nested.wait_for(lambda: nested.state()["monitors"][mon]["notch"] == "rest", 3)
+
+
 def test_reserve_zone(nested: Nested) -> None:
     mon = nested.hyprctl("monitors", as_json=True)[0]
     assert mon["reserved"][1] == 32, mon["reserved"]           # top reserved by aptus-reserve
@@ -62,7 +73,8 @@ def test_mask_click_through(nested: Nested) -> None:
 
 def test_configerrors_empty(nested: Nested) -> None:
     errs = nested.hyprctl("configerrors", as_json=True)
-    assert errs in ([], [""], None) or all(not e for e in errs), errs
+    assert errs is not None, "hyprctl configerrors -j gave no JSON"
+    assert all(not e for e in errs), errs
 
 
 def test_no_deprecated_config(nested: Nested) -> None:

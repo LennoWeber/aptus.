@@ -54,18 +54,19 @@ Singleton {
         _store(key, r.value, next);
         return "";
     }
-    // Back to the default (removes the key from settings.json).
-    function reset(key: string): void {
+    // Back to the default (removes the key from settings.json). Returns "" or, when the default
+    // breaks a cross-key rule with the other values (a focus default outside custom durations,
+    // dimAfter > lockAfter), the message; nothing changes then, as with set().
+    function reset(key: string): string {
         const e = entry(key);
-        if (!e || e.type === "derived") return;
-        const next = Object.assign({}, values);
-        next[key] = JSON.parse(JSON.stringify(e["default"]));
-        Lib.deriveAll(schema, next);
-        _store(key, next[key], next);
+        if (!e) return "unknown setting";
+        if (e.type === "derived") return "";
+        return _resetKeys([key]);
     }
-    // Reset every key of a settings page (settings.md §4 "Reset page").
-    function resetPage(page: string): void {
-        for (const k in schema.keys) if (schema.keys[k].page === page) reset(k);
+    // Reset every key of a settings page at once (settings.md §4 "Reset page"); "" or the message.
+    function resetPage(page: string): string {
+        const keys = Object.keys(schema.keys || {}).filter(k => schema.keys[k].page === page && schema.keys[k].type !== "derived");
+        return keys.length ? _resetKeys(keys) : "";
     }
     // Validate without storing: { ok, value, message }.
     function validate(key: string, value: var): var { return Lib.validate(schema, key, value, Paths.home, null); }
@@ -125,6 +126,16 @@ Singleton {
     // The text of a v1 settings.json, kept for the backup before the first write.
     property string _v1Text: ""
 
+    // reset()/resetPage(): all `keys` back to their defaults together, cross-checked first.
+    function _resetKeys(keys: var): string {
+        const next = Object.assign({}, values);
+        for (const k of keys) next[k] = JSON.parse(JSON.stringify(schema.keys[k]["default"]));
+        Lib.deriveAll(schema, next);
+        const cross = Lib.crossCheck(schema, next);
+        if (cross.length) { settingInvalid(keys[0], cross[0].message); return cross[0].message; }
+        for (const k of keys) _store(k, next[k], next);
+        return "";
+    }
     // Commit one change: `value` becomes the override of `key` (removed when it equals the
     // default, which is how reset() goes through here), `next` the complete validated value map
     // (derived keys included); marks the key pending, emits settingChanged per changed key, starts

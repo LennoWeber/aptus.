@@ -13,7 +13,6 @@ Item {
 
     Component { id: menuComp; Menu {} }
     Component { id: hostComp; MenuHost {} }
-    Component { id: stateComp; MonitorState {} }
     Component { id: modeComp; NotchMode {} }
 
     Label { id: label; text: "Hello"; type: "title" }
@@ -131,6 +130,13 @@ Item {
             keyClick(Qt.Key_Right);
             compare(m._subIndex, 4);
             verify(m.width > 0 && m.height > 0);
+            let sm = null;
+            for (let i = 0; i < top.children.length; i++) {
+                const c = top.children[i];
+                if (c.item && c.item._level === 1) sm = c.item;
+            }
+            verify(sm && sm.width < 400 && sm.height < 200, "the submenu has its own size, not the parent's");
+            verify(sm.x >= m.x + m.width - 2 * Tokens.menu.padding && sm.x + sm.width <= 800, "beside the root menu, inside the area");
             keyClick(Qt.Key_Down);
             keyClick(Qt.Key_Return);
             compare(trigSpy.count, 2);
@@ -147,22 +153,20 @@ Item {
             m.destroy();
         }
         function test_menu_host() {
-            const st = stateComp.createObject(top, { name: "A" });
-            SurfaceManager.monitors = { "A": st };
+            SurfaceManager.syncMonitors(["A"]);
+            const st = SurfaceManager.monitors["A"];
             const host = hostComp.createObject(top, { monitor: st, width: 800, height: 600 });
             let got = null;
             SurfaceManager.openMenu("A", { anchorX: 10, anchorY: 10, owner: "test", model: [{ id: "x", label: "X" }],
                                           onTriggered: row => { got = row.id; } });
             wait(50);
-            const c0 = SurfaceManager.closeCalls;
             // the menu has focus: Down + Enter triggers
             keyClick(Qt.Key_Down);
             keyClick(Qt.Key_Return);
             compare(got, "x");
-            compare(SurfaceManager.closeCalls, c0 + 1);
             compare(st.menu, null);
             tryCompare(host, "_shown", null, 1000);
-            host.destroy(); st.destroy();
+            host.destroy();
         }
         function test_field() {
             field.text = "abc";
@@ -273,8 +277,8 @@ Item {
             tryCompare(t, "_shown", false, 500);
         }
         function test_outside_and_focus() {
-            const st = stateComp.createObject(top, { name: "A" });
-            SurfaceManager.monitors = { "A": st };
+            SurfaceManager.syncMonitors(["A"]);
+            const st = SurfaceManager.monitors["A"];
             const host = hostComp.createObject(top, { monitor: st, width: 800, height: 600 });
             focusTarget.forceActiveFocus();
             verify(focusTarget.activeFocus);
@@ -296,7 +300,7 @@ Item {
             keyClick(Qt.Key_Escape);
             compare(st.menu, null);
             tryCompare(host, "_shown", null, 1000);
-            host.destroy(); st.destroy();
+            host.destroy();
         }
         function test_tooltip_regrace() {
             mouseMove(top, 780, 20);

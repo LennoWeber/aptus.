@@ -44,6 +44,23 @@ def test_crash_limit_slow_retry() -> None:
     assert flags == [False, False, True, False, False]   # the lock fallback and the notice fire once
 
 
+def test_slow_retry_stays_until_a_long_run() -> None:
+    """07 §10: after three crashes within 10 s, every restart waits 30 s, and the lock fallback and
+    the notice fire once; a run of ≥ 10 s starts over."""
+    crashes = CrashLog(times=[], started=-1)
+    delays, flags, t = [], [], 0.0
+    for _ in range(9):
+        t = crashes.started + 0.2                  # each run crashes 0.2 s after its start
+        delays.append(supervise.next_delay(POLICY, crashes, t))
+        flags.append(supervise.crashed_out(POLICY, crashes, t))
+        crashes.started = t + delays[-1]
+    assert delays == [0.5, 1.0, 30.0, 30.0, 30.0, 30.0, 30.0, 30.0, 30.0]
+    assert flags == [False, False, True] + [False] * 6
+    t = crashes.started + 15                       # a long run: fast again
+    assert supervise.next_delay(POLICY, crashes, t) == 0.5
+    assert not supervise.crashed_out(POLICY, crashes, t)
+
+
 def test_old_crashes_forgotten() -> None:
     crashes = CrashLog(times=[], started=-1)
     crash_at(crashes, [0, 1])

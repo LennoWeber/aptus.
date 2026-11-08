@@ -429,4 +429,26 @@ TestCase {
         compare(r.monitors.A.notch, "polkit")
         compare(o(o(fresh(), "overview"), "keysPeek").monitors.A.notch, "rest")
     }
+
+    function test_second_polkit_request_stays_on_its_monitor() {
+        var r = o(fresh(), "polkit", { id: 1 }, "A")
+        r = R.setActive(r.monitors, r.global, "B", 1000)
+        r = o(r, "polkit", { id: 2 })
+        compare(r.global.polkitMonitor, "A")
+        compare(r.monitors.A.notchArgs.id, 2)
+        compare(r.monitors.B.notch, "rest")
+    }
+    function test_polkit_monitor_removed_while_locked() {
+        var r = o(o(fresh(), "polkit", { id: 1 }, "A"), "deck")
+        compare(r.global.pending.length, 1)
+        r = R.setLocked(r.monitors, r.global, true, 1000)
+        r = R.removeMonitor(r.monitors, r.global, "A", 1000)
+        compare(r.global.polkitMonitor, "")
+        compare(r.global.pending.length, 0, "cancelled, nothing to replay onto")
+    }
+    function test_operations_default_now() {
+        var r = fresh()
+        r = R.post(r.monitors, r.global, "event", { text: "x" }, 0, "", "")
+        verify(typeof r.monitors.A.passive[0].born === "number", "born is a time without `now`")
+    }
 }

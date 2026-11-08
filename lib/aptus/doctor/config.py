@@ -60,13 +60,13 @@ def check(paths: Paths) -> list[Check]:
                 op = relation.get(kb, "<=")
                 if not ops[op](va, vb):
                     checks.append(Check(f"config: {kb}", False,
-                                        f"must be {'greater than' if op == '<' else 'at least'} "
-                                        f"{ka} ({va}); the default is used"))
+                                        f"must be {'later than' if op == '<' else 'at least'} "
+                                        f"{keys[ka].get('label', ka)} ({va}); the default is used"))
         elif rule["kind"] == "member":
             if values[rule["key"]] not in values[rule["of"]]:
                 checks.append(Check(f"config: {rule['key']}", False,
-                                    f"must be one of {rule['of']} "
-                                    f"({', '.join(map(str, values[rule['of']]))}); the default is used"))
+                                    f"must be one of {', '.join(map(str, values[rule['of']]))}; "
+                                    "the default is used"))
     set_count = len(raw) - 1
     if not any(not c.ok for c in checks):
         checks.insert(0, Check(name, True, f"{set_count} value(s) set"))
@@ -74,7 +74,8 @@ def check(paths: Paths) -> list[Check]:
 
 
 def validate(schema: dict, key: str, value: object, home: str) -> str | None:
-    """None when valid, else the message (the same wording as the shell)."""
+    """None when valid, else the message: the wording of shell/core/js/config.js without the
+    leading label (the check is named after the key). Stricter in one place: a relative path."""
     entry = schema["keys"].get(key)
     if entry is None:
         return "is not a known setting"
@@ -83,7 +84,8 @@ def validate(schema: dict, key: str, value: object, home: str) -> str | None:
                     for t in r["types"]}
 
     def is_int(v: object) -> bool:
-        return isinstance(v, int) and not isinstance(v, bool)
+        # JSON has one number type: 60.0 is the whole number 60, as in the shell
+        return (isinstance(v, int) and not isinstance(v, bool)) or (isinstance(v, float) and v.is_integer())
 
     def number_problem(v: object, e: dict) -> str | None:
         if not is_int(v):
@@ -92,9 +94,8 @@ def validate(schema: dict, key: str, value: object, home: str) -> str | None:
             return None
         lo, hi = e.get("min"), e.get("max")
         if (lo is not None and v < lo) or (hi is not None and v > hi):
-            unit = f" {e['unit']}" if e.get("unit") else ""
-            zero = f" (or 0: {e['zeroMeans']})" if e.get("zeroMeans") else ""
-            return f"must be {lo}–{hi}{unit}{zero}"
+            zero = f" or 0 ({e['zeroMeans']})" if e.get("zeroMeans") else ""
+            return f"must be {lo}–{hi}{zero}"
         return None
 
     def path_problem(v: object, must_exist: bool, inside: bool) -> str | None:
@@ -115,10 +116,12 @@ def validate(schema: dict, key: str, value: object, home: str) -> str | None:
     def in_values(v: object, vals: list) -> bool:
         return not isinstance(v, bool) and any(v == x for x in vals)
 
+    if value is None:
+        return None if entry.get("nullable") else "cannot be empty"
     if kind == "derived":
-        return f"is derived from {entry.get('from', 'another setting')} and cannot be set"
+        return "is not settable"
     if kind == "bool":
-        return None if isinstance(value, bool) else "must be true or false"
+        return None if isinstance(value, bool) else "must be on or off"
     if kind == "int":
         return number_problem(value, entry)
     if kind == "enum":
@@ -144,7 +147,7 @@ def validate(schema: dict, key: str, value: object, home: str) -> str | None:
             return f"must contain {entry['pattern']}"
         return None
     if kind == "time":
-        return None if time_ok(value) else "must be a time HH:MM"
+        return None if time_ok(value) else "must be a time like 07:30"
     if kind == "path":
         return path_problem(value, bool(entry.get("mustExist")), "path" in inside_types)
     if kind == "list":
@@ -153,55 +156,56 @@ def validate(schema: dict, key: str, value: object, home: str) -> str | None:
         if "minItems" in entry and len(value) < entry["minItems"] or \
                 "maxItems" in entry and len(value) > entry["maxItems"]:
             lo, hi = entry.get("minItems", 0), entry.get("maxItems")
-            return (f"must have exactly {lo} entries" if lo == hi
-                    else f"must have at most {hi} entries" if lo == 0
-                    else f"must have {lo}–{hi} entries")
-        if entry.get("unique") and len({json.dumps(v, sort_keys=True) for v in value}) != len(value):
-            return "must not list an entry twice"
+            return f"must have {lo if lo == hi else f'{lo}–{hi}'} entries"
         of = entry.get("of")
+        seen: list[str] = []
         for item in value:
             if of == "string" and not isinstance(item, str):
-                return "every entry must be text"
+                return "must list text"
+            if of == "enum" and not in_values(item, entry["values"]):
+                return f"{item} is not one of " + ", ".join(map(str, entry["values"]))
             if of == "int":
                 problem = number_problem(item, entry)
                 if problem:
-                    return f"every entry {problem}"
-            if of == "enum" and not in_values(item, entry["values"]):
-                return "every entry must be one of " + ", ".join(map(str, entry["values"]))
+                    return problem
             if of == "path":
+                if not isinstance(item, str) or not item:
+                    return "must list paths"
                 problem = path_problem(item, False, "list<path>" in inside_types)
                 if problem:
-                    return f"every entry {problem}"
+                    return f"{item} {problem}"
+            if entry.get("unique"):
+                if json.dumps(item, sort_keys=True) in seen:
+                    return f"lists {item} twice"
+                seen.append(json.dumps(item, sort_keys=True))
         return None
     if kind == "map":
         if not isinstance(value, dict):
-            return "must be an object"
+            return "must be a table"
         for k, v in value.items():
             if not isinstance(v, str):
-                return f"{k}: must be text"
+                return f"{k} must be text"
             if entry.get("pattern") and entry["pattern"] not in v:
-                return f"{k}: must contain {entry['pattern']}"
+                return f"{k} must contain {entry['pattern']}"
         return None
     if kind == "object":
-        if value is None:
-            return None if entry.get("nullable") else "must not be null"
         if not isinstance(value, dict):
             return "must be an object"
         for field, ftype in entry.get("shape", {}).items():
             v = value.get(field)
-            if ftype == "string" and not isinstance(v, str):
-                return f"{field}: must be text"
-            if ftype == "number" and (not isinstance(v, (int, float)) or isinstance(v, bool)):
-                return f"{field}: must be a number"
-            if ftype == "time" and not time_ok(v):
-                return f"{field}: must be a time HH:MM"
-            if ftype == "list<int>":
-                if not isinstance(v, list) or not all(is_int(x) for x in v):
-                    return f"{field}: must be a list of whole numbers"
-                ranges = entry.get("itemRanges", {}).get(field, {})
-                if any(x < ranges.get("min", x) or x > ranges.get("max", x) for x in v):
-                    return f"{field}: every entry must be {ranges.get('min')}–{ranges.get('max')}"
-                if ranges.get("unique") and len(set(v)) != len(v):
-                    return f"{field}: must not list an entry twice"
+            wrong = (field not in value
+                     or ftype == "string" and not isinstance(v, str)
+                     or ftype == "number" and (not isinstance(v, (int, float)) or isinstance(v, bool))
+                     or ftype == "time" and not time_ok(v)
+                     or ftype == "list<int>" and (not isinstance(v, list) or not all(is_int(x) for x in v)))
+            if wrong:
+                return f"{field} is missing or wrong"
+            ranges = entry.get("itemRanges", {}).get(field)
+            if ranges and isinstance(v, list):
+                for i, x in enumerate(v):
+                    if x < ranges["min"] or x > ranges["max"]:
+                        return f"{field} must be {ranges['min']}–{ranges['max']}"
+                    if ranges.get("unique") and x in v[:i]:
+                        return f"{field} lists {x} twice"
         return None
-    return f"has an unknown type {kind!r} in the schema"
+    return f"unknown type {kind}"

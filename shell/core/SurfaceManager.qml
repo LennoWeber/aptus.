@@ -174,6 +174,7 @@ Singleton {
     function _apply(result: var): void {
         const g = result.global;
         _lastActive = g.activeMonitor;
+        _lastLocked = g.locked;
         if (polkitMonitor !== g.polkitMonitor) polkitMonitor = g.polkitMonitor;
         pending = g.pending;
         if (previousWindow !== g.previousWindow) previousWindow = g.previousWindow;
@@ -218,7 +219,7 @@ Singleton {
             ms[n] = o;
         }
         return { monitors: ms, global: {
-            activeMonitor: _lastActive, locked: locked, polkitMonitor: polkitMonitor, pending: Array.from(pending),
+            activeMonitor: _lastActive, locked: _lastLocked, polkitMonitor: polkitMonitor, pending: Array.from(pending),
             previousWindow: previousWindow, currentWindow: currentWindow, settingsOpen: settingsOpen,
             settingsArgs: settingsArgs, settingsFocused: settingsFocused, passiveSerial: passiveSerial, limits: limits,
             overFullscreen: Config.loaded ? Config.get("notch.overFullscreen") : "critical"
@@ -230,6 +231,9 @@ Singleton {
 
     // The active monitor as rules.js last saw it (the Spotlight rule needs the old one).
     property string _lastActive: ""
+    // The lock state as rules.js last saw it: `locked` has already changed when onLockedChanged
+    // runs, and the snapshot must still be the state before (setLocked closes the menus).
+    property bool _lastLocked: false
     // The MonitorState fields copied from a rules.js result, in order (_apply).
     readonly property var _fields: ["instant", "hero", "notchArgs", "notchSerial", "deckPages", "deckArgs",
         "overviewArgs", "menu", "capture", "fullscreen", "passive", "notch", "deck", "overview", "passiveTop"]

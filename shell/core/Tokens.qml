@@ -187,6 +187,8 @@ Singleton {
     // Apply a resolution object (resolve.js result, or current/shell.json written outside).
     function apply(resolved: var): void {
         if (!resolved || !resolved.roles) return;
+        // an unchanged resolution (a setting that does not touch the palette) starts no crossfade
+        if (_r && JSON.stringify(_r) === JSON.stringify(resolved)) return;
         const gradChanges = !_r || _r.glyphGrad !== resolved.glyphGrad;
         const first = _r === null;
         // M-30: every colour crossfades from what is shown now to the new resolution

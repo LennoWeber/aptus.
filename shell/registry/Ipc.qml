@@ -79,6 +79,7 @@ Scope {
         function toast(json: string): string {
             const a = root.parseArgs(json);
             if (a === null) return "error: toast must be a JSON object";
+            if (!Notifications.available) return root.notYet("notifications");
             Notifications.inject(a);
             return "ok";
         }
@@ -87,21 +88,20 @@ Scope {
     IpcHandler {
         target: "theme"
         function mode(value: string): string {
-            if (value === "toggle") { Theme.toggleMode(); return "ok"; }
-            if (["dark", "light", "auto"].indexOf(value) < 0) return "error: mode is dark, light, auto or toggle";
-            Theme.setMode(value);
-            return "ok";
+            if (value !== "toggle" && ["dark", "light", "auto"].indexOf(value) < 0) return "error: mode is dark, light, auto or toggle";
+            const why = value === "toggle" ? Theme.toggleMode() : Theme.setMode(value);
+            return why ? "error: " + why : "ok";
         }
         function accent(name: string): string {
             const e = Config.entry("appearance.accent");
             if (!e || e.values.indexOf(name) < 0) return "error: accent is one of " + (e ? e.values.join(", ") : "");
-            Theme.setAccent(name);
-            return "ok";
+            const why = Theme.setAccent(name);
+            return why ? "error: " + why : "ok";
         }
         function glass(value: string): string {
             if (value !== "on" && value !== "off") return "error: glass is on or off";
-            Theme.setGlass(value === "on");
-            return "ok";
+            const why = Theme.setGlass(value === "on");
+            return why ? "error: " + why : "ok";
         }
     }
 
@@ -179,8 +179,16 @@ Scope {
             return "ok";
         }
         function logout(): string { Session.logout(); return "ok"; }
-        function reboot(): string { Session.reboot(); return "ok"; }
-        function poweroff(): string { Session.poweroff(); return "ok"; }
+        function reboot(): string {
+            if (!Session.canPower) return root.notYet("reboot");
+            Session.reboot();
+            return "ok";
+        }
+        function poweroff(): string {
+            if (!Session.canPower) return root.notYet("poweroff");
+            Session.poweroff();
+            return "ok";
+        }
         function sheet(): string { return SurfaceManager.toggle("session") ? "open" : "closed"; }
     }
 

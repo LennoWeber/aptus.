@@ -70,8 +70,10 @@ Item {
         }
         return w;
     }
-    readonly property real _space: parent ? parent.width : 0
-    readonly property real _spaceV: parent ? parent.height : 0
+    // The area the menu stays inside: its parent, or for a submenu the root menu's area (the
+    // submenu's own parent is its Loader, which has the submenu's size).
+    property real _space: parent ? parent.width : 0
+    property real _spaceV: parent ? parent.height : 0
 
     function _usable(i: int): bool {
         const r = i >= 0 && i < model.length ? model[i] : null;
@@ -115,6 +117,7 @@ Item {
             anchorX: x + width - _pad, anchorY: top,
             _altX: x + _pad, _altY: top + it.height + 2 * _pad,
             _level: _level + 1,
+            _space: _space, _spaceV: _spaceV,
             currentIndex: -1
         });
         const m = sub.item as Menu;
@@ -314,11 +317,13 @@ Item {
         }
     }
 
-    // The open submenu: a sibling in the parent's coordinates, above this menu.
+    // The open submenu: a sibling at the parent's origin (so it shares the parent's coordinates),
+    // above this menu; unsized, so the Loader takes the submenu's size instead of imposing one.
     Loader {
         id: sub
         parent: root.parent
-        anchors.fill: parent
+        x: 0
+        y: 0
         z: root.z + 1
 
         Connections {

@@ -36,6 +36,7 @@ class CrashLog:
     times: list[float]                            # monotonic times of recent crashes
     streak: int = 0                               # crashes since the last run of ≥ crash_window s
     started: float = 0.0                          # monotonic start of the current run
+    slow_from: int = 0                            # streak count at which the slow retry began (0: fast)
 
 
 def shell_command(paths: Paths) -> list[str]:
@@ -55,23 +56,24 @@ def shell_env(paths: Paths, env: Mapping[str, str]) -> dict[str, str]:
 
 def next_delay(policy: RestartPolicy, crashes: CrashLog, now: float) -> float:
     """Record a crash at `now` and return the wait before the next start: 0.5, 1, 2 s along a
-    streak of short runs (a run of ≥ crash_window s starts a new streak), and the slow retry once
-    crash_limit crashes fall inside crash_window (07 §10)."""
+    streak of short runs; once crash_limit crashes fall inside crash_window, the slow retry for
+    every restart (07 §10). A run of ≥ crash_window s starts over (new streak, fast again)."""
     if crashes.streak < 0 or now < crashes.started:
         raise ValueError("supervise invariant: negative streak or a crash before the run started")
     if now - crashes.started >= policy.crash_window:
-        crashes.streak = 0
+        crashes.streak, crashes.slow_from = 0, 0
     crashes.streak += 1
     crashes.times[:] = [t for t in crashes.times if now - t <= policy.crash_window] + [now]
-    if len(crashes.times) >= policy.crash_limit:
+    if crashes.slow_from or len(crashes.times) >= policy.crash_limit:
+        crashes.slow_from = crashes.slow_from or crashes.streak
         return policy.slow_retry
     return policy.delays[min(crashes.streak, len(policy.delays)) - 1]
 
 
 def crashed_out(policy: RestartPolicy, crashes: CrashLog, now: float) -> bool:
-    """Whether the crash limit was just reached (lock fallback + notify)."""
-    recent = [t for t in crashes.times if now - t <= policy.crash_window]
-    return len(recent) == policy.crash_limit
+    """Whether the crash recorded last switched to the slow retry (lock fallback + notify, once
+    until a long run starts over)."""
+    return crashes.slow_from > 0 and crashes.slow_from == crashes.streak
 
 
 def on_crash_limit(paths: Paths) -> None:

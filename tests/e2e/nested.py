@@ -154,6 +154,14 @@ class Nested:
                         os.path.join(runtime, self.wayland_display), "click", str(x), str(y)],
                        check=True, timeout=10)
 
+    def key(self, keysym: str) -> None:
+        """Press and release one key through wtype on the nested socket; it reaches the focused
+        surface (a virtual keyboard never fires binds)."""
+        if not self.wayland_display or self.wayland_display == os.environ.get("WAYLAND_DISPLAY"):
+            raise RuntimeError("no nested display: refusing to type into the real session")
+        env = dict(os.environ, WAYLAND_DISPLAY=self.wayland_display)
+        subprocess.run(["wtype", "-k", keysym], env=env, check=True, timeout=10)
+
     def screenshot(self, path: Path) -> Path:
         """grim of the nested output (WAYLAND_DISPLAY = the nested socket)."""
         env = dict(os.environ, WAYLAND_DISPLAY=self.wayland_display)
@@ -222,3 +230,29 @@ def write_test_png(path: Path, width: int = 480, height: int = 270) -> None:
     png = b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0))
     png += chunk(b"IDAT", zlib.compress(b"".join(rows), 6)) + chunk(b"IEND", b"")
     path.write_bytes(png)
+
+
+def main() -> int:
+    """`python3 tests/e2e/nested.py`: a nested session with the shell for trying things by hand
+    (keys typed into its window reach its binds). Ctrl+C stops it and cleans up."""
+    import tempfile
+    os.environ.setdefault("APTUS_REAL_HYPRLAND_SIGNATURE", os.environ.get("HYPRLAND_INSTANCE_SIGNATURE", ""))
+    root = Path(tempfile.mkdtemp(prefix="aptus-nested-"))
+    n = Nested(root=root, home=root / "home")
+    try:
+        n.start()
+        n.start_shell(timeout=20)
+        print(f"nested session {n.signature} on {n.wayland_display}; home {n.home}")
+        print(f"shell log: {n.home / 'aptus-shell.log'}  (Ctrl+C to stop)")
+        while n.proc is not None and n.proc.poll() is None:
+            time.sleep(0.5)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        n.stop()
+        shutil.rmtree(root, ignore_errors=True)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

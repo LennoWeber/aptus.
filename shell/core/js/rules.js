@@ -34,6 +34,8 @@ var PASSIVE_KINDS = ["osd", "toast", "event"]
 // Defaults for global.limits (SurfaceManager passes the token values: toast.staleMs,
 // event.maxAgeMs, notch.pinnedCardTimeoutMs).
 var DEFAULT_LIMITS = { toastStale: 30000, eventMaxAge: 4000, pinnedCardTimeout: 8000 }
+// TODO(S3): close a pinned card after limits.pinnedCardTimeout without the pointer over it
+//   (notch.md §4); the card reports its hover, which rules.js does not know yet.
 // What may still happen while locked: passive OSD only (07 §5).
 var LOCKED_ALLOWED_PASSIVE = ["osd"]
 
@@ -123,6 +125,7 @@ function begin(monitors, global) {
 }
 function effect(c, kind, surface, monitor) { c.effects.push({ kind: kind, surface: surface, monitor: monitor || "" }) }
 function finish(c, now) {
+    now = nowOr(now)
     var g = c.global, opts = { overFullscreen: g.overFullscreen, limits: g.limits }
     var keyboardAfter = false
     for (var n in c.monitors) {
@@ -167,6 +170,8 @@ function nowOr(now) { return now === undefined ? Date.now() : now }
 function monitorOf(c, req) { return req.monitor || c.global.activeMonitor }
 function doOpen(c, req) {
     var s = req.surface, args = req.args || {}, g = c.global, name = monitorOf(c, req)
+    // one polkit prompt: a new request replaces the shown one where it is (focus may have moved)
+    if (s === "polkit" && g.polkitMonitor) name = g.polkitMonitor
     if (g.locked) return effect(c, "refused", s, name)
     if (g.polkitMonitor && s !== "polkit") {
         g.pending.push({ op: req.op === "toggle" ? "toggle" : "open", surface: s, args: args, monitor: req.monitor || "" })
@@ -323,6 +328,7 @@ function back(monitors, global, monitor, backResult, now) {
 // place (keeps its id and position, resets born). → also { id } of the entry.
 function post(monitors, global, kind, payload, priority, monitor, key, now) {
     checkState(monitors, global);
+    now = nowOr(now)
     var c = begin(monitors, global), g = c.global, name = monitor || g.activeMonitor, m = c.monitors[name]
     var id = 0
     var refused = !m || PASSIVE_KINDS.indexOf(kind) < 0
@@ -417,13 +423,13 @@ function openMenu(monitors, global, monitor, menu, now) {
     if (!m || c.global.locked || (c.global.polkitMonitor && c.global.polkitMonitor !== name) || m.capture)
         effect(c, "refused", "menu", name)
     else { m.menu = menu; effect(c, "opened", "menu", name) }
-    return finish(c, nowOr(now))
+    return finish(c, now)
 }
 function closeMenu(monitors, global, monitor, now) {
     checkState(monitors, global);
     var c = begin(monitors, global), m = c.monitors[monitor || c.global.activeMonitor]
     if (m) closeMenuOn(c, m)
-    return finish(c, nowOr(now))
+    return finish(c, now)
 }
 
 // Environment changes.
@@ -433,12 +439,12 @@ function addMonitor(monitors, global, name, now) {
     // the new monitor has no frozen frame: the selection is cancelled (07 §5, capture.md §7)
     if (!c.monitors[name]) { closeCapture(c); c.monitors[name] = newMonitor(name) }
     if (!c.global.activeMonitor) c.global.activeMonitor = name
-    return finish(c, nowOr(now))
+    return finish(c, now)
 }
 function removeMonitor(monitors, global, name, now) {
     checkState(monitors, global);
     var c = begin(monitors, global), m = c.monitors[name], g = c.global
-    if (!m) return finish(c, nowOr(now))
+    if (!m) return finish(c, now)
     var hadPolkit = g.polkitMonitor === name, polkitArgs = m.notchArgs
     var opened = ["menu", "capture", m.notch !== "rest" ? m.notch : "", m.deck ? "deck" : "", m.overview ? "overview" : ""]
     for (var i = 0; i < opened.length; i++)
@@ -449,11 +455,13 @@ function removeMonitor(monitors, global, name, now) {
     if (hadPolkit) {
         g.polkitMonitor = ""
         // the prompt moves to the active monitor without animation
-        if (g.activeMonitor) { doOpen(c, { surface: "polkit", args: polkitArgs, monitor: g.activeMonitor }); c.monitors[g.activeMonitor].instant = true }
-        // no monitor left: nothing to replay the queued requests onto (found by the invariants)
+        if (g.activeMonitor) doOpen(c, { surface: "polkit", args: polkitArgs, monitor: g.activeMonitor })
+        if (g.polkitMonitor) c.monitors[g.polkitMonitor].instant = true
+        // not shown again (no monitor left, or locked): the request is cancelled and nothing is
+        // left to replay the queue onto (07 §5)
         else g.pending = []
     }
-    return finish(c, nowOr(now))
+    return finish(c, now)
 }
 function setActive(monitors, global, name, now) {
     checkState(monitors, global);
@@ -464,7 +472,7 @@ function setActive(monitors, global, name, now) {
         if (old && old.notch !== "rest" && old.notch !== "polkit") { closeMenuOn(c, old); closeNotchOn(c, old) }
         g.activeMonitor = name
     }
-    return finish(c, nowOr(now))
+    return finish(c, now)
 }
 function setLocked(monitors, global, locked, now) {
     checkState(monitors, global);
@@ -474,20 +482,20 @@ function setLocked(monitors, global, locked, now) {
         for (var n in c.monitors) closeMenuOn(c, c.monitors[n])
         closeCapture(c)
     }
-    return finish(c, nowOr(now))
+    return finish(c, now)
 }
 function setFullscreen(monitors, global, name, fullscreen, now) {
     checkState(monitors, global);
     var c = begin(monitors, global)
     if (c.monitors[name]) c.monitors[name].fullscreen = !!fullscreen
-    return finish(c, nowOr(now))
+    return finish(c, now)
 }
 // The settings window reports whether it is focused (settings.md §2 toggle semantics).
 function setSettingsFocused(monitors, global, focused, now) {
     checkState(monitors, global);
     var c = begin(monitors, global)
     c.global.settingsFocused = !!focused
-    return finish(c, nowOr(now))
+    return finish(c, now)
 }
 // Re-run expiry and arbitration without an operation (SurfaceManager's timer: events age out).
 function tick(monitors, global, now) { checkState(monitors, global); return finish(begin(monitors, global), now) }
