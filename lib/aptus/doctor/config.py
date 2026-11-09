@@ -50,27 +50,37 @@ def check(paths: Paths) -> list[Check]:
             checks.append(Check(f"config: {key}", False, f"{problem}; the default is used"))
         else:
             values[key] = value
-    for rule in schema.get("rules", []):
-        if rule["kind"] == "order":
-            chain = [(k, values[k]) for k in rule["keys"]
-                     if not (rule.get("ignoreZero") and values[k] == 0)]
-            ops = {"<": lambda x, y: x < y, "<=": lambda x, y: x <= y}
-            relation = dict(zip(rule["keys"][1:], rule["relations"]))
-            for (ka, va), (kb, vb) in zip(chain, chain[1:]):
-                op = relation.get(kb, "<=")
-                if not ops[op](va, vb):
-                    checks.append(Check(f"config: {kb}", False,
-                                        f"must be {'later than' if op == '<' else 'at least'} "
-                                        f"{keys[ka].get('label', ka)} ({va}); the default is used"))
-        elif rule["kind"] == "member":
-            if values[rule["key"]] not in values[rule["of"]]:
-                checks.append(Check(f"config: {rule['key']}", False,
-                                    f"must be one of {', '.join(map(str, values[rule['of']]))}; "
-                                    "the default is used"))
+    for key, problem in cross_check(schema, values):
+        checks.append(Check(f"config: {key}", False, f"{problem}; the default is used"))
     set_count = len(raw) - 1
     if not any(not c.ok for c in checks):
         checks.insert(0, Check(name, True, f"{set_count} value(s) set"))
     return checks
+
+
+def cross_check(schema: dict, values: dict) -> list[tuple[str, str]]:
+    """The cross-key rules (schema "rules", order and member), as config.js crossCheck applies
+    them: (key, problem without the key's label) for every value that breaks one."""
+    keys = schema["keys"]
+    out: list[tuple[str, str]] = []
+    for rule in schema.get("rules", []):
+        if rule["kind"] == "order":
+            # keys[j - 1] relation keys[j]; zeros (never) are skipped when ignoreZero
+            prev = None
+            for j, k in enumerate(rule["keys"]):
+                if rule.get("ignoreZero") and values[k] == 0:
+                    continue
+                if prev is not None:
+                    rel = rule["relations"][min(j - 1, len(rule["relations"]) - 1)]
+                    if not (values[prev] < values[k] if rel == "<" else values[prev] <= values[k]):
+                        out.append((k, f"must be {'later than' if rel == '<' else 'at least'} "
+                                       f"{keys[prev].get('label', prev)}"))
+                prev = k
+        elif rule["kind"] == "member":
+            members = values[rule["of"]]
+            if isinstance(members, list) and values[rule["key"]] not in members:
+                out.append((rule["key"], f"must be one of {', '.join(map(str, members))}"))
+    return out
 
 
 def validate(schema: dict, key: str, value: object, home: str) -> str | None:

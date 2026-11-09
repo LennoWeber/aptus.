@@ -37,6 +37,16 @@ TestCase {
         compare(m.passive.length, 0);
     }
 
+    function test_event_ages_out_without_an_operation() {
+        // an event queued behind a toast leaves after event.maxAgeMs by itself (the expiry timer)
+        const toast = SurfaceManager.post("toast", { text: "t" }, 1, "A", "");
+        SurfaceManager.post("event", { text: "e" }, 0, "A", "");
+        const m = SurfaceManager.monitors["A"];
+        compare(m.passive.length, 2);
+        tryVerify(() => m.passive.length === 1, Tokens.surfaces.event.maxAgeMs + 2000);
+        SurfaceManager.dismiss(toast, "A");
+    }
+
     function test_lock_closes_menu_and_keeps_working() {
         SurfaceManager.openMenu("A", { anchorX: 0, anchorY: 0, owner: "t", model: [{ label: "X" }] });
         verify(SurfaceManager.monitors["A"].menu !== null);

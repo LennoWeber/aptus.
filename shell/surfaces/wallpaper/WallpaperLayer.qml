@@ -4,6 +4,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Wayland
 import qs.core
+import qs.components
 
 PanelWindow {
     id: root
@@ -44,7 +45,7 @@ PanelWindow {
         const back = _aFront ? imgB : imgA;
         back.opacity = 0;
         // M-28: the new image settles from motion.catalogue.wallpaper.scaleFrom (none when reduced)
-        back.scale = Motion.reduced ? 1 : (Motion.catalogue.wallpaper ? Motion.catalogue.wallpaper.scaleFrom : 1);
+        back.scale = Motion.scaleFrom("wallpaper");
         back.source = url;
     }
     // The back image finished decoding: fade it in, then swap _aFront.
@@ -89,21 +90,17 @@ PanelWindow {
     ParallelAnimation {
         id: fadeIn
         readonly property Image target: root._aFront ? imgB : imgA
-        NumberAnimation {
+        StandardAnimation {
             target: fadeIn.target
             property: "opacity"
             to: 1
             duration: Motion.reduced ? Motion.reducedCrossfade : Motion.ambientWallpaper
-            easing.type: Easing.BezierSpline
-            easing.bezierCurve: Motion.standard
         }
-        NumberAnimation {
+        StandardAnimation {
             target: fadeIn.target
             property: "scale"
             to: 1
             duration: Motion.reduced ? 0 : Motion.ambientWallpaper
-            easing.type: Easing.BezierSpline
-            easing.bezierCurve: Motion.standard
         }
         onFinished: {
             const old = root._aFront ? imgA : imgB;

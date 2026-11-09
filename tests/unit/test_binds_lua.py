@@ -19,7 +19,7 @@ SHORTCUTS = (REPO / "shell" / "registry" / "Shortcuts.qml").read_text(encoding="
 LUAJIT = shutil.which("luajit")
 
 # The stub records every call as one JSON line: hl.dsp.* return descriptors, hl.bind/unbind/
-# gesture print them.
+# gesture/dispatch print them, and a gesture's action function runs once.
 HARNESS = r"""
 local function enc(v)
   local t = type(v)
@@ -40,7 +40,10 @@ end
 hl = { dsp = dsp("hl.dsp"),
        bind = function(chord, action, opts) emit({ call = "bind", chord = chord, action = action, opts = opts }) end,
        unbind = function(chord) emit({ call = "unbind", chord = chord }) end,
-       gesture = function(g) emit({ call = "gesture", g = g }) end,
+       gesture = function(g)
+         emit({ call = "gesture", g = g })
+         if type(g.action) == "function" then g.action() end   -- records what it dispatches
+       end,
        dispatch = function(a) emit({ call = "dispatch", action = a }) end }
 dofile(arg[1])
 """
@@ -66,8 +69,9 @@ def test_every_shortcut_bound(test_home: Path) -> None:
     globals_ = {b["action"]["arg"] for b in binds if b["action"]["dsp"] == "hl.dsp.global"}
     gestures = [c for c in calls if c["call"] == "gesture"]
     assert len(gestures) == 2
-    # a gesture's action is a Lua function: the names are read from the source
-    globals_ |= set(re.findall(r'hl\.dsp\.global\("(aptus:[\w-]+)"\)', (REPO / "hypr" / "binds.lua").read_text()))
+    # a gesture's action is a Lua function; the stub ran it, so its dispatch is in the calls
+    globals_ |= {c["action"]["arg"] for c in calls
+                 if c["call"] == "dispatch" and c["action"]["dsp"] == "hl.dsp.global"}
     names = {g.removeprefix("aptus:") for g in globals_}
     assert names <= routes(), f"bound but not handled by Shortcuts.qml: {names - routes()}"
     assert routes() - names == {"lock"}, "every route is bound (lock goes through exec)"

@@ -19,7 +19,7 @@ Item {
 
     Behavior on _fill {
         enabled: !Motion.reduced
-        SpringAnimation { spring: Motion.snappySpring; damping: Motion.snappyDamping; mass: Motion.snappyMass; epsilon: Motion.snappyEpsilon }
+        SnappySpring {}
     }
 
     Rectangle {

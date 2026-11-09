@@ -1,3 +1,5 @@
 module Quickshell.Io
 FileView 0.0 FileView.qml
 singleton FileViewError 0.0 FileViewError.qml
+Process 0.0 Process.qml
+StdioCollector 0.0 StdioCollector.qml

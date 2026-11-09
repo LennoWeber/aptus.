@@ -14,6 +14,7 @@ Item {
     Component { id: menuComp; Menu {} }
     Component { id: hostComp; MenuHost {} }
     Component { id: modeComp; NotchMode {} }
+    Component { id: slotComp; DrawerSlot { drawer: Component { Drawer { bulge.width: 120; function back(): bool { return true; } } } } }
 
     Label { id: label; text: "Hello"; type: "title" }
     Glyph { id: glyph; name: "wifi"; on: true }
@@ -60,6 +61,7 @@ Item {
     SignalSpy { id: swSpy; target: sw; signalName: "toggled" }
     SignalSpy { id: slSpy; target: slider; signalName: "moved" }
     SignalSpy { id: btnSpy; target: button; signalName: "clicked" }
+    SignalSpy { id: slotSpy; signalName: "closeRequested" }
 
     // outside-press target and two tooltip owners (MenuHost, Tooltip regrace)
     Rectangle {
@@ -350,6 +352,32 @@ Item {
             m.active = false;
             tryCompare(m, "opacity", 0, 1000);
             m.destroy();
+        }
+        function test_drawer_slot() {
+            // 04 §8: the drawer loads on open, stays through its exit fade, then unloads
+            const s = slotComp.createObject(top, { width: 200, height: 100, monitorName: "DP-1" });
+            compare(s.item, null, "closed: not loaded");
+            compare(s.bulge.shown, false);
+            compare(s.back(), false);
+            s.open = true;
+            verify(s.item !== null, "open: loaded");
+            compare(s.item.monitorName, "DP-1");
+            compare(s.item.open, true);
+            compare(s.bulge.width, 120, "the drawer's bulge is forwarded");
+            compare(s.back(), true, "the drawer's back step is forwarded");
+            tryCompare(s.item, "opacity", 1, 1000);
+            slotSpy.target = s; slotSpy.clear();
+            s.item.closeRequested();
+            compare(slotSpy.count, 1, "closeRequested is forwarded");
+            s.open = false;
+            wait(0);
+            verify(s.item !== null, "kept while the exit fade runs");
+            verify(s.item.busy);
+            tryVerify(() => s.item === null, 1000, "unloaded after the exit");
+            compare(s.bulge.width, 0, "a closed bulge while unloaded");
+            s.open = true;
+            verify(s.item !== null && s.item.open, "loads again");
+            s.destroy();
         }
     }
 }

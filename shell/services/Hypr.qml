@@ -1,7 +1,7 @@
 pragma Singleton
 pragma ComponentBehavior: Bound
 // Hypr: monitors, workspaces, toplevels, active window, fullscreen, urgent, special, submap.
-// Owner: S1 (core, window actions), S3 (workspaces, urgent, special, icons). Stub until its stage fills it.
+// Owner: S1 (core, window actions; built), S3 (workspaces, urgent, special, icons).
 import QtQuick
 import Quickshell
 import Quickshell.Hyprland

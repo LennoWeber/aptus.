@@ -44,7 +44,7 @@ Item {
         border.color: root.enabled ? Tokens.inkMeta : Tokens.inkFaint
 
         Behavior on color {
-            ColorAnimation { duration: Motion.ms("small", !root.checked); easing.type: Easing.BezierSpline; easing.bezierCurve: Motion.standard }
+            StandardColorAnimation { duration: Motion.ms("small", !root.checked) }
         }
         Glyph {
             anchors.centerIn: parent
@@ -56,7 +56,7 @@ Item {
             opacity: root.checked ? 1 : 0
 
             Behavior on opacity {
-                NumberAnimation { duration: Motion.ms("small", !root.checked); easing.type: Easing.BezierSpline; easing.bezierCurve: Motion.standard }
+                StandardAnimation { duration: Motion.ms("small", !root.checked) }
             }
         }
     }

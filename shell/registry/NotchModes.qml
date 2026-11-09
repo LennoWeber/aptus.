@@ -4,7 +4,6 @@ pragma Singleton
 pragma ComponentBehavior: Bound
 import QtQuick
 import Quickshell
-import "../core/js/rules.js" as Rules
 import qs.surfaces.spotlight
 import qs.surfaces.switcher
 import qs.surfaces.today
@@ -18,10 +17,8 @@ import qs.surfaces.focus
 Singleton {
     id: root
 
-    // The interactive and passive notch modes ("card:<activity>" cards belong to the notch itself).
-    readonly property var ids: Rules.NOTCH_MODES
-
-    // id → Component (keysPeek uses the Keys sheet with args.peek).
+    // Notch-mode id (rules.js NOTCH_MODES) → Component; keysPeek uses the Keys sheet with
+    // args.peek, "card:<activity>" cards belong to the notch itself.
     readonly property var components: ({
         spotlight: spotlightC,
         switcher: switcherC,
@@ -34,8 +31,6 @@ Singleton {
         focusPicker: focusPickerC,
         keysPeek: keysC
     })
-
-    function component(id: string): Component { return components[id] || null; }
 
     Component { id: spotlightC; Spotlight {} }
     Component { id: switcherC; SwitcherStrip {} }

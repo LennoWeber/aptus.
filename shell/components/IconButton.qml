@@ -40,7 +40,7 @@ Item {
         scale: mouse.pressed && !root._disabled && root.height >= Tokens.button.pressScaleMin ? Tokens.button.pressScale : 1
 
         Behavior on scale {
-            NumberAnimation { duration: Motion.ms("press", !mouse.pressed); easing.type: Easing.BezierSpline; easing.bezierCurve: Motion.standard }
+            StandardAnimation { duration: Motion.ms("press", !mouse.pressed) }
         }
 
         Wash {

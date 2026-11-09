@@ -27,16 +27,13 @@ Item {
         pop.restart();
     }
 
-    SpringAnimation {
+    SnappySpring {
         id: pop
         target: root
         property: "_pop"
         to: 1
-        spring: Motion.snappySpring
-        damping: Motion.snappyDamping
-        mass: Motion.snappyMass
         // _pop is a scale (0..1): the pixel epsilon of the token, relative to the badge size
-        epsilon: Motion.snappyEpsilon / Math.max(1, root.implicitWidth)
+        epsilon: Motion.springs.snappy.epsilon / Math.max(1, root.implicitWidth)
     }
     Rectangle {
         anchors.fill: parent

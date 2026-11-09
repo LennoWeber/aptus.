@@ -58,15 +58,13 @@ Item {
         }
         Component.onCompleted: _last = ch
 
-        NumberAnimation {
+        StandardAnimation {
             id: roll
             target: cell
             property: "_t"
             from: 0
             to: 1
             duration: Motion.ms("fade", false)
-            easing.type: Easing.BezierSpline
-            easing.bezierCurve: Motion.standard
         }
         Label {
             id: before

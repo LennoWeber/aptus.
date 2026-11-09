@@ -108,7 +108,7 @@ def cmd_dev(on: bool) -> int:
     """`aptus dev [on|off]`: create/remove <runtime>/dev and restart the supervised shell; the
     supervisor starts qs with APTUS_DEV=1 while the flag exists (live reload, P-23)."""
     p = paths.get()
-    p.runtime.mkdir(parents=True, exist_ok=True, mode=0o700)
+    p.make_runtime()
     if on:
         p.dev_flag.touch()
     else:

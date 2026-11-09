@@ -9,7 +9,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from enum import Enum
 
-from . import atomic
+from . import atomic, hypr
 from .log import setup
 from .paths import Paths, get
 
@@ -34,8 +34,8 @@ def check_environment(env: Mapping[str, str]) -> str | None:
     desktops = env.get("XDG_CURRENT_DESKTOP", "").split(":")
     if "Hyprland" not in desktops:
         return f"not a Hyprland session (XDG_CURRENT_DESKTOP={env.get('XDG_CURRENT_DESKTOP', '')!r})"
-    if not env.get("HYPRLAND_INSTANCE_SIGNATURE"):
-        return "HYPRLAND_INSTANCE_SIGNATURE is not set"
+    if not env.get(hypr.ENV_SIG):
+        return f"{hypr.ENV_SIG} is not set"
     return None
 
 
@@ -44,9 +44,9 @@ def start(paths: Paths, env: Mapping[str, str]) -> StartReport:
     import and units arrive with S2 and are skipped (always skipped under APTUS_TEST=1)."""
     log = logging.getLogger("aptus.session")
     report = StartReport()
-    paths.runtime.mkdir(parents=True, exist_ok=True, mode=0o700)
+    paths.make_runtime()
     paths.state.mkdir(parents=True, exist_ok=True)
-    test = env.get("APTUS_TEST") == "1"
+    test = paths.test
     # Steps 1–5 of 02 §7. In S1 none of them runs: the lease, the renderer and the guard arrive
     # with S2, and importing the environment without the guard would leak into Umbriel's manager.
     for step in ("aptus-lease recover", "aptus-theme render", "aptus-lease take",
@@ -61,13 +61,13 @@ def start(paths: Paths, env: Mapping[str, str]) -> StartReport:
 
 def write_status(paths: Paths, report: StartReport) -> None:
     """<runtime>/session.json for `aptus msg shell state` and the doctor."""
-    paths.runtime.mkdir(parents=True, exist_ok=True, mode=0o700)
+    paths.make_runtime()
     atomic.write_json(paths.session_status, {
         "mode": report.mode.value,
         "reasons": report.reasons,
         "warnings": report.warnings,
         "pid": os.getpid(),
-        "signature": os.environ.get("HYPRLAND_INSTANCE_SIGNATURE", ""),
+        "signature": os.environ.get(hypr.ENV_SIG, ""),
         "started": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
         "test": paths.test,
     })

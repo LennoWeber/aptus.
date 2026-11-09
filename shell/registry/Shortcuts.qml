@@ -13,22 +13,8 @@ import qs.services
 Scope {
     id: root
 
-    // The names, in the order of 07 §7.
-    readonly property var names: [
-        "spotlight", "spotlight-clipboard", "spotlight-emoji",
-        "super-tap", "keys-peek",
-        "overview", "overview-open", "overview-close",
-        "switcher-next", "switcher-prev", "switcher-commit",
-        "deck", "today", "jot", "keys", "gallery", "session", "settings",
-        "lock", "logout",
-        "theme-toggle",
-        "focus", "dnd", "quiet-bar",
-        "capture-region", "capture-screen", "record", "colour",
-        "vol-up", "vol-down", "vol-up-fine", "vol-down-fine", "mute", "mic-mute",
-        "bright-up", "bright-down", "bright-up-fine", "bright-down-fine",
-        "kbd-up", "kbd-down", "kbd-toggle",
-        "media-toggle", "media-next", "media-prev"
-    ]
+    // The names, in the order of 07 §7 (the order of _routes below).
+    readonly property var names: Object.keys(_routes)
 
     // Surfaces whose stage has not built them yet: their shortcuts only log, so an empty surface
     // never takes the keyboard with nothing on screen (IPC still opens them, for tests). Each stage
@@ -72,7 +58,7 @@ Scope {
         else if (_built("spotlight")) SurfaceManager.open("spotlight", { scope: scope });
     }
 
-    // name → action (07 §7).
+    // name → action (07 §7); a new shortcut is one line here plus its bind in hypr/binds.lua.
     readonly property var _routes: ({
         "spotlight": () => _spotlightScope(""),
         "spotlight-clipboard": () => _spotlightScope("clipboard"),

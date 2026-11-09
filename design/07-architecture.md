@@ -58,11 +58,12 @@ aptus/
 │  ├─ shell.qml                 root: ShellRoot, Variants over Quickshell.screens → MonitorShell
 │  ├─ core/                     Tokens, Motion, Config, Paths, Log, Format, SurfaceManager, MonitorState,
 │  │                            js/ (pure logic: rules, config, colour, resolve, format, bulge, sun)
-│  ├─ components/               Bulge (frame/cove path), BulgeSpec, NotchMode, Drawer, Activity, ListRow,
+│  ├─ components/               Bulge (frame/cove path), BulgeSpec, NotchMode, Drawer, DrawerSlot, Activity, ListRow,
 │  │                            List, Button, IconButton, Tile, Slider, Switch, Segmented, Checkbox, Field,
 │  │                            Keycap, Ring, Level, Menu, MenuHost, Tooltip, Badge, EmptyState, Glyph,
 │  │                            Label, Wash, FocusRing, AppIcon, Thumb, Scrim, RollingDigits, Ellipsis,
-│  │                            ErrorLine, PagerDots, Swatch
+│  │                            ErrorLine, PagerDots, Swatch, StandardAnimation, StandardColorAnimation,
+│  │                            SnappySpring
 │  ├─ services/                 one singleton per data source (§6)
 │  ├─ surfaces/<name>/          one folder (QML module qs.surfaces.<name>) per surface, owned by one
 │  │                            stage: frame, wallpaper, bar, notch (rest, compact, toast, osd, event,

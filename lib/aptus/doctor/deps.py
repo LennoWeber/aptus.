@@ -41,10 +41,14 @@ def check() -> list[Check]:
         else:
             checks.append(Check(f"deps: {command}", True))
     if shutil.which("rpm"):
+        # one query: an installed package prints its name alone on a line, a missing one a
+        # (localised) "package … is not installed" line
+        done = subprocess.run(["rpm", "-q", "--qf", "%{NAME}\n", *FORBIDDEN_PACKAGES],
+                              capture_output=True, text=True)
+        installed = {line.strip() for line in done.stdout.splitlines()}
         for package in FORBIDDEN_PACKAGES:
-            done = subprocess.run(["rpm", "-q", "--quiet", package], capture_output=True)
-            checks.append(Check(f"deps: no {package}", done.returncode != 0,
-                                "" if done.returncode else "installed, but never for aptus (02 §9)"))
+            checks.append(Check(f"deps: no {package}", package not in installed,
+                                "installed, but never for aptus (02 §9)" if package in installed else ""))
     else:
         checks.append(Check("deps: forbidden packages", True, "rpm not found, not checked",
                             warn=True))

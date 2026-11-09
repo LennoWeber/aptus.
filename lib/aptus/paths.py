@@ -75,6 +75,11 @@ class Paths:
     cache_bat: Path            # ~/.cache/aptus/bat
     cache_agenda_http: Path    # ~/.cache/aptus/agenda-http
 
+    def make_runtime(self) -> Path:
+        """Create <runtime> (private, 0700) if needed and return it."""
+        self.runtime.mkdir(parents=True, exist_ok=True, mode=0o700)
+        return self.runtime
+
 
 ENV_TEST = "APTUS_TEST"
 TEST_RUNTIME = ".aptus-run"     # $HOME/.aptus-run in tests and without XDG_RUNTIME_DIR

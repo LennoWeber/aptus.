@@ -47,8 +47,10 @@ EXIT_TIMEOUT = 4        # the shell did not answer in time (frozen)
 TIMEOUT = 2.0           # seconds
 
 # qs ipc call reports these on stdout with exit code 0 (phase-5 probe, S1).
-QS_ERRORS = ("Too few arguments", "Function not found", "Unable to parse argument",
-             "No running instances", "Target not found")
+QS_ERRORS = ("Too few arguments", "Too many arguments", "Function not found",
+             "Unable to parse argument", "No running instances", "Target not found")
+# The ones `qs ipc show` explains (or, for too few, fixes by padding optional arguments).
+USAGE_ERRORS = ("Too few arguments", "Too many arguments", "Function not found", "Target not found")
 
 
 def classify(returncode: int, output: str) -> int:
@@ -58,43 +60,50 @@ def classify(returncode: int, output: str) -> int:
         return EXIT_NO_SHELL
     if returncode != 0 or not out:
         return EXIT_ERROR
-    # "Too many arguments" is qs's text too (probe); aptus msg never sends too many itself.
-    if out.startswith(QS_ERRORS) or out.startswith("Too many arguments") or out.startswith("error:"):
+    if out.startswith(QS_ERRORS) or out.startswith("error:"):
         return EXIT_ERROR
     return EXIT_OK
 
 
+class _Failed(Exception):
+    """A qs run that ended without an answer: (EXIT_* code, message)."""
+
+
+def _qs(argv: list[str], deadline: float, timeout: float) -> subprocess.CompletedProcess[str]:
+    try:
+        return subprocess.run(argv, capture_output=True, text=True, stdin=subprocess.DEVNULL,
+                              timeout=max(0.05, deadline - time.monotonic()))
+    except FileNotFoundError:
+        raise _Failed(EXIT_NO_SHELL, "qs is not installed") from None
+    except subprocess.TimeoutExpired:
+        raise _Failed(EXIT_TIMEOUT, f"the shell did not answer within {timeout:g} s") from None
+
+
 def call(paths: Paths, target: str, function: str, args: Sequence[str],
          timeout: float = TIMEOUT) -> tuple[int, str]:
-    """Run the call (qs ipc show first to pad optional arguments). → (EXIT_* code, answer)."""
+    """Run the call. → (EXIT_* code, answer). The call goes first (Super+L waits on it); only when
+    qs reports a wrong function or argument count does `qs ipc show` explain it, or give the
+    arity to pad optional arguments with "" and call again."""
     deadline = time.monotonic() + timeout
-    show = ["qs", "-p", str(paths.shell), "ipc", "show"]
     try:
-        shown = subprocess.run(show, capture_output=True, text=True, timeout=timeout,
-                               stdin=subprocess.DEVNULL)
-    except FileNotFoundError:
-        return EXIT_NO_SHELL, "qs is not installed"
-    except subprocess.TimeoutExpired:
-        return EXIT_TIMEOUT, f"the shell did not answer within {timeout:g} s"
-    if shown.returncode != 0 or "No running instances" in shown.stdout + shown.stderr:
-        return EXIT_NO_SHELL, "no aptus shell is running"
-    table = parse_show(shown.stdout)
-    name = ALIASES.get((target, function), function)
-    if target not in table:
-        return EXIT_USAGE, f"unknown target {target!r} (targets: {', '.join(sorted(table))})"
-    if name not in table[target]:
-        return EXIT_USAGE, (f"unknown function {target} {function!r} "
-                            f"(functions: {', '.join(sorted(table[target]))})")
-    arity = table[target][name]
-    if len(args) > arity:
-        return EXIT_USAGE, f"{target} {function} takes at most {arity} argument(s), got {len(args)}"
-    argv = build(paths, target, function, args, arity)
-    try:
-        done = subprocess.run(argv, capture_output=True, text=True, stdin=subprocess.DEVNULL,
-                              timeout=max(0.05, deadline - time.monotonic()))
-    except subprocess.TimeoutExpired:
-        return EXIT_TIMEOUT, f"the shell did not answer within {timeout:g} s"
-    answer = (done.stdout.strip() or done.stderr.strip())
+        done = _qs(build(paths, target, function, args, None), deadline, timeout)
+        answer = done.stdout.strip() or done.stderr.strip()
+        if done.returncode == 0 and answer.startswith(USAGE_ERRORS):
+            shown = _qs(["qs", "-p", str(paths.shell), "ipc", "show"], deadline, timeout)
+            table = parse_show(shown.stdout)
+            name = ALIASES.get((target, function), function)
+            if target not in table:
+                return EXIT_USAGE, f"unknown target {target!r} (targets: {', '.join(sorted(table))})"
+            if name not in table[target]:
+                return EXIT_USAGE, (f"unknown function {target} {function!r} "
+                                    f"(functions: {', '.join(sorted(table[target]))})")
+            arity = table[target][name]
+            if len(args) > arity:
+                return EXIT_USAGE, f"{target} {function} takes at most {arity} argument(s), got {len(args)}"
+            done = _qs(build(paths, target, function, args, arity), deadline, timeout)
+            answer = done.stdout.strip() or done.stderr.strip()
+    except _Failed as e:
+        return e.args[0], e.args[1]
     code = classify(done.returncode, answer)
     if code == EXIT_ERROR and not answer:
         answer = "empty answer from the shell"

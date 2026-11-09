@@ -70,7 +70,8 @@ def test_deps_lists_missing(monkeypatch: pytest.MonkeyPatch) -> None:
 
     def fake_run(cmd, *a, **kw):                    # type: ignore[no-untyped-def]
         if cmd[0] == "rpm":                          # mako is installed, nothing else
-            return subprocess.CompletedProcess(cmd, 0 if cmd[-1] == "mako" else 1, "", "")
+            out = "".join("mako\n" if p == "mako" else f"package {p} is not installed\n" for p in cmd[4:])
+            return subprocess.CompletedProcess(cmd, len(cmd) - 5, out, "")
         return subprocess.CompletedProcess(cmd, 0, "Inter\nJetBrains Mono,JetBrains Mono NL\n", "")
 
     monkeypatch.setattr(subprocess, "run", fake_run)
@@ -98,8 +99,17 @@ def test_messages_match_the_shell() -> None:
         assert dconfig.validate(schema, key, value, cases["home"]) == message, (key, value)
 
 
+def test_cross_rules_match_the_shell() -> None:
+    # The shared cross-rule cases; tests/qml/tst_config.qml checks crossCheck against them.
+    cases = json.loads((REPO / "tests" / "fixtures" / "validate-cases.json").read_text(encoding="utf-8"))
+    schema = json.loads((REPO / "shell" / "config" / "settings-schema.json").read_text(encoding="utf-8"))
+    defaults = {k: e["default"] for k, e in schema["keys"].items()}
+    for overrides, problems in cases["crossCases"]:
+        assert dconfig.cross_check(schema, {**defaults, **overrides}) == [tuple(p) for p in problems], overrides
+
+
 def test_cross_rule_messages() -> None:
     write_settings({"v": 2, "focus.durations": [30, 60, 120], "idle.dimAfter": 600, "idle.lockAfter": 300})
     detail = {c.name: c.detail for c in failures(dconfig.check(get()))}
     assert detail["config: focus.default"] == "must be one of 30, 60, 120; the default is used"
-    assert detail["config: idle.lockAfter"] == "must be later than Dim after (600); the default is used"
+    assert detail["config: idle.lockAfter"] == "must be later than Dim after; the default is used"

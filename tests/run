@@ -14,8 +14,8 @@ echo "== pytest tests/unit"
 "${pytest[@]}" -q tests/unit || failed+=("unit")
 
 echo "== qmltestrunner tests/qml"
-# tst_components imports test doubles of Quickshell and qs.core (tests/qml/mkmock.py); Tokens reads
-# tokens.json through a file XHR.
+# The QML tests import the mock dir of tests/qml/mkmock.py (doubles of Quickshell, the real core
+# singletons); its FileView reads through a file XHR.
 mock="$(mktemp -d)"
 trap 'rm -rf "$mock"' EXIT
 if python3 tests/qml/mkmock.py "$mock/import"; then

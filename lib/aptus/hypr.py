@@ -86,25 +86,26 @@ def request_json(command: str, *, sig: str | None = None) -> Any:
         raise HyprError(f"{command}: not JSON: {answer.strip()[:200]}") from e
 
 
+def _expect_ok(what: str, command: str, sig: str | None) -> None:
+    """Send `command`; anything but an empty answer or "ok" is a HyprError naming `what`."""
+    answer = request(command, sig=sig).strip()
+    if answer not in ("", "ok"):
+        raise HyprError(f"{what}: {answer[:200]}")
+
+
 def dispatch(lua: str, *, sig: str | None = None) -> None:
     """`dispatch <lua>`: Hyprland 0.57 takes a Lua dispatcher expression."""
-    answer = request(f"dispatch {lua}", sig=sig).strip()
-    if answer not in ("", "ok"):
-        raise HyprError(f"dispatch: {answer[:200]}")
+    _expect_ok("dispatch", f"dispatch {lua}", sig)
 
 
 def eval_lua(lua: str, *, sig: str | None = None) -> None:
-    answer = request(f"eval {lua}", sig=sig).strip()
-    if answer not in ("", "ok"):
-        raise HyprError(f"eval: {answer[:200]}")
+    _expect_ok("eval", f"eval {lua}", sig)
 
 
 def notify(text: str, timeout_ms: int = 8000, *, sig: str | None = None) -> None:
     """A Hyprland notification (the supervisor's crash message)."""
     # `hyprctl notify <icon> <ms> <colour> <text>`: icon 0 = warning, colour 0 = default.
-    answer = request(f"notify 0 {int(timeout_ms)} 0 {' '.join(text.split())}", sig=sig).strip()
-    if answer not in ("", "ok"):
-        raise HyprError(f"notify: {answer[:200]}")
+    _expect_ok("notify", f"notify 0 {int(timeout_ms)} 0 {' '.join(text.split())}", sig)
 
 
 def config_errors(*, sig: str | None = None) -> list[str]:

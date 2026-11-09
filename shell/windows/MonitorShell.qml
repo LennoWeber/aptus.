@@ -130,7 +130,7 @@ Scope {
             MouseArea {
                 id: barInput
                 width: parent.width
-                height: frame.hidden && !revealed ? (Motion.catalogue.fullscreen ? Motion.catalogue.fullscreen.hotEdge : 2) : Tokens.barHeight
+                height: frame.hidden && !revealed ? Motion.catalogueValue("fullscreen.hotEdge") : Tokens.barHeight
                 hoverEnabled: true
                 acceptedButtons: Qt.NoButton
                 property bool revealed: false
@@ -154,21 +154,23 @@ Scope {
                 activityComponents: root.activities
                 cardComponents: root.cards
             }
-            Deck {
+            // Deck and Overview load only while open or closing (04 §8, DrawerSlot).
+            DrawerSlot {
                 id: deck
                 anchors.fill: parent
+                drawer: Component { Deck {} }
                 monitorName: root.name
                 open: root.monitor ? root.monitor.deck : false
                 args: root.monitor ? root.monitor.deckArgs : ({})
                 onCloseRequested: SurfaceManager.close("deck", root.name)
             }
-            Overview {
+            DrawerSlot {
                 id: overview
                 anchors.fill: parent
+                drawer: Component { Overview { pillRects: bar.pillRects } }
                 monitorName: root.name
                 open: root.monitor ? root.monitor.overview : false
                 args: root.monitor ? root.monitor.overviewArgs : ({})
-                pillRects: bar.pillRects
                 onCloseRequested: SurfaceManager.close("overview", root.name)
             }
             MenuHost {

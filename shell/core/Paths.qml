@@ -3,6 +3,7 @@ pragma Singleton
 // under APTUS_TEST=1 everything derives from HOME (the harness points HOME at a temp dir).
 import QtQuick
 import Quickshell
+import "js/config.js" as ConfigLib
 
 Singleton {
     id: root
@@ -77,23 +78,10 @@ Singleton {
     readonly property string sounds: assets + "/sounds"          // <repo>/shell/assets/sounds (S3, S8)
     readonly property string fonts: assets + "/fonts"           // <repo>/shell/assets/fonts
 
-    // "~/x" → "<home>/x"; other paths unchanged.
-    function expand(path: string): string {
-        if (path === "~") return home;
-        return path.indexOf("~/") === 0 ? home + path.substr(1) : path;
-    }
-    // Whether a path (after expand) is inside HOME (the insideHome rule of the schema).
-    function insideHome(path: string): bool {
-        const p = expand(path);
-        if (p.charAt(0) !== "/") return false;
-        const parts = [];
-        for (const seg of p.split("/")) {
-            if (seg === "" || seg === ".") continue;
-            if (seg === "..") parts.pop(); else parts.push(seg);
-        }
-        const norm = "/" + parts.join("/");
-        return norm === home || norm.indexOf(home + "/") === 0;
-    }
+    // "~/x" → "<home>/x"; other paths unchanged (config.js, the same rule settings use).
+    function expand(path: string): string { return ConfigLib.expand(path, home); }
+    // Whether a path (after expand) is inside HOME (the schema's insideHome rule, config.js).
+    function insideHome(path: string): bool { return home !== "" && ConfigLib.insideHome(path, home); }
     // "file://" URL for Image sources and FileView paths.
     function url(path: string): string {
         if (path === "") return "";

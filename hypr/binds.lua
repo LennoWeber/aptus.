@@ -100,5 +100,5 @@ bind("media-prev",    "XF86AudioPrev",                G("media-prev"),    "Media
 
 -- Gestures (09 §8)
 -- 3-finger horizontal swipe = workspaces stays in hyprland.lua (Lenno's line)
-hl.gesture({ fingers = 3, direction = "down", action = function() hl.dispatch(hl.dsp.global("aptus:overview-open")) end })
-hl.gesture({ fingers = 3, direction = "up",   action = function() hl.dispatch(hl.dsp.global("aptus:overview-close")) end })
+hl.gesture({ fingers = 3, direction = "down", action = function() hl.dispatch(G("overview-open")) end })
+hl.gesture({ fingers = 3, direction = "up",   action = function() hl.dispatch(G("overview-close")) end })

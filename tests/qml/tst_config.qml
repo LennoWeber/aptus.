@@ -38,6 +38,20 @@ TestCase {
             compare(msg, c[2], c[0] + " = " + JSON.stringify(c[1]))
         }
     }
+    // The shared cross-rule cases: crossCheck finds what `aptus doctor config` finds.
+    function test_shared_cross_cases() {
+        var xhr = new XMLHttpRequest()
+        xhr.open("GET", Qt.resolvedUrl("../fixtures/validate-cases.json"), false)
+        xhr.send()
+        var f = JSON.parse(xhr.responseText)
+        for (var i = 0; i < f.crossCases.length; i++) {
+            var values = Object.assign(Lib.defaults(schema), f.crossCases[i][0])
+            var got = Lib.crossCheck(schema, values).map(function (p) {
+                return [p.key, p.message.slice((schema.keys[p.key].label || p.key).length + 1)]
+            })
+            compare(got, f.crossCases[i][1], JSON.stringify(f.crossCases[i][0]))
+        }
+    }
     function test_type_checks() {
         verify(!v("appearance.glass", 1).ok)
         verify(v("appearance.glass", true).ok)

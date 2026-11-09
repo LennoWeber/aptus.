@@ -12,6 +12,7 @@ import os
 import shutil
 import signal
 import struct
+import sys
 import subprocess
 import time
 import zlib
@@ -20,6 +21,11 @@ from pathlib import Path
 from typing import Any
 
 REPO = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "lib"))
+
+from aptus import hypr, paths  # noqa: E402
+
+HYPR_RUNTIME = Path(os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}")) / "hypr"
 
 
 @dataclass
@@ -29,8 +35,11 @@ class Nested:
     signature: str = ""             # the nested HYPRLAND_INSTANCE_SIGNATURE
     wayland_display: str = ""       # its socket name (wayland-N)
     proc: subprocess.Popen | None = None
-    shell_pid: int = 0
     log: list[str] = field(default_factory=list)
+    paths: paths.Paths = field(init=False)
+
+    def __post_init__(self) -> None:
+        self.paths = paths.resolve({"HOME": str(self.home), "APTUS_TEST": "1"})
 
     def start(self, timeout: float = 10.0) -> None:
         """Start Hyprland with tests/e2e/hyprland.lua; wait for its socket."""
@@ -53,7 +62,7 @@ class Nested:
         env = {k: v for k, v in os.environ.items() if k not in ("HYPRLAND_INSTANCE_SIGNATURE", "APTUS_DEV")}
         env.update(HOME=str(self.home), HYPRLAND_NO_SD_VARS="1", HYPRLAND_NO_SD_NOTIFY="1",
                    APTUS_TEST="1", APTUS_REAL_HYPRLAND_SIGNATURE=real)
-        hypr_dir = Path(os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}")) / "hypr"
+        hypr_dir = HYPR_RUNTIME
         before = set(os.listdir(hypr_dir)) if hypr_dir.exists() else set()
         log = open(self.root / "hyprland.log", "wb")
         self.proc = subprocess.Popen(["dbus-run-session", "--", "Hyprland", "--config", str(cfg / "hyprland.lua")],
@@ -62,7 +71,7 @@ class Nested:
         def found() -> str:
             new = set(os.listdir(hypr_dir)) - before if hypr_dir.exists() else set()
             for sig in new:
-                if (hypr_dir / sig / ".socket.sock").exists():
+                if hypr.socket_path(self.paths, sig).exists():
                     return sig
             return ""
         self.signature = self.wait_for(found, timeout)
@@ -99,7 +108,7 @@ class Nested:
                 pass
         # A Hyprland that was killed leaves its runtime dir behind; only ever the nested one.
         if self.signature and self.signature != real_signature():
-            runtime = Path(os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}")) / "hypr" / self.signature
+            runtime = HYPR_RUNTIME / self.signature
             if self.proc is None or self.proc.poll() is not None:
                 shutil.rmtree(runtime, ignore_errors=True)
 
@@ -121,7 +130,7 @@ class Nested:
         self.hyprctl("dispatch", f"hl.dsp.exec_cmd({lua_string(command)})")
 
     def start_shell(self, timeout: float = 10.0) -> None:
-        """aptus-session start inside the nested session; wait until `shell state` answers."""
+        """Wait until `shell state` answers (the session block of hyprland.lua starts the shell)."""
         def answers() -> bool:
             try:
                 return self.state() is not None
@@ -177,6 +186,12 @@ class Nested:
             if time.monotonic() > end:
                 raise TimeoutError(f"waited {timeout} s for {getattr(predicate, '__name__', 'a condition')}")
             time.sleep(interval)
+
+
+def export_real_signature() -> None:
+    """Record the running session's signature as APTUS_REAL_HYPRLAND_SIGNATURE (once, before
+    anything else changes the environment)."""
+    os.environ.setdefault("APTUS_REAL_HYPRLAND_SIGNATURE", os.environ.get("HYPRLAND_INSTANCE_SIGNATURE", ""))
 
 
 def real_signature() -> str:
@@ -236,7 +251,7 @@ def main() -> int:
     """`python3 tests/e2e/nested.py`: a nested session with the shell for trying things by hand
     (keys typed into its window reach its binds). Ctrl+C stops it and cleans up."""
     import tempfile
-    os.environ.setdefault("APTUS_REAL_HYPRLAND_SIGNATURE", os.environ.get("HYPRLAND_INSTANCE_SIGNATURE", ""))
+    export_real_signature()
     root = Path(tempfile.mkdtemp(prefix="aptus-nested-"))
     n = Nested(root=root, home=root / "home")
     try:

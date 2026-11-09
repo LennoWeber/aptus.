@@ -290,6 +290,17 @@ TestCase {
         verify(r.id !== id)
         compare(r.monitors.A.passive.filter(e => e.key === "volume").length, 2)
     }
+    function test_next_deadline() {
+        var r = fresh()
+        compare(R.nextDeadline(r.monitors, r.global), 0)              // nothing ages out
+        r = p(r, "toast", {}, 1, 1000)
+        compare(R.nextDeadline(r.monitors, r.global), 0)              // toasts need no timer
+        r = p(r, "event", { text: "a" }, 0, 2000)                      // shown behind the toast? queued
+        r = p(r, "event", { text: "b" }, 0, 2500)
+        compare(R.nextDeadline(r.monitors, r.global), 2000 + R.DEFAULT_LIMITS.eventMaxAge + 1)
+        r = R.tick(r.monitors, r.global, 2000 + R.DEFAULT_LIMITS.eventMaxAge + 1)
+        compare(r.monitors.A.passive.filter(e => e.kind === "event").length, 1)
+    }
     function test_update_payload() {
         var r = p(fresh(), "toast", { count: 1 }, 1, 1000)
         var id = r.id
@@ -445,6 +456,10 @@ TestCase {
         compare(r.global.polkitMonitor, "A")
         compare(r.monitors.A.notchArgs.id, 2)
         compare(r.monitors.B.notch, "rest")
+        // closing or toggling from the other monitor acts on the prompt where it is
+        r = t(r, "polkit")
+        compare(r.monitors.A.notch, "rest")
+        compare(r.global.polkitMonitor, "")
     }
     function test_polkit_monitor_removed_while_locked() {
         var r = o(o(fresh(), "polkit", { id: 1 }, "A"), "deck")

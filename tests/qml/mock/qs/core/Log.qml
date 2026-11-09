@@ -1,6 +1,6 @@
 pragma Singleton
 import QtQuick
-// Test double of qs.core Log for tst_components (qmltestrunner cannot load Quickshell).
+// Test double of qs.core Log for the QML tests (qmltestrunner cannot load Quickshell).
 QtObject {
     function debug(c: string, m: string): void { console.log(c + ": " + m); }
     function info(c: string, m: string): void { console.log(c + ": " + m); }

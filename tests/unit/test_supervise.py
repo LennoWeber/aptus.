@@ -17,7 +17,7 @@ def crash_at(crashes: CrashLog, times: list[float], policy: RestartPolicy = POLI
     """Crashes at the given times, each restart `delay` after its crash (as run() does)."""
     out = []
     for t in times:
-        delay = supervise.next_delay(policy, crashes, t)
+        delay, _ = supervise.next_delay(policy, crashes, t)
         out.append(delay)
         crashes.started = t + delay
     return out
@@ -38,9 +38,8 @@ def test_crash_limit_slow_retry() -> None:
     crashes = CrashLog(times=[], started=-1)
     flags = []
     for t in (0, 1, 2.5, 33, 34):
-        supervise.next_delay(POLICY, crashes, t)
+        flags.append(supervise.next_delay(POLICY, crashes, t)[1])
         crashes.started = t + 0.1
-        flags.append(supervise.crashed_out(POLICY, crashes, t))
     assert flags == [False, False, True, False, False]   # the lock fallback and the notice fire once
 
 
@@ -51,14 +50,14 @@ def test_slow_retry_stays_until_a_long_run() -> None:
     delays, flags, t = [], [], 0.0
     for _ in range(9):
         t = crashes.started + 0.2                  # each run crashes 0.2 s after its start
-        delays.append(supervise.next_delay(POLICY, crashes, t))
-        flags.append(supervise.crashed_out(POLICY, crashes, t))
+        delay, switched = supervise.next_delay(POLICY, crashes, t)
+        delays.append(delay)
+        flags.append(switched)
         crashes.started = t + delays[-1]
     assert delays == [0.5, 1.0, 30.0, 30.0, 30.0, 30.0, 30.0, 30.0, 30.0]
     assert flags == [False, False, True] + [False] * 6
     t = crashes.started + 15                       # a long run: fast again
-    assert supervise.next_delay(POLICY, crashes, t) == 0.5
-    assert not supervise.crashed_out(POLICY, crashes, t)
+    assert supervise.next_delay(POLICY, crashes, t) == (0.5, False)
 
 
 def test_old_crashes_forgotten() -> None:

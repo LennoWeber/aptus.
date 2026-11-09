@@ -22,10 +22,8 @@ Rectangle {
     color: _target
 
     Behavior on color {
-        ColorAnimation {
+        StandardColorAnimation {
             duration: root.pressed ? Motion.ms("press", false) : Motion.ms("hover", false)
-            easing.type: Easing.BezierSpline
-            easing.bezierCurve: Motion.standard
         }
     }
 }

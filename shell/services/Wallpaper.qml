@@ -1,7 +1,7 @@
 pragma Singleton
 pragma ComponentBehavior: Bound
 // Wallpaper: wallpaper.json, resolution per monitor.
-// Owner: S1 (resolution, drawing), S10 (gallery, thumbnails, analysis, rotation). Stub until its stage fills it.
+// Owner: S1 (resolution, drawing; built), S10 (gallery, thumbnails, analysis, rotation).
 import QtQuick
 import Quickshell
 import Quickshell.Io
@@ -75,8 +75,8 @@ Singleton {
             try { root.state = JSON.parse(text()); } catch (e) { Log.warn("service.wallpaper", "wallpaper.json: " + e); }
         }
     }
-    // wallpaper.dir, newest first (the first start shows the newest image, wallpaper.md §3).
-    // The folder, watched (wallpaper.md §6): newest first; images follows every change.
+    // wallpaper.dir, watched (wallpaper.md §6), newest first: the first start shows the newest
+    // image (§3); `images` follows every change.
     FolderListModel {
         id: folder
         folder: root._dir !== "" ? Paths.url(root._dir) : ""

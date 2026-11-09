@@ -10,19 +10,19 @@ import qs.surfaces.focus
 import qs.surfaces.today
 import qs.surfaces.capture
 import qs.surfaces.session
+import "../core/js/rules.js" as Rules
 
 Singleton {
     id: root
 
-    // Live activities, in notch.md §4 order.
-    readonly property var activityIds: ["recording", "timer", "meeting", "focus", "media", "progress"]
+    // Live activities, in notch.md §4 order (rules.js knows the same ids for cards).
+    readonly property var activityIds: Rules.ACTIVITIES
     // id → Component of an Activity (MediaActivity, ProgressActivity, FocusActivity,
     // TimerActivity, MeetingActivity, RecordingActivity).
     readonly property var activities: ({ recording: recordingA, timer: timerA, meeting: meetingA, focus: focusA, media: mediaA, progress: progressA })
 
-    // Result cards: a toast payload with `card: <id>` is drawn by this component.
-    readonly property var cardIds: ["capture", "colour", "stillOpen"]
-    // id → Component of a NotchCard (CaptureCard, ColourCard, StillOpenCard).
+    // Result cards: a toast payload with `card: <id>` is drawn by the NotchCard of that id
+    // (CaptureCard, ColourCard, StillOpenCard).
     readonly property var cards: ({ capture: captureK, colour: colourK, stillOpen: stillOpenK })
 
     Component { id: recordingA; RecordingActivity {} }

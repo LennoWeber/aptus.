@@ -139,7 +139,7 @@ Item {
     focus: true
     opacity: _appear
     transform: Scale {
-        readonly property real from: Motion.reduced ? 1 : (Motion.catalogue.menu ? Motion.catalogue.menu.scaleFrom : 1)
+        readonly property real from: Motion.scaleFrom("menu")
         origin.x: root.anchorX - root.x
         origin.y: root.anchorY - root.y
         xScale: from + (1 - from) * root._appear

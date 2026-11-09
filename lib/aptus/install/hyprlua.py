@@ -8,8 +8,8 @@ import difflib
 import json
 import re
 from collections.abc import Sequence
-
 from dataclasses import dataclass, field
+from pathlib import Path
 
 BLOCK_BEGIN = "-- >>> aptus >>>"
 BLOCK_END = "-- <<< aptus <<<"
@@ -118,14 +118,20 @@ def statements(text: str) -> list[tuple[int, int, str]]:
     return result
 
 
-def plan_install(text: str) -> Plan:
-    """Remove the 09 §1 lines and append the block (idempotent: an existing block is kept)."""
+def _lines(text: str) -> tuple[list[str], list[str]]:
+    """The lines of `text` with their newline (the last one without, if the file ends without
+    one; split on "\\n" only, unlike str.splitlines), and the same lines without it."""
     lines = [line + "\n" for line in text.split("\n")]
     if text.endswith("\n") or not text:
         lines.pop()
     else:
         lines[-1] = lines[-1][:-1]
-    bare = [line.rstrip("\n") for line in lines]
+    return lines, [line.rstrip("\n") for line in lines]
+
+
+def plan_install(text: str) -> Plan:
+    """Remove the 09 §1 lines and append the block (idempotent: an existing block is kept)."""
+    lines, bare = _lines(text)
     block_present = BLOCK_BEGIN in bare
     in_block = set()
     if block_present:
@@ -162,12 +168,7 @@ def plan_install(text: str) -> Plan:
 
 def plan_uninstall(text: str, removed: Sequence[Removal], restore: bool) -> Plan:
     """Remove the block; with `restore`, put the removed lines back after their anchors."""
-    lines = [line + "\n" for line in text.split("\n")]
-    if text.endswith("\n") or not text:
-        lines.pop()
-    else:
-        lines[-1] = lines[-1][:-1]
-    bare = [line.rstrip("\n") for line in lines]
+    lines, bare = _lines(text)
     block_present = BLOCK_BEGIN in bare
     if block_present:
         begin = bare.index(BLOCK_BEGIN)
@@ -221,6 +222,11 @@ def removed_lua(removals: Sequence[Removal]) -> str:
         out.append(f"-- line {r.line_no} ({r.reason}), after: {r.anchor_before}")
         out.append(f"--   {r.text}")
     return "\n".join(out) + "\n"
+
+
+def read_removed(path: Path) -> list[Removal]:
+    """The removals recorded in removed.lua, none when the file does not exist."""
+    return parse_removed(path.read_text(encoding="utf-8")) if path.is_file() else []
 
 
 def parse_removed(text: str) -> list[Removal]:

@@ -39,7 +39,7 @@ Item {
         opacity: root.selected || mouse.containsMouse ? 1 : 0
 
         Behavior on opacity {
-            NumberAnimation { duration: Motion.ms("small", false); easing.type: Easing.BezierSpline; easing.bezierCurve: Motion.standard }
+            StandardAnimation { duration: Motion.ms("small", false) }
         }
     }
     Rectangle {

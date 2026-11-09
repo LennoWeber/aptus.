@@ -54,7 +54,7 @@ Item {
         scale: mouse.pressed && !root._disabled && root.height >= Tokens.button.pressScaleMin ? Tokens.button.pressScale : 1
 
         Behavior on scale {
-            NumberAnimation { duration: Motion.ms("press", !mouse.pressed); easing.type: Easing.BezierSpline; easing.bezierCurve: Motion.standard }
+            StandardAnimation { duration: Motion.ms("press", !mouse.pressed) }
         }
 
         Rectangle {
@@ -63,7 +63,7 @@ Item {
             color: root._fill
 
             Behavior on color {
-                ColorAnimation { duration: mouse.pressed ? Motion.ms("press", false) : Motion.ms("hover", false); easing.type: Easing.BezierSpline; easing.bezierCurve: Motion.standard }
+                StandardColorAnimation { duration: mouse.pressed ? Motion.ms("press", false) : Motion.ms("hover", false) }
             }
         }
         Row {

@@ -47,15 +47,13 @@ Item {
     }
     Component.onCompleted: _lastState = stateText
 
-    NumberAnimation {
+    StandardAnimation {
         id: swapAnim
         target: root
         property: "_swap"
         from: 0
         to: 1
         duration: Motion.ms("small", false)
-        easing.type: Easing.BezierSpline
-        easing.bezierCurve: Motion.standard
     }
 
     Item {
@@ -63,7 +61,7 @@ Item {
         scale: mouse.pressed && root._overMain && !root._disabled ? Tokens.button.pressScale : 1
 
         Behavior on scale {
-            NumberAnimation { duration: Motion.ms("press", !mouse.pressed); easing.type: Easing.BezierSpline; easing.bezierCurve: Motion.standard }
+            StandardAnimation { duration: Motion.ms("press", !mouse.pressed) }
         }
 
         Rectangle {
@@ -74,7 +72,7 @@ Item {
                 : (root._overMain && !root._disabled ? Tokens.raisedHot : Tokens.raised)
 
             Behavior on color {
-                ColorAnimation { duration: Motion.ms("small", !root.on); easing.type: Easing.BezierSpline; easing.bezierCurve: Motion.standard }
+                StandardColorAnimation { duration: Motion.ms("small", !root.on) }
             }
         }
         // The chevron area (right 24 px): its own hover wash, concentric with the tile's corners.
@@ -89,7 +87,7 @@ Item {
             color: root._overChevron ? (mouse.pressed ? Tokens.washPressed : Tokens.raisedHot) : Tokens.alpha(Tokens.raisedHot, 0)
 
             Behavior on color {
-                ColorAnimation { duration: Motion.ms("hover", false); easing.type: Easing.BezierSpline; easing.bezierCurve: Motion.standard }
+                StandardColorAnimation { duration: Motion.ms("hover", false) }
             }
             Glyph {
                 anchors.centerIn: parent

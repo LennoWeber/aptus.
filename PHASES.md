@@ -14,7 +14,7 @@ The work log for aptus v2, from stage S0 on. The v1 log is in the `v1-final` tag
 | Wave | Stages | State |
 |---|---|---|
 | 0 | S0 probes | P-01, P-03, P-11, P-23 pass; P-14 half; the rest run with their stage |
-| 1 | S1 Foundation | phases 1–7 done; wave-1 review next |
+| 1 | S1 Foundation | done: phases 1–7, wave-1 review, simplify |
 | 2 | S2 Isolation ‖ S3 Bar and notch | — |
 | 3 | S4 Spotlight ‖ S5 Deck ‖ S6 Session ‖ S7 Windows | — |
 | 4 | S8 Time and attention ‖ S9 Capture ‖ S10 Settings and gallery | — |
@@ -668,3 +668,44 @@ config 24, configsingleton 7, surfacemanager 7, tokens 5, the rest unchanged), l
 
 **Checked:** `tests/run`: pytest 95, qmltestrunner 155, lint 117 files 0 warnings; `pytest
 tests/e2e`: 12/12.
+
+### Wave-1 simplify (`simplify` on the wave diff; four reviewers: reuse, quality, efficiency, altitude)
+
+| Area | Change |
+|---|---|
+| Rules engine | `begin()` checks the state and fills the limits with their defaults once (16 `checkState` calls and `DRAWERS`/`OTHER` gone); `monitorOf` owns the polkit-monitor rule; `nextDeadline` gives the expiry of the oldest unshown event, so SurfaceManager arms one single-shot timer instead of a 500 ms tick. |
+| SurfaceManager | Every operation goes through `_run(op, …)`; the global state is kept as `_g` (`_hasPassive`, `_lastActive`, `_lastLocked` gone); limits come straight from the tokens. |
+| Motion, Tokens | Motion: `ms()`, `catalogueMs()`, `catalogueValue()`, `scaleFrom()` and `springs` instead of 20 copied properties; lookups before tokens.json has loaded give 0 silently (the shell log of a nested run had "unknown duration intro"). Tokens coalesces re-resolutions with `Qt.callLater`. |
+| Components | `StandardAnimation`, `StandardColorAnimation`, `SnappySpring` replace 36 copies of the curve and spring settings. Choreographed carries the host contract NotchMode and Drawer shared (monitorName, args, takesKeyboard, keys, closeRequested, back). Glyph lays out its leaving text only during a swap. |
+| Lazy drawers (04 §8) | `DrawerSlot` loads Deck and Overview from opening until their exit has finished (`Drawer.busy`, default `Choreographed.leaving`) and forwards bulge and `back()`, so S5/S7 never edit MonitorShell. MenuHost was lazy already; CaptureOverlay's stub tells S9 to load its content the same way. `test_drawer_slot` (fails without the hold). |
+| Shell start | The locked-marker and intro-flag checks are two FileViews instead of two `sh` Processes. |
+| Config, Paths, Ipc, registry | Config: one `_commit` path for set/reset/resetPage, reload only when the file differs from what it wrote. Paths.qml uses config.js `expand`/`insideHome`. Ipc: `guarded()` for the not-yet-built services, theme modes and the time pattern from the schema/config.js. Activities/NotchModes read the ids from rules.js. Shortcuts: `names` from the route table. |
+| aptus msg | Calls first and runs `qs ipc show` only on a usage error (one process per call instead of two); "Too many arguments" is a usage error. |
+| install, doctor | install: `_bin_links`, `_links_into_repo`, `_blocked`, `hyprlua.read_removed`, `hyprlua._lines`; `install/__main__.py` removed (install.sh imports `main`). doctor: `cross_check` mirrors config.js `crossCheck` (same relation indexing, same words); `crossCases` in `validate-cases.json` are checked by both suites. Forbidden packages: one `rpm -q` call. |
+| supervise, hypr, session | `next_delay` returns `(delay, switched)` (`crashed_out` and `slow_from` gone, `CrashLog.slow`); `hypr._expect_ok`; `Paths.make_runtime()`; session uses `hypr.ENV_SIG` and `paths.test`. |
+| binds.lua | The overview gestures use `G()`; the binds test runs gesture actions instead of grepping the source. |
+| Tests | Shared fixtures `fake_hypr`, `stub_bin`, `FakeQs`; e2e uses `Nested.paths` and the route table. The mock builds Tokens, Motion, Config and SurfaceManager in one loop; dead mock files gone. |
+
+Skipped, with the reason:
+
+| Finding | Why |
+|---|---|
+| Animate the wallpaper colour change | It happens on a wallpaper change only; the crossfade covers it. |
+| imgA/imgB of WallpaperLayer as an inline component | Inline components cannot reach the outer ids under `ComponentBehavior: Bound`; the copy is two short blocks. |
+| Label composition helper, env export helper | One caller each. |
+| Move `Shortcuts.notBuilt` elsewhere | Any other home would be shared by more files; it belongs to the routes. |
+| A global revision counter | S10's (settings UI) concern. |
+| Literal fallbacks in Tokens/Motion | Placeholders before tokens.json has loaded; MonitorShells appear only after it has (07 §3 step 2), so nothing draws with them. |
+
+Handed to S3 (in its brief): Hypr's refetch on title events and the eager `windows` list (E1), the
+Frame shadow blurring the whole monitor instead of the bulge bounding box (E4), Bulge normalising
+twice (E12).
+
+**New APIs:** `DrawerSlot`, `Drawer.busy`, `Choreographed.leaving` and the contract members it now
+holds; `StandardAnimation`, `StandardColorAnimation`, `SnappySpring`; `Motion.catalogueValue`,
+`scaleFrom`, `springs`; `Rules.nextDeadline`, `withDefaults`; `Paths.make_runtime`;
+`hyprlua.read_removed`; `doctor.config.cross_check`; `supervise.next_delay` → `(delay, switched)`.
+
+**Checked:** `tests/run`: pytest 97, qmltestrunner 159, lint 121 files 0 warnings; `pytest
+tests/e2e`: 12/12. A nested run (shell start, overview open and Esc, theme toggle): screenshots
+right, shell log without warnings (only the portal's app-id note of the nested session).

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 import time
 from pathlib import Path
@@ -13,16 +14,16 @@ def test_shell_starts(nested: Nested) -> None:
     st = nested.state()
     assert st["services"]["config"]["loaded"]
     assert list(st["monitors"]) == [m["name"] for m in nested.hyprctl("monitors", as_json=True)]
-    status = json.loads((nested.home / ".aptus-run" / "aptus" / "session.json").read_text())
+    status = json.loads(nested.paths.session_status.read_text())
     assert status.get("test") is True
 
 
 def test_globalshortcuts_listed(nested: Nested) -> None:
     out = nested.hyprctl("globalshortcuts")
-    names = Path(__file__).resolve().parents[2] / "shell" / "registry" / "Shortcuts.qml"
-    import re
-    block = names.read_text().split("readonly property var names: [", 1)[1].split("]", 1)[0]
-    for name in re.findall(r'"([a-z-]+)"', block):
+    shortcuts = Path(__file__).resolve().parents[2] / "shell" / "registry" / "Shortcuts.qml"
+    names = re.findall(r'^\s*"([a-z][\w-]*)": \(\) =>', shortcuts.read_text(), re.M)
+    assert names
+    for name in names:
         assert f"aptus:{name}" in out, name
 
 
@@ -92,7 +93,7 @@ def test_wallpaper_next_keeps_monitor_images(nested: Nested) -> None:
     from nested import write_test_png
     walls = nested.home / "Pictures" / "Wallpapers"
     write_test_png(walls / "second.png", 320, 180)
-    state = nested.home / ".local" / "state" / "aptus" / "wallpaper.json"
+    state = nested.paths.state / "wallpaper.json"
     mon = nested.state()["global"]["activeMonitor"]
     own = str(walls / "test.png")
     assert nested.msg("wallpaper", "set", own, mon) == "ok"
@@ -129,4 +130,4 @@ def test_shell_restart(nested: Nested) -> None:
         except Exception:
             return False
     nested.wait_for(answers, 10)
-    assert not (nested.home / ".aptus-run" / "aptus" / "restart").exists()   # the supervisor took it
+    assert not nested.paths.restart_flag.exists()   # the supervisor took it

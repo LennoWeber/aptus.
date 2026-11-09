@@ -8,7 +8,10 @@ TestCase {
     name: "tokens"
 
     function init() {
+        // the mock FileView loads tokens.json after the turn, so the first resolution comes later
+        tryVerify(() => Tokens._r !== null);
         compare(Config.reset("appearance.mode"), "");
+        tryCompare(Tokens, "mode", "dark");                  // resolved after the turn (coalesced)
         tryCompare(Tokens, "_t", 1, 2000);
     }
 
@@ -21,7 +24,7 @@ TestCase {
     function test_mode_change_crossfades() {
         const dark = String(Tokens.ground);      // a copy: a colour read from a property stays live
         compare(Config.set("appearance.mode", "light"), "");
-        compare(Tokens.mode, "light");
+        tryCompare(Tokens, "mode", "light");
         verify(Tokens._t < 1, "the colours fade, they do not jump");
         tryCompare(Tokens, "_t", 1, 2000);
         verify(String(Tokens.ground) !== dark);

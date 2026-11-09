@@ -36,7 +36,7 @@ class CrashLog:
     times: list[float]                            # monotonic times of recent crashes
     streak: int = 0                               # crashes since the last run of ≥ crash_window s
     started: float = 0.0                          # monotonic start of the current run
-    slow_from: int = 0                            # streak count at which the slow retry began (0: fast)
+    slow: bool = False                            # in the slow retry (until a long run)
 
 
 def shell_command(paths: Paths) -> list[str]:
@@ -54,26 +54,22 @@ def shell_env(paths: Paths, env: Mapping[str, str]) -> dict[str, str]:
     return out
 
 
-def next_delay(policy: RestartPolicy, crashes: CrashLog, now: float) -> float:
-    """Record a crash at `now` and return the wait before the next start: 0.5, 1, 2 s along a
-    streak of short runs; once crash_limit crashes fall inside crash_window, the slow retry for
-    every restart (07 §10). A run of ≥ crash_window s starts over (new streak, fast again)."""
+def next_delay(policy: RestartPolicy, crashes: CrashLog, now: float) -> tuple[float, bool]:
+    """Record a crash at `now` → (the wait before the next start, whether this crash switched to
+    the slow retry). The wait is 0.5, 1, 2 s along a streak of short runs; once crash_limit
+    crashes fall inside crash_window, the slow retry for every restart (07 §10). The switch fires
+    the lock fallback and the notice, once until a run of ≥ crash_window s starts over (new
+    streak, fast again)."""
     if crashes.streak < 0 or now < crashes.started:
         raise ValueError("supervise invariant: negative streak or a crash before the run started")
     if now - crashes.started >= policy.crash_window:
-        crashes.streak, crashes.slow_from = 0, 0
+        crashes.streak, crashes.slow = 0, False
     crashes.streak += 1
     crashes.times[:] = [t for t in crashes.times if now - t <= policy.crash_window] + [now]
-    if crashes.slow_from or len(crashes.times) >= policy.crash_limit:
-        crashes.slow_from = crashes.slow_from or crashes.streak
-        return policy.slow_retry
-    return policy.delays[min(crashes.streak, len(policy.delays)) - 1]
-
-
-def crashed_out(policy: RestartPolicy, crashes: CrashLog, now: float) -> bool:
-    """Whether the crash recorded last switched to the slow retry (lock fallback + notify, once
-    until a long run starts over)."""
-    return crashes.slow_from > 0 and crashes.slow_from == crashes.streak
+    if crashes.slow or len(crashes.times) >= policy.crash_limit:
+        switched, crashes.slow = not crashes.slow, True
+        return policy.slow_retry, switched
+    return policy.delays[min(crashes.streak, len(policy.delays)) - 1], False
 
 
 def on_crash_limit(paths: Paths) -> None:
@@ -118,7 +114,7 @@ def run(paths: Paths, policy: RestartPolicy, command: Sequence[str]) -> int:
             child.send_signal(signum)
 
     previous = {sig: signal.signal(sig, forward) for sig in (signal.SIGTERM, signal.SIGINT)}
-    paths.runtime.mkdir(parents=True, exist_ok=True, mode=0o700)
+    paths.make_runtime()
     paths.restart_flag.unlink(missing_ok=True)       # a stale request from an earlier session
     try:
         while not state["stop"]:
@@ -156,9 +152,9 @@ def run(paths: Paths, policy: RestartPolicy, command: Sequence[str]) -> int:
                 log.info("the shell exited normally; the supervisor ends")
                 break
             now = time.monotonic()
-            delay = next_delay(policy, crashes, now)
+            delay, switched = next_delay(policy, crashes, now)
             log.warning("the shell exited with %s; restarting in %g s", rc, delay)
-            if crashed_out(policy, crashes, now):
+            if switched:
                 on_crash_limit(paths)
             end = time.monotonic() + delay
             while not state["stop"] and time.monotonic() < end:

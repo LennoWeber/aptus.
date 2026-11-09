@@ -7,6 +7,7 @@ import Quickshell
 import Quickshell.Io
 import qs.core
 import qs.services
+import "../core/js/config.js" as ConfigLib
 
 Scope {
     id: root
@@ -25,6 +26,13 @@ Scope {
     }
     // The answer of a service's IPC functions until its stage fills it (07 §7: never an empty answer).
     function notYet(name: string): string { return "error: " + name + " is not available yet"; }
+    // Run fn() when the service is built (`available`, else notYet); fn may return an "error: …"
+    // text (a bad argument), which is the answer; anything else answers "ok".
+    function guarded(service: var, name: string, fn: var): string {
+        if (!service.available) return notYet(name);
+        const why = fn();
+        return typeof why === "string" && why.indexOf("error:") === 0 ? why : "ok";
+    }
     // Parse an optional JSON argument ("" → {}); null when invalid.
     function parseArgs(json: string): var {
         if (json === undefined || json === null || json === "" || json === "undefined") return {};
@@ -79,16 +87,15 @@ Scope {
         function toast(json: string): string {
             const a = root.parseArgs(json);
             if (a === null) return "error: toast must be a JSON object";
-            if (!Notifications.available) return root.notYet("notifications");
-            Notifications.inject(a);
-            return "ok";
+            return root.guarded(Notifications, "notifications", () => Notifications.inject(a));
         }
     }
 
     IpcHandler {
         target: "theme"
         function mode(value: string): string {
-            if (value !== "toggle" && ["dark", "light", "auto"].indexOf(value) < 0) return "error: mode is dark, light, auto or toggle";
+            const modes = Config.entry("appearance.mode").values;
+            if (value !== "toggle" && modes.indexOf(value) < 0) return "error: mode is " + modes.join(", ") + " or toggle";
             const why = value === "toggle" ? Theme.toggleMode() : Theme.setMode(value);
             return why ? "error: " + why : "ok";
         }
@@ -119,54 +126,54 @@ Scope {
     IpcHandler {
         target: "focus"
         function start(minutes: string, intent: string): string {
-            if (!Focus.available) return root.notYet("focus");
-            const m = parseInt(minutes);
-            if (!(m >= 1 && m <= 600)) return "error: minutes must be 1–600";
-            Focus.start(m, intent || null);
-            return "ok";
+            return root.guarded(Focus, "focus", () => {
+                const m = parseInt(minutes);
+                if (!(m >= 1 && m <= 600)) return "error: minutes must be 1–600";
+                Focus.start(m, intent || null);
+            });
         }
-        function stop(): string { if (!Focus.available) return root.notYet("focus"); Focus.stop(); return "ok"; }
-        function pause(): string { if (!Focus.available) return root.notYet("focus"); Focus.pause(); return "ok"; }
-        function resume(): string { if (!Focus.available) return root.notYet("focus"); Focus.resume(); return "ok"; }
+        function stop(): string { return root.guarded(Focus, "focus", () => Focus.stop()); }
+        function pause(): string { return root.guarded(Focus, "focus", () => Focus.pause()); }
+        function resume(): string { return root.guarded(Focus, "focus", () => Focus.resume()); }
         function extend(minutes: string): string {
-            if (!Focus.available) return root.notYet("focus");
-            const m = parseInt(minutes);
-            if (!(m >= 1 && m <= 240)) return "error: minutes must be 1–240";
-            Focus.extend(m);
-            return "ok";
+            return root.guarded(Focus, "focus", () => {
+                const m = parseInt(minutes);
+                if (!(m >= 1 && m <= 240)) return "error: minutes must be 1–240";
+                Focus.extend(m);
+            });
         }
     }
 
     IpcHandler {
         target: "dnd"
-        function on(): string { if (!Dnd.available) return root.notYet("dnd"); Dnd.turnOn(); return "ok"; }
-        function off(): string { if (!Dnd.available) return root.notYet("dnd"); Dnd.turnOff(); return "ok"; }
+        function on(): string { return root.guarded(Dnd, "dnd", () => Dnd.turnOn()); }
+        function off(): string { return root.guarded(Dnd, "dnd", () => Dnd.turnOff()); }
         // `aptus msg dnd for <duration>`: "for" is reserved in JavaScript, so aptus msg maps it to
         // forDuration. Duration: "90m", "1h", "1h30m", "45" (minutes).
         function forDuration(duration: string): string {
-            if (!Dnd.available) return root.notYet("dnd");
-            const m = /^(?:(\d+)h)?(?:(\d+)m?)?$/.exec(String(duration).trim());
-            const secs = m && (m[1] || m[2]) ? (parseInt(m[1] || "0") * 60 + parseInt(m[2] || "0")) * 60 : 0;
-            if (secs <= 0) return "error: duration like 90m, 1h, 1h30m or 45";
-            Dnd.forSeconds(secs);
-            return "ok";
+            return root.guarded(Dnd, "dnd", () => {
+                const m = /^(?:(\d+)h)?(?:(\d+)m?)?$/.exec(String(duration).trim());
+                const secs = m && (m[1] || m[2]) ? (parseInt(m[1] || "0") * 60 + parseInt(m[2] || "0")) * 60 : 0;
+                if (secs <= 0) return "error: duration like 90m, 1h, 1h30m or 45";
+                Dnd.forSeconds(secs);
+            });
         }
         function until(hhmm: string): string {
-            if (!Dnd.available) return root.notYet("dnd");
-            if (!/^([01][0-9]|2[0-3]):[0-5][0-9]$/.test(hhmm)) return "error: time like 07:30";
-            Dnd.untilTime(hhmm);
-            return "ok";
+            return root.guarded(Dnd, "dnd", () => {
+                if (!ConfigLib.TIME_RE.test(hhmm)) return "error: time like 07:30";
+                Dnd.untilTime(hhmm);
+            });
         }
     }
 
     IpcHandler {
         target: "capture"
-        function region(): string { if (!Capture.available) return root.notYet("capture"); Capture.region(); return "ok"; }
-        function screen(): string { if (!Capture.available) return root.notYet("capture"); Capture.screen(); return "ok"; }
-        function window(): string { if (!Capture.available) return root.notYet("capture"); Capture.window(); return "ok"; }
-        function record(): string { if (!Capture.available) return root.notYet("capture"); Capture.record(); return "ok"; }
-        function stop(): string { if (!Capture.available) return root.notYet("capture"); Capture.stop(); return "ok"; }
-        function colour(): string { if (!Capture.available) return root.notYet("capture"); Capture.colour(); return "ok"; }
+        function region(): string { return root.guarded(Capture, "capture", () => Capture.region()); }
+        function screen(): string { return root.guarded(Capture, "capture", () => Capture.screen()); }
+        function window(): string { return root.guarded(Capture, "capture", () => Capture.window()); }
+        function record(): string { return root.guarded(Capture, "capture", () => Capture.record()); }
+        function stop(): string { return root.guarded(Capture, "capture", () => Capture.stop()); }
+        function colour(): string { return root.guarded(Capture, "capture", () => Capture.colour()); }
     }
 
     IpcHandler {
@@ -194,8 +201,8 @@ Scope {
 
     IpcHandler {
         target: "jot"
-        function add(text: string): string { if (!Jot.available) return root.notYet("jot"); if (!text) return "error: text missing"; Jot.add(text); return "ok"; }
-        function todo(text: string): string { if (!Jot.available) return root.notYet("jot"); if (!text) return "error: text missing"; Jot.todo(text); return "ok"; }
+        function add(text: string): string { return root.guarded(Jot, "jot", () => text ? Jot.add(text) : "error: text missing"); }
+        function todo(text: string): string { return root.guarded(Jot, "jot", () => text ? Jot.todo(text) : "error: text missing"); }
     }
 
     IpcHandler {

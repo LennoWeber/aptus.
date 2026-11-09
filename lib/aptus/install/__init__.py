@@ -82,6 +82,27 @@ def check_action(paths: Paths, action: Action) -> None:
         refuse("a link that does not point into the repository")
 
 
+def _bin_links(paths: Paths) -> list[tuple[Path, Path]]:
+    """~/.local/bin/aptus* → the repo's bin/aptus* (the commands install.sh links)."""
+    return [(paths.local_bin / f.name, f) for f in sorted(paths.bin.iterdir())
+            if f.name.startswith("aptus") and f.is_file()]
+
+
+def _links_into_repo(paths: Paths, link: Path) -> bool:
+    return link.is_symlink() and inside(link.parent / os.readlink(link), paths.repo)
+
+
+def _removed_file(paths: Paths) -> Path:
+    return paths.install_state / "removed.lua"
+
+
+def _blocked(actions: Sequence[Action]) -> list[Action]:
+    """The link actions whose way a real file blocks that no move among `actions` clears."""
+    moved = {a.path for a in actions if a.kind == "move"}
+    return [a for a in actions if a.kind == "link" and a.target is not None and os.path.lexists(a.path)
+            and not a.path.is_symlink() and a.path not in moved]
+
+
 def v1_leftovers(paths: Paths) -> list[Path]:
     """The v1 files of 11 §4.3 that exist (symlinks into the old repo count even if dangling)."""
     found: list[Path] = []
@@ -112,9 +133,7 @@ def plan(paths: Paths) -> list[Action]:
               paths.scope / "kitty", paths.scope / "yazi", paths.local_bin, paths.hypr_config_dir):
         if not d.is_dir():
             actions.append(Action("mkdir", d, detail="create"))
-    links = [(paths.hypr_aptus_link, paths.hypr_repo)]
-    links += [(paths.local_bin / f.name, f) for f in sorted(paths.bin.iterdir())
-              if f.name.startswith("aptus") and f.is_file()]
+    links = [(paths.hypr_aptus_link, paths.hypr_repo)] + _bin_links(paths)
     stamp = time.strftime("%Y-%m-%d")
     backup = paths.v1_backup / stamp
     for link, target in links:
@@ -146,10 +165,8 @@ def plan_uninstall(paths: Paths) -> list[Action]:
     # Action has no "remove" kind: a link action without target removes the link, and a folder
     # aptus filled (scope mirrors) is moved into install_state instead of being deleted.
     actions: list[Action] = []
-    links = [paths.hypr_aptus_link] + [paths.local_bin / f.name for f in sorted(paths.bin.iterdir())
-                                       if f.name.startswith("aptus")]
-    for link in links:
-        if link.is_symlink() and inside(link.parent / os.readlink(link), paths.repo):
+    for link in [paths.hypr_aptus_link] + [link for link, _ in _bin_links(paths)]:
+        if _links_into_repo(paths, link):
             actions.append(Action("link", link, None, detail="remove the link into the repo"))
     if paths.scope.exists():
         actions.append(Action("move", paths.scope,
@@ -157,9 +174,8 @@ def plan_uninstall(paths: Paths) -> list[Action]:
                               detail="scope mirrors (02 §11)"))
     if paths.hyprland_lua.is_file():
         text = paths.hyprland_lua.read_text(encoding="utf-8")
-        removed_file = paths.install_state / "removed.lua"
-        removed = (hyprlua.parse_removed(removed_file.read_text(encoding="utf-8"))
-                   if removed_file.is_file() else [])
+        removed_file = _removed_file(paths)
+        removed = hyprlua.read_removed(removed_file)
         if hyprlua.BLOCK_BEGIN in text.splitlines():
             actions.append(Action("edit-hyprland", paths.hyprland_lua, removed_file,
                                   detail="remove the aptus block", approval="hyprland"))
@@ -205,11 +221,10 @@ def apply(paths: Paths, actions: Sequence[Action]) -> None:
     restore = any(a.kind == "edit-hyprland" and a.approval == "restore" for a in actions)
     for action in actions:
         check_action(paths, action)
-    moved = {a.path for a in actions if a.kind == "move"}
+    blocked = _blocked(actions)
+    if blocked:
+        raise FileExistsError(f"{blocked[0].path} is in the way of the link and is not moved aside; nothing changed")
     for a in actions:
-        if a.kind == "link" and a.target is not None and os.path.lexists(a.path) \
-                and not a.path.is_symlink() and a.path not in moved:
-            raise FileExistsError(f"{a.path} is in the way of the link and is not moved aside; nothing changed")
         if a.kind == "move" and os.path.lexists(a.target):
             raise FileExistsError(f"{a.target} exists already; nothing changed")
     edited = False
@@ -233,7 +248,7 @@ def apply(paths: Paths, actions: Sequence[Action]) -> None:
             text = lua.read_text(encoding="utf-8")
             paths.install_state.mkdir(parents=True, exist_ok=True)
             shutil.copy2(lua, paths.install_state / f"hyprland.lua.{stamp}")
-            removed_file = paths.install_state / "removed.lua"
+            removed_file = _removed_file(paths)
             if a.target is None:              # install
                 edit = hyprlua.plan_install(text)
                 if edit.removals:
@@ -241,15 +256,12 @@ def apply(paths: Paths, actions: Sequence[Action]) -> None:
                     # restorable; a line removed again replaces its old entry (its anchor is the
                     # current file's), so it is put back once
                     again = {r.text for r in edit.removals}
-                    earlier = [r for r in (hyprlua.parse_removed(removed_file.read_text(encoding="utf-8"))
-                                           if removed_file.is_file() else []) if r.text not in again]
+                    earlier = [r for r in hyprlua.read_removed(removed_file) if r.text not in again]
                     if removed_file.exists():
                         shutil.copy2(removed_file, paths.install_state / f"removed.lua.{stamp}")
                     atomic.write_text(removed_file, hyprlua.removed_lua(earlier + edit.removals))
             else:                             # uninstall, optionally putting the lines back
-                removed = (hyprlua.parse_removed(removed_file.read_text(encoding="utf-8"))
-                           if removed_file.is_file() else [])
-                edit = hyprlua.plan_uninstall(text, removed, restore)
+                edit = hyprlua.plan_uninstall(text, hyprlua.read_removed(removed_file), restore)
             atomic.write_text(lua, edit.new_text)
             if a.target is not None and restore and removed_file.exists():
                 # put back once: a later uninstall must not offer the same lines again
@@ -259,9 +271,8 @@ def apply(paths: Paths, actions: Sequence[Action]) -> None:
 def _aptus_linked(paths: Paths, approved: Sequence[Action]) -> bool:
     """~/.config/hypr/aptus points into the repo now, or an approved action makes it so."""
     link = paths.hypr_aptus_link
-    if link.is_symlink() and inside(link.parent / os.readlink(link), paths.repo):
-        return True
-    return any(a.kind == "link" and a.path == link and a.target is not None for a in approved)
+    return _links_into_repo(paths, link) or any(
+        a.kind == "link" and a.path == link and a.target is not None for a in approved)
 
 
 def main(argv: Sequence[str]) -> int:
@@ -299,9 +310,7 @@ def main(argv: Sequence[str]) -> int:
         if group == "hyprland" and not uninstall:
             print(hyprlua.diff(hyprlua.plan_install(text)))
         elif group in ("hyprland", "restore"):
-            removed_file = p.install_state / "removed.lua"
-            removed = (hyprlua.parse_removed(removed_file.read_text(encoding="utf-8"))
-                       if removed_file.is_file() else [])
+            removed = hyprlua.read_removed(_removed_file(p))
             base = hyprlua.plan_uninstall(text, removed, False)
             shown = base if group == "hyprland" else hyprlua.Plan(
                 original=base.new_text,
@@ -316,9 +325,7 @@ def main(argv: Sequence[str]) -> int:
         else:
             print("Skipped.")
     # a link whose way is blocked by a file the declined v1 group would have moved aside is left out
-    cleared = {a.path for a in approved if a.kind == "move"}
-    blocked = [a for a in approved if a.kind == "link" and a.target is not None and os.path.lexists(a.path)
-               and not a.path.is_symlink() and a.path not in cleared]
+    blocked = _blocked(approved)
     for a in blocked:
         print(f"Left out: the link {a.path} (a file is in the way and its move was declined).")
     approved = [a for a in approved if a not in blocked]

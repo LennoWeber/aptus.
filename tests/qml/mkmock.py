@@ -1,7 +1,7 @@
 """Build the import dir for qmltestrunner (tests/run): qmltestrunner cannot load the Quickshell
-plugin, so the tests import test doubles of Quickshell (incl. a Quickshell.Io FileView that reads
-through XHR and writes to memory) and of Log, Paths and Format from here, plus the real
-qs.components, core/js, MonitorState, and Config, Tokens, Motion and SurfaceManager made
+plugin, so the tests import test doubles of Quickshell (incl. Quickshell.Io: a FileView that reads
+through XHR and writes to memory, a Process that runs nothing) and of Log and Paths from here, plus
+the real qs.components, core/js, MonitorState, and Config, Tokens, Motion and SurfaceManager made
 independent of the Quickshell plugin.
 
     python3 tests/qml/mkmock.py <out-dir>
@@ -17,49 +17,11 @@ REPO = Path(__file__).resolve().parents[2]
 MOCK = Path(__file__).resolve().parent / "mock"
 
 
-def strip_quickshell(text: str, keep_io: bool = False) -> str:
-    """A core singleton without the Quickshell plugin: `Singleton {` → `Item {`, no Quickshell
-    import (Quickshell.Io stays with keep_io: the mock module provides FileView)."""
-    if not keep_io:
-        text = text.replace("import Quickshell.Io\n", "")
+def strip_quickshell(text: str) -> str:
+    """A core singleton without the Quickshell plugin: `Singleton {` → `Item {`, no `import
+    Quickshell` (Quickshell.Io stays: the mock module provides it)."""
     text = text.replace("import Quickshell\n", "")
     return re.sub(r"\nSingleton \{", "\nItem {", text, count=1)
-
-
-def cut_block(text: str, start: str, replacement: str = "") -> str:
-    """Replace the brace block that begins with the line `start` (e.g. "    FileView {")."""
-    i = text.index(start)
-    depth, j = 0, i
-    while True:
-        if text[j] == "{":
-            depth += 1
-        elif text[j] == "}":
-            depth -= 1
-            if depth == 0:
-                break
-        j += 1
-    return text[:i] + replacement + text[j + 1:]
-
-
-def tokens_qml() -> str:
-    """Tokens reads tokens.json with a synchronous XHR instead of FileView (needs
-    QML_XHR_ALLOW_FILE_READ=1)."""
-    s = strip_quickshell((REPO / "shell/core/Tokens.qml").read_text(encoding="utf-8"))
-    s = cut_block(s, "    FileView {", f"""    function _load(): void {{
-        const x = new XMLHttpRequest();
-        x.open("GET", "file://{REPO}/theme/tokens.json", false);
-        x.send();
-        root.raw = JSON.parse(x.responseText);
-    }}""")
-    if "Component.onCompleted: {" not in s:
-        raise SystemExit("mkmock: Tokens.qml has no Component.onCompleted block to load from")
-    return s.replace("Component.onCompleted: {", "Component.onCompleted: { _load();", 1)
-
-
-def motion_qml() -> str:
-    """Motion without the gsettings Process (reduced motion stays off)."""
-    s = strip_quickshell((REPO / "shell/core/Motion.qml").read_text(encoding="utf-8"))
-    return cut_block(s, "    Process {")
 
 
 def build(out: Path) -> None:
@@ -67,12 +29,11 @@ def build(out: Path) -> None:
         shutil.rmtree(out)
     shutil.copytree(MOCK, out, symlinks=True)
     core = out / "qs" / "core"
-    (core / "Tokens.qml").write_text(tokens_qml(), encoding="utf-8")
-    (core / "Motion.qml").write_text(motion_qml(), encoding="utf-8")
-    (core / "Config.qml").write_text(
-        strip_quickshell((REPO / "shell/core/Config.qml").read_text(encoding="utf-8"), keep_io=True), encoding="utf-8")
-    (core / "SurfaceManager.qml").write_text(
-        strip_quickshell((REPO / "shell/core/SurfaceManager.qml").read_text(encoding="utf-8")), encoding="utf-8")
+    # the real core singletons; Quickshell.Io comes from the mock (FileView reads through XHR,
+    # Process and StdioCollector do nothing, so reduced motion stays off)
+    for name in ("Tokens", "Motion", "Config", "SurfaceManager"):
+        text = (REPO / "shell/core" / f"{name}.qml").read_text(encoding="utf-8")
+        (core / f"{name}.qml").write_text(strip_quickshell(text), encoding="utf-8")
     paths = core / "Paths.qml"
     paths.write_text(paths.read_text(encoding="utf-8").replace("@REPO@", str(REPO)), encoding="utf-8")
     (core / "MonitorState.qml").symlink_to(REPO / "shell/core/MonitorState.qml")

@@ -35,7 +35,7 @@ Item {
         color: root.checked ? Tokens.accent : Tokens.line
 
         Behavior on color {
-            ColorAnimation { duration: Motion.ms("small", !root.checked); easing.type: Easing.BezierSpline; easing.bezierCurve: Motion.standard }
+            StandardColorAnimation { duration: Motion.ms("small", !root.checked) }
         }
     }
     Rectangle {
@@ -48,10 +48,10 @@ Item {
 
         Behavior on x {
             enabled: !Motion.reduced
-            SpringAnimation { spring: Motion.snappySpring; damping: Motion.snappyDamping; mass: Motion.snappyMass; epsilon: Motion.snappyEpsilon }
+            SnappySpring {}
         }
         Behavior on color {
-            ColorAnimation { duration: Motion.ms("small", !root.checked); easing.type: Easing.BezierSpline; easing.bezierCurve: Motion.standard }
+            StandardColorAnimation { duration: Motion.ms("small", !root.checked) }
         }
     }
     MouseArea {

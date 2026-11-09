@@ -95,11 +95,11 @@ Item {
 
         Behavior on x {
             enabled: !Motion.reduced
-            SpringAnimation { spring: Motion.snappySpring; damping: Motion.snappyDamping; mass: Motion.snappyMass; epsilon: Motion.snappyEpsilon }
+            SnappySpring {}
         }
         Behavior on width {
             enabled: !Motion.reduced
-            SpringAnimation { spring: Motion.snappySpring; damping: Motion.snappyDamping; mass: Motion.snappyMass; epsilon: Motion.snappyEpsilon }
+            SnappySpring {}
         }
     }
     Row {

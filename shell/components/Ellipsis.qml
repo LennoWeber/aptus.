@@ -22,7 +22,7 @@ Item {
     onRunningChanged: if (!running) _late = false
 
     Behavior on opacity {
-        NumberAnimation { duration: Motion.ms("fade", !(root.running && root._late)); easing.type: Easing.BezierSpline; easing.bezierCurve: Motion.standard }
+        StandardAnimation { duration: Motion.ms("fade", !(root.running && root._late)) }
     }
     Timer {
         interval: Motion.catalogueMs("loadingDelay", false)

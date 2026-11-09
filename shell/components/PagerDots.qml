@@ -30,7 +30,7 @@ Item {
                 color: index === root.current ? Tokens.inkSec : Tokens.inkFaint
 
                 Behavior on color {
-                    ColorAnimation { duration: Motion.ms("small", false); easing.type: Easing.BezierSpline; easing.bezierCurve: Motion.standard }
+                    StandardColorAnimation { duration: Motion.ms("small", false) }
                 }
             }
         }

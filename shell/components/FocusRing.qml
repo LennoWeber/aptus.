@@ -19,7 +19,7 @@ Item {
     visible: opacity > 0
 
     Behavior on opacity {
-        NumberAnimation { duration: Motion.ms("hover", !root.shown); easing.type: Easing.BezierSpline; easing.bezierCurve: Motion.standard }
+        StandardAnimation { duration: Motion.ms("hover", !root.shown) }
     }
 
     Rectangle {

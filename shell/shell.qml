@@ -64,35 +64,48 @@ ShellRoot {
         running: false
         from: 0
         to: 1
-        duration: Motion.introIn
+        duration: Motion.ms("intro", false)
         easing.type: Easing.BezierSpline
         easing.bezierCurve: Motion.enter
     }
 
     // Steps 4–5 of 07 §3: the locked marker means a crash while locked (lock at once, no intro);
     // a missing intro flag for this Hyprland signature means the first start of the session.
-    Process {
-        id: startCheck
-        command: ["sh", "-c", "test -e \"$1\" && echo locked; test -e \"$2\" && echo played; true",
-                  "sh", Paths.lockedMarker, Paths.introFlag]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                const out = this.text;
-                if (out.indexOf("locked") >= 0) {
-                    Log.info("shell", "locked marker found: locking at once");
-                    Session.lock();
-                } else if (out.indexOf("played") < 0) {
-                    root.introProgress = 0;
-                    introFlag.running = true;
-                    Qt.callLater(() => intro.start());
-                }
-                root._startChecked = true;
-            }
-        }
+    // Each FileView answers once at the start: loaded = the file exists, loadFailed = it does not.
+    FileView {
+        path: Paths.lockedMarker
+        blockLoading: true
+        printErrors: false
+        onLoaded: root._startAnswer("locked", true)
+        onLoadFailed: root._startAnswer("locked", false)
     }
-    Process {
+    FileView {
         id: introFlag
-        command: ["sh", "-c", "mkdir -p \"$(dirname \"$1\")\" && touch \"$1\"", "sh", Paths.introFlag]
+        path: Paths.introFlag
+        blockLoading: true
+        printErrors: false
+        onLoaded: root._startAnswer("played", true)
+        onLoadFailed: root._startAnswer("played", false)
+    }
+    // The answers so far, { locked: bool, played: bool }; acted on once both are in and the
+    // services have started (Component.onCompleted).
+    property var _start: ({})
+    property bool _completed: false
+    function _startAnswer(what: string, exists: bool): void {
+        if (!(what in _start)) _start[what] = exists;
+        _startDecide();
+    }
+    function _startDecide(): void {
+        if (_startChecked || !_completed || !("locked" in _start) || !("played" in _start)) return;
+        if (_start.locked) {
+            Log.info("shell", "locked marker found: locking at once");
+            Session.lock();
+        } else if (!_start.played) {
+            introProgress = 0;
+            introFlag.setText("played\n");          // FileView creates the folder itself
+            Qt.callLater(() => intro.start());
+        }
+        _startChecked = true;
     }
 
     Component.onCompleted: {
@@ -100,7 +113,8 @@ ShellRoot {
         // bus name before apps send.
         for (const s of [Hypr, Notifications, Idle, Session, Wallpaper]) Log.debug("shell", "started " + s);
         SurfaceManager.syncMonitors(Hypr.monitors.map(m => m.name));
-        startCheck.running = true;
+        _completed = true;
+        _startDecide();
         Log.info("shell", "aptus shell started (" + Paths.shellDir + ")");
     }
 }

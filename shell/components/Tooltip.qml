@@ -55,7 +55,7 @@ Item {
     }
     Behavior on y {
         enabled: !Motion.reduced
-        NumberAnimation { duration: Motion.ms("hover", !root._shown); easing.type: Easing.BezierSpline; easing.bezierCurve: Motion.standard }
+        StandardAnimation { duration: Motion.ms("hover", !root._shown) }
     }
 
     on_WantChanged: {

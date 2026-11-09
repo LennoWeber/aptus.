@@ -7,6 +7,7 @@ QtObject {
     readonly property string config: home + "/.config/aptus"
     readonly property string fonts: "@REPO@/shell/assets/fonts"
     readonly property string schemaFile: "@REPO@/shell/config/settings-schema.json"
+    readonly property string tokensFile: "@REPO@/theme/tokens.json"
     readonly property string settingsFile: config + "/settings.json"
     function url(path: string): string { return path === "" ? "" : "file://" + path; }
     function expand(path: string): string { return path; }

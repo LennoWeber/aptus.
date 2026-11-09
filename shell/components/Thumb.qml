@@ -32,7 +32,7 @@ Item {
             opacity: status === Image.Ready ? 1 : 0
 
             Behavior on opacity {
-                NumberAnimation { duration: Motion.ms("fade", false); easing.type: Easing.BezierSpline; easing.bezierCurve: Motion.standard }
+                StandardAnimation { duration: Motion.ms("fade", false) }
             }
         }
     }
@@ -48,7 +48,7 @@ Item {
         visible: opacity > 0
 
         Behavior on opacity {
-            NumberAnimation { duration: Motion.ms("small", !root.selected); easing.type: Easing.BezierSpline; easing.bezierCurve: Motion.standard }
+            StandardAnimation { duration: Motion.ms("small", !root.selected) }
         }
     }
 }

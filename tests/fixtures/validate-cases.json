@@ -1,5 +1,5 @@
 {
-  "about": "One value per case and the problem it has, without the setting's label; null when valid. tests/unit/test_doctor.py checks lib/aptus/doctor/config.py against it, tests/qml/tst_config.qml checks shell/core/js/config.js, so `aptus doctor config` and the shell say the same thing.",
+  "about": "One value per case and the problem it has, without the setting's label; null when valid. tests/unit/test_doctor.py checks lib/aptus/doctor/config.py against it, tests/qml/tst_config.qml checks shell/core/js/config.js, so `aptus doctor config` and the shell say the same thing. crossCases: settings over the defaults and the cross-rule problems they cause, as [key, problem without the label], checked against crossCheck and doctor's cross_check.",
   "home": "/home/t",
   "cases": [
     ["appearance.glass", true, null],
@@ -35,5 +35,16 @@
     ["files.roots", ["~/Code"], null],
     ["files.roots", [""], "must list paths"],
     ["files.roots", ["/etc"], "/etc must be inside your home folder"]
+  ],
+  "crossCases": [
+    [{}, []],
+    [{"idle.dimAfter": 600, "idle.lockAfter": 300}, [["idle.lockAfter", "must be later than Dim after"]]],
+    [{"idle.dimAfter": 300, "idle.lockAfter": 300}, [["idle.lockAfter", "must be later than Dim after"]]],
+    [{"idle.lockAfter": 900}, [["idle.screenOffAfter", "must be at least Lock after"]]],
+    [{"idle.lockAfter": 600}, []],
+    [{"idle.lockAfter": 0, "idle.dimAfter": 700}, [["idle.screenOffAfter", "must be at least Dim after"]]],
+    [{"idle.dimAfter": 0, "idle.lockAfter": 0, "idle.screenOffAfter": 0}, []],
+    [{"focus.durations": [30, 60, 120]}, [["focus.default", "must be one of 30, 60, 120"]]],
+    [{"focus.durations": [30, 60, 120], "focus.default": 60}, []]
   ]
 }

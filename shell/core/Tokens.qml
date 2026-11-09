@@ -292,13 +292,15 @@ Singleton {
         function onLoadedChanged(): void { root._updateAuto(); root.resolveNow(); }
         function onSettingChanged(key: string): void {
             if (key === "weather.location") root._updateAuto();
-            if (key.indexOf("appearance.") === 0 || key === "weather.location") root.resolveNow();
+            if (key.indexOf("appearance.") === 0 || key === "weather.location") Qt.callLater(root.resolveNow);
         }
     }
-    onRawChanged: resolveNow()
-    on_AutoModeChanged: resolveNow()
-    onWallpaperHueChanged: resolveNow()
-    onWallpaperLightnessChanged: resolveNow()
-    onWallpaperChromaChanged: resolveNow()
+    // Inputs that arrive together (a wallpaper analysis sets hue, chroma and lightness) resolve
+    // once, after the current turn; the start (onCompleted, Config loaded) resolves at once.
+    onRawChanged: Qt.callLater(resolveNow)
+    on_AutoModeChanged: Qt.callLater(resolveNow)
+    onWallpaperHueChanged: Qt.callLater(resolveNow)
+    onWallpaperLightnessChanged: Qt.callLater(resolveNow)
+    onWallpaperChromaChanged: Qt.callLater(resolveNow)
     Component.onCompleted: { _updateAuto(); resolveNow(); }
 }

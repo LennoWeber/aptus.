@@ -147,7 +147,7 @@ Item {
             // M-19: 1:1 while dragging; click, wheel and keys move it on the snappy spring
             Behavior on x {
                 enabled: !root._dragging && !Motion.reduced
-                SpringAnimation { spring: Motion.snappySpring; damping: Motion.snappyDamping; mass: Motion.snappyMass; epsilon: Motion.snappyEpsilon }
+                SnappySpring {}
             }
             FocusRing {
                 target: thumb

@@ -16,10 +16,10 @@ REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "lib"))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from nested import Nested, real_signature  # noqa: E402
+from nested import Nested, export_real_signature, real_signature  # noqa: E402
 
 # Read before anything else touches the environment (fails closed: no session, no tests).
-os.environ.setdefault("APTUS_REAL_HYPRLAND_SIGNATURE", os.environ.get("HYPRLAND_INSTANCE_SIGNATURE", ""))
+export_real_signature()
 
 
 @pytest.fixture(scope="session")

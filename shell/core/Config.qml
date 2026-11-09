@@ -42,17 +42,11 @@ Singleton {
     }
     // Set and persist a value (debounced 300 ms, atomic). Returns "" or the validation message.
     function set(key: string, value: var): string {
-        const e = entry(key);
-        if (!e) return "unknown setting";
         const r = Lib.validate(schema, key, value, Paths.home, null);
         if (!r.ok) { settingInvalid(key, r.message); return r.message; }
-        const next = Object.assign({}, values);
-        next[key] = r.value;
-        Lib.deriveAll(schema, next);
-        const cross = Lib.crossCheck(schema, next);
-        if (cross.length) { settingInvalid(key, cross[0].message); return cross[0].message; }
-        _store(key, r.value, next);
-        return "";
+        const change = {};
+        change[key] = r.value;
+        return _commit(change);
     }
     // Back to the default (removes the key from settings.json). Returns "" or, when the default
     // breaks a cross-key rule with the other values (a focus default outside custom durations,
@@ -61,12 +55,12 @@ Singleton {
         const e = entry(key);
         if (!e) return "unknown setting";
         if (e.type === "derived") return "";
-        return _resetKeys([key]);
+        return _commit(_defaultsOf([key]));
     }
     // Reset every key of a settings page at once (settings.md §4 "Reset page"); "" or the message.
     function resetPage(page: string): string {
         const keys = Object.keys(schema.keys || {}).filter(k => schema.keys[k].page === page && schema.keys[k].type !== "derived");
-        return keys.length ? _resetKeys(keys) : "";
+        return keys.length ? _commit(_defaultsOf(keys)) : "";
     }
     // Validate without storing: { ok, value, message }.
     function validate(key: string, value: var): var { return Lib.validate(schema, key, value, Paths.home, null); }
@@ -83,7 +77,7 @@ Singleton {
             schema = { keys: {}, rules: [] };
         }
         defaults = Lib.defaults(schema);
-        const v = Lib.defaults(schema);
+        const v = Lib.clone(defaults);
         Lib.deriveAll(schema, v);
         values = v;
         revision++;
@@ -102,18 +96,20 @@ Singleton {
         Lib.deriveAll(schema, r.values);
         for (const p of r.problems) { Log.warn("config", p.key + ": " + p.message); settingInvalid(p.key, p.message); }
         const old = values;
+        const changed = Object.keys(r.values).filter(k => !Lib.equal(old[k], r.values[k]));
         overrides = r.overrides;
         unknown = r.unknown;
         values = r.values;
-        revision++;
         const wasLoaded = loaded;
+        if (!wasLoaded || changed.length) revision++;
         loaded = true;
-        if (wasLoaded) for (const k in r.values) if (!Lib.equal(old[k], r.values[k])) settingChanged(k);
+        if (wasLoaded) for (const k of changed) settingChanged(k);
         if (r.migrated) saveTimer.restart();
     }
     function _save(): void {
         if (v1File) _backupV1();
-        settingsView.setText(Lib.serialise(overrides, unknown));
+        _written = Lib.serialise(overrides, unknown);
+        settingsView.setText(_written);
         pending = {};
     }
     function _backupV1(): void {
@@ -124,26 +120,36 @@ Singleton {
 
     // The text of a v1 settings.json, kept for the backup before the first write.
     property string _v1Text: ""
+    // The text the shell wrote last (null before the first write): the file watch also reports
+    // the shell's own writes, which need no reload.
+    property var _written: null
 
-    // reset()/resetPage(): all `keys` back to their defaults together, cross-checked first.
-    function _resetKeys(keys: var): string {
-        const next = Object.assign({}, values);
-        for (const k of keys) next[k] = JSON.parse(JSON.stringify(schema.keys[k]["default"]));
+    // key → a copy of its default, for reset()/resetPage().
+    function _defaultsOf(keys: var): var {
+        const out = {};
+        for (const k of keys) out[k] = Lib.clone(defaults[k]);
+        return out;
+    }
+    // Commit validated values { key: value } together (set, reset, resetPage): derive, check the
+    // cross-key rules on the result (refused as a whole, nothing changes, as settingInvalid of the
+    // first key), then store.
+    function _commit(changes: var): string {
+        const next = Object.assign({}, values, changes);
         Lib.deriveAll(schema, next);
         const cross = Lib.crossCheck(schema, next);
-        if (cross.length) { settingInvalid(keys[0], cross[0].message); return cross[0].message; }
-        for (const k of keys) _store(k, next[k], next);
+        if (cross.length) { settingInvalid(Object.keys(changes)[0], cross[0].message); return cross[0].message; }
+        _store(changes, next);
         return "";
     }
-    // Commit one change: `value` becomes the override of `key` (removed when it equals the
-    // default, which is how reset() goes through here), `next` the complete validated value map
-    // (derived keys included); marks the key pending, emits settingChanged per changed key, starts
-    // the save debounce.
-    function _store(key: string, value: var, next: var): void {
-        const o = Object.assign({}, overrides);
-        if (Lib.equal(value, schema.keys[key]["default"])) delete o[key]; else o[key] = value;
-        const p = Object.assign({}, pending);
-        p[key] = value;
+    // Store a commit: each changed key's override (removed when it equals the default), marked
+    // pending; `next` is the complete value map (derived keys included). Emits settingChanged per
+    // changed key, starts the save debounce.
+    function _store(changes: var, next: var): void {
+        const o = Object.assign({}, overrides), p = Object.assign({}, pending);
+        for (const k in changes) {
+            if (Lib.equal(changes[k], schema.keys[k]["default"])) delete o[k]; else o[k] = changes[k];
+            p[k] = changes[k];
+        }
         const old = values;
         overrides = o;
         pending = p;
@@ -168,7 +174,7 @@ Singleton {
         atomicWrites: true
         printErrors: false
         onFileChanged: reload()
-        onLoaded: root._loadFile(text())
+        onLoaded: if (text() !== root._written) root._loadFile(text())
         onLoadFailed: error => {
             if (error !== FileViewError.FileNotFound) root.fileError = FileViewError.toString(error);
             root._loadFile("");

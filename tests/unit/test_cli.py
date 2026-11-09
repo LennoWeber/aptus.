@@ -11,7 +11,7 @@ from aptus import cli, msg
 from aptus.paths import get
 
 
-def test_logs_two_queries(tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+def test_logs_two_queries(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, stub_bin,
                           capsys: pytest.CaptureFixture[str]) -> None:
     tags, unit = cli.journal_queries(None)
     assert tags[:5] == ["journalctl", "--user", "--no-pager", "-o", "json"]
@@ -24,7 +24,6 @@ def test_logs_two_queries(tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 
     # A fake journalctl answers each query with its own lines; one line matches both (same cursor).
     fake = tmp_path / "bin"
-    fake.mkdir()
     shared = {"__CURSOR": "c-both", "__REALTIME_TIMESTAMP": "1500000", "MESSAGE": "both",
               "SYSLOG_IDENTIFIER": "x"}
     by_tag = {"__CURSOR": "c1", "__REALTIME_TIMESTAMP": "3000000", "MESSAGE": "from the shell",
@@ -33,10 +32,8 @@ def test_logs_two_queries(tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
                "_SYSTEMD_USER_UNIT": "aptus-guard.service"}
     tag_out, unit_out = ("\n".join(json.dumps(e) for e in lines) for lines in
                          ([shared, by_tag, ], [shared, by_unit]))
-    script = fake / "journalctl"
-    script.write_text(f"#!/bin/sh\ncase \"$*\" in *' -u '*) cat <<'EOF'\n{unit_out}\nEOF\n;; "
+    stub_bin(fake, "journalctl", f"#!/bin/sh\ncase \"$*\" in *' -u '*) cat <<'EOF'\n{unit_out}\nEOF\n;; "
                       f"*) cat <<'EOF'\n{tag_out}\nEOF\n;; esac\n")
-    script.chmod(0o755)
     monkeypatch.setenv("PATH", f"{fake}{os.pathsep}{os.environ['PATH']}")
     assert cli.main(["logs"]) == 0
     lines = capsys.readouterr().out.splitlines()

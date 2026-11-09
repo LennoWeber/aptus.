@@ -54,11 +54,11 @@ ListView {
 
         Behavior on y {
             enabled: !Motion.reduced
-            SpringAnimation { spring: Motion.snappySpring; damping: Motion.snappyDamping; mass: Motion.snappyMass; epsilon: Motion.snappyEpsilon }
+            SnappySpring {}
         }
         Behavior on height {
             enabled: !Motion.reduced
-            SpringAnimation { spring: Motion.snappySpring; damping: Motion.snappyDamping; mass: Motion.snappyMass; epsilon: Motion.snappyEpsilon }
+            SnappySpring {}
         }
     }
     Accessible.role: Accessible.List

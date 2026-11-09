@@ -44,11 +44,10 @@ Item {
         swap.restart();
     }
 
-    NumberAnimation {
+    StandardAnimation {
         id: swap
         target: root; property: "_swap"; from: 0; to: 1
         duration: Motion.ms("small", false)
-        easing.type: Easing.BezierSpline; easing.bezierCurve: Motion.standard
     }
 
     Text {
@@ -56,7 +55,8 @@ Item {
         anchors.fill: parent
         visible: root._swap < 1
         opacity: 1 - root._swap
-        text: root._previous
+        // empty outside a swap: no second layout per FILL/wght frame
+        text: root._swap < 1 ? root._previous : ""
         color: root._ink
         horizontalAlignment: Text.AlignHCenter
         verticalAlignment: Text.AlignVCenter
@@ -83,10 +83,10 @@ Item {
 
     Behavior on _fill {
         enabled: !Motion.reduced
-        NumberAnimation { duration: Motion.ms("small", !root.on); easing.type: Easing.BezierSpline; easing.bezierCurve: Motion.standard }
+        StandardAnimation { duration: Motion.ms("small", !root.on) }
     }
     Behavior on _wght {
         enabled: !Motion.reduced
-        NumberAnimation { duration: Motion.ms("small", !root.active); easing.type: Easing.BezierSpline; easing.bezierCurve: Motion.standard }
+        StandardAnimation { duration: Motion.ms("small", !root.active) }
     }
 }
