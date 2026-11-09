@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 from ...paths import Paths
+from .. import system
 from ..journal import SlotRecord
 from ..slots import SlotSpec
 from . import Snapshot
@@ -30,56 +31,68 @@ def check_key(key: str, *, writing: bool) -> None:
 
 def read_key(paths: Paths, key: str) -> str | None:
     """`dconf read KEY`: the GVariant text, None when the key is not set."""
-    # TODO(S2): check_key; system.run ['dconf', 'read', key]; skipped or code != 0 → DconfError;
-    #   empty stdout → None.
-    raise NotImplementedError
+    check_key(key, writing=False)
+    r = system.run(paths, ["dconf", "read", key])
+    if r.skipped or r.code != 0:
+        raise DconfError(f"dconf read {key}: {'not available' if r.skipped else r.stderr.strip()}")
+    return r.stdout.strip() or None
+
+
+def _change(paths: Paths, argv: list[str]) -> None:
+    r = system.run(paths, argv)
+    if r.skipped or r.code != 0:
+        raise DconfError(f"{' '.join(argv[:3])}: {'not available' if r.skipped else r.stderr.strip()}")
 
 
 def write_key(paths: Paths, key: str, value: str) -> None:
-    # TODO(S2): check_key(writing=True); ['dconf', 'write', key, value]; failure → DconfError.
-    raise NotImplementedError
+    check_key(key, writing=True)
+    _change(paths, ["dconf", "write", key, value])
 
 
 def reset_key(paths: Paths, key: str) -> None:
-    # TODO(S2): check_key(writing=True); ['dconf', 'reset', key].
-    raise NotImplementedError
+    check_key(key, writing=True)
+    _change(paths, ["dconf", "reset", key])
 
 
 def read(paths: Paths, rec: SlotRecord) -> Snapshot:
     """{set, value}."""
-    # TODO(S2): {'set': value is not None, 'value': value}.
-    raise NotImplementedError
+    value = read_key(paths, rec.key)
+    return Snapshot({"set": value is not None, "value": value})
 
 
 def digest(paths: Paths, rec: SlotRecord) -> dict:
     """{"value": text | None}."""
-    # TODO(S2): {'value': read_key}.
-    raise NotImplementedError
+    return {"value": read_key(paths, rec.key)}
 
 
 def before_digest(before: dict) -> dict:
-    # TODO(S2): {'value': before['value'] if before['set'] else None}.
-    raise NotImplementedError
+    return {"value": before.get("value") if before.get("set") else None}
 
 
 def planned(spec: SlotSpec) -> dict:
-    # TODO(S2): {'value': spec.value}; record-only: the before value (filled by take).
-    raise NotImplementedError
+    """{"value": spec.value}; a record-only spec (value None) plans no change: take records the
+    `before` digest as its `after`."""
+    return {"value": spec.value}
 
 
 def write(paths: Paths, rec: SlotRecord, spec: SlotSpec) -> dict:
-    """`dconf write`; a record-only slot is left alone and keeps its digest."""
-    # TODO(S2): rec.write false → return digest unchanged; else write_key and return {'value':
-    #   value}.
-    raise NotImplementedError
+    """`dconf write`; a record-only slot is left alone and keeps its digest. Returns the value
+    read back (dconf may normalise the GVariant text)."""
+    if not rec.write or spec.value is None:
+        return digest(paths, rec)
+    write_key(paths, rec.key, spec.value)
+    return digest(paths, rec)
 
 
 def restore(paths: Paths, rec: SlotRecord, data: bytes | None) -> None:
     """`dconf write KEY BEFORE`, or `dconf reset KEY` when it was not set."""
-    # TODO(S2): record-only → nothing; set → write_key(before value); else reset_key.
-    raise NotImplementedError
+    if not rec.write:
+        return
+    if rec.before.get("set"):
+        write_key(paths, rec.key, rec.before["value"])
+    else:
+        reset_key(paths, rec.key)
 
 
 def current(paths: Paths, rec: SlotRecord) -> bytes:
-    # TODO(S2): (read_key or '').encode().
-    raise NotImplementedError
+    return (read_key(paths, rec.key) or "").encode("utf-8")

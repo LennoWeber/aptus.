@@ -3,6 +3,8 @@ the journal's `before` shape, writes aptus's paint, restores `before`, and gives
 `after` records and release compares against."""
 from __future__ import annotations
 
+import hashlib
+import importlib
 from dataclasses import dataclass
 from types import ModuleType
 from typing import Any
@@ -17,6 +19,7 @@ class Snapshot:
 
 
 KINDS = ("file", "ini-sections", "dconf")       # SlotKind values
+_MODULES = {"file": "file", "ini-sections": "ini", "dconf": "dconf"}
 
 # Every kind module has the same seven functions (rec: journal.SlotRecord, spec: slots.SlotSpec):
 #   read(paths, rec) -> Snapshot           current state in the journal's `before` shape
@@ -31,11 +34,12 @@ KINDS = ("file", "ini-sections", "dconf")       # SlotKind values
 
 def module(kind: str) -> ModuleType:
     """The module implementing `kind` (a SlotKind or its value); ValueError for anything else."""
-    # TODO(S2): map SlotKind(kind) to the file, ini, dconf modules (imported lazily).
-    raise NotImplementedError
+    value = getattr(kind, "value", kind)
+    if value not in KINDS:
+        raise ValueError(f"unknown slot kind {kind!r}")
+    return importlib.import_module(f".{_MODULES[value]}", __name__)
 
 
 def sha256(data: bytes) -> str:
     """Hex SHA-256, the digest every kind records."""
-    # TODO(S2): hashlib.sha256(data).hexdigest().
-    raise NotImplementedError
+    return hashlib.sha256(data).hexdigest()

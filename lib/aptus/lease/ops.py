@@ -6,14 +6,19 @@ point checks `paths.require_safe_home` (through `lock`).
 """
 from __future__ import annotations
 
+import fcntl
+import logging
+import os
+import time
 from collections.abc import Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from . import invariants
+from .. import atomic, hypr
 from ..paths import Paths, require_safe_home
-from .journal import Owner, SlotRecord, State
+from . import invariants, journal, kinds, liveness, preflight, system
+from .journal import Journal, JournalError, Owner, SlotKind, SlotRecord, SlotStatus, State
 from .preflight import Preflight
 from .slots import SlotSpec
 
@@ -62,25 +67,101 @@ class Status:
 
 LOCK_TIMEOUT = 10.0            # seconds to wait for the flock before giving up (LeaseError)
 
+_log = logging.getLogger("aptus.lease")
+_held: dict[str, list[int]] = {}       # lock path → [fd, depth]: re-entrant within one process
+
 
 @contextmanager
 def lock(paths: Paths, timeout: float = LOCK_TIMEOUT) -> Iterator[None]:
     """flock(lease/lock), re-entrant within one process (take calls recover); LeaseError after
     `timeout`. Checks require_safe_home first. Only lease operations run under it: rendering,
     scope and Own files use the theme lock, so a slow `bat cache --build` never delays a release."""
-    # TODO(S2): require_safe_home; a module dict path → (fd, depth) for re-entrancy; else open
-    #   (O_CREAT, 0600), flock LOCK_EX|LOCK_NB in a 50 ms loop until `timeout`, yield, unlock.
     require_safe_home(paths)
-    raise NotImplementedError
+    key = str(paths.lease_lock)
+    if key in _held:
+        _held[key][1] += 1
+        try:
+            yield
+        finally:
+            _held[key][1] -= 1
+        return
+    paths.lease.mkdir(mode=0o700, parents=True, exist_ok=True)
+    fd = os.open(paths.lease_lock, os.O_RDWR | os.O_CREAT | os.O_CLOEXEC, 0o600)
+    end = time.monotonic() + timeout
+    while True:
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            break
+        except BlockingIOError:
+            if time.monotonic() > end:
+                os.close(fd)
+                raise LeaseError(f"the lease lock is busy (waited {timeout:.0f} s)") from None
+            time.sleep(0.05)
+    _held[key] = [fd, 1]
+    try:
+        yield
+    finally:
+        del _held[key]
+        fcntl.flock(fd, fcntl.LOCK_UN)
+        os.close(fd)
 
 
 def owner(paths: Paths, env: Mapping[str, str]) -> Owner:
     """This session as the lease owner: boot id, the Hyprland pid from
     <hypr runtime>/<signature>/hyprland.lock, the signature, XDG_SESSION_ID, now. LeaseError when
     the signature is missing or refused (hypr.check_allowed) or the pid cannot be found."""
-    # TODO(S2): hypr.signature(env) (raises for the real one under test); line 1 of hyprland.lock;
-    #   comm must be "Hyprland"; journal.now().
-    raise NotImplementedError
+    try:
+        sig = hypr.signature(env)
+    except hypr.HyprError as e:
+        raise LeaseError(str(e)) from e
+    lockfile = paths.hypr_runtime / sig / "hyprland.lock"
+    try:
+        pid = int(lockfile.read_text().splitlines()[0])
+    except (OSError, ValueError, IndexError) as e:
+        raise LeaseError(f"no Hyprland pid in {lockfile}: {e}") from e
+    if system.comm(pid) != "Hyprland":
+        raise LeaseError(f"pid {pid} of {lockfile} is not Hyprland")
+    return Owner(boot_id=system.boot_id(), hyprland_pid=pid, hyprland_signature=sig,
+                 logind_session=env.get("XDG_SESSION_ID", ""), taken_at=journal.now())
+
+
+def _record(spec: SlotSpec) -> SlotRecord:
+    """The journal record of a spec; `write` false only for a dconf key without a value."""
+    write_path = str(kinds.module("file").write_path(spec.path)) if spec.path is not None else ""
+    return SlotRecord(id=spec.id, kind=spec.kind, target=spec.target, reload=spec.reload,
+                      path=str(spec.path or ""), write_path=write_path, key=spec.key,
+                      sections=list(spec.sections),
+                      write=spec.kind != SlotKind.DCONF or spec.value is not None)
+
+
+def _prepare(paths: Paths, spec: SlotSpec, report: TakeReport) -> SlotRecord | None:
+    """Step 4 for one slot: `before` (and its slots/ copy), the planned `after`; None = skipped."""
+    rec = _record(spec)
+    mod = kinds.module(spec.kind)
+    try:
+        snap = mod.read(paths, rec)
+    except Exception as e:                                  # unreadable, dconf missing, …
+        _log.warning("slot %s skipped: %s", spec.id, e)
+        report.skipped.append(spec.id)
+        return None
+    if spec.kind != SlotKind.DCONF and not snap.record.get("exists") and (
+            not spec.create or not Path(rec.write_path).parent.is_dir()):
+        report.skipped.append(spec.id)
+        return None
+    rec.before = snap.record
+    if snap.data is not None:
+        dest = journal.before_file(paths, rec.id)
+        invariants.writable(paths, dest, kind="state")
+        paths.lease_slots.mkdir(mode=0o700, parents=True, exist_ok=True)
+        atomic.write_bytes(dest, snap.data, 0o600)
+    rec.after = mod.planned(spec) if rec.write else mod.before_digest(rec.before)
+    return rec
+
+
+def _set_state(paths: Paths, j: Journal, new: State) -> None:
+    invariants.transition(j.state, new)
+    j.state = new
+    journal.save(paths, j)
 
 
 def take(paths: Paths, env: Mapping[str, str], specs: Sequence[SlotSpec], who: Owner,
@@ -93,63 +174,208 @@ def take(paths: Paths, env: Mapping[str, str], specs: Sequence[SlotSpec], who: O
     released and `error` says why. LeaseError when a journal is still there after recover (a live
     owner, failed slots, or one that does not parse): Noctalia's only `before` record must never
     be overwritten."""
-    # TODO(S2): with lock: recover(paths); if journal.load is not None (after archiving a
-    #   leftover `released` one) → LeaseError. preflight.check(paths, env) → not ok: return
-    #   TakeReport(preflight=…). For each spec: SlotRecord from the spec (write_path via the
-    #   kind), kind.read → before (+ slots/<id>.before atomically), skip rules, after =
-    #   kind.planned. journal.save(state taking) — nothing is modified before this point. Write
-    #   each slot (kind.write, status held, save after each); journal held. Any exception after
-    #   `taking`: save, release(paths), error. invariants.transition on every state change.
     invariants.check_specs(paths, specs)
-    raise NotImplementedError
+    report = TakeReport()
+    with lock(paths):
+        try:
+            recover(paths)
+            left = journal.load(paths)
+        except JournalError as e:
+            raise LeaseError(f"the lease journal does not parse, a human must look: {e}") from e
+        if left is not None:
+            raise LeaseError(f"a lease journal is still there ({left.state.value}); "
+                             "run aptus-lease recover or aptus doctor isolation")
+        report.preflight = preflight.check(paths, env)
+        if not report.preflight.ok:
+            return report
+        try:
+            records = [(r, spec) for spec in specs if (r := _prepare(paths, spec, report))]
+        except Exception as e:                              # writing slots/<id>.before failed
+            report.error = f"recording before failed: {e}"
+            return report
+        j = Journal(state=State.TAKING, owner=who, theme_generation=generation,
+                    slots=[r for r, _ in records])
+        invariants.transition(None, State.TAKING)
+        journal.save(paths, j)                              # nothing was modified before this
+        try:
+            for rec, spec in records:
+                if rec.write:
+                    rec.after = kinds.module(rec.kind).write(paths, rec, spec)
+                rec.status = SlotStatus.HELD
+                journal.save(paths, j)
+            _set_state(paths, j, State.HELD)
+        except Exception as e:
+            report.error = f"{type(e).__name__}: {e}"
+            _log.error("take failed, releasing what was taken: %s", report.error)
+            undo = release(paths)
+            if undo.failed:
+                report.error += f"; release failed for {', '.join(undo.failed)}"
+            return report
+    report.held = True
+    report.slots = [r.id for r in j.slots]
+    return report
 
 
 def update(paths: Paths, specs: Sequence[SlotSpec], generation: int) -> UpdateReport:
     """02 §5.4: write the specs of slots this lease holds; `before` is never touched, `after_prev`
     keeps the previous paint until the new one is in place. A slot not in the journal is
     ignored (it is taken at the next session start). LeaseError when no lease is held."""
-    # TODO(S2): with lock: journal held (else LeaseError); per spec with a held record:
-    #   after_prev = after, save; after = kind.write; after_prev = None; save; theme_generation.
-    raise NotImplementedError
+    invariants.check_specs(paths, specs)
+    report = UpdateReport(generation=generation)
+    with lock(paths):
+        try:
+            j = journal.load(paths)
+        except JournalError as e:
+            raise LeaseError(str(e)) from e
+        if j is None or j.state != State.HELD:
+            raise LeaseError("no lease is held")
+        for spec in specs:
+            rec = journal.slot(j, spec.id)
+            if rec is None or rec.status != SlotStatus.HELD or not rec.write or \
+                    (spec.kind == SlotKind.DCONF and spec.value is None):
+                continue
+            invariants.check_update(spec, rec)
+            mod = kinds.module(rec.kind)
+            rec.after_prev, rec.after = rec.after, mod.planned(spec)
+            journal.save(paths, j)
+            try:
+                rec.after = mod.write(paths, rec, spec)
+                rec.after_prev = None
+                report.written.append(spec.id)
+            except Exception as e:
+                report.failed[spec.id] = f"{type(e).__name__}: {e}"
+            journal.save(paths, j)
+        j.theme_generation = generation
+        journal.save(paths, j)
+    return report
 
 
-def release(paths: Paths) -> ReleaseReport:
+def _before_data(paths: Paths, rec: SlotRecord) -> bytes | None:
+    """slots/<id>.before of a file slot that existed, verified against before.sha256."""
+    if rec.kind != SlotKind.FILE or not rec.before.get("exists"):
+        return None
+    data = journal.before_file(paths, rec.id).read_bytes()
+    if kinds.sha256(data) != rec.before.get("sha256"):
+        raise LeaseError(f"slots/{rec.id}.before does not match the recorded before")
+    return data
+
+
+def _release_slot(paths: Paths, rec: SlotRecord, stamp: str, report: ReleaseReport) -> None:
+    """One slot of 02 §5.6; any failure marks the slot failed (recover retries)."""
+    mod = kinds.module(rec.kind)
+    try:
+        if not rec.write:
+            rec.status = SlotStatus.RESTORED
+            return
+        want = mod.before_digest(rec.before)
+        now = mod.digest(paths, rec)
+        if now == want:
+            rec.status = SlotStatus.RESTORED
+            report.unchanged.append(rec.id)
+            return
+        if now != rec.after and (rec.after_prev is None or now != rec.after_prev):
+            save_conflict(paths, stamp, rec)
+            report.conflicts.append(rec.id)
+        data = _before_data(paths, rec)
+        for _ in range(2):
+            mod.restore(paths, rec, data)
+            if mod.digest(paths, rec) == want:
+                break
+        else:
+            raise LeaseError("the restored slot does not match its before")
+        rec.status, rec.error = SlotStatus.RESTORED, ""
+        report.restored.append(rec.id)
+        if rec.reload != "none":
+            report.reloads[rec.target] = rec.reload
+    except Exception as e:
+        rec.status, rec.error = SlotStatus.FAILED, f"{type(e).__name__}: {e}"
+        report.failed[rec.id] = rec.error
+        _log.error("slot %s not restored: %s", rec.id, rec.error)
+
+
+def release(paths: Paths, expect: tuple[str, int] | None = None) -> ReleaseReport:
     """02 §5.6: journal `releasing`; per slot compare with `before` (unchanged), aptus's
     `after`/`after_prev` (restore) or neither (conflict: save the current content, restore
     anyway); verify, retry once, else `failed`; then `released` and history/, or stay
     `releasing` when a slot failed. `reloads` names the hooks the caller runs afterwards (the
-    environment is the guard's)."""
-    # TODO(S2): with lock: no journal or released → acted false. State releasing, save. Per slot
-    #   not restored: record-only → restored; digest == before_digest → unchanged; not ours →
-    #   save_conflict; kind.restore with slots/<id>.before; verify twice; failed with error;
-    #   save after each slot. No failure: released_at, journal.archive. reloads of restored slots.
-    #   Every state change (here, in take and update) goes through invariants.transition first.
-    raise NotImplementedError
+    environment is the guard's). With `expect` = (signature, pid) only that owner's lease is
+    released (checked under the flock)."""
+    report = ReleaseReport()
+    with lock(paths):
+        j = journal.load(paths)
+        if j is None:
+            return report
+        if j.state == State.RELEASED:
+            journal.archive(paths, j)
+            return report
+        if expect is not None and (j.owner is None or (j.owner.hyprland_signature,
+                                                       j.owner.hyprland_pid) != tuple(expect)):
+            return report
+        report.acted = True
+        if j.state != State.RELEASING:
+            _set_state(paths, j, State.RELEASING)
+        stamp = time.strftime("%Y%m%dT%H%M%S")
+        for rec in j.slots:
+            if rec.status != SlotStatus.RESTORED:
+                _release_slot(paths, rec, stamp, report)
+                journal.save(paths, j)
+        if report.failed:
+            return report
+        j.released_at = journal.now()
+        _set_state(paths, j, State.RELEASED)
+        journal.archive(paths, j)
+    _log.info("lease released: %d restored, %d unchanged, %d conflicts", len(report.restored),
+              len(report.unchanged), len(report.conflicts))
+    return report
 
 
 def recover(paths: Paths) -> ReleaseReport:
     """02 §5.7 under the flock: no journal, `released` (archived), or a live owner → nothing
     (acted false); else release. JournalError (not caught) for a journal that does not parse:
     only a human may decide then. Never takes."""
-    # TODO(S2): with lock: journal.load (JournalError propagates); released → archive;
-    #   owner and liveness.owner_alive → return; else release(paths).
-    raise NotImplementedError
+    with lock(paths):
+        j = journal.load(paths)
+        if j is None:
+            return ReleaseReport()
+        if j.state == State.RELEASED:
+            journal.archive(paths, j)
+            return ReleaseReport()
+        if j.owner is not None and liveness.owner_alive(paths, j.owner):
+            return ReleaseReport()
+        _log.warning("recovering a %s lease of a dead owner", j.state.value)
+        return release(paths)
 
 
 def status(paths: Paths) -> Status:
-    """Read-only summary for `aptus-lease status` and the doctor (no lock)."""
-    # TODO(S2): journal.load, owner_alive, failed slot ids, len(conflicts/).
-    raise NotImplementedError
+    """Read-only summary for `aptus-lease status` and the doctor (no lock). JournalError for a
+    journal that does not parse."""
+    s = Status()
+    j = journal.load(paths)
+    if j is not None:
+        s.state, s.owner, s.slots, s.generation = j.state, j.owner, len(j.slots), j.theme_generation
+        s.failed = [r.id for r in j.slots if r.status == SlotStatus.FAILED]
+        s.owner_alive = j.owner is not None and liveness.owner_alive(paths, j.owner)
+    if paths.lease_conflicts.is_dir():
+        s.conflicts = sum(1 for _ in paths.lease_conflicts.iterdir())
+    return s
 
 
 def held_by(paths: Paths, signature: str, pid: int | None = None) -> bool:
     """Whether a journal that is not `released` belongs to the session with `signature` (and
     `pid` when given): apply's lease mode, the guard's ownership check."""
-    # TODO(S2): journal.load (False when unreadable); state != released; owner fields match.
-    raise NotImplementedError
+    try:
+        j = journal.load(paths)
+    except JournalError:
+        return False
+    return (j is not None and j.state != State.RELEASED and j.owner is not None
+            and j.owner.hyprland_signature == signature
+            and (pid is None or j.owner.hyprland_pid == pid))
 
 
 def save_conflict(paths: Paths, stamp: str, rec: SlotRecord) -> Path:
     """conflicts/<stamp>/<slot id>: what someone else wrote into a leased slot."""
-    # TODO(S2): kind.current bytes, atomic.write_bytes (0600), mkdir parents.
-    raise NotImplementedError
+    dest = paths.lease_conflicts / stamp / rec.id
+    invariants.writable(paths, dest, kind="state")
+    dest.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    atomic.write_bytes(dest, kinds.module(rec.kind).current(paths, rec), 0o600)
+    return dest

@@ -232,20 +232,31 @@ def inside(path: Path, root: Path) -> bool:
 
 
 def require_safe_home(paths: Paths) -> None:
-    """Under APTUS_TEST=1 raise UnsafeHome unless HOME is a directory whose realpath lies below the
-    realpath of the system temporary directory and neither is, holds nor lies inside the passwd
-    home of this user (a /tmp symlink to the real home is refused); outside tests a no-op. The lease lock and the theme lock
-    call it, so every writer of a leased slot, a scope mirror or an Own file goes through it."""
-    if not paths.test:
+    """Under APTUS_TEST=1 (in `paths` or in this process's environment) raise UnsafeHome unless
+    - HOME is a directory whose realpath lies below the realpath of the temporary directory,
+    - that temporary directory is not `/` and does not hold the passwd home,
+    - HOME neither is, holds nor lies inside the passwd home (a /tmp link to it is refused),
+    - every XDG base and aptus's state and cache dirs resolve inside HOME (no link out of it).
+    Outside tests a no-op. The lease lock, the theme lock and every invariants.writable call it,
+    so every writer of a leased slot, a scope mirror or an Own file goes through it."""
+    if not paths.test and os.environ.get(ENV_TEST) != "1":
         return
     home = os.path.realpath(paths.home)
     tmp = os.path.realpath(tempfile.gettempdir())
     real_home = os.path.realpath(pwd.getpwuid(os.getuid()).pw_dir)
+
+    def below(p: str, root: str) -> bool:
+        return p.startswith(root.rstrip(os.sep) + os.sep)
+
     if not os.path.isdir(home):
         raise UnsafeHome(f"APTUS_TEST=1 but HOME {paths.home} is not a directory")
-    if not home.startswith(tmp.rstrip(os.sep) + os.sep):
+    if tmp == os.sep or real_home == tmp or below(real_home, tmp):
+        raise UnsafeHome(f"APTUS_TEST=1 but the temporary directory {tmp} holds the real home")
+    if not below(home, tmp):
         raise UnsafeHome(f"APTUS_TEST=1 but HOME {paths.home} ({home}) is not below {tmp}")
-    # also refuses a directory inside the real home, whatever TMPDIR says
-    if home == real_home or real_home.startswith(home + os.sep) \
-            or home.startswith(real_home + os.sep):
+    if home == real_home or below(real_home, home) or below(home, real_home):
         raise UnsafeHome(f"APTUS_TEST=1 but HOME {paths.home} is, holds or lies in the real home")
+    for d in (paths.config_home, paths.state_home, paths.cache_home, paths.data_home,
+              paths.runtime_home, paths.state, paths.cache):
+        if not below(os.path.realpath(d), home):
+            raise UnsafeHome(f"APTUS_TEST=1 but {d} resolves outside the temporary HOME")

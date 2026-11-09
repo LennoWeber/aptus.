@@ -211,7 +211,8 @@ def test_scope_name(name, ok) -> None:
 def held_journal(p, **slot_kw) -> Journal:
     rec = dict(id="gtk3.artifact", kind=SlotKind.FILE, target="gtk3",
                path=str(p.config_home / "gtk-3.0/noctalia.css"),
-               write_path=str(p.config_home / "gtk-3.0/noctalia.css"), status=SlotStatus.HELD)
+               write_path=str(p.config_home / "gtk-3.0/noctalia.css"), status=SlotStatus.HELD,
+               before={"exists": True, "sha256": "a" * 64, "mode": "0644", "size": 1, "link": ""})
     rec.update(slot_kw)
     return Journal(state=State.HELD, owner=owner(), slots=[SlotRecord(**rec)])
 
@@ -220,7 +221,8 @@ def test_good_journals(p) -> None:
     inv.check_journal(p, held_journal(p))
     inv.check_journal(p, Journal(state=State.HELD, owner=owner(), slots=[
         SlotRecord(id="dconf.gtk-theme", kind=SlotKind.DCONF, target="dconf",
-                   key=KEY + "gtk-theme", write=False, status=SlotStatus.HELD)]))
+                   key=KEY + "gtk-theme", write=False, status=SlotStatus.HELD,
+                   before={"set": True, "value": "'Adwaita'"})]))
     j = held_journal(p, status=SlotStatus.RESTORED)
     j.state, j.released_at = State.RELEASED, "2026-11-09T11:00:00+01:00"
     inv.check_journal(p, j)
@@ -243,20 +245,34 @@ def _mutations(p):
     def version(j): j.version = 2
     def foreign_key(j):
         j.slots[0] = SlotRecord(id="dconf.x", kind=SlotKind.DCONF, target="dconf",
-                                key="/org/gnome/shell/x", status=SlotStatus.HELD)
+                                key="/org/gnome/shell/x", status=SlotStatus.HELD,
+                                before={"set": False, "value": None})
     def written_gtk_theme(j):
         j.slots[0] = SlotRecord(id="dconf.gtk-theme", kind=SlotKind.DCONF, target="dconf",
-                                key=KEY + "gtk-theme", write=True, status=SlotStatus.HELD)
-    return [no_owner, released_no_stamp, stamp_while_held, dup, pending_in_held, failed_in_held,
-            restored_in_taking, record_only_file, outside_home, into_noctalia, version,
-            foreign_key, written_gtk_theme]
+                                key=KEY + "gtk-theme", write=True, status=SlotStatus.HELD,
+                                before={"set": False, "value": None})
+    def no_before(j): j.slots[0].before = {}
+    def bad_sha(j): j.slots[0].before["sha256"] = "nope"
+    def escaping_id(j): j.slots[0].id = "gtk3.a/../../x"
+    def relative(j): j.slots[0].path = "gtk-3.0/noctalia.css"
+    def same_file(j):
+        j.slots.append(dataclasses.replace(j.slots[0], id="gtk3.other"))
+    return [(no_owner, "without an owner"), (released_no_stamp, "released_at"),
+            (stamp_while_held, "released_at"), (dup, "duplicate"), (pending_in_held, "pending"),
+            (failed_in_held, "failed"), (restored_in_taking, "restored"),
+            (record_only_file, "record-only"), (outside_home, "outside HOME"),
+            (into_noctalia, "inside"), (version, "version"), (foreign_key, "outside the fixed"),
+            (written_gtk_theme, "recorded only"), (no_before, "malformed before"),
+            (bad_sha, "malformed before"), (escaping_id, "slot id"), (relative, "relative"),
+            (same_file, "same file")]
 
 
-@pytest.mark.parametrize("i", range(13))
+@pytest.mark.parametrize("i", range(18))
 def test_bad_journal_refused(p, i) -> None:
     j = held_journal(p)
-    _mutations(p)[i](j)
-    with pytest.raises(inv.InvariantError):
+    mutate, why = _mutations(p)[i]
+    mutate(j)
+    with pytest.raises(inv.InvariantError, match=why):
         inv.check_journal(p, j)
 
 
@@ -324,8 +340,128 @@ def test_tmpdir_inside_real_home_refused(p, monkeypatch) -> None:
         paths_mod.require_safe_home(dataclasses.replace(p, home=candidate))
 
 
-def test_outside_tests_no_check(p) -> None:
+def test_outside_tests_no_check(p, monkeypatch) -> None:
+    monkeypatch.delenv("APTUS_TEST")
     paths_mod.require_safe_home(dataclasses.replace(p, test=False, home=REAL_HOME))
+
+
+def test_process_env_counts_even_when_paths_say_otherwise(p) -> None:
+    with pytest.raises(paths_mod.UnsafeHome):
+        paths_mod.require_safe_home(dataclasses.replace(p, test=False, home=REAL_HOME))
+
+
+def test_tmpdir_root_refused(p, monkeypatch) -> None:
+    monkeypatch.setattr(tempfile, "tempdir", "/")
+    with pytest.raises(paths_mod.UnsafeHome, match="holds the real home"):
+        paths_mod.require_safe_home(dataclasses.replace(p, home=Path("/usr")))
+
+
+def test_xdg_dir_linked_out_of_home_refused(p, tmp_path) -> None:
+    out = tmp_path / "elsewhere"
+    out.mkdir()
+    (p.home / ".local").mkdir()
+    (p.home / ".local/state").symlink_to(out)
+    with pytest.raises(paths_mod.UnsafeHome, match="resolves outside"):
+        paths_mod.require_safe_home(p)
+
+
+def test_runtime_dir_outside_home_is_state(p, monkeypatch) -> None:
+    """In a normal session the runtime dir is /run/user/<uid>, outside HOME: guard.state and the
+    bake queue are aptus state all the same. (Only paths are checked; nothing is written.)"""
+    monkeypatch.delenv("APTUS_TEST")
+    real = paths_mod.resolve({"HOME": str(p.home), "XDG_RUNTIME_DIR": f"/run/user/{os.getuid()}"})
+    inv.writable(real, real.runtime / "guard.state", kind="state")
+    with pytest.raises(inv.InvariantError):
+        inv.writable(real, Path(f"/run/user/{os.getuid()}/other"), kind="state")
+
+
+# --- the call sites fire ---------------------------------------------------------------------
+
+def _file_rec(p, write_path: Path) -> SlotRecord:
+    return SlotRecord(id="gtk3.artifact", kind=SlotKind.FILE, target="gtk3", path=str(write_path),
+                      write_path=str(write_path), before={"exists": False, "link": ""})
+
+
+def test_file_write_outside_home_refused(p, tmp_path) -> None:
+    from aptus.lease.kinds import file as file_kind
+    outside = tmp_path / "outside.css"
+    rec = _file_rec(p, outside)
+    with pytest.raises(inv.InvariantError, match="outside HOME"):
+        file_kind.write(p, rec, file_spec(p))
+    assert not outside.exists()
+
+
+def test_file_write_through_a_new_link_refused(p, tmp_path) -> None:
+    from aptus.lease.kinds import file as file_kind
+    target = p.config_home / "gtk-3.0/noctalia.css"
+    target.parent.mkdir(parents=True)
+    (p.home / "real.css").write_text("x")
+    target.symlink_to(p.home / "real.css")
+    with pytest.raises(inv.InvariantError, match="became a symlink"):
+        file_kind.write(p, _file_rec(p, target), file_spec(p))
+    assert target.is_symlink()
+
+
+def test_scope_entry_refuses_odd_names(p) -> None:
+    with pytest.raises(inv.InvariantError):
+        inv.scope_entry(p, "..")
+    assert inv.scope_entry(p, "kitty").name == "kitty"
+
+
+def test_journal_save_is_the_choke_point(p) -> None:
+    from aptus.lease import journal
+    with pytest.raises(inv.InvariantError, match="without an owner"):
+        journal.save(p, Journal(state=State.HELD))
+    with pytest.raises(inv.InvariantError, match="none → held"):
+        journal.save(p, held_journal(p))
+    j = held_journal(p)
+    j.state = State.TAKING
+    j.slots[0].status = SlotStatus.PENDING
+    journal.save(p, j)
+    changed = held_journal(p)
+    changed.slots[0].before["sha256"] = "b" * 64
+    with pytest.raises(inv.InvariantError, match="before would change"):
+        journal.save(p, changed)
+    gone = held_journal(p)
+    gone.slots = []
+    with pytest.raises(inv.InvariantError, match="vanish"):
+        journal.save(p, gone)
+    journal.save(p, held_journal(p))
+    with pytest.raises(inv.InvariantError, match="archiving a held"):
+        journal.archive(p, journal.load(p))
+
+
+def test_update_must_match_the_taken_slot(p) -> None:
+    rec = _file_rec(p, p.config_home / "gtk-3.0/noctalia.css")
+    inv.check_update(file_spec(p), rec)
+    with pytest.raises(inv.InvariantError, match="changes its kind"):
+        inv.check_update(file_spec(p, path=p.config_home / "gtk-4.0/noctalia.css"), rec)
+
+
+def test_two_specs_on_one_file_refused(p) -> None:
+    with pytest.raises(inv.InvariantError, match="same file"):
+        inv.check_specs(p, [file_spec(p), file_spec(p, id="gtk3.again")])
+
+
+def test_relative_spec_path_refused(p) -> None:
+    with pytest.raises(inv.InvariantError, match="absolute"):
+        inv.check_spec(p, file_spec(p, path=Path("gtk-3.0/noctalia.css")))
+
+
+def test_dconf_foreign_key_never_reaches_the_tool(p) -> None:
+    with pytest.raises(dconf.DconfError):
+        dconf.write_key(p, "/org/gnome/shell/favorite-apps", "[]")
+    with pytest.raises(dconf.DconfError):
+        dconf.reset_key(p, KEY + "gtk-theme")
+    assert not (p.home / ".aptus-test/calls.jsonl").exists()
+
+
+def test_signals_refuse_the_real_session(p) -> None:
+    from aptus import hypr
+    from aptus.lease import system
+    with pytest.raises(hypr.RefusedInstance):
+        system.signal_session(p, ["kitty"], "SIGUSR1", os.environ["APTUS_REAL_HYPRLAND_SIGNATURE"])
+    assert system.signal_session(p, ["kitty"], "SIGUSR1", "") == []
 
 
 def test_lease_lock_refuses_real_home(p) -> None:

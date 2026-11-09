@@ -8,11 +8,16 @@ recognises aptus's own paint after a crash at any step.
 """
 from __future__ import annotations
 
+import dataclasses
+import json
+import os
+import time
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 from typing import Any
 
+from .. import atomic
 from ..paths import Paths
 
 
@@ -90,51 +95,100 @@ class JournalError(RuntimeError):
 
 def now() -> str:
     """Local time, ISO 8601 with offset, seconds precision."""
-    # TODO(S2): local time with a ±HH:MM offset (time.strftime %z, colon inserted).
-    raise NotImplementedError
+    t = time.localtime()
+    off = time.strftime("%z", t)
+    return time.strftime("%Y-%m-%dT%H:%M:%S", t) + off[:3] + ":" + off[3:]
 
 
 def to_dict(j: Journal) -> dict[str, Any]:
     """The JSON shape of 02 §5.2 (enums as their values)."""
-    # TODO(S2): dataclasses.asdict; enums to their values.
-    raise NotImplementedError
+    d = dataclasses.asdict(j)
+    d["state"] = j.state.value
+    for out, rec in zip(d["slots"], j.slots):
+        out["kind"] = rec.kind.value
+        out["status"] = rec.status.value
+    return d
 
 
 def from_dict(d: dict[str, Any]) -> Journal:
     """Inverse of to_dict; JournalError for an unknown version, state or slot kind."""
-    # TODO(S2): version 1 only; State/SlotKind/SlotStatus from values; Owner and SlotRecord from
-    #   their fields; any KeyError/TypeError/ValueError → JournalError.
-    raise NotImplementedError
+    if not isinstance(d, dict) or d.get("version") != 1:
+        raise JournalError("unknown journal version")
+    try:
+        owner = Owner(**d["owner"]) if d.get("owner") else None
+        slots = []
+        for raw in d.get("slots", []):
+            raw = dict(raw)
+            raw["kind"] = SlotKind(raw["kind"])
+            raw["status"] = SlotStatus(raw.get("status", "pending"))
+            slots.append(SlotRecord(**raw))
+        return Journal(version=1, state=State(d["state"]), owner=owner,
+                       theme_generation=int(d.get("theme_generation", 0)), slots=slots,
+                       released_at=str(d.get("released_at", "")))
+    except (KeyError, TypeError, ValueError, AttributeError) as e:
+        raise JournalError(f"the journal does not parse: {e}") from e
 
 
 def load(paths: Paths) -> Journal | None:
     """The journal, None when there is none; JournalError when it is unreadable."""
-    # TODO(S2): missing → None; json.load + from_dict; OSError/ValueError → JournalError.
-    raise NotImplementedError
+    try:
+        with open(paths.lease_journal, encoding="utf-8") as f:
+            raw = json.load(f)
+    except FileNotFoundError:
+        return None
+    except (OSError, ValueError) as e:
+        raise JournalError(f"{paths.lease_journal}: {e}") from e
+    return from_dict(raw)
 
 
 def save(paths: Paths, j: Journal) -> None:
     """Write journal.json atomically (atomic.write_json: temp, fsync, rename, fsync dir)."""
-    # TODO(S2): mkdir lease/ (0700); atomic.write_json(paths.lease_journal, to_dict(j), 0o600).
     from . import invariants  # imported here: invariants imports this module
     invariants.check_journal(paths, j)
-    raise NotImplementedError
+    invariants.check_save(load(paths), j)
+    invariants.writable(paths, paths.lease_journal, kind="state")
+    paths.lease.mkdir(mode=0o700, parents=True, exist_ok=True)
+    atomic.write_json(paths.lease_journal, to_dict(j), 0o600)
+
+
+def before_file(paths: Paths, slot_id: str) -> Path:
+    """slots/<id>.before: Noctalia's bytes of a file slot, written at take."""
+    return paths.lease_slots / f"{slot_id}.before"
 
 
 def archive(paths: Paths, j: Journal) -> Path:
     """Write the released journal to history/<time>.json, remove journal.json and the slots/
-    copies it referenced, keep the newest HISTORY_KEEP entries; returns the history file."""
-    # TODO(S2): write history/<stamp>.json (0600), unlink journal.json and slots/<id>.before of its
-    #   slots, keep the newest HISTORY_KEEP files.
-    raise NotImplementedError
+    copies it referenced, keep the newest HISTORY_KEEP entries; returns the history file. Only a
+    released journal whose slots are all restored is archived (invariants.check_journal)."""
+    from . import invariants
+    if j.state != State.RELEASED:
+        invariants.fail(f"archiving a {j.state.value} journal")
+    invariants.check_journal(paths, j)
+    invariants.writable(paths, paths.lease_history, kind="state")
+    paths.lease_history.mkdir(mode=0o700, parents=True, exist_ok=True)
+    ns = time.time_ns()
+    stamp = time.strftime("%Y%m%dT%H%M%S", time.localtime(ns // 10**9)) + f"-{ns % 10**9:09d}"
+    dest = paths.lease_history / f"{stamp}.json"
+    atomic.write_json(dest, to_dict(j), 0o600)
+    for name in (paths.lease_journal, *(before_file(paths, s.id) for s in j.slots)):
+        try:
+            os.unlink(name)
+        except FileNotFoundError:
+            pass
+    for old in sorted(paths.lease_history.glob("*.json"))[:-HISTORY_KEEP]:
+        old.unlink(missing_ok=True)
+    return dest
 
 
 def last_released(paths: Paths) -> Journal | None:
     """The newest journal in history/ (the doctor compares slots against its `before`)."""
-    # TODO(S2): newest history/*.json through from_dict; None when none parses.
-    raise NotImplementedError
+    for f in sorted(paths.lease_history.glob("*.json"), reverse=True):
+        try:
+            return from_dict(json.loads(f.read_text(encoding="utf-8")))
+        except (OSError, ValueError, JournalError):
+            continue
+    return None
 
 
 def slot(j: Journal, slot_id: str) -> SlotRecord | None:
-    # TODO(S2): linear search by id.
-    raise NotImplementedError
+    return next((s for s in j.slots if s.id == slot_id), None)
