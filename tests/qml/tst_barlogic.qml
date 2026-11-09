@@ -14,4 +14,5 @@ TestCase {
     function test_tray_layout() { skip("phase 7") }
     function test_deck_args() { skip("phase 7") }
     function test_menus() { skip("phase 7") }
+    function test_title_width() { skip("phase 7") }
 }

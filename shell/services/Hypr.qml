@@ -110,7 +110,12 @@ Singleton {
     // The window menu (bar.md §4); address "" = the active window.
     function togglePin(address: string): void { throw new Error("not implemented"); }
     function moveToMonitor(address: string, monitor: string): void { throw new Error("not implemented"); }
-    function sendToScratch(address: string): void { throw new Error("not implemented"); }
+    // The scratch pill (bar.md §3): show or hide special:scratch on the focused monitor.
+    function toggleScratch(): void { throw new Error("not implemented"); }
+    // The window of an app (a toast without a default action focuses it, notch.md §6): by the
+    // desktop entry (Apps.entryFor of each window's class), else by class = app name; most
+    // recently focused first; null when none.
+    function windowForApp(desktopEntry: string, appName: string): var { throw new Error("not implemented"); }
     // Focus the next (+1) / previous (-1) window on the focused workspace (wheel on the title).
     function cycleFocus(direction: int): void { throw new Error("not implemented"); }
     // The Caps Lock OSD (shortcuts capslock-on / capslock-off; the bind reads the keyboard state).
@@ -120,6 +125,15 @@ Singleton {
     function _onTitle(data: string): void { throw new Error("not implemented"); }
     // An `urgent` event: mark the window's workspace; toast when that workspace is not shown.
     function _onUrgent(address: string): void { throw new Error("not implemented"); }
+    // `activewindowv2` (address): the focus order for the pills' MRU apps (hypr.js bumpFocus).
+    function _onActiveWindow(address: string): void { throw new Error("not implemented"); }
+    // `activespecialv2` ("id,name,monitor"): specialOpen of that monitor.
+    function _onActiveSpecial(data: string): void { throw new Error("not implemented"); }
+    // `screencast` ("state,owner"): screencast.
+    function _onScreencast(data: string): void { throw new Error("not implemented"); }
+    // `activelayout` ("keyboard,layout"): layout, and the layout OSD (levels.js layoutOsd) when
+    // the main keyboard's layout changed (not at start).
+    function _onLayout(data: string): void { throw new Error("not implemented"); }
     // Rebuild `windows` from the toplevels (after a toplevel refresh only).
     function _rebuildWindows(): void { throw new Error("not implemented"); }
     // Rebuild `workspaces` from Hyprland's workspaces, the windows and the focus order.

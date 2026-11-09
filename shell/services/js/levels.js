@@ -41,3 +41,7 @@ function brightnessOsd(level) { throw new Error("not implemented") }
 function kbdOsd(level, max) { throw new Error("not implemented") }
 function capsOsd(on) { throw new Error("not implemented") }
 function layoutOsd(name) { throw new Error("not implemented") }
+// The OSD kinds the Deck has a slider for (volume, mic, brightness): while the Deck is open on
+// the monitor its slider moves instead and no OSD is posted (notch.md §8). One place for the rule;
+// Audio._osd and Brightness._osd ask it.
+function deckReplaces(kind) { throw new Error("not implemented") }

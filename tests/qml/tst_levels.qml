@@ -11,4 +11,5 @@ TestCase {
     function test_network_glyphs() { skip("phase 7") }
     function test_steps_snap_and_clamp() { skip("phase 7") }
     function test_osd_payloads() { skip("phase 7") }
+    function test_deck_replaces() { skip("phase 7") }
 }

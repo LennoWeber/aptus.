@@ -31,3 +31,15 @@ def test_burst_becomes_one_stack_toast(nested) -> None:
 
 def test_ipc_notch_toast(nested) -> None:
     pytest.skip("phase 7")
+
+
+def test_held_under_dnd_then_summary(nested) -> None:
+    pytest.skip("phase 7")
+
+
+def test_sender_close_removes_the_toast(nested) -> None:
+    pytest.skip("phase 7")
+
+
+def test_toast_ways_out(nested) -> None:
+    pytest.skip("phase 7")

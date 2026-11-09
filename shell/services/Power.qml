@@ -34,4 +34,7 @@ Singleton {
 
     // The battery toasts of 05 §8: warn once at ≤ 15 %, crit at ≤ 7 % until plugged in.
     function _checkBattery(): void { throw new Error("not implemented"); }
+    // The charger was plugged in or out: plugged in → the event "Charging" (notch.md §7) and the
+    // crit toast goes; a new discharge may warn again.
+    function _pluggedChanged(): void { throw new Error("not implemented"); }
 }

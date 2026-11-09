@@ -31,4 +31,10 @@ Singleton {
     function disconnectVpn(): void { Log.info("service.network", "disconnectVpn: not available yet"); }
     // Connect to a network; password "" for known or open ones.
     function connect(ssid: string, password: string): void { Log.info("service.network", "connect: not available yet"); }
+
+    // The output of `nmcli -t -f NAME,TYPE connection show --active` (status.js vpnFrom; Networking
+    // has no VPN device type): vpnActive, vpnName.
+    function _readVpn(text: string): void { throw new Error("not implemented"); }
+    // Wi-Fi was switched off: the event "Wi-Fi off" (notch.md §7).
+    function _wifiChanged(): void { throw new Error("not implemented"); }
 }

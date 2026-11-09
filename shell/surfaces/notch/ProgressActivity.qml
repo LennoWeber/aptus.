@@ -12,6 +12,6 @@ Activity {
     // The first Progress item (Progress.items[0]), or null.
     readonly property var item: null
 
-    // The right-click menu rows: Open in Today (and Cancel when the source offers it).
-    function menuTriggered(row: var): void { throw new Error("not implemented"); }
+    // No own right-click rows (notch.md §4: the menu is only Open in Today, which the Notch adds;
+    // Cancel is on the card).
 }

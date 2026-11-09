@@ -25,9 +25,16 @@ Singleton {
     function toggle(): void { Log.info("service.media", "toggle: not available yet"); }
     function next(): void { Log.info("service.media", "next: not available yet"); }
     function previous(): void { Log.info("service.media", "previous: not available yet"); }
+    // The media card's controls on the active player (notch.md §5): seek to seconds, shuffle,
+    // loop None → Playlist → Track → None; only what the player supports.
+    function seek(position: real): void { throw new Error("not implemented"); }
+    function toggleShuffle(): void { throw new Error("not implemented"); }
+    function cycleLoop(): void { throw new Error("not implemented"); }
 
     // Rebuild `players` and pick `active` (media.js pickActive).
     function _rebuild(): void { throw new Error("not implemented"); }
     // A player's playback state changed (entered Playing, paused).
     function _noteState(player: var): void { throw new Error("not implemented"); }
+    // A player was controlled (keys, card): its lastActive is now.
+    function _touch(player: var): void { throw new Error("not implemented"); }
 }

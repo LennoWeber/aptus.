@@ -59,6 +59,9 @@ function stackStep(stack, record, passiveId, monitor, now, windowMs) { throw new
 function stackPayload(stack, newest, timeout) { throw new Error("not implemented") }
 // The summary toast for `count` held notifications.
 function heldPayload(count, reason, timeout) { throw new Error("not implemented") }
+// A toast the shell raises itself (no notification behind it: battery, urgent workspace): a
+// toast payload with nid 0, the glyph instead of the app icon, no actions.
+function systemToast(title, body, glyph, critical, timeout) { throw new Error("not implemented") }
 // Body markup reduced to <b>, <i> and <a href>; everything else escaped or dropped.
 function reduceMarkup(body) { throw new Error("not implemented") }
 // The visible text of reduced markup (for the timeout's character count).

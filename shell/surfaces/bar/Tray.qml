@@ -24,4 +24,6 @@ Item {
 
     // The overflow menu (icon + title rows) below the `expand_more` button.
     function _overflowMenu(x: real, y: real): void { throw new Error("not implemented"); }
+    // An overflow row: activate that item.
+    function _overflowTriggered(row: var): void { throw new Error("not implemented"); }
 }

@@ -71,10 +71,20 @@ Item {
     function _toastActivated(entry: var, action: string): void { throw new Error("not implemented"); }
     function _toastDismissed(entry: var): void { throw new Error("not implemented"); }
     function _toastMenu(entry: var, x: real, y: real): void { throw new Error("not implemented"); }
-    // A compact activity's right-click menu (notch.md §4).
+    // The toast menu's rows: Mute <App> for 1 hour, Turn on Do not disturb, Notification settings.
+    function _toastMenuTriggered(entry: var, row: var): void { throw new Error("not implemented"); }
+    // A compact activity's right-click menu (notch.md §4): the activity's own rows plus
+    // "Open in Today", which the Notch handles; the others go to Activity.menuTriggered.
     function _activityMenu(activity: string, x: real, y: real): void { throw new Error("not implemented"); }
+    function _activityMenuTriggered(activity: string, row: var): void { throw new Error("not implemented"); }
     // The toast countdown of the shown toast: run, pause (hover, covered), expire.
     function _countdownTick(): void { throw new Error("not implemented"); }
+    // The passive timers (notch.js dueEntries): OSD collapse, event time, pinned-card timeout;
+    // dismisses what is due and arms the timer for the next deadline.
+    function _expire(): void { throw new Error("not implemented"); }
+    // A press outside a pinned card (the Notch's own catcher, 07 §5): close the card and replay
+    // focus to the window under the pointer (Hypr.windowAt, focusWindow).
+    function _outsideClicked(x: real, y: real): void { throw new Error("not implemented"); }
     // An interactive mode entered / left the notch (registerBack / unregisterBack, Esc ladder).
     function _modeEntered(mode: string, item: var): void { throw new Error("not implemented"); }
     function _modeLeft(mode: string): void { throw new Error("not implemented"); }

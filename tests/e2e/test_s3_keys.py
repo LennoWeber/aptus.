@@ -34,3 +34,7 @@ def test_media_keys_act_on_the_fake_player(nested) -> None:
 
 def test_nothing_to_play(nested) -> None:
     pytest.skip("phase 7")
+
+
+def test_no_osd_while_the_deck_or_a_mode_is_open(nested) -> None:
+    pytest.skip("phase 7")

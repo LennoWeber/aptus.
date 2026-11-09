@@ -10,9 +10,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-# The fake `brightnessctl`: understands `-d <device> set <n>` (and `-m`/`info` for a read) and
-# writes only below $APTUS_SYSFS; refuses to run without it.
-BRIGHTNESSCTL = ""
+def brightnessctl_script() -> str:
+    """The fake `brightnessctl` (a shell script): understands `-d <device> set <n>` (and `-m`/`info`
+    for a read), writes only below $APTUS_SYSFS and refuses to run without it."""
+    raise NotImplementedError
 
 
 @dataclass

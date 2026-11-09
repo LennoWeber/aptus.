@@ -41,6 +41,6 @@ Singleton {
     // brightnessctl -d <device> set <value> (from PATH; the e2e tests put a fake first).
     function _write(device: string, value: int): void { throw new Error("not implemented"); }
     // Post the OSD ("brightness" on the monitor showing eDP-1, "kbd" on the active one), unless
-    // the Deck is open there.
+    // the Deck is open there and has a slider for it (levels.js deckReplaces).
     function _osd(kind: string): void { throw new Error("not implemented"); }
 }

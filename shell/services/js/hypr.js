@@ -47,5 +47,7 @@ function parseTitleEvent(data) { throw new Error("not implemented") }
 function patchTitle(windows, address, title) { throw new Error("not implemented") }
 // The focus order with `address` first.
 function bumpFocus(order, address) { throw new Error("not implemented") }
-// The workspace (record) is shown on its monitor now.
-function isShown(record, monitors) { throw new Error("not implemented") }
+// An event's data split into `count` fields at the first count-1 commas (the last field keeps
+// its commas: titles, layout names), e.g. `activespecialv2` "id,name,monitor", `screencast`
+// "state,owner", `activelayout` "keyboard,layout".
+function splitEvent(data, count) { throw new Error("not implemented") }

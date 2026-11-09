@@ -33,10 +33,20 @@ function dropLayer(layers, uid) { throw new Error("not implemented") }
 // The compact slots (notch.md §4): per slot the live candidate with the highest priority; when
 // the centre group would exceed maxWidth, the lower-priority slot gives way.
 function assignSlots(candidates, clockWidth, gap, maxWidth) { throw new Error("not implemented") }
-// The toast bulge size (notch.md §6: 72 / 104 / 132 by actions and image).
+// The toast bulge height (notch.md §6: 72 / 104 / 132 by actions and image).
 function toastHeight(payload, heights) { throw new Error("not implemented") }
-// The event bulge width: the content's width clamped to 260–360.
-function eventWidth(contentWidth, min, max) { throw new Error("not implemented") }
+// The bulge size { width, height } of a view kind (notch.md §5–§8): toast 420 × toastHeight, OSD
+// 300 × 44, event the content width clamped to 260–360 × 36, card and result 420 × the card's
+// height (+ the pager when more than one activity is live), mode the mode's own size; rest and
+// hidden 0 × 0. measured: { width, height, pager: bool } of the content; tokens: Tokens.surfaces.
+function bulgeSize(kind, payload, measured, tokens) { throw new Error("not implemented") }
+// The passive timers (notch.md §6–§8, rules.js limits): which entries are due now and when the
+// next one is. passive: the monitor's entries; shown: the id of the entry on screen (0 none);
+// eventShownAt: when that event first showed; pinnedSince: when the pointer last left a pinned
+// card (0 not pinned or under the pointer); timing: { osdMs, eventMs, pinnedMs }.
+// → { due: [entry id], card: bool (the pinned card is due), next: ms | 0 }.
+// An OSD is due osdMs after its `born` (shown or not: one posted under a mode never shows late).
+function dueEntries(passive, shown, eventShownAt, pinnedSince, now, timing) { throw new Error("not implemented") }
 // Countdowns (notch.md §6: pause on hover and while covered, resume with ≥ resumeMin left).
 function countdownStart(total, now) { throw new Error("not implemented") }
 function countdownPause(c, now) { throw new Error("not implemented") }

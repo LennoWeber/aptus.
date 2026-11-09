@@ -19,4 +19,7 @@ Singleton {
     function setEnabled(on: bool): void { Log.info("service.bt", "setEnabled: not available yet"); }
     function connectDevice(address: string): void { Log.info("service.bt", "connectDevice: not available yet"); }
     function disconnectDevice(address: string): void { Log.info("service.bt", "disconnectDevice: not available yet"); }
+
+    // A device connected: the event "<name> connected · 70 %" (notch.md §7, status.js).
+    function _deviceConnected(device: var): void { throw new Error("not implemented"); }
 }

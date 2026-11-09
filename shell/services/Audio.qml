@@ -45,6 +45,6 @@ Singleton {
     function setStreamVolume(id: int, volume: real): void { Log.info("service.audio", "setStreamVolume: not available yet"); }
 
     // Post the OSD of a kind ("volume" | "mic") on the active monitor, unless the Deck is open
-    // there (its slider moves instead, notch.md §8).
+    // there (its slider moves instead, notch.md §8; levels.js deckReplaces).
     function _osd(kind: string): void { throw new Error("not implemented"); }
 }

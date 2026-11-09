@@ -48,5 +48,6 @@ function windowGlyphs(window) { throw new Error("not implemented") }
 function windowMenu(window, monitors, monitor) { throw new Error("not implemented") }
 // The pill menu rows (bar.md §3) for a workspace record; monitors: [name]; current monitor.
 function pillMenu(record, monitors, monitor) { throw new Error("not implemented") }
-// The monitor is narrower than surfaces.bar.narrowMonitorWidth.
-function isNarrow(width, threshold) { throw new Error("not implemented") }
+// The title's width (bar.md §2, §9): what is left between the zones, at most titleMaxWidth (240
+// on a narrow monitor), 0 (hidden) below titleMinWidth. tokens: Tokens.surfaces.bar.
+function titleWidth(available, narrow, tokens) { throw new Error("not implemented") }

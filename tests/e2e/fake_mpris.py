@@ -51,6 +51,14 @@ class Player:
     def get_property(self, interface: str, name: str):
         raise NotImplementedError
 
+    def set_property(self, interface: str, name: str, value) -> bool:
+        """Shuffle, LoopStatus, Volume (writable); logged like a call."""
+        raise NotImplementedError
+
+    def seeked(self) -> None:
+        """Emit Seeked(position) after Seek or SetPosition."""
+        raise NotImplementedError
+
     def changed(self, names: list[str]) -> None:
         """Emit PropertiesChanged for the Player interface."""
         raise NotImplementedError

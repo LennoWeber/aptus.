@@ -21,5 +21,13 @@ def test_pinned_card_ways_out(nested) -> None:
     pytest.skip("phase 7")
 
 
+def test_hover_card_opens_and_collapses(nested) -> None:
+    pytest.skip("phase 7")
+
+
+def test_privacy_reports_nothing_under_test(nested) -> None:
+    pytest.skip("phase 7")
+
+
 def test_screenshots(nested) -> None:
     pytest.skip("phase 7")

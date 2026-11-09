@@ -12,5 +12,6 @@ TestCase {
     function test_scratch_pill() { skip("phase 7") }
     function test_wheel_neighbour() { skip("phase 7") }
     function test_title_event_patch() { skip("phase 7") }
-    function test_urgent_and_shown() { skip("phase 7") }
+    function test_urgent_records() { skip("phase 7") }
+    function test_split_event() { skip("phase 7") }
 }

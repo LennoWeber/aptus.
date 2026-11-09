@@ -38,6 +38,10 @@ Item {
     function _go(record: var): void { throw new Error("not implemented"); }
     function _moveHere(record: var): void { throw new Error("not implemented"); }
     function _menu(record: var, x: real, y: real): void { throw new Error("not implemented"); }
+    // The pill menu's rows (bar.js pillMenu): Rename… opens the overview with the workspace for
+    // its F2 rename (overview.md §5, S6: args { workspace, rename: true }; the bar never takes the
+    // keyboard), Move focused window here, Move workspace to ▸, Close all windows… (confirmed).
+    function _menuTriggered(record: var, row: var): void { throw new Error("not implemented"); }
     function _wheel(direction: int): void { throw new Error("not implemented"); }
     // Move the capsule to the active pill (M-02: the leading edge first).
     function _placeCapsule(): void { throw new Error("not implemented"); }

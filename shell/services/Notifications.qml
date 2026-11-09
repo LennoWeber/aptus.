@@ -61,6 +61,12 @@ Singleton {
 
     // A notification arrived from the server (a Quickshell Notification), or was replaced in place.
     function _arrive(n: var): void { throw new Error("not implemented"); }
+    // The sender closed a notification (CloseNotification, or it expired on the sender's side):
+    // its toast goes, its progress item goes (Progress.remove), the record leaves the history.
+    function _senderClosed(id: int): void { throw new Error("not implemented"); }
+    // The policy context now (notifications.js decide): Dnd, Focus, the active monitor's fullscreen
+    // and notch.overFullscreen, the allowlist, the muted apps.
+    function _context(): var { throw new Error("not implemented"); }
     // A record through the policy: Today, held, progress or a toast (live: the Notification or null).
     function _receive(record: var, live: var): void { throw new Error("not implemented"); }
     // Post or update the toast of a record (stack, replaces_id).

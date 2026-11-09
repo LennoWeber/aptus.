@@ -18,6 +18,6 @@ Activity {
 
     // Middle click: play/pause (notch.md §4).
     function middleClick(): void { throw new Error("not implemented"); }
-    // The right-click menu rows: Hide until it changes, Open in Today.
+    // The right-click menu's own row: Hide until it changes (the Notch adds Open in Today).
     function menuTriggered(row: var): void { throw new Error("not implemented"); }
 }

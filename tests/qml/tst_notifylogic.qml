@@ -19,4 +19,6 @@ TestCase {
     function test_history_order_trim_and_read() { skip("phase 7") }
     function test_persistence_round_trip() { skip("phase 7") }
     function test_fallback_app_and_glyph() { skip("phase 7") }
+    function test_system_toast() { skip("phase 7") }
+    function test_critical_priority_passes_over_fullscreen() { skip("phase 7") }
 }
