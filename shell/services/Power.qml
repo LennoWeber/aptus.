@@ -31,4 +31,7 @@ Singleton {
     property bool _warned: false
     property int _critToast: 0
     function setProfile(name: string): void { Log.info("service.power", "setProfile: not available yet"); }
+
+    // The battery toasts of 05 §8: warn once at ≤ 15 %, crit at ≤ 7 % until plugged in.
+    function _checkBattery(): void { throw new Error("not implemented"); }
 }

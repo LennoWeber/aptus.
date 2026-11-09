@@ -27,4 +27,12 @@ Item {
     property var _throttle: ({ changes: [], shownAt: 0 })
     // M-03 progress 0 → 1 of the current swap.
     property real _swap: 1
+
+    // The window's title or class changed: show it now or after the throttle's delay.
+    function _changed(): void { throw new Error("not implemented"); }
+    // Swap to the pending title and icon (M-03).
+    function _show(): void { throw new Error("not implemented"); }
+    // The window menu below the title (bar.md §4) and what its rows do.
+    function _menu(): void { throw new Error("not implemented"); }
+    function _menuTriggered(row: var): void { throw new Error("not implemented"); }
 }

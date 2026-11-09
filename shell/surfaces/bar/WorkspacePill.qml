@@ -30,4 +30,7 @@ Item {
     // M-36: the nudge's scale and when it last ran (ms; at most once per nudge.minInterval).
     property real _nudge: 1
     property real _lastNudge: 0
+
+    // One nudge (M-36), unless one ran within nudge.minInterval.
+    function nudge(): void { throw new Error("not implemented"); }
 }

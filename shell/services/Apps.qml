@@ -17,4 +17,8 @@ Singleton {
     property var _byClass: ({})
     // The icon name for a window class (desktop entry StartupWMClass, id, then the class itself).
     function iconFor(windowClass: string): string { Log.info("service.apps", "iconFor: not available yet"); return ""; }
+    // The app's name for a window class (desktop entry name, else the class) — empty titles and tooltips.
+    function nameFor(windowClass: string): string { throw new Error("not implemented"); }
+    // The desktop entry for a window class or desktop-entry id (heuristicLookup), or null.
+    function entryFor(windowClass: string): var { throw new Error("not implemented"); }
 }

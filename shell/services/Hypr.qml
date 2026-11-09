@@ -96,6 +96,37 @@ Singleton {
     // hyprctl reload (Spotlight "Reload Hyprland").
     function reload(): void { dispatch("hl.dsp.reload_config()"); }
 
+    // ── S3: the bar's workspace actions and model ──────────────────────────────────────────
+    // One monitor's strip (hypr.js stripFor with bar.workspaces.show).
+    function stripFor(monitor: string): var { throw new Error("not implemented"); }
+    // The workspace record of an id, or null.
+    function workspace(id: int): var { throw new Error("not implemented"); }
+    // Name a workspace ("" removes the name, ≤ surfaces.bar.workspaceNameMaxChars): written to
+    // Paths.workspacesState and applied with renameWorkspace (bar.md §8).
+    function setWorkspaceName(id: int, name: string): void { throw new Error("not implemented"); }
+    // The pill menu's "Move workspace to ▸" and "Close all windows…" (bar.md §3).
+    function moveWorkspaceToMonitor(id: int, monitor: string): void { throw new Error("not implemented"); }
+    function closeWorkspaceWindows(id: int): void { throw new Error("not implemented"); }
+    // The window menu (bar.md §4); address "" = the active window.
+    function togglePin(address: string): void { throw new Error("not implemented"); }
+    function moveToMonitor(address: string, monitor: string): void { throw new Error("not implemented"); }
+    function sendToScratch(address: string): void { throw new Error("not implemented"); }
+    // Focus the next (+1) / previous (-1) window on the focused workspace (wheel on the title).
+    function cycleFocus(direction: int): void { throw new Error("not implemented"); }
+    // The Caps Lock OSD (shortcuts capslock-on / capslock-off; the bind reads the keyboard state).
+    function showCapsLock(on: bool): void { throw new Error("not implemented"); }
+
+    // A `windowtitlev2` event: patch the title in place (no refresh), or refresh when unknown.
+    function _onTitle(data: string): void { throw new Error("not implemented"); }
+    // An `urgent` event: mark the window's workspace; toast when that workspace is not shown.
+    function _onUrgent(address: string): void { throw new Error("not implemented"); }
+    // Rebuild `windows` from the toplevels (after a toplevel refresh only).
+    function _rebuildWindows(): void { throw new Error("not implemented"); }
+    // Rebuild `workspaces` from Hyprland's workspaces, the windows and the focus order.
+    function _rebuildWorkspaces(): void { throw new Error("not implemented"); }
+    // Read the workspace names file's text and apply the names.
+    function _loadNames(text: string): void { throw new Error("not implemented"); }
+
     // A toplevel as the plain record above (from lastIpcObject; fresh after refreshToplevels).
     function _client(t: var): var {
         const o = t.lastIpcObject || {};

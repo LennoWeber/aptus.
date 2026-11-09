@@ -10,3 +10,9 @@
 // The active player: the one that most recently entered Playing; if none plays, the one that
 // played last; players in media.ignore (matched case-insensitively against identity, desktop
 // entry and the service name's last part) are never active.
+// (The card's time texts are core/js/format.js clockDuration.)
+
+// The key of the active player among summaries, or "".
+function pickActive(players, ignore) { throw new Error("not implemented") }
+// The player is listed in media.ignore.
+function isIgnored(player, ignore) { throw new Error("not implemented") }

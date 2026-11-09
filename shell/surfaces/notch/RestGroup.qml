@@ -26,4 +26,10 @@ Item {
     property string _time: ""
     property string _date: ""
     property string _longDate: ""
+
+    // Refresh the texts and arm the timer for the next minute boundary.
+    function _refresh(): void { throw new Error("not implemented"); }
+    // The right-click menu (notch.md §3) and what its rows do.
+    function _menu(x: real, y: real): void { throw new Error("not implemented"); }
+    function _menuTriggered(row: var): void { throw new Error("not implemented"); }
 }

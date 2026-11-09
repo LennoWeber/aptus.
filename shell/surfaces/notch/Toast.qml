@@ -35,4 +35,9 @@ Item {
     property real _icon: 1
     property real _title: 1
     property real _body: 1
+
+    // Open the inline reply field (the reply action) and give it the keyboard.
+    function openReply(): void { throw new Error("not implemented"); }
+    // Close the reply field (Esc returns to the toast; back() of the Esc ladder).
+    function closeReply(): bool { throw new Error("not implemented"); }
 }

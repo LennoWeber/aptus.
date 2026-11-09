@@ -39,4 +39,8 @@ Singleton {
     function setDefaultSink(id: int): void { Log.info("service.audio", "setDefaultSink: not available yet"); }
     function setDefaultSource(id: int): void { Log.info("service.audio", "setDefaultSource: not available yet"); }
     function setStreamVolume(id: int, volume: real): void { Log.info("service.audio", "setStreamVolume: not available yet"); }
+
+    // Post the OSD of a kind ("volume" | "mic") on the active monitor, unless the Deck is open
+    // there (its slider moves instead, notch.md §8).
+    function _osd(kind: string): void { throw new Error("not implemented"); }
 }

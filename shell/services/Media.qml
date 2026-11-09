@@ -25,4 +25,9 @@ Singleton {
     function toggle(): void { Log.info("service.media", "toggle: not available yet"); }
     function next(): void { Log.info("service.media", "next: not available yet"); }
     function previous(): void { Log.info("service.media", "previous: not available yet"); }
+
+    // Rebuild `players` and pick `active` (media.js pickActive).
+    function _rebuild(): void { throw new Error("not implemented"); }
+    // A player's playback state changed (entered Playing, paused).
+    function _noteState(player: var): void { throw new Error("not implemented"); }
 }

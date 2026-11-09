@@ -17,4 +17,12 @@ Item {
     readonly property var items: []
     // Items that left but still close (M-04), by id.
     property var _leaving: ({})
+
+    // The inputs of bar.md §6: click opens the Deck at the item's section ("" = the top), the
+    // wheel on volume / battery steps volume / brightness, middle on volume mutes, right on
+    // network / Bluetooth toggles Wi-Fi / Bluetooth.
+    function _open(section: string): void { throw new Error("not implemented"); }
+    function _wheel(id: string, direction: int): void { throw new Error("not implemented"); }
+    function _middle(id: string): void { throw new Error("not implemented"); }
+    function _right(id: string): void { throw new Error("not implemented"); }
 }

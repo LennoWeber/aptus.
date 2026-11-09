@@ -21,3 +21,31 @@
 // The `fixed` assignment follows `auto-workspace-monitors.sh` (05 §7) exactly: without an
 // external monitor eDP-1 holds 1–10; otherwise the first monitor Hyprland lists that is not
 // eDP-1 holds 1–5 and eDP-1 6–10. Any further monitor has no fixed ids and shows `used`.
+
+// The internal monitor of `auto-workspace-monitors.sh`.
+var INTERNAL = "eDP-1"
+// The scratch workspace (09: `special:scratch`).
+var SCRATCH = "special:scratch"
+
+// The fixed workspace ids of `monitor` given every monitor name in Hyprland's order ([] = none).
+function fixedIds(monitorNames, monitor) { throw new Error("not implemented") }
+// Workspace records from Hyprland's workspaces ([{ id, name, monitor, windows }]), the window
+// records, monitors ([{ name, activeWorkspace }]), the focused monitor, the focus order
+// (addresses, MRU), urgent addresses and workspace names (id → name).
+function workspaceRecords(workspaces, windows, monitors, focusedMonitor, focusOrder, urgent, names, maxChars) { throw new Error("not implemented") }
+// Distinct app classes on a workspace, most recently focused first.
+function appsOf(windows, workspaceId, focusOrder) { throw new Error("not implemented") }
+// The pill's label: the name (≤ maxChars, ellipsised) or the id.
+function labelOf(id, name, maxChars) { throw new Error("not implemented") }
+// One monitor's strip (mode: "used" | "fixed").
+function stripFor(records, monitor, mode, monitorNames, specialOpen) { throw new Error("not implemented") }
+// The previous / next used workspace id of a strip from `current` (wheel), or `current`.
+function neighbour(strip, current, direction) { throw new Error("not implemented") }
+// `windowtitlev2` data ("address,title") → { address: "0x…", title }.
+function parseTitleEvent(data) { throw new Error("not implemented") }
+// The window list with one title replaced, or null when the address is unknown (then refresh).
+function patchTitle(windows, address, title) { throw new Error("not implemented") }
+// The focus order with `address` first.
+function bumpFocus(order, address) { throw new Error("not implemented") }
+// The workspace (record) is shown on its monitor now.
+function isShown(record, monitors) { throw new Error("not implemented") }

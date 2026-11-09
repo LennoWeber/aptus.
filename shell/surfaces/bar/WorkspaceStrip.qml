@@ -31,4 +31,13 @@ Item {
     property real _capsuleRight: 0
     // The active pill's index a moment ago (which edge leads).
     property int _lastActive: -1
+
+    // A pill's actions (bar.md §3): go there; move the focused window there (stay); its menu at a
+    // point in strip coordinates; the wheel steps to the previous / next used workspace.
+    function _go(record: var): void { throw new Error("not implemented"); }
+    function _moveHere(record: var): void { throw new Error("not implemented"); }
+    function _menu(record: var, x: real, y: real): void { throw new Error("not implemented"); }
+    function _wheel(direction: int): void { throw new Error("not implemented"); }
+    // Move the capsule to the active pill (M-02: the leading edge first).
+    function _placeCapsule(): void { throw new Error("not implemented"); }
 }

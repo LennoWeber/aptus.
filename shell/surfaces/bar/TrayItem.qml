@@ -15,4 +15,7 @@ Item {
     property string monitorName: ""
 
     readonly property bool hovered: false
+
+    // The item's DBusMenu as an aptus menu below the icon (QsMenuOpener rows → Menu model).
+    function openMenu(): void { throw new Error("not implemented"); }
 }

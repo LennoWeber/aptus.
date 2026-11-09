@@ -21,4 +21,7 @@ Item {
     // The items in the bar and those behind the overflow button (bar.js trayLayout).
     readonly property var shownItems: []
     readonly property var overflowItems: []
+
+    // The overflow menu (icon + title rows) below the `expand_more` button.
+    function _overflowMenu(x: real, y: real): void { throw new Error("not implemented"); }
 }

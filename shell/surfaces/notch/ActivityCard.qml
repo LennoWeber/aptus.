@@ -24,4 +24,8 @@ Item {
 
     // Tab / ←/→ / a pager dot picked another activity.
     signal picked(string activity)
+
+    // Hand the card item what it may declare: monitorName, activity, pinned (the card contract
+    // documented on Activity.card).
+    function _setUp(item: var): void { throw new Error("not implemented"); }
 }

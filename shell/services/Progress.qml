@@ -14,4 +14,9 @@ Singleton {
     // The service works (S3).
     readonly property bool available: false
     function cancel(id: string): void { Log.info("service.progress", "cancel: not available yet"); }
+    // A notification record with a progress hint (notch.md §6 rule 4): add or update its item;
+    // false once it completed (value 100) or lost the hint, so the caller toasts it.
+    function fromRecord(record: var): bool { throw new Error("not implemented"); }
+    // Drop an item (the sender closed the notification).
+    function remove(id: string): void { throw new Error("not implemented"); }
 }

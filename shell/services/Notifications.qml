@@ -41,4 +41,32 @@ Singleton {
 
     // IPC `notch toast <json>` (test only): a fake notification through the real interruption policy.
     function inject(payload: var): void { Log.info("service.notifications", "inject: not available yet"); }
+
+    // The toast's actions (notch.md §6): the default action ("") or a button; dismisses unless
+    // the notification is resident. Without a default action: focus the app's window.
+    function activate(id: int, action: string): void { throw new Error("not implemented"); }
+    // ✕ or middle click: the toast closes, the record stays in Today as read.
+    function dismiss(id: int): void { throw new Error("not implemented"); }
+    // The inline reply was sent.
+    function reply(id: int, text: string): void { throw new Error("not implemented"); }
+    // "Mute <App> for 1 hour".
+    function muteApp(appName: string): void { throw new Error("not implemented"); }
+    // Today (S4) and the toast: read state and removal.
+    function markRead(id: int): void { throw new Error("not implemented"); }
+    function markAllRead(): void { throw new Error("not implemented"); }
+    function remove(id: int): void { throw new Error("not implemented"); }
+    function clearAll(): void { throw new Error("not implemented"); }
+    // The Notch tells that a toast's passive entry left the notch (timed out or dismissed).
+    function toastGone(passiveId: int): void { throw new Error("not implemented"); }
+
+    // A notification arrived from the server (a Quickshell Notification), or was replaced in place.
+    function _arrive(n: var): void { throw new Error("not implemented"); }
+    // A record through the policy: Today, held, progress or a toast (live: the Notification or null).
+    function _receive(record: var, live: var): void { throw new Error("not implemented"); }
+    // Post or update the toast of a record (stack, replaces_id).
+    function _toast(record: var, priority: int): void { throw new Error("not implemented"); }
+    // The hold ended: one summary toast for the held notifications.
+    function _releaseHeld(): void { throw new Error("not implemented"); }
+    // The history changed: recount unread, write the state file (debounced).
+    function _changed(): void { throw new Error("not implemented"); }
 }

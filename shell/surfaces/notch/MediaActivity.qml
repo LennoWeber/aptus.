@@ -15,4 +15,9 @@ Activity {
     readonly property bool paused: false
     // Hidden by "Hide until it changes" until the track changes.
     property string _hiddenTrack: ""
+
+    // Middle click: play/pause (notch.md §4).
+    function middleClick(): void { throw new Error("not implemented"); }
+    // The right-click menu rows: Hide until it changes, Open in Today.
+    function menuTriggered(row: var): void { throw new Error("not implemented"); }
 }

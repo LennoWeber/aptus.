@@ -891,3 +891,60 @@ toast/OSD/card morphs) measured; `hyprctl configerrors` empty; no shell-log line
   when it has them (documented in phase 3 on `Activity.qml`'s `card`, a shared file).
 - No shared file changes yet: shared changes are made complete in their own commits when they
   are needed (phase 5/7), not split over phases.
+
+### Phase 3 · signatures (2026-11-09)
+
+**Done** (placeholder bodies throw `not implemented` / `raise NotImplementedError`; nothing calls
+them yet; existing S1 stub bodies untouched):
+- `services/js/notifications.js`: urgency constants, `CRITICAL_PRIORITY`, `MUTE_MS`, fallbacks,
+  `HELD_WHILE`, `KEEP_TAGS`; `makeRecord`, `decide`, `isAllowlisted`, `isMuted`, `toastTimeout`,
+  `toastPayload`, `stackStep`, `stackPayload`, `heldPayload`, `reduceMarkup`, `plainText`,
+  `progressOf`, history `addToHistory`/`trimHistory`/`markRead`/`markAllRead`/`removeRecord`,
+  `unreadInfo`, `serialise`/`parse`.
+- `media.js`: `pickActive`, `isIgnored` (time texts reuse `format.js` `clockDuration`).
+- `hypr.js`: `INTERNAL`, `SCRATCH`; `fixedIds`, `workspaceRecords`, `appsOf`, `labelOf`,
+  `stripFor`, `neighbour`, `parseTitleEvent`, `patchTitle`, `bumpFocus`, `isShown`.
+- `levels.js`: glyph tables (`BATTERY` 8 steps, `WIFI` 4, `VOLUME`, `GLYPHS`); `batteryGlyph`,
+  `volumeGlyph`, `networkGlyph`, `brightnessGlyph`, `step`, OSD payloads for volume, mic,
+  brightness, keyboard light, Caps Lock, layout.
+- `bar/js/bar.js` (imports `format.js`): `STATUS_ORDER`, `WINDOW_GLYPHS`; `statusItems`,
+  `batteryTooltip`, `collapseLevel`, `noteTitleChange`/`titleDelay`, `trayLayout`, `deckArgs`,
+  `workspaceTooltip`, `windowGlyphs`, `windowMenu`, `pillMenu`, `isNarrow`.
+- `notch/js/notch.js` (imports `format.js`): `viewOf`, `keyOf`, `nextLayers`, `dropLayer`,
+  `assignSlots`, `toastHeight`, `eventWidth`, countdown `Start`/`Pause`/`Resume`/`Left`,
+  `pagerStep`, `longDate`.
+- Services: Hypr (`stripFor`, `workspace`, `setWorkspaceName`, `moveWorkspaceToMonitor`,
+  `closeWorkspaceWindows`, `togglePin`, `moveToMonitor`, `sendToScratch`, `cycleFocus`,
+  `showCapsLock`, private `_onTitle`, `_onUrgent`, `_rebuildWindows`, `_rebuildWorkspaces`,
+  `_loadNames`), Notifications (`activate`, `dismiss`, `reply`, `muteApp`, `markRead`,
+  `markAllRead`, `remove`, `clearAll`, `toastGone`, private `_arrive`, `_receive`, `_toast`,
+  `_releaseHeld`, `_changed`), Progress (`fromRecord`, `remove`), Media (`_rebuild`,
+  `_noteState`), Audio (`_osd`), Brightness (`_read`, `_write`, `_osd`), Power
+  (`_checkBattery`), Apps (`nameFor`, `entryFor`).
+- Bar: WorkspaceStrip (`_go`, `_moveHere`, `_menu`, `_wheel`, `_placeCapsule`), WorkspacePill
+  (`nudge`), ActiveWindow (`_changed`, `_show`, `_menu`, `_menuTriggered`), Tray
+  (`_overflowMenu`), TrayItem (`openMenu`), StatusCluster (`_open`, `_wheel`, `_middle`,
+  `_right`). Notch: Notch (`_sync`, `_layerGone`, `_openCard`, `_closeHoverCard`,
+  `_dismissEntry`, `_toastActivated`/`Dismissed`/`Menu`, `_activityMenu`, `_countdownTick`,
+  `_modeEntered`/`_modeLeft`), RestGroup (`_refresh`, `_menu`, `_menuTriggered`), Toast
+  (`openReply`, `closeReply`), ActivityCard (`_setUp`), MediaActivity (`middleClick`,
+  `menuTriggered`), ProgressActivity (`menuTriggered`).
+- Python: `fakehw.BRIGHTNESSCTL`, `FakeHardware.build/backlight_value/kbd_value`;
+  `fake_mpris.Player` (`metadata`, `call`, `get_property`, `changed`), `main`.
+- Test skeletons (`skip("phase 7")`): `tests/qml/tst_{notifylogic,medialogic,hyprmodel,levels,
+  barlogic,notchlogic,glyphs}.qml`, `tests/e2e/test_s3_{keys,notifications,bar,monitors}.py`
+  (the planned `test_s3_notch` is folded into `bar` and `notifications`).
+
+**Shared commits** (separate, see the final list): `S3 shared: shell/components/Activity.qml`
+(`middleClick()` / `menuTriggered(row)` no-op hooks; the card contract comment: the Notch sets
+`activity`, `monitorName`, `pinned` on the created item when it declares them; the Notch adds
+"Open in Today" to every activity menu itself) and `S3 shared: shell/core/MonitorState.qml`
+(the passive payload comment points at S3's toast and OSD shapes; found by the phase-2 review).
+
+**Reported.** Reuse instead of new helpers: `format.js` already has `clockDuration` (media
+times), `duration` (battery tooltip), `dateLong` + `isoWeek` (the clock tooltip), so
+`formatTime`, `remainingText`, `durationText` and `isoWeek` were dropped from the new
+libraries while writing. Every nested session needs the fake backlight (the brief's safety
+rule, and e2e tests share one session per pytest run, so a per-module fixture would come too
+late): planned as `S3 shared: tests/e2e/nested.py` (the harness builds `FakeHardware` into its
+temporary root and passes `APTUS_SYSFS` and the fake `PATH` to the nested Hyprland).

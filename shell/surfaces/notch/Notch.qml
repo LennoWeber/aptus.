@@ -52,4 +52,26 @@ Item {
     readonly property var _slots: ({ left: "", right: "", waiting: [] })
     // The interactive mode loaded now ("" none); the back handler registered for it.
     property string _mode: ""
+
+    // The view changed: update the layers (notch.js nextLayers) and the timers of what shows.
+    function _sync(): void { throw new Error("not implemented"); }
+    // A layer finished fading out.
+    function _layerGone(uid: int): void { throw new Error("not implemented"); }
+    // Open an activity's card: by hover (transient, no keyboard) or by click (pinned).
+    function _openCard(activity: string, pinned: bool): void { throw new Error("not implemented"); }
+    // Close the transient (hover) card.
+    function _closeHoverCard(): void { throw new Error("not implemented"); }
+    // A passive entry is done (timeout, dismissal): SurfaceManager.dismiss and the toast's owner.
+    function _dismissEntry(entry: var): void { throw new Error("not implemented"); }
+    // A toast's inputs (notch.md §6).
+    function _toastActivated(entry: var, action: string): void { throw new Error("not implemented"); }
+    function _toastDismissed(entry: var): void { throw new Error("not implemented"); }
+    function _toastMenu(entry: var, x: real, y: real): void { throw new Error("not implemented"); }
+    // A compact activity's right-click menu (notch.md §4).
+    function _activityMenu(activity: string, x: real, y: real): void { throw new Error("not implemented"); }
+    // The toast countdown of the shown toast: run, pause (hover, covered), expire.
+    function _countdownTick(): void { throw new Error("not implemented"); }
+    // An interactive mode entered / left the notch (registerBack / unregisterBack, Esc ladder).
+    function _modeEntered(mode: string, item: var): void { throw new Error("not implemented"); }
+    function _modeLeft(mode: string): void { throw new Error("not implemented"); }
 }
