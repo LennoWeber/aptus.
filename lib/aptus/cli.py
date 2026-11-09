@@ -138,6 +138,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.command == "logs":
         return cmd_logs(args.follow, args.component)
     if args.command in ("theme", "lease"):
+        # TODO(S2): theme → aptus.theme.cli.main(args.args); lease → aptus.lease.cli.main(args.args);
+        #   help texts in parser() ("render, apply, targets" / "take, update, release, recover, status").
         print(f"aptus {args.command}: not available until S2", file=sys.stderr)
         return 2
     if args.command == "dev":

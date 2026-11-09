@@ -18,11 +18,12 @@ class Snapshot:
 
 KINDS = ("file", "ini-sections", "dconf")       # SlotKind values
 
-# Every kind module has the same six functions (rec: journal.SlotRecord, spec: slots.SlotSpec):
+# Every kind module has the same seven functions (rec: journal.SlotRecord, spec: slots.SlotSpec):
 #   read(paths, rec) -> Snapshot           current state in the journal's `before` shape
 #   digest(paths, rec) -> dict             current state in the `after` shape (what release compares)
 #   before_digest(before) -> dict          the `after`-shaped digest of a recorded `before`
-#   planned(spec) -> dict                  the `after` digest that writing `spec` produces
+#   planned(spec) -> dict                  the `after` digest that writing `spec` produces (equal
+#                                          to `digest` right after `write`)
 #   write(paths, rec, spec) -> dict        write aptus's paint; returns the digest now in place
 #   restore(paths, rec, data) -> None      put `before` back (data: slots/<id>.before for files)
 #   current(paths, rec) -> bytes           what is in the slot now, for conflicts/<time>/<id>
@@ -30,9 +31,11 @@ KINDS = ("file", "ini-sections", "dconf")       # SlotKind values
 
 def module(kind: str) -> ModuleType:
     """The module implementing `kind` (a SlotKind or its value); ValueError for anything else."""
+    # TODO(S2): map SlotKind(kind) to the file, ini, dconf modules (imported lazily).
     raise NotImplementedError
 
 
 def sha256(data: bytes) -> str:
     """Hex SHA-256, the digest every kind records."""
+    # TODO(S2): hashlib.sha256(data).hexdigest().
     raise NotImplementedError

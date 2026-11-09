@@ -30,6 +30,8 @@ Singleton {
 
     // Re-read the three files and update every property above from lease.js summarize().
     function refresh(): void {
-        // phase 7
+        // TODO(S2): three FileViews (Paths.leaseJournal, Paths.guardState, Paths.sessionStatus,
+        //   watchChanges, printErrors false) call refresh(); parse each (null when missing or
+        //   broken); LeaseJs.summarize(); assign the properties.
     }
 }

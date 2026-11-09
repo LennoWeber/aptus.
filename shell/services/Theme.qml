@@ -31,15 +31,22 @@ Singleton {
     // Ask for an `aptus-theme apply` with the current resolution: debounced 250 ms, started after
     // the shell's own crossfade (08 §6), one run at a time (a request during a run runs after it).
     function requestApply(): void {
-        // phase 7
+        // TODO(S2): restart a 250 ms Timer (+ Motion theme duration, after the crossfade); on
+        //   trigger: running → _pending = true; else Process ["aptus-theme", "apply", "--inputs",
+        //   JSON.stringify(_inputs())] (Paths.repo + "/bin/aptus-theme"); called from shell.qml
+        //   when Tokens' resolution, frame.edge or motion.reduce change.
     }
     // The --inputs JSON for aptus-theme (lib/aptus/theme/inputs.py to_dict) from Tokens and Config.
     function _inputs(): var {
+        // TODO(S2): mode (Tokens.mode), accent/contrast/glass/modeSetting (Config), wallpaperHue/
+        //   Chroma/Lightness (Tokens), currentAccent (Tokens.accentName), frameEdge, reduceMotion,
+        //   bakeTargets (Config isolation.bakeTargets).
         return ({});
     }
     // Parse the JSON report on stdout into lastApply, failed and generation; warn for failures.
     function _applied(stdout: string, exitCode: int): void {
-        // phase 7
+        // TODO(S2): JSON.parse → lastApply (text), failed, generation; failures → Log.warn and the
+        //   notch toast (S3 shows it); exit ≠ 0 without JSON → failed {"render": stderr}.
     }
 
     function _set(key: string, value: var): string {

@@ -12,8 +12,10 @@ import "js/sun.js" as Sun
 Singleton {
     id: root
 
-    // TODO(S2): watch Paths.themeCurrent + "/shell.json" for resolutions written outside (07 §7),
-    //   once aptus-theme defines that file.
+    // TODO(S2): watch Paths.state + "/theme/resolved.json" (FileView, watchChanges; a stable file
+    //   written by rename after each render: a swapped `current` symlink is not noticed, phase-5
+    //   probe) and apply() its parsed content: equal resolutions are a no-op, so the shell's own
+    //   renders do not crossfade twice (07 §7).
 
     // The parsed theme/tokens.json.
     property var raw: ({})

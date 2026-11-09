@@ -42,21 +42,28 @@ REASON_UNKNOWN = "cannot list login sessions"
 def sessions(paths: Paths) -> list[LoginSession] | None:
     """This user's logind sessions (`loginctl list-sessions` + `show-session`), None when loginctl
     is missing or fails (the caller fails closed: no lease)."""
+    # TODO(S2): system.run loginctl list-sessions --no-legend -o json (fallback: plain columns),
+    #   keep this uid; show-session -p Id,Class,Type,State,Desktop,Service --value per id.
     raise NotImplementedError
 
 
 def others(all_sessions: Sequence[LoginSession], own_id: str) -> list[LoginSession]:
     """Open graphical user sessions other than `own_id` (an Umbriel session on another VT is
     `online`)."""
+    # TODO(S2): cls == "user", type in GRAPHICAL, state in OPEN, id != own_id.
     raise NotImplementedError
 
 
 def noctalia(paths: Paths) -> list[int]:
     """Pids of running Noctalia shells of this user (under test: of this HOME only)."""
+    # TODO(S2): system.processes(NOCTALIA_NAMES) plus qs/quickshell whose cmdline names noctalia.
     raise NotImplementedError
 
 
 def check(paths: Paths, env: Mapping[str, str]) -> Preflight:
     """Step 3 of 02 §5.3 and §8: ok only when no other session is open, no Noctalia runs and the
-    sessions could be listed; else reasons and the notch's notice."""
+    sessions could be listed; else reasons and the notch's notice. Runs inside ops.take under
+    the lease flock; the guard reuses `sessions`/`others` while the lease is held."""
+    # TODO(S2): sessions None → REASON_UNKNOWN (fail closed); others(…, env XDG_SESSION_ID) →
+    #   REASON_OTHER_SESSION/NOTICE_OTHER_SESSION; noctalia() → REASON_NOCTALIA/NOTICE_NOCTALIA.
     raise NotImplementedError

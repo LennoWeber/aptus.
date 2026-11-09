@@ -960,3 +960,84 @@ empty QML body marked "phase 7":
 
 **Checked.** Every module of `lib/aptus` imports. `tests/run` is green (97 unit tests, the QML
 tests) and qmllint reports 0 warnings.
+
+### Review of phase 3 (fresh subagent, phase-3 diff only)
+
+13 findings; the first reviewer died on the usage limit and was started again on the same diff.
+The fixes went into the phase-4 commit (signatures and docstrings changed, bodies still
+placeholders).
+
+**Fixed.**
+1. Import cycle ops ↔ recover. `recover()` moved into `ops`; `lease/recover.py` became
+   `lease/liveness.py` with only `socket_accepts` and `owner_alive` (no import of ops).
+2. Reloads without the manifest. `ReleaseReport.reloads` (target id → reload string) and
+   `hooks.run_reloads(paths, reloads, signature)`; `run_all` delegates to it. The guard, recover
+   and release reload from the journal's `SlotRecord.reload` alone.
+3. Install interface for 02 §11. The four kinds are named now with their one path each:
+   `enable-unit`, `disable-unit`, `baseline` (only when no baseline exists: a re-install never
+   re-records, that would hide an aptus write), `release-lease`, and the order. The tuple itself
+   grows in phase 7 with its handling, because an S1 test pins it and a kind without handling
+   would pass `check_action`.
+4. `scope/kitty` and `scope/yazi` as real directories. `install.plan` drops them (TODO);
+   `scope.swap` documents the contract for directory and file targets (`starship.toml`) and
+   moves an old real file aside.
+5. Inputs of `slot_specs`. `Generation.inputs`; render writes the dconf values into
+   `<gen>/<id>/dconf.json`; the bake opt-in comes from `inputs.bake_targets`.
+6. `theme_step` duplicated apply. `apply.apply_generation(paths, manifest, gen, signature)` is
+   shared by the session (after take) and `apply`; `lease_mode` is gone (`ops.held_by`).
+7. Take after an incomplete recover. `take` raises `LeaseError` when a journal is still there
+   after recover (live owner, failed slots, unparseable), so Noctalia's only `before` record is
+   never overwritten; a leftover `released` journal is archived; `recover` lets `JournalError`
+   through and `aptus-lease recover` exits 1 for it; a lock timeout raises `LeaseError`.
+8. Locking. A theme lock of its own (`state/theme/lock`, `render.lock`) covers render, scope and
+   Own; the lease flock is taken only inside ops, so `bat cache --build` never delays a release.
+9. Guard. `release_if_ours` accepts every non-`released` state of the same owner;
+   `unset_environment` runs only after our own release and unsets only variables that still hold
+   aptus's value; `HYPRCURSOR_SIZE` is in `UNSET`.
+10. The file kind never creates directories: a missing parent skips the slot.
+11. Smaller items: one wording for who writes slots (the lease package, in-process; `aptus-lease`
+    is its CLI); `render_step` falls back to `render.current`; `state/doctor-check`; "seven
+    functions"; `read` records `link` and `mode`; `ini.planned` equals `digest` after a write;
+    the vscode files have distinct `out`s (`vscode/code.json`, `codium.json`,
+    `antigravity.json`); guard imports at the top.
+12. Safety:
+    - Preflight runs inside `ops.take` under the flock, so a manual `aptus-lease take` with
+      Umbriel open takes nothing.
+    - `targets.expand` raises `ManifestError` for a slot, dest or `at` outside HOME or inside
+      Umbriel's config, Noctalia's state or `/etc`.
+    - The kinds check `invariants.writable` on the resolved write path (phase 6).
+    - `require_safe_home` compares realpaths.
+13. One enforcement point each:
+    - `require_safe_home` runs in `ops.lock` and `render.lock`, which every in-process caller
+      (guard, theme, session) passes.
+    - `own.write_files` refuses an existing dest that is not in own.json.
+    - The guard starts before take: no guard, no lease.
+    - `paths.sysroot` (`/`, or `$HOME/.aptus-test/root` under test) for `exists:` rules,
+      Papirus and the system theme dirs.
+    - The spec gap (Umbriel logging in on another VT mid-session) is closed by the guard: it
+      polls `/run/systemd/users/<uid>` (`paths.logind_user`) once a second, releases at once when
+      another graphical session appears and writes `scope-only` into guard.state; the shell's
+      Lease service shows the notice. A window of about one second remains (open item).
+
+**Deferred.** The spec updates (02 §4/§5/§7/§11, 07 §3/§7, 08 §5/§6) are made in phase 7 with the
+implementation, as planned.
+
+### Phase 4 · TODO markers (2026-11-09)
+
+**Done.** A `# TODO(S2): …` line (or block) in every placeholder, naming the steps, the order and
+the error cases:
+- lease: `system`, `journal`, the three kinds, `ops`, `liveness`, `preflight`, `guard`, `cli`.
+- theme: `palette` (port of colour.js), `resolve`, `sun`, `inputs`, `targets`, `noctalia`,
+  `render`, `scope`, `own`, `hooks`, `apply`, `cli`.
+- `doctor/isolation.py` (the eight checks and the baseline), `session.py` (the new start order:
+  recover, render, guard, take, apply, import; `write_status`, `stop`), `paths.require_safe_home`.
+- Integration spots: `install` (`KINDS`, `check_action`, `plan`, `plan_uninstall`, `apply`,
+  `leased_paths`, `systemctl_user`), `cli.py` (theme/lease dispatch), `doctor/__init__`
+  (isolation group), `Tokens.qml` (the `TODO(S2)` watch, now on `state/theme/resolved.json`),
+  `Lease.qml`, `Theme.qml`, `lease.js`.
+- Template fix: two fold markers removed from `templates/yazi/flavor.toml` (they would render as
+  stray `{{`).
+
+**Checked.** A script walks every function of `lib/aptus`: each one that raises
+`NotImplementedError` carries a `TODO(S2)` (192 markers, 174 placeholders). Every module imports.
+`tests/run` green (97 unit, 159 QML), qmllint 0 warnings.

@@ -89,29 +89,39 @@ class ManifestError(ValueError):
 
 def load(path: Path) -> Manifest:
     """Parse and validate targets.toml (tomllib)."""
+    # TODO(S2): tomllib; parse_target each; ids unique; every template exists below
+    #   paths.templates; [inert] table.
     raise NotImplementedError
 
 
 def parse_target(raw: dict[str, Any]) -> Target:
     """One `[[target]]` table; the one-file shorthand (template/out/slot at the top level) becomes
     a single FileOut."""
+    # TODO(S2): known keys only; Mechanism(mechanism); SlotKind(kind); shorthand → FileOut;
+    #   dconf/requires tables → sorted tuples; scope → ScopeSpec; `into` without '/'.
     raise NotImplementedError
 
 
-def expand(paths: Paths, value: str) -> Path:
-    """`~` → paths.home, {config} {state} {cache} {data} → the XDG base directories; every other
-    path must be absolute (ManifestError)."""
+def expand(paths: Paths, value: str, *, system: bool = False) -> Path:
+    """`~` → paths.home, {config} {state} {cache} {data} → the XDG base directories. A path aptus
+    may write (slot, dest, mirror) must lie below HOME and outside ~/.config/umbriel,
+    ~/.local/state/noctalia and /etc, else ManifestError. With `system` (a `when` or a read-only
+    source) an absolute path outside HOME is allowed and mapped into paths.sysroot."""
+    # TODO(S2): replace the prefix; os.path.normpath; check against HOME and the never-paths.
     raise NotImplementedError
 
 
 def active(paths: Paths, target: Target) -> bool:
     """The `when` rule: always, exists:<path>, which:<command> (under test: $HOME/.aptus-test/bin)."""
+    # TODO(S2): always; exists:<path> → expand(system=True).exists(); which:<cmd> →
+    #   system.tool(paths, cmd) under test, shutil.which otherwise.
     raise NotImplementedError
 
 
 def slots(paths: Paths, target: Target) -> list[tuple[FileOut, Path]]:
     """(file, slot path) of a lease or bake target: `*` expanded by glob (sorted), and with
     `present` only the slots that exist."""
+    # TODO(S2): expand each FileOut.slot; '*' → sorted glob; present → only existing ones.
     raise NotImplementedError
 
 
@@ -119,4 +129,6 @@ def coverage(manifest: Manifest, enabled: Enabled, slot_paths: Sequence[Path]) -
     """Each enabled Noctalia id is covered by a lease/scope/own/bake target's `noctalia` list, kept
     by a `never` target's, inert, or (a user template) covered when its output path is one of
     `slot_paths`; else uncovered."""
+    # TODO(S2): builtin + community ids and user ids; covered by a non-never target's noctalia
+    #   list, kept by a never target's, inert, or a user output equal to a slot path.
     raise NotImplementedError

@@ -174,7 +174,7 @@ rules = [
 
 # : ]]]
 
-# : Icons {{{
+# : Icons
 
 [icon]
 globs = []
@@ -914,4 +914,4 @@ conds = [
 	{ if = "!dir", text = "", fg = "{{ accent }}" },
 ]
 
-# : }}}
+# : (end of icons)

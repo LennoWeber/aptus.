@@ -97,7 +97,13 @@ class Paths:
     noctalia_config: Path      # ~/.config/noctalia (*.toml overlays; read-only)
     noctalia_settings: Path    # ~/.local/state/noctalia/settings.toml (read-only; never written, I-1)
     umbriel_config: Path       # ~/.config/umbriel (read-only; never written, I-1)
-    greetd_config: Path        # /etc/greetd/config.toml ($HOME/.aptus-test/etc/… in tests; read-only)
+    sysroot: Path              # "/" (system files aptus only reads); $HOME/.aptus-test/root in tests
+    greetd_config: Path        # <sysroot>/etc/greetd/config.toml (read-only)
+    papirus: Path              # <sysroot>/usr/share/icons/Papirus (read-only; aptus-icons link into it)
+    system_themes: Path        # <sysroot>/usr/share/themes (doctor check 7, read-only)
+    logind_user: Path          # <sysroot>/run/systemd/users/<uid>: logind's record of this user (guard)
+    theme_lock: Path           # theme/lock: flock around render, scope and Own writes
+    theme_resolved: Path       # theme/resolved.json: the current resolution, a stable file the shell watches
     tmux_sockets: Path         # ${TMUX_TMPDIR:-/tmp}/tmux-<uid> ($HOME/.aptus-test/tmux-<uid> in tests)
     nvim_sockets: Path         # the directory of nvim.* server sockets: <runtime_home> (inside HOME in tests)
 
@@ -153,6 +159,7 @@ def resolve(env: Mapping[str, str] | None = None) -> Paths:
     install_state = state / "install"
     tmux_tmp = Path(env.get("TMUX_TMPDIR") or "/tmp")
     scope = state / "scope"
+    sysroot = test_root / "root" if test else Path("/")
     systemd_user = config_home / "systemd" / "user"
     return Paths(
         test=test, home=home,
@@ -196,7 +203,11 @@ def resolve(env: Mapping[str, str] | None = None) -> Paths:
         noctalia_config=config_home / "noctalia",
         noctalia_settings=state_home / "noctalia" / "settings.toml",
         umbriel_config=config_home / "umbriel",
-        greetd_config=(test_root / "etc" if test else Path("/etc")) / "greetd" / "config.toml",
+        sysroot=sysroot, greetd_config=sysroot / "etc" / "greetd" / "config.toml",
+        papirus=sysroot / "usr" / "share" / "icons" / "Papirus",
+        system_themes=sysroot / "usr" / "share" / "themes",
+        logind_user=sysroot / "run" / "systemd" / "users" / str(os.getuid()),
+        theme_lock=theme / "lock", theme_resolved=theme / "resolved.json",
         tmux_sockets=(test_root if test else tmux_tmp) / f"tmux-{os.getuid()}",
         nvim_sockets=runtime_home,
     )
@@ -220,7 +231,9 @@ def inside(path: Path, root: Path) -> bool:
 
 
 def require_safe_home(paths: Paths) -> None:
-    """Under APTUS_TEST=1 raise UnsafeHome unless HOME is a directory below the system temporary
-    directory and is not the passwd home of this user; outside tests a no-op. Every writer of a
-    leased slot, a scope mirror or an Own file calls it first."""
+    """Under APTUS_TEST=1 raise UnsafeHome unless HOME is a directory whose realpath lies below the
+    realpath of the system temporary directory and is not the passwd home of this user (a /tmp
+    symlink to the real home is refused); outside tests a no-op. The lease lock and the theme lock
+    call it, so every writer of a leased slot, a scope mirror or an Own file goes through it."""
+    # TODO(S2): os.path.realpath of paths.home, tempfile.gettempdir(), pwd home; is_dir; compare.
     raise NotImplementedError

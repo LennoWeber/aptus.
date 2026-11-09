@@ -30,6 +30,14 @@ class Action:
 
 
 KINDS = ("mkdir", "link", "move", "edit-hyprland")
+# TODO(S2): add the kinds of 02 §11 (and adjust the S1 test that pins KINDS):
+#   "enable-unit"   path = systemd_user/WANTS_LINK: daemon-reload + enable aptus-recover.service
+#                   (after its link action); check_action: exactly that path.
+#   "disable-unit"  the same path: `systemctl --user disable`; first in uninstall.
+#   "baseline"      path = paths.baseline: doctor.isolation.record_baseline + save, only when no
+#                   baseline exists (a re-install never re-records: that would hide an aptus write).
+#   "release-lease" path = paths.lease_journal: ops.release (uninstall, when a journal is there).
+#   ORDER: release-lease, disable-unit, mkdir, move, link, edit-hyprland, enable-unit, baseline.
 WANTS_LINK = "default.target.wants/aptus-recover.service"   # below the user unit directory
 
 
@@ -71,7 +79,9 @@ def check_action(paths: Paths, action: Action) -> None:
             refuse("an autostart entry or a font (CLAUDE.md)")
     if under(where, paths.systemd_user) and where != real(paths.systemd_user / "aptus-recover.service"):
         refuse("a user unit other than aptus-recover.service")
-    # TODO(S2): refuse the leased slots too, once aptus-lease has its slot table (02 §5).
+    # TODO(S2): refuse the leased slots too, once aptus-lease has its slot table (02 §5):
+    #   `where` equal to or below any realpath of leased_paths(paths) → refuse("a leased slot").
+    #   Allow the S2 kinds only at their one path each (see KINDS).
     if action.kind == "edit-hyprland" and (action.path != paths.hyprland_lua or (
             action.target is not None and not under(real(action.target), paths.install_state))):
         refuse("not hyprland.lua, or its removed lines outside the install state")
@@ -86,12 +96,16 @@ def check_action(paths: Paths, action: Action) -> None:
 def leased_paths(paths: Paths) -> list[Path]:
     """Every slot path of the lease and bake targets in theme/targets.toml (globs expanded),
     which no install action may touch (02 §5: only aptus-lease writes them)."""
+    # TODO(S2): targets.load; for lease and bake targets: targets.slots(paths, t) paths (present
+    #   ignored: every candidate); [] when the manifest does not load.
     raise NotImplementedError
 
 
 def systemctl_user(paths: Paths, args: Sequence[str]) -> None:
     """`systemctl --user <args>` through lease.system (a fake under test); RuntimeError when it
     fails or is not available."""
+    # TODO(S2): lease.system.run(paths, ['systemctl', '--user', *args]); skipped or code != 0 →
+    #   RuntimeError with stderr.
     raise NotImplementedError
 
 
@@ -142,6 +156,9 @@ def plan(paths: Paths) -> list[Action]:
     """Directories (state, scope mirrors, ~/.local/bin), links (~/.config/hypr/aptus → hypr/,
     ~/.local/bin/aptus* → bin/), v1 leftovers to move, the hyprland.lua edit."""
     actions: list[Action] = []
+    # TODO(S2): drop scope/kitty and scope/yazi (they are symlinks swapped by aptus-theme); add
+    #   the link systemd_user/aptus-recover.service → recover_unit_repo, "enable-unit" when the
+    #   wants link is missing, "baseline" when paths.baseline is missing.
     for d in (paths.config, paths.state, paths.install_state, paths.hypr_state, paths.scope,
               paths.scope / "kitty", paths.scope / "yazi", paths.local_bin, paths.hypr_config_dir):
         if not d.is_dir():
@@ -175,6 +192,9 @@ def plan(paths: Paths) -> list[Action]:
 
 
 def plan_uninstall(paths: Paths) -> list[Action]:
+    # TODO(S2): 02 §11: "release-lease" when a journal exists; "disable-unit" + unlink of the unit
+    #   link; move the Own files recorded in own.json (aptus-icons-*, qt6ct.conf, colors/aptus.conf)
+    #   into install_state/uninstalled-<date>/ like the scope mirrors. Lease history stays.
     # Action has no "remove" kind: a link action without target removes the link, and a folder
     # aptus filled (scope mirrors) is moved into install_state instead of being deleted.
     actions: list[Action] = []
@@ -253,6 +273,7 @@ def apply(paths: Paths, actions: Sequence[Action]) -> None:
         elif a.kind == "move":
             a.target.parent.mkdir(parents=True, exist_ok=True)
             shutil.move(str(a.path), str(a.target))
+        # TODO(S2): the four S2 kinds (release-lease, disable-unit, enable-unit, baseline).
         elif a.kind == "edit-hyprland" and not edited:
             edited = True                     # remove-block and restore are one edit
             # the file a link leads to (check_action checked that one): writing the link's own

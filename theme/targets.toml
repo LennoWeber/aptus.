@@ -315,9 +315,9 @@ row       = 24
 noctalia  = ["vscode"]
 mechanism = "lease"
 files     = [
-  { template = "vscode/NoctaliaTheme-color-theme.json", out = "vscode/NoctaliaTheme-color-theme.json", name = "code", slot = "~/.vscode/extensions/noctalia.noctaliatheme-*/themes/NoctaliaTheme-color-theme.json" },
-  { template = "vscode/NoctaliaTheme-color-theme.json", out = "vscode/NoctaliaTheme-color-theme.json", name = "codium", slot = "~/.vscode-oss/extensions/noctalia.noctaliatheme-*/themes/NoctaliaTheme-color-theme.json" },
-  { template = "vscode/NoctaliaTheme-color-theme.json", out = "vscode/NoctaliaTheme-color-theme.json", name = "antigravity", slot = "~/.antigravity-ide/extensions/noctalia.noctaliatheme-*/themes/NoctaliaTheme-color-theme.json" },
+  { template = "vscode/NoctaliaTheme-color-theme.json", out = "vscode/code.json", name = "code", slot = "~/.vscode/extensions/noctalia.noctaliatheme-*/themes/NoctaliaTheme-color-theme.json" },
+  { template = "vscode/NoctaliaTheme-color-theme.json", out = "vscode/codium.json", name = "codium", slot = "~/.vscode-oss/extensions/noctalia.noctaliatheme-*/themes/NoctaliaTheme-color-theme.json" },
+  { template = "vscode/NoctaliaTheme-color-theme.json", out = "vscode/antigravity.json", name = "antigravity", slot = "~/.antigravity-ide/extensions/noctalia.noctaliatheme-*/themes/NoctaliaTheme-color-theme.json" },
 ]
 present   = true
 reload    = "none"

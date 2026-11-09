@@ -90,39 +90,49 @@ class JournalError(RuntimeError):
 
 def now() -> str:
     """Local time, ISO 8601 with offset, seconds precision."""
+    # TODO(S2): local time with a ±HH:MM offset (time.strftime %z, colon inserted).
     raise NotImplementedError
 
 
 def to_dict(j: Journal) -> dict[str, Any]:
     """The JSON shape of 02 §5.2 (enums as their values)."""
+    # TODO(S2): dataclasses.asdict; enums to their values.
     raise NotImplementedError
 
 
 def from_dict(d: dict[str, Any]) -> Journal:
     """Inverse of to_dict; JournalError for an unknown version, state or slot kind."""
+    # TODO(S2): version 1 only; State/SlotKind/SlotStatus from values; Owner and SlotRecord from
+    #   their fields; any KeyError/TypeError/ValueError → JournalError.
     raise NotImplementedError
 
 
 def load(paths: Paths) -> Journal | None:
     """The journal, None when there is none; JournalError when it is unreadable."""
+    # TODO(S2): missing → None; json.load + from_dict; OSError/ValueError → JournalError.
     raise NotImplementedError
 
 
 def save(paths: Paths, j: Journal) -> None:
     """Write journal.json atomically (atomic.write_json: temp, fsync, rename, fsync dir)."""
+    # TODO(S2): mkdir lease/ (0700); atomic.write_json(paths.lease_journal, to_dict(j), 0o600).
     raise NotImplementedError
 
 
 def archive(paths: Paths, j: Journal) -> Path:
     """Write the released journal to history/<time>.json, remove journal.json and the slots/
     copies it referenced, keep the newest HISTORY_KEEP entries; returns the history file."""
+    # TODO(S2): write history/<stamp>.json (0600), unlink journal.json and slots/<id>.before of its
+    #   slots, keep the newest HISTORY_KEEP files.
     raise NotImplementedError
 
 
 def last_released(paths: Paths) -> Journal | None:
     """The newest journal in history/ (the doctor compares slots against its `before`)."""
+    # TODO(S2): newest history/*.json through from_dict; None when none parses.
     raise NotImplementedError
 
 
 def slot(j: Journal, slot_id: str) -> SlotRecord | None:
+    # TODO(S2): linear search by id.
     raise NotImplementedError

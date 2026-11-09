@@ -53,45 +53,60 @@ IMPORT_VARS = ("APTUS_SESSION", "QT_QPA_PLATFORMTHEME", "XCURSOR_THEME", "XCURSO
 
 
 def recover_step(paths: Paths, report: StartReport) -> None:
-    """Step 1: aptus-lease recover (a leftover lease of a dead owner is released first)."""
+    """Step 1: recover (a leftover lease of a dead owner is released first); a failure is a
+    warning, and take refuses afterwards if a journal is still there."""
+    # TODO(S2): ops.recover; hooks.run_reloads of its reloads (no signature yet needed: this
+    #   session's); JournalError/LeaseError → report.warnings.
     raise NotImplementedError
 
 
 def render_step(paths: Paths, report: StartReport) -> Generation | None:
-    """Step 2: render a generation from settings.json; None when the renderer failed (the apps
-    keep Noctalia's paint, 08 §9)."""
-    raise NotImplementedError
-
-
-def lease_step(paths: Paths, env: Mapping[str, str], gen: Generation, report: StartReport) -> None:
-    """Step 3: preflight, then take with the generation's slot specs; sets report.mode, reasons
-    and notice. Any failure leaves the session scope-only."""
-    raise NotImplementedError
-
-
-def theme_step(paths: Paths, env: Mapping[str, str], gen: Generation, report: StartReport) -> None:
-    """Scope and Own targets of the generation and the reload hooks (also in scope-only mode)."""
-    raise NotImplementedError
-
-
-def import_environment(paths: Paths, env: Mapping[str, str]) -> bool:
-    """Step 4: `systemctl --user import-environment IMPORT_VARS` (only while the lease is held)."""
+    """Step 2: render a generation from settings.json; when the renderer fails, the last good
+    generation (render.current), else None: no lease then (08 §9)."""
+    # TODO(S2): inputs.from_settings; targets.load; render.render; exceptions → warning and
+    #   render.current(paths).
     raise NotImplementedError
 
 
 def start_guard(paths: Paths, env: Mapping[str, str]) -> bool:
-    """Step 5: `systemd-run --user --unit=aptus-guard … aptus-guard <hyprland-pid> <signature>`."""
+    """Step 3, before any slot is written: `systemd-run --user --unit=aptus-guard --collect …
+    aptus-guard <hyprland-pid> <signature>`; True when the unit is active. No guard, no lease."""
+    # TODO(S2): ops.owner(env).hyprland_pid; system.run systemd-run (skipped under test without a
+    #   fake → False); then `systemctl --user is-active aptus-guard.service`.
+    raise NotImplementedError
+
+
+def lease_step(paths: Paths, env: Mapping[str, str], gen: Generation, report: StartReport) -> None:
+    """Step 4: ops.take with the generation's slot specs (preflight inside); sets report.mode,
+    reasons and notice. Any failure leaves the session scope-only with NOTICE_FAILED."""
+    # TODO(S2): apply.slot_specs; ops.take(paths, env, specs, ops.owner(env), gen.n);
+    #   preflight not ok → reasons/notice; error or LeaseError → scope-only, NOTICE_FAILED.
+    raise NotImplementedError
+
+
+def import_environment(paths: Paths, env: Mapping[str, str]) -> bool:
+    """Step 5: `systemctl --user import-environment IMPORT_VARS` (only while the lease is held:
+    a scope-only session must not reach an open Umbriel's user manager)."""
+    # TODO(S2): system.run with the names; skipped/failed → False and a warning.
     raise NotImplementedError
 
 
 def stop_guard(paths: Paths) -> bool:
     """`systemctl --user stop aptus-guard.service`: the guard releases on SIGTERM."""
+    # TODO(S2): system.run; True when it succeeded.
     raise NotImplementedError
 
 
 def start(paths: Paths, env: Mapping[str, str]) -> StartReport:
-    """Steps 1–6 of 07 §3 / 02 §7 up to the exec. S1: scope-only; recover, render, lease, env
-    import and units arrive with S2 and are skipped (always skipped under APTUS_TEST=1)."""
+    """Steps 1–6 of 07 §3 / 02 §7 up to the exec: recover, render, the guard, take (with
+    preflight), the environment import (lease only), then the scope and Own targets and hooks of
+    the generation (apply.apply_generation, also scope-only). Never raises: each failure becomes a
+    warning and, where it matters, scope-only mode."""
+    # TODO(S2): require_safe_home (UnsafeHome → scope-only, nothing written); recover_step;
+    #   gen = render_step; no gen → scope-only "render failed"; guard = start_guard; no guard →
+    #   scope-only "guard did not start"; else lease_step; held → import_environment;
+    #   apply.apply_generation(paths, manifest, gen, signature); report.generation, report.guard.
+    #   The S1 body below stays until then.
     log = logging.getLogger("aptus.session")
     report = StartReport()
     paths.make_runtime()
@@ -110,7 +125,8 @@ def start(paths: Paths, env: Mapping[str, str]) -> StartReport:
 
 
 def write_status(paths: Paths, report: StartReport) -> None:
-    """<runtime>/session.json for `aptus msg shell state` and the doctor."""
+    """<runtime>/session.json for `aptus msg shell state`, the Lease service and the doctor."""
+    # TODO(S2): add "notice", "generation", "guard" (the Lease service reads them).
     paths.make_runtime()
     atomic.write_json(paths.session_status, {
         "mode": report.mode.value,
@@ -131,6 +147,8 @@ def exec_supervisor(paths: Paths) -> None:
 
 def stop(paths: Paths) -> int:
     """The logout path's last step: nothing to release before S2; returns 0."""
+    # TODO(S2): stop_guard (the guard releases); not running → ops.release directly when this
+    #   session (HYPRLAND_INSTANCE_SIGNATURE) holds the lease; 0 unless that release failed.
     logging.getLogger("aptus.session").info("stop: nothing to release before S2")
     return 0
 

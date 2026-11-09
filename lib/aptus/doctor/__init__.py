@@ -26,6 +26,7 @@ def run(which: Sequence[str], paths: Paths) -> list[Check]:
         elif group == "deps":
             checks += deps.check()
         elif group == "isolation":
+            # TODO(S2): from . import isolation; checks += isolation.check(paths)
             checks.append(Check("isolation", True, "arrives with S2", warn=True))
         else:
             checks.append(Check(group, False, "unknown check group (isolation, config, deps)"))
