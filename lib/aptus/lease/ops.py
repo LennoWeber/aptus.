@@ -11,7 +11,8 @@ from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from ..paths import Paths
+from . import invariants
+from ..paths import Paths, require_safe_home
 from .journal import Owner, SlotRecord, State
 from .preflight import Preflight
 from .slots import SlotSpec
@@ -69,6 +70,7 @@ def lock(paths: Paths, timeout: float = LOCK_TIMEOUT) -> Iterator[None]:
     scope and Own files use the theme lock, so a slow `bat cache --build` never delays a release."""
     # TODO(S2): require_safe_home; a module dict path → (fd, depth) for re-entrancy; else open
     #   (O_CREAT, 0600), flock LOCK_EX|LOCK_NB in a 50 ms loop until `timeout`, yield, unlock.
+    require_safe_home(paths)
     raise NotImplementedError
 
 
@@ -98,6 +100,7 @@ def take(paths: Paths, env: Mapping[str, str], specs: Sequence[SlotSpec], who: O
     #   kind.planned. journal.save(state taking) — nothing is modified before this point. Write
     #   each slot (kind.write, status held, save after each); journal held. Any exception after
     #   `taking`: save, release(paths), error. invariants.transition on every state change.
+    invariants.check_specs(paths, specs)
     raise NotImplementedError
 
 
@@ -120,6 +123,7 @@ def release(paths: Paths) -> ReleaseReport:
     #   not restored: record-only → restored; digest == before_digest → unchanged; not ours →
     #   save_conflict; kind.restore with slots/<id>.before; verify twice; failed with error;
     #   save after each slot. No failure: released_at, journal.archive. reloads of restored slots.
+    #   Every state change (here, in take and update) goes through invariants.transition first.
     raise NotImplementedError
 
 

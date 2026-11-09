@@ -1088,3 +1088,66 @@ temporary HOME. The probe results are in design/probes.md.
 **Shapes phase 7:**
 - `render` rounds HSL with `floor(x + 0.5)` (the draft used Python's banker's `round`).
 - The two ini fixes and the guard's inode check above.
+
+### Phase 6 · invariants (2026-11-09)
+
+**Done.** Checks only. The placeholders keep their bodies after the checks, and no TODO was
+removed.
+- New `lease/invariants.py`. Each check raises `InvariantError("isolation invariant: …")`:
+  - `transition(old, new)`: the journal state machine of 02 §5.3–§5.7 (`TRANSITIONS`).
+  - `never_paths()`: Umbriel's config, Noctalia's state and config, the repo, the fonts dir, XDG
+    autostart, user GTK themes, and `/etc` (also below `sysroot`).
+  - `writable(paths, target, kind=lease|scope|own|state)`. The realpath, with every link
+    followed, must be below HOME and outside every never-path. Then by kind:
+    - lease: not inside aptus's own dirs;
+    - scope: below `scope/`;
+    - own: aptus's state or cache, the two qt6ct files, or `aptus-icons-{dark,light}`;
+    - state: aptus's state, cache or runtime.
+  - `check_spec`/`check_specs`:
+    - the id is `<target>.<name>` and unique;
+    - the fields fit the kind;
+    - dconf keys come from the fixed set, and `gtk-theme` is never given a value;
+    - the slot is writable.
+  - `check_journal`:
+    - version 1;
+    - an owner unless released, and `released_at` exactly when released;
+    - unique ids, and slot statuses that fit the state;
+    - no record-only file or ini slot;
+    - dconf keys from the set, and a written `gtk-theme` refused;
+    - every file or ini slot writable.
+  - `check_scope_name`: one plain path component.
+  - `check_unset`: the guard unsets only aptus's variables.
+- Implemented now, because they are themselves checks:
+  - `dconf.check_key`.
+  - `paths.require_safe_home`. Under `APTUS_TEST=1` HOME must be an existing directory whose
+    realpath lies below the realpath of the temporary directory. It must not be, hold or lie
+    inside the passwd home. The last rule keeps `TMPDIR=$HOME` from making the real home
+    "temporary".
+- Calls at the top of the placeholders:
+  - `file`/`ini` `write` and `restore` → `writable(lease)`;
+  - `journal.save` → `check_journal`;
+  - `ops.lock` and `render.lock` → `require_safe_home`;
+  - `ops.take`/`update` → `check_specs`;
+  - `render.render` → `writable(state)`;
+  - `scope.swap` → `check_scope_name` and `writable(scope)`;
+  - `own.icons` → `writable(own)`;
+  - `system.signal_session` and `hooks.builtin_hyprland` → `hypr.check_allowed`.
+  - The guard's unset and ops' state changes name `check_unset` and `transition` in their TODOs
+    (the values exist only once the body runs).
+- Tests: `tests/unit/test_s2_invariants.py`, 80 cases, each check with passing and failing
+  inputs. They include:
+  - a symlink out of the temporary HOME, and one into Umbriel's config;
+  - a stow-style directory link inside HOME, which is allowed;
+  - the real home, a `/tmp` link to it, a missing dir, `/usr`, and `TMPDIR` inside the real home;
+  - `ops.lock` and `render.lock` refusing the real home before they touch a file.
+
+  An autouse fixture blocks `dconf`, `gsettings`, `loginctl`, `kitty`, `ghostty`, `tmux`, `nvim`
+  and `bat` on `PATH`, on top of conftest's net.
+
+**Checked.**
+- Read-only: every non-glob slot of the manifest, resolved against the real HOME with realpath
+  only (nothing opened), passes `writable(lease)`. That is 28 slots, 0 refused. Four resolve
+  through stow links into `~/dotfiles` (btop, hyprtoolkit, nvim colors, matugen), which is
+  inside HOME, so D-03 matters for them. The Steam slot resolves into `~/.local/share/Steam`.
+- `tests/run` green: 177 unit (97 + 80), 159 QML. qmllint 0 warnings. Every module imports, and
+  every placeholder still has its TODO.

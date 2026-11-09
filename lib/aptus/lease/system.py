@@ -11,6 +11,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 
+from .. import hypr
 from ..paths import Paths
 
 
@@ -90,4 +91,5 @@ def signal_session(paths: Paths, names: Sequence[str], signal_name: str, signatu
     signalled. Refuses the real session's signature under test (hypr.check_allowed)."""
     # TODO(S2): hypr.check_allowed(signature); signal.Signals[signal_name]; os.kill each,
     #   ProcessLookupError ignored.
+    hypr.check_allowed(signature)
     raise NotImplementedError

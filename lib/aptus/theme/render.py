@@ -16,7 +16,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from ..paths import Paths
+from ..lease import invariants
+from ..paths import Paths, require_safe_home
 from .inputs import Inputs
 from .targets import FileOut, Manifest
 
@@ -50,6 +51,7 @@ def lock(paths: Paths, timeout: float = 30.0) -> Iterator[None]:
     gen-<n+1> and `current`; checks require_safe_home first. Separate from the lease flock."""
     # TODO(S2): require_safe_home; mkdir theme/; flock with a 50 ms LOCK_NB loop until timeout
     #   (RuntimeError then); not re-entrant (apply_generation takes it once).
+    require_safe_home(paths)
     raise NotImplementedError
 
 
@@ -104,6 +106,7 @@ def render(paths: Paths, inputs: Inputs, manifest: Manifest) -> Generation:
     phase-5 probe); prune."""
     # TODO(S2): resolve.load_tokens; resolve.resolve ×3; context; per target per FileOut
     #   render_text(template) → gen/<out>; atomic.symlink; atomic.write_json(theme_resolved).
+    invariants.writable(paths, paths.theme, kind="state")
     raise NotImplementedError
 
 

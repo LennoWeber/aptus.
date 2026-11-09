@@ -9,6 +9,7 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
+from .. import hypr
 from ..paths import Paths
 from .targets import Target
 
@@ -87,6 +88,8 @@ def builtin_hyprland(paths: Paths, signature: str) -> HookResult:
     values (hypr.eval_lua with this signature; refused for the real one under test)."""
     # TODO(S2): hypr.eval_lua(hl.config{...} from theme_resolved) with sig=signature; no signature
     #   → next-start.
+    if signature:
+        hypr.check_allowed(signature)
     raise NotImplementedError
 
 

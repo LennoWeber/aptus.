@@ -21,8 +21,11 @@ class DconfError(RuntimeError):
 
 def check_key(key: str, *, writing: bool) -> None:
     """DconfError unless `key` is KEY_DIR + one of KEYS (and, when writing, not RECORD_ONLY)."""
-    # TODO(S2): key.startswith(KEY_DIR) and the rest in KEYS; writing and in RECORD_ONLY → error.
-    raise NotImplementedError
+    name = key[len(KEY_DIR):] if key.startswith(KEY_DIR) else None
+    if name not in KEYS:
+        raise DconfError(f"dconf key {key!r} is outside the fixed key set")
+    if writing and name in RECORD_ONLY:
+        raise DconfError(f"dconf key {key!r} is recorded only, never written")
 
 
 def read_key(paths: Paths, key: str) -> str | None:

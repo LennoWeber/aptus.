@@ -72,7 +72,8 @@ def unset_environment(paths: Paths) -> list[str]:
     """`systemctl --user unset-environment` of the UNSET variables that still hold aptus's value in
     `systemctl --user show-environment`; returns the names unset. Called only after this
     session's own lease was released (scope-only sessions never imported anything)."""
-    # TODO(S2): system.run show-environment, parse NAME=value, compare with aptus's values, unset.
+    # TODO(S2): system.run show-environment, parse NAME=value, compare with aptus's values;
+    #   invariants.check_unset(names, UNSET) before the unset-environment call.
     raise NotImplementedError
 
 

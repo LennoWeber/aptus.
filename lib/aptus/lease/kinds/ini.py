@@ -11,7 +11,9 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass
+from pathlib import Path
 
+from .. import invariants
 from ...paths import Paths
 from ..journal import SlotRecord
 from ..slots import SlotSpec
@@ -97,6 +99,7 @@ def write(paths: Paths, rec: SlotRecord, spec: SlotSpec) -> dict:
     # TODO(S2): new sections = extract(spec.content) with anchors from before's sections of the
     #   same name (else the previous new section's, else the end); splice into the current
     #   text; atomic write with the file's mode; invariants.writable.
+    invariants.writable(paths, Path(rec.write_path), kind="lease")
     raise NotImplementedError
 
 

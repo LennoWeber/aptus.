@@ -9,6 +9,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from pathlib import Path
 
+from ..lease import invariants
 from ..paths import Paths
 from .render import Generation
 from .targets import FileOut, Target
@@ -37,6 +38,8 @@ def swap(paths: Paths, into: str, build: Path) -> None:
     build. A real file or directory at scope/<into> (from an older install) is moved aside to
     scope/.<into>.old-<time> first."""
     # TODO(S2): atomic.symlink(build.name, scope/<into>); remove the old target if it was a build.
+    invariants.check_scope_name(into)
+    invariants.writable(paths, paths.scope / into, kind="scope")
     raise NotImplementedError
 
 

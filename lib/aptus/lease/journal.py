@@ -116,6 +116,8 @@ def load(paths: Paths) -> Journal | None:
 def save(paths: Paths, j: Journal) -> None:
     """Write journal.json atomically (atomic.write_json: temp, fsync, rename, fsync dir)."""
     # TODO(S2): mkdir lease/ (0700); atomic.write_json(paths.lease_journal, to_dict(j), 0o600).
+    from . import invariants  # imported here: invariants imports this module
+    invariants.check_journal(paths, j)
     raise NotImplementedError
 
 

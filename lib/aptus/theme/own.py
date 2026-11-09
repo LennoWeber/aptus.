@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from pathlib import Path
 
+from ..lease import invariants
 from ..paths import Paths
 from .render import Generation
 from .targets import Target
@@ -30,6 +31,8 @@ def icons(paths: Paths, folder: str) -> list[Path]:
     #   Directories for ICON_SIZES places); symlinks folder*.svg →
     #   papirus/<size>/places/folder-<folder>*.svg; rename over; skip when index.theme
     #   names the same folder.
+    for mode in ("dark", "light"):
+        invariants.writable(paths, paths.icons / f"aptus-icons-{mode}", kind="own")
     raise NotImplementedError
 
 

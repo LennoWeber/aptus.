@@ -5,6 +5,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from .. import invariants
 from ...paths import Paths
 from ..journal import SlotRecord
 from ..slots import SlotSpec
@@ -47,6 +48,7 @@ def write(paths: Paths, rec: SlotRecord, spec: SlotSpec) -> dict:
     and refuses a write_path outside HOME (invariants.writable)."""
     # TODO(S2): invariants.writable(write_path); parent must exist (OSError otherwise);
     #   atomic.write_bytes(write_path, content, mode of before or 0o644); return digest.
+    invariants.writable(paths, Path(rec.write_path), kind="lease")
     raise NotImplementedError
 
 

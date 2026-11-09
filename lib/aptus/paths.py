@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import os
 import pwd
+import tempfile
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -232,8 +233,19 @@ def inside(path: Path, root: Path) -> bool:
 
 def require_safe_home(paths: Paths) -> None:
     """Under APTUS_TEST=1 raise UnsafeHome unless HOME is a directory whose realpath lies below the
-    realpath of the system temporary directory and is not the passwd home of this user (a /tmp
-    symlink to the real home is refused); outside tests a no-op. The lease lock and the theme lock
+    realpath of the system temporary directory and neither is, holds nor lies inside the passwd
+    home of this user (a /tmp symlink to the real home is refused); outside tests a no-op. The lease lock and the theme lock
     call it, so every writer of a leased slot, a scope mirror or an Own file goes through it."""
-    # TODO(S2): os.path.realpath of paths.home, tempfile.gettempdir(), pwd home; is_dir; compare.
-    raise NotImplementedError
+    if not paths.test:
+        return
+    home = os.path.realpath(paths.home)
+    tmp = os.path.realpath(tempfile.gettempdir())
+    real_home = os.path.realpath(pwd.getpwuid(os.getuid()).pw_dir)
+    if not os.path.isdir(home):
+        raise UnsafeHome(f"APTUS_TEST=1 but HOME {paths.home} is not a directory")
+    if not home.startswith(tmp.rstrip(os.sep) + os.sep):
+        raise UnsafeHome(f"APTUS_TEST=1 but HOME {paths.home} ({home}) is not below {tmp}")
+    # also refuses a directory inside the real home, whatever TMPDIR says
+    if home == real_home or real_home.startswith(home + os.sep) \
+            or home.startswith(real_home + os.sep):
+        raise UnsafeHome(f"APTUS_TEST=1 but HOME {paths.home} is, holds or lies in the real home")
