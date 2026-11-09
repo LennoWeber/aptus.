@@ -21,4 +21,9 @@ Item {
     property real _dragPosition: -1
     // The player's position, re-read once a second while the card is shown and playing.
     property real _position: 0
+
+    // TODO(phase): cover 88, title, artist · album, app icon + identity, the seek bar (drag →
+    //   _dragPosition, release → Media.seek), 0:42 / −2:18 (clockDuration), previous / play-pause
+    //   (36, primary) / next, shuffle and loop when supported (Media.toggleShuffle/cycleLoop); a
+    //   1 s Timer re-reads position while shown and playing.
 }

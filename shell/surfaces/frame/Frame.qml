@@ -35,11 +35,18 @@ Item {
 
     // The open bulges normalised once per change (bulge.js normalise), shared by the frame and
     // the shadow shapes.
+    // TODO(phase): bulge.js normalise of `bulges` once per change; both Bulge items take it
+    //   (shared change Bulge.qml/bulge.js: a `shape` input instead of their own normalise()).
     readonly property var shape: ({ full: null, bulges: [] })
     // The area the drawer shadow is blurred over: the shadow-casting bodies' bounding box plus
     // the blur radius (monitor-local), empty when nothing casts one.
+    // TODO(phase): from the normalised bodies' bounding box + Tokens.shadowBlur (S1 hand-off; the
+    //   shadow MultiEffect then covers this box instead of the whole monitor; measured, 07 §12).
     readonly property rect shadowBox: Qt.rect(0, 0, 0, 0)
 
+    // TODO(phase): no whole-frame opacity (it took the notch's bulge, and with it a critical toast
+    //   or OSD above a fullscreen window, out too): the band and line slide out and fade with
+    //   edgeNow/barNow, the bulges stay drawn (M-31).
     opacity: 1 - hide
 
     // The drawer shadow: the open bulge bodies in the shadow colour, blurred and offset (03 §6).
@@ -57,6 +64,7 @@ Item {
         bodiesOnly: true
         colour: Tokens.shadow
     }
+    // TODO(phase): source rect and size = shadowBox (the drawer shadow over the bodies' box only).
     MultiEffect {
         source: bodies
         width: bodies.width

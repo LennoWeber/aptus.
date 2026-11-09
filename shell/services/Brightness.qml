@@ -15,9 +15,12 @@ Singleton {
     // 0 = no keyboard light
     property int kbdMax: 0
     // The service works (S3).
+    // TODO(phase): true once the root was scanned (also with no backlight: the keys stay inert).
     readonly property bool available: false
 
     // The sysfs root ($APTUS_SYSFS, else /sys; under APTUS_TEST without it: none).
+    // TODO(phase): from Quickshell.env; a directory listing of class/backlight and class/leds
+    //   (first backlight, first *::kbd_backlight) picks device/kbdDevice, then _read.
     readonly property string sysfs: ""
     // The backlight and keyboard-LED device names under class/backlight and class/leds.
     property string device: ""
@@ -29,11 +32,15 @@ Singleton {
     property int _kbdBefore: 0
 
     // Backlight step for the hardware keys: direction ±1, fine = 1 % instead of brightness.step (OSD).
+    // TODO(phase): levels.js step on the percent scale, never below osd.brightnessMin (05 §6),
+    //   set, _osd("brightness"); inert without a backlight.
     function step(direction: int, fine: bool): void { Log.info("service.brightness", "step: not available yet"); }
     // Keyboard light one level up or down (inert without an LED).
+    // TODO(phase): clamp 0..kbdMax, _write(kbdDevice), _osd("kbd"); toggle: 0 ↔ the level before.
     function kbdStep(direction: int): void { Log.info("service.brightness", "kbdStep: not available yet"); }
     function kbdToggle(): void { Log.info("service.brightness", "kbdToggle: not available yet"); }
     // Backlight 0..1 (Spotlight "Brightness 40", Deck slider).
+    // TODO(phase): raw = round(value × max), at least brightnessMin %, _write(device).
     function set(value: real): void { Log.info("service.brightness", "set: not available yet"); }
 
     // Read the backlight and LED files under `sysfs` (sysfs has no inotify: after every own write).

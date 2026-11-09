@@ -17,8 +17,10 @@ Item {
     property bool entrance: true
 
     // The bulge size: 420 × 72 / 104 / 132 (notch.md §6), more while the reply field is open.
+    // TODO(phase): notch.js bulgeSize("toast", payload, …).
     readonly property real bulgeWidth: 0
     readonly property real bulgeHeight: 0
+    // TODO(phase): a HoverHandler over the toast.
     readonly property bool hovered: false
     // The inline reply field is open (takes the keyboard; the countdown stops).
     property bool replying: false
@@ -40,4 +42,10 @@ Item {
     function openReply(): void { throw new Error("not implemented"); }
     // Close the reply field (Esc returns to the toast; back() of the Esc ladder).
     function closeReply(): bool { throw new Error("not implemented"); }
+
+    // TODO(phase): app icon 24 (or payload.glyph), app · time (micro), ✕ on hover, title (crit
+    //   warning glyph), body ≤ 2 lines (StyledText of reduced markup, links open), image 48,
+    //   ≤ 3 quiet action buttons, reply Field (takes the keyboard; Enter → replied, Esc →
+    //   closeReply), stack icons; click body → activated(""), middle → dismissed, right →
+    //   rightClicked; entrance M-06.
 }

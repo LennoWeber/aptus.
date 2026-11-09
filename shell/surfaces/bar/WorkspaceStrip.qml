@@ -21,9 +21,11 @@ Item {
 
     // Icon collapse (bar.js collapseLevel): 0 icons on every pill, 1 numbers on the inactive
     // pills, 2 numbers only.
+    // TODO(phase): bar.js collapseLevel of the pills' measured widths against maxWidth.
     readonly property int collapse: 0
     // M-14: the pills in strip coordinates, [{ workspace, x, y, width, height }] (Bar.pillRects
     // maps them to monitor coordinates).
+    // TODO(phase): from the Repeater's pills (updated when they move or resize).
     readonly property var pillRects: []
 
     // The accent capsule's edges in strip coordinates (M-02: the leading edge leads, the trailing
@@ -45,4 +47,9 @@ Item {
     function _wheel(direction: int): void { throw new Error("not implemented"); }
     // Move the capsule to the active pill (M-02: the leading edge first).
     function _placeCapsule(): void { throw new Error("not implemented"); }
+
+    // TODO(phase): the overview button (grid_view, 28 px; click opens the overview), a Repeater
+    //   of WorkspacePill over strip.pills (stagger 30 ms with introProgress), the scratch pill
+    //   (click → Hypr.toggleScratch), the accent capsule (spring.snappy, trail 40 ms), wheel on the
+    //   strip → _wheel; strip/active changes → _placeCapsule; urgent records → pill.nudge().
 }

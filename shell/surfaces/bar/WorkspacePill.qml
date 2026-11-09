@@ -18,6 +18,7 @@ Item {
     property real appear: 1
 
     // The pointer is over the pill (wash, tooltip after 600 ms).
+    // TODO(phase): the MouseArea's containsMouse.
     readonly property bool hovered: false
 
     signal clicked()
@@ -33,4 +34,8 @@ Item {
 
     // One nudge (M-36), unless one ran within nudge.minInterval.
     function nudge(): void { throw new Error("not implemented"); }
+
+    // TODO(phase): label (bar type, tabular), ≤ pillMaxIcons AppIcons (Apps.iconFor) and "+n",
+    //   wash on hover, urgent dot (warn), scratch ring, tooltip bar.js workspaceTooltip after
+    //   600 ms; MouseArea → the signals; appear drives opacity and rise (M-01).
 }

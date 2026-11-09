@@ -22,6 +22,8 @@ Singleton {
     // names of the monitors whose active workspace has a fullscreen window (SurfaceManager input)
     property var fullscreenMonitors: Hyprland.monitors.values.filter(m => m.activeWorkspace && m.activeWorkspace.hasFullscreen).map(m => m.name)
     // every mapped toplevel: { address, class, title, monitor, workspace, x, y, width, height, floating, pinned, fullscreen, focusHistoryId }
+    // TODO(phase): S1 hand-off: no eager map on every toplevel change; _rebuildWindows sets it
+    //   once per toplevel refresh, _onTitle patches titles in place.
     property var windows: Hyprland.toplevels.values.map(t => _client(t)).filter(w => w.address !== "")
     // the current submap
     property string submap: ""
@@ -30,6 +32,7 @@ Singleton {
 
     // Workspace records (hypr.js): [{ id, name, label, monitor, windows, apps, urgent, special,
     // active, focused }], normal workspaces in id order, then the special ones.
+    // TODO(phase): set by _rebuildWorkspaces (and specialOpen, urgent with it).
     property var workspaces: []
     // monitor name → the special workspace shown on it ("" none), e.g. "special:scratch"
     property var specialOpen: ({})
@@ -37,6 +40,7 @@ Singleton {
     property var urgent: []
 
     // The service works (S3): workspaces, urgent, special and the title patching are live.
+    // TODO(phase): true.
     readonly property bool available: false
     // A screencast (screen sharing) is running (`screencast` event; Privacy reads it).
     property bool screencast: false
@@ -162,11 +166,17 @@ Singleton {
     }
 
     // Hyprland event names after which lastIpcObject is stale (refreshToplevels needed).
+    // TODO(phase): S1 hand-off: drop windowtitle/windowtitlev2 here (a terminal retitles many
+    //   times a second); windowtitlev2 goes to _onTitle instead.
     readonly property var _windowEvents: ["openwindow", "closewindow", "movewindow", "movewindowv2", "windowtitle",
         "windowtitlev2", "changefloatingmode", "fullscreen", "pin", "activewindowv2", "workspacev2", "resizewindow"]
     Connections {
         target: Hyprland
         function onRawEvent(event: HyprlandEvent): void {
+            // TODO(phase): windowtitlev2 → _onTitle; urgent → _onUrgent; activespecialv2 →
+            //   _onActiveSpecial; screencast → _onScreencast; activelayout → _onLayout;
+            //   activewindowv2 → _onActiveWindow; workspace/window events → _rebuildWorkspaces after
+            //   the refresh lands (Hyprland.workspaces/toplevels change), a renamed workspace too.
             if (event.name === "submap") root.submap = event.data;
             else if (root._windowEvents.indexOf(event.name) >= 0) root._refresh(["toplevels", "workspaces"]);
             if (event.name === "fullscreen" || event.name === "workspacev2" || event.name === "monitoraddedv2"
@@ -199,5 +209,8 @@ Singleton {
             if (root._pending.length === 0) stop();
         }
     }
+    // TODO(phase): a FileView on Paths.workspacesState (names, _loadNames; watched), and the
+    //   first _rebuildWindows/_rebuildWorkspaces once the first refreshes land (07 §6: a lazy
+    //   singleton never relies on on<Prop>Changed for its first value).
     Component.onCompleted: _refresh(["monitors", "toplevels"])
 }

@@ -12,7 +12,10 @@ Singleton {
     // id "n:<notification id>" for items from a notification's progress hint (source "notification").
     property var items: []
     // The service works (S3).
+    // TODO(phase): true.
     readonly property bool available: false
+    // TODO(phase): a notification item is cancelled through its "cancel" action (if it offers
+    //   one, `cancellable`), then removed.
     function cancel(id: string): void { Log.info("service.progress", "cancel: not available yet"); }
     // A notification record with a progress hint (notch.md §6 rule 4): add or update its item;
     // false once it completed (value 100) or lost the hint, so the caller toasts it.

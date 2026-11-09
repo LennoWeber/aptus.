@@ -20,12 +20,18 @@ Item {
     property var activityComponents: ({})
     property var cardComponents: ({})
     // The notch's part of the frame shape.
+    // TODO(phase): dock top, centred, width/height from the current layer's bulge size (0 at rest)
+    //   on spring.notch, coves 0 → Tokens.cove over the first 120 ms (M-06); under `hide` it stays.
     readonly property BulgeSpec bulge: BulgeSpec {}
     // The rest clock's rectangle in monitor coordinates (M-20 hand-off to Today).
+    // TODO(phase): the RestGroup's clockRect.
     readonly property rect clockRect: Qt.rect(0, 0, 0, 0)
     // Width the notch occupies inside the bar at rest (the bar keeps its zones clear of it).
+    // TODO(phase): the rest group's width with the compact slots (≤ centreGroupMaxWidth).
     readonly property real restWidth: 0
     // The item whose area takes pointer input (bar band part plus the bulge), for the input mask.
+    // TODO(phase): an item covering the rest group and the bulge; while a card is pinned, the
+    //   whole monitor below the bar band (the outside catcher → _outsideClicked).
     readonly property Item maskItem: null
 
     // How far the frame is slid out under a fullscreen window (Frame.hide, M-31): the rest group
@@ -33,6 +39,7 @@ Item {
     property real hide: 0
 
     // What the notch shows now (notch.js view): rest, hidden, toast, osd, event, card, result, mode.
+    // TODO(phase): notch.js viewOf(monitor's state, _hoverCard, active monitor); changes → _sync.
     readonly property var view: ({ kind: "rest", key: "", entry: null, activity: "", mode: "" })
     // The layers on screen: the current one and those still fading out (notch.js layer records).
     property var _layers: []
@@ -52,6 +59,7 @@ Item {
     // Activity id → this monitor's Activity object (one per registered activity).
     property var _activities: ({})
     // The compact slots after arbitration (notch.js slot assignment).
+    // TODO(phase): notch.js assignSlots of the live _activities (cached compact widths).
     readonly property var _slots: ({ left: "", right: "", waiting: [] })
     // The interactive mode whose back handler is registered: the one loaded now, also while it
     // still fades out after monitor.notch moved on ("" none).
@@ -88,4 +96,13 @@ Item {
     // An interactive mode entered / left the notch (registerBack / unregisterBack, Esc ladder).
     function _modeEntered(mode: string, item: var): void { throw new Error("not implemented"); }
     function _modeLeft(mode: string): void { throw new Error("not implemented"); }
+
+    // TODO(phase): an Instantiator over activityComponents filling _activities (monitorName set);
+    //   the RestGroup (introProgress, unread from Notifications, slides with `hide`); CompactSlot
+    //   left/right of the clock (hover → _openCard(id, false), leave → a 400 ms Timer →
+    //   _closeHoverCard, click → _openCard(id, true), middle → Activity.middleClick, right →
+    //   _activityMenu); a Repeater of NotchLayer over _layers (toast signals → _toast*, gone →
+    //   _layerGone; a mode layer → _modeEntered/_modeLeft); a HoverHandler on the bulge →
+    //   _bulgeHovered; a 100 ms Timer → _countdownTick while a toast shows; a single-shot Timer →
+    //   _expire at dueEntries' next; the scrim of an interactive mode; the outside catcher.
 }

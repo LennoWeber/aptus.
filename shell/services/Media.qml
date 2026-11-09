@@ -13,6 +13,7 @@ Singleton {
     // the active MprisPlayer or null
     property var active: null
     // The service works (S3).
+    // TODO(phase): true.
     readonly property bool available: false
     // When the active player paused (ms; 0 while it plays): the compact cover hides after
     // surfaces.notch.compactPausedHideMs.
@@ -21,7 +22,12 @@ Singleton {
     // Player key (D-Bus service name) → { playingSince, lastActive } for the active-player rule.
     property var _seen: ({})
 
+    // TODO(phase): Mpris.players (an Instantiator whose Connections report playbackState
+    //   changes to _noteState), media.ignore changes → _rebuild; the first _rebuild at start.
+
     // The active player (05 §7 rule): play/pause, next, previous.
+    // TODO(phase): act on `active` (lastActive bumped); no player at all → the event
+    //   "Nothing to play" (notch.md §5); a player that cannot do it → nothing.
     function toggle(): void { Log.info("service.media", "toggle: not available yet"); }
     function next(): void { Log.info("service.media", "next: not available yet"); }
     function previous(): void { Log.info("service.media", "previous: not available yet"); }

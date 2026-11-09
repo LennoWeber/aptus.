@@ -14,6 +14,8 @@ Item {
     property bool quiet: false
 
     // The status items now (bar.js statusItems), right to left.
+    // TODO(phase): bar.js statusItems of Power, Audio, Bt, Network, Dnd, Focus, Privacy and the
+    //   bar.battery.percent / bar.bluetooth settings; quiet keeps only quietKeeps items.
     readonly property var items: []
     // Items that left but still close (M-04), by id.
     property var _leaving: ({})
@@ -25,4 +27,8 @@ Item {
     function _wheel(id: string, direction: int): void { throw new Error("not implemented"); }
     function _middle(id: string): void { throw new Error("not implemented"); }
     function _right(id: string): void { throw new Error("not implemented"); }
+
+    // TODO(phase): the pill (height 24, radius 12, raised on hover), a Repeater of StatusItem
+    //   (right to left, M-04 open/close with _leaving), click on padding → Deck top; the item
+    //   signals → _open / _wheel / _middle / _right.
 }

@@ -20,6 +20,7 @@ Item {
     property bool clockTaken: false
 
     // The clock's rectangle in this item's coordinates (the Notch maps it for clockRect).
+    // TODO(phase): the clock's RollingDigits mapped to monitor coordinates.
     readonly property rect clockRect: Qt.rect(0, 0, 0, 0)
 
     // The texts on screen, refreshed on the minute boundary (one aligned timer, 04 §8).
@@ -32,4 +33,9 @@ Item {
     // The right-click menu (notch.md §3) and what its rows do.
     function _menu(x: real, y: real): void { throw new Error("not implemented"); }
     function _menuTriggered(row: var): void { throw new Error("not implemented"); }
+
+    // TODO(phase): RollingDigits clock (bar.clock.format), date after it (showDate, hidden on a
+    //   narrow monitor), unread dot (accent; warn when unreadAllowlisted; M-35 240 ms), Tooltip
+    //   _longDate; click → Today, right click → _menu; a minute Timer → _refresh; clockTaken hides
+    //   the clock while a mode owns it (M-20).
 }

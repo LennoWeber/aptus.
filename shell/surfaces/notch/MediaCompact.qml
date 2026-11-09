@@ -11,4 +11,7 @@ Item {
     // The MprisPlayer.
     property var player: null
     property bool paused: false
+
+    // TODO(phase): the 18 px cover (radius 4; trackArtUrl, else a music_note glyph), paused: 40 %
+    //   ink.faint overlay.
 }

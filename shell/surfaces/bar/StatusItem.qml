@@ -13,6 +13,7 @@ Item {
     // The item is wanted (M-04: width opens, then the glyph fades in; reverse to leave).
     property bool shown: true
 
+    // TODO(phase): the MouseArea's containsMouse.
     readonly property bool hovered: false
 
     signal clicked()
@@ -23,4 +24,7 @@ Item {
     // M-04 progress: width 0 → 1, then the glyph 0 → 1.
     property real _open: 0
     property real _glyph: 0
+
+    // TODO(phase): Glyph (ink by item.ink; bolt overlay; extra glyph; percentage text), Tooltip
+    //   item.tooltip, width animated with M-04 by `shown`; MouseArea → the signals.
 }

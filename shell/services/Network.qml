@@ -14,6 +14,9 @@ Singleton {
     property var vpns: []
     property bool airplane: false
 
+    // TODO(phase): online … strength from Networking (connectivity Full/Limited/Portal = online;
+    //   the first connected device's type; the active WifiNetwork's name and signalStrength × 100);
+    //   wifiEnabled from Networking.wifiEnabled, off → _wifiChanged.
     property bool online: false
     property bool wifiEnabled: false
     // "wifi" | "ethernet" | "none"
@@ -21,10 +24,15 @@ Singleton {
     property string ssid: ""
     // 0..100
     property int strength: 0
+    // TODO(phase): a read-only `nmcli -t -f NAME,TYPE connection show --active` Process → _readVpn,
+    //   at start and whenever a long-running `nmcli monitor` prints a line (no nmcli: no VPN).
     property bool vpnActive: false
     property string vpnName: ""
     // The service works (S3: status).
+    // TODO(phase): true once Networking has a backend.
     readonly property bool available: false
+    // TODO(phase): right click on the bar's network item (bar.md §6): Networking.wifiEnabled;
+    //   refused (logged) under Paths.test.
     function setWifiEnabled(on: bool): void { Log.info("service.network", "setWifiEnabled: not available yet"); }
     function setAirplane(on: bool): void { Log.info("service.network", "setAirplane: not available yet"); }
     function connectVpn(name: string): void { Log.info("service.network", "connectVpn: not available yet"); }

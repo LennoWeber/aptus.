@@ -35,4 +35,9 @@ Item {
     // The window menu below the title (bar.md §4) and what its rows do.
     function _menu(): void { throw new Error("not implemented"); }
     function _menuTriggered(row: var): void { throw new Error("not implemented"); }
+
+    // TODO(phase): AppIcon 16 · title (Ellipsis, ink.sec) + bar.js windowGlyphs, old title rising
+    //   out (M-03 with _swap); window/title/class changes → _changed; a Timer for the throttle
+    //   delay → _show; click → _menu (bar.md §4), middle click → Hypr.closeWindow, wheel →
+    //   Hypr.cycleFocus.
 }

@@ -11,11 +11,14 @@ Singleton {
     // desktop entries
     property var entries: []
     // The service works (S3: the class → icon and name lookup).
+    // TODO(phase): true.
     readonly property bool available: false
     // Window class → { icon, name } looked up once (desktop entries change rarely; cleared when
     // they do).
     property var _byClass: ({})
     // The icon name for a window class (desktop entry StartupWMClass, id, then the class itself).
+    // TODO(phase): entryFor(windowClass).icon, else the class; cached in _byClass, which
+    //   DesktopEntries.applications changes clear.
     function iconFor(windowClass: string): string { Log.info("service.apps", "iconFor: not available yet"); return ""; }
     // The app's name for a window class (desktop entry name, else the class) — empty titles and tooltips.
     function nameFor(windowClass: string): string { throw new Error("not implemented"); }

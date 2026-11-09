@@ -14,4 +14,7 @@ Item {
     property bool pinned: false
     // The Progress item shown.
     property var item: null
+
+    // TODO(phase): name, percent, rate · remaining, Cancel (only when item.cancellable →
+    //   Progress.cancel).
 }

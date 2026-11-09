@@ -9,4 +9,6 @@ Item {
 
     // The Progress item: { id, name, fraction, rate, remaining, cancellable, source }.
     property var item: null
+
+    // TODO(phase): Ring 14 (fraction; -1 indeterminate still) + "42 %" (micro, tabular).
 }

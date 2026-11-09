@@ -12,14 +12,17 @@ Item {
     property real notchWidth: 0
     // M-14: the workspace pills in monitor coordinates, [{ workspace, x, y, width, height }],
     // for the overview's shared-element morph.
+    // TODO(phase): the strip's pillRects mapped to monitor coordinates.
     readonly property var pillRects: []
     // How far the frame is slid out under a fullscreen window (Frame.hide, M-31); the bar follows.
     property real hide: 0
 
     // Quiet bar (M-31b, Focus.quietBar): title, tray, date and non-critical status collapse.
+    // TODO(phase): Focus.quietBar (the hover reveal is S8's: TODO(S8)).
     readonly property bool quiet: false
     // A monitor narrower than surfaces.bar.narrowMonitorWidth (bar.md §9): date hidden, title
     // ≤ 240, tray ≤ 2.
+    // TODO(phase): width < Tokens.surfaces.bar.narrowMonitorWidth.
     readonly property bool narrow: false
 
     height: Tokens.barHeight
@@ -33,6 +36,10 @@ Item {
     readonly property real _sideWidth: Math.max(0, (width - notchWidth) / 2 - _inset - Tokens.gapBarZone)
 
     // Zones (S3 fills them: workspaces and window title left, tray and status right).
+    // TODO(phase): left: WorkspaceStrip (Hypr.stripFor(monitor.name), maxWidth 40 % of the bar,
+    //   bar.workspaces.icons) then ActiveWindow (bar.title.show, bar.js titleWidth with narrow;
+    //   quiet collapses it); right: StatusCluster (quiet) then Tray (bar.tray.*, narrowTrayMax,
+    //   bar.tray.monitor; quiet collapses it). Settings via Config.
     Row {
         id: leftZone
         x: root._inset

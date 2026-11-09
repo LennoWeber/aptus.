@@ -998,3 +998,35 @@ rewrite.
 
 Checked after the fixes: `tests/lint.sh` 146 files, 0 warnings. The notch states of the plan's
 `test_s3_notch.py` live in `test_s3_bar.py` (one nested session for bar and notch states).
+
+### Phase 4 · TODO markers (2026-11-09)
+
+**Done.** `TODO(phase)` markers (94 in `shell/`) at every place of the owned code that changes:
+the services (`Hypr`: eager `windows` and the title refresh of the S1 hand-off, the raw-event
+routing to `_onTitle`, `_onUrgent`, `_onActiveSpecial`, `_onScreencast`, `_onLayout`,
+`_onActiveWindow`, the names FileView and the first rebuild; `Notifications`: server, tracked
+instantiator with replace and sender close, state file, `holding`, `inject`; `Progress`, `Media`,
+`Audio` with its test double and the PipeWire backend behind a LazyLoader, `Brightness` with the
+sysfs root and the brightnessctl writes, `Power`, `Network` with the nmcli read, `Bt`, `Privacy`,
+`Apps`), `Frame` (one `shape`, `shadowBox`, no whole-frame opacity, the MultiEffect over the
+box), `Bar` (zones, `quiet`, `narrow`, `pillRects`), every new bar and notch component (its
+readonly bindings and its drawing), `Notch` (bulge, clock rect, rest width, mask item, view,
+slots, the content tree and timers) and the two activities. The S1 markers `TODO(S3)` in
+`Notch.qml` and `rules.js` stay until phase 7.
+
+**Shared change points** (not marked in the shared files; each becomes its own `S3 shared:`
+commit in phase 7, smallest change):
+
+| File | Change |
+|---|---|
+| `shell/windows/MonitorShell.qml` | `Notch { hide: frame.hide }` |
+| `shell/core/js/rules.js` | the `TODO(S3)` comment goes (the pinned-card timeout is the Notch's `dueEntries`) |
+| `shell/core/js/bulge.js`, `shell/components/Bulge.qml` | a `shape` input (normalised once by Frame), so `framePath`/`bodiesPath` do not normalise again |
+| `hypr/binds.lua`, `shell/registry/Shortcuts.qml` (+ 05 §6, 07, 09 lines) | Caps Lock bind with a Lua function → `aptus:capslock-on`/`-off`; routes `capslock-on`/`-off` → `Hypr.showCapsLock` (probe in phase 5) |
+| `shell/registry/Ipc.qml` | S3 service summaries in `shell state` (audio, brightness, media, notifications, hypr workspaces) for the e2e tests |
+| `shell/config/settings-schema.json` + `design/10-settings.md` | `bar.clock.showDate` "after the time" |
+| `tests/e2e/nested.py` | build `FakeHardware` for every nested session (APTUS_SYSFS, PATH with the fake brightnessctl) |
+| `design/probes.md` | P-17, P-20 |
+
+**Checked.** `tests/lint.sh`: 146 files, 0 warnings. No body, type or signature changed in
+this phase (the diff adds comments only).

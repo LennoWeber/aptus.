@@ -10,8 +10,12 @@ Activity {
     slot: "right"
 
     // The first Progress item (Progress.items[0]), or null.
+    // TODO(phase): Progress.items[0] or null.
     readonly property var item: null
 
     // No own right-click rows (notch.md §4: the menu is only Open in Today, which the Notch adds;
     // Cancel is on the card).
+
+    // TODO(phase): live while Progress.items is not empty; priority progress; compact
+    //   ProgressCompact, card ProgressCard.
 }

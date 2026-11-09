@@ -11,6 +11,8 @@ Singleton {
     // profiles this machine offers ("power-saver", "balanced", "performance")
     property var profiles: []
 
+    // TODO(phase): hasBattery … timeToFull from UPower.displayDevice (isLaptopBattery, isPresent;
+    //   read only), percentage changes → _checkBattery.
     property bool hasBattery: false
     // 0..100
     property real percentage: 0
@@ -20,10 +22,13 @@ Singleton {
     // s
     property int timeToFull: 0
     // "power-saver" | "balanced" | "performance"
+    // TODO(phase): read from PowerProfiles.profile for the battery tooltip (setProfile is S5's).
     property string profile: ""
     // The service works (S3: battery).
+    // TODO(phase): true once UPower answered (also on a desktop without a battery).
     readonly property bool available: false
     // On AC (charging, or full on the charger).
+    // TODO(phase): !UPower.onBattery; changes → _pluggedChanged.
     property bool pluggedIn: false
 
     // The battery toasts (05 §8): the warn toast was shown in this discharge; the crit toast's

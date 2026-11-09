@@ -10,7 +10,15 @@ Singleton {
 
     // False until S3 fills this service; while false, Ipc answers "error: notifications is not
     // available yet" instead of "ok" (aptus msg exits non-zero).
+    // TODO(phase): true once the server and the policy run (Ipc `notch toast` then answers ok).
     readonly property bool available: false
+
+    // TODO(phase): the NotificationServer (actions, images, body markup and hyperlinks, inline
+    //   reply, persistence; keepOnReload false) → _arrive; an Instantiator over its tracked
+    //   notifications whose Connections catch in-place replaces (replaces_id → _arrive) and
+    //   `closed` by the sender (_senderClosed); a FileView + 2 s debounce for
+    //   Paths.notificationsState; `holding` from Dnd.on, Focus.running and the active monitor's
+    //   fullscreen (notch.overFullscreen) with _releaseHeld when it clears; a stack-window timer.
 
     // Today's list, newest first (≤ notifications.historyMax): notifications.js records
     property var history: []
@@ -40,6 +48,8 @@ Singleton {
     property string _heldReason: ""
 
     // IPC `notch toast <json>` (test only): a fake notification through the real interruption policy.
+    // TODO(phase): a record from the JSON fields (appName, summary, body, urgency, actions, image)
+    //   with the next _injectSerial id, through _receive with no live object.
     function inject(payload: var): void { Log.info("service.notifications", "inject: not available yet"); }
 
     // The toast's actions (notch.md §6): the default action ("") or a button; dismisses unless

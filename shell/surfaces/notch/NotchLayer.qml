@@ -17,10 +17,17 @@ Item {
     property bool plain: false
 
     // The size the content wants for the bulge.
+    // TODO(phase): the content's bulgeWidth/bulgeHeight (notch.js bulgeSize).
     readonly property real bulgeWidth: 0
     readonly property real bulgeHeight: 0
     // The fade-out has finished (the Notch removes the layer).
+    // TODO(phase): faded out completely after leaving (morphOutMs) → Notch._layerGone.
     readonly property bool gone: false
     // The loaded content item.
+    // TODO(phase): the Loader's item.
     readonly property Item content: null
+
+    // TODO(phase): a Loader of Toast / Osd / EventLine / ActivityCard / the mode component by
+    //   record.kind; opacity in after morphInDelayMs (content rise 8), out in morphOutMs; `plain`
+    //   swaps in place without the rise (replaces_id, M-06 not replayed).
 }

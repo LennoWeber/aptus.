@@ -11,6 +11,9 @@ Item {
     property var payload: ({})
 
     // 260–360 × 36, from the text's width.
+    // TODO(phase): notch.js bulgeSize("event", …): the row's width clamped 260–360 × 36.
     readonly property real bulgeWidth: 0
     readonly property real bulgeHeight: 0
+
+    // TODO(phase): glyph + one line of text (body).
 }

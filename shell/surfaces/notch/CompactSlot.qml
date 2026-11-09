@@ -17,6 +17,7 @@ Item {
     property string monitorName: ""
 
     // The width the slot wants (the compact item's implicit width, 0 when empty).
+    // TODO(phase): the compact item's implicitWidth (0 without an activity), cached per activity.
     readonly property real openWidth: 0
     readonly property bool hovered: false
 
@@ -29,4 +30,8 @@ Item {
 
     // The slot's animated width (M-05).
     property real _width: 0
+
+    // TODO(phase): a Loader of activity.compact (sets activity, monitorName), width animated
+    //   (M-05); hover 300 ms (activityHover) → hoverRested, exit → hoverLeft; click, middle,
+    //   right → the signals; pulseSerial → one pulse.
 }

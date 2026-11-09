@@ -18,8 +18,10 @@ Item {
     property bool pinned: false
 
     // 420 × the activity's cardHeight (+ the pager).
+    // TODO(phase): notch.js bulgeSize("card", …): 420 × the activity's cardHeight (+ pager).
     readonly property real bulgeWidth: 0
     readonly property real bulgeHeight: 0
+    // TODO(phase): a HoverHandler over the card.
     readonly property bool hovered: false
 
     // Tab / ←/→ / a pager dot picked another activity.
@@ -28,4 +30,7 @@ Item {
     // Hand the card item what it may declare: monitorName, activity, pinned (the card contract
     // documented on Activity.card).
     function _setUp(item: var): void { throw new Error("not implemented"); }
+
+    // TODO(phase): a Loader of the current activity's card (→ _setUp), PagerDots when more than
+    //   one is live; Tab / ←/→ (notch.js pagerStep) → picked while pinned.
 }
