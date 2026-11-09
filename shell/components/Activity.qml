@@ -15,7 +15,9 @@ QtObject {
     property bool live: false
     // Current priority (Tokens.surfaces.notch.activityPriorities; media drops to mediaPaused).
     property int priority: 0
-    // The compact look (its implicitWidth is the slot width) and the card content.
+    // The compact look (its implicitWidth is the slot width) and the card content. The Notch sets
+    // these on the created item when it declares them: `activity` (this object), `monitorName`,
+    // `pinned` (the card was opened by click and has the keyboard).
     property Component compact: null
     property Component card: null
     // The card's height for this activity (tokens surfaces.notch.cardHeights, notch.md §5).
@@ -27,4 +29,9 @@ QtObject {
     property var menu: []
     // A changed value nudges the compact look once (M-35-style pulse), e.g. a timer that starts ringing.
     property int pulseSerial: 0
+
+    // Middle click on the compact look (notch.md §4: media play/pause, a ringing timer stops).
+    function middleClick(): void {}
+    // A row of `menu` was chosen (the Notch adds "Open in Today" itself).
+    function menuTriggered(row: var): void {}
 }
