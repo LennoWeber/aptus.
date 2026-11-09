@@ -1,0 +1,402 @@
+/* Base Window */
+window.thunar,
+.thunar {
+    background-color: {{ ground }};
+    color: {{ inkMain }};
+}
+
+/* Sidebar */
+.thunar .sidebar,
+.thunar .sidebar .view,
+.thunar .sidebar treeview.view {
+    background-color: {{ ground }};
+    color: {{ inkSec }};
+}
+
+.thunar .sidebar treeview.view:hover:not(:selected) {
+    background-color: {{ raisedHot }};
+    color: {{ inkMain }};
+}
+
+.thunar .sidebar treeview.view:selected,
+.thunar .sidebar treeview.view:selected:hover,
+.thunar .sidebar treeview.view:selected label,
+.thunar .sidebar treeview.view:selected:hover label {
+    background-color: {{ accent }};
+    color: {{ onAccent }};
+}
+
+.thunar .sidebar treeview.view:selected:backdrop,
+.thunar .sidebar treeview.view:selected:backdrop label {
+    background-color: {{ raisedHot }};
+    color: {{ inkSec }};
+}
+
+/* Main File View (Icon, Compact, and Detailed List Views) */
+.thunar .standard-view,
+.thunar .standard-view .view,
+.thunar .standard-view exo-icon-view,
+.thunar .standard-view treeview.view {
+    background-color: {{ ground }};
+    color: {{ inkMain }};
+}
+
+/* Detailed List View Column Headers (Ctrl+2) */
+.thunar .standard-view treeview.view header button {
+    background-color: {{ ground }};
+    color: {{ inkSec }};
+    border-color: {{ line }};
+}
+
+.thunar .standard-view treeview.view header button label {
+    color: {{ inkSec }};
+}
+
+.thunar .standard-view treeview.view header button:hover {
+    background-color: {{ raisedHot }};
+    color: {{ inkMain }};
+}
+
+.thunar .standard-view treeview.view header button:hover label {
+    color: {{ inkMain }};
+}
+
+/* File Selection (Excludes .rubberband so drag-selection doesn't turn solid) */
+.thunar .standard-view exo-icon-view:selected:not(.rubberband),
+.thunar .standard-view treeview.view:selected:not(.rubberband),
+.thunar .standard-view .view:selected:not(.rubberband),
+.thunar .standard-view exo-icon-view:selected:hover:not(.rubberband),
+.thunar .standard-view treeview.view:selected:hover:not(.rubberband),
+.thunar .standard-view .view:selected:hover:not(.rubberband) {
+    background-color: {{ accent }};
+    color: {{ onAccent }};
+}
+
+/* Unfocused Window / Inactive Split Pane (F3) Selection */
+.thunar .standard-view exo-icon-view:selected:backdrop:not(.rubberband),
+.thunar .standard-view treeview.view:selected:backdrop:not(.rubberband),
+.thunar .standard-view .view:selected:backdrop:not(.rubberband) {
+    background-color: {{ washCurrentHover }};
+    color: {{ inkSec }};
+}
+
+/* Drag-Selection Box (Rubberband) - Subtle 10% tint + solid border */
+.thunar rubberband,
+.thunar .rubberband,
+.thunar .standard-view rubberband,
+.thunar .standard-view .rubberband,
+.thunar .standard-view .view .rubberband,
+.thunar .standard-view .view.rubberband,
+.thunar .standard-view exo-icon-view.rubberband,
+.thunar .standard-view exo-icon-view.view.rubberband,
+.thunar .standard-view exo-icon-view.view.rubberband:selected,
+.thunar .standard-view treeview.view rubberband {
+    background-color: alpha({{ accent }}, 0.10);
+    border-color: {{ accent }};
+}
+
+/* Text Selection (Location Entry) */
+.thunar selection,
+.thunar entry selection {
+    background-color: {{ accent }};
+    color: {{ onAccent }};
+}
+
+/* Split-Pane & Sidebar Divider */
+.thunar paned > separator {
+    background-color: {{ line }};
+}
+
+/* Menubar (Ctrl+M) & Toolbars */
+.thunar menubar,
+window.thunar toolbar,
+.thunar toolbar,
+window.thunar toolbar#location-toolbar {
+    background-color: {{ raised }};
+    color: {{ inkMain }};
+    border-color: {{ line }};
+}
+
+.thunar menubar > menuitem:hover,
+.thunar menubar > menuitem:hover > label,
+.thunar menubar > menuitem:hover > box > label {
+    background-color: {{ accent }};
+    color: {{ onAccent }};
+}
+
+.thunar toolbar button:hover {
+    background-color: {{ raisedHot }};
+    background-image: none;
+    box-shadow: none;
+    color: {{ inkMain }};
+}
+
+.thunar toolbar button:hover label,
+.thunar toolbar button:hover image {
+    color: {{ inkMain }};
+}
+
+.thunar toolbar button:disabled,
+.thunar toolbar button:disabled label,
+.thunar toolbar button:disabled image {
+    color: {{ inkFaint }};
+}
+
+/* Path Bar Container */
+.thunar toolbar .path-bar,
+.thunar .path-bar {
+    background-color: {{ raised }};
+    background-image: none;
+    border-color: {{ line }};
+}
+
+/* Path Bar - Base & Inactive Buttons (Rest) */
+.thunar toolbar .path-bar button,
+.thunar toolbar .path-bar button.path-bar-button,
+.thunar toolbar .path-bar button.location-button,
+.thunar toolbar .path-bar button.path-bar-button:not(:checked),
+.thunar toolbar .path-bar button.location-button:not(:checked),
+window.thunar toolbar#location-toolbar > toolitem > widget > widget.linked.path-bar > button,
+window.thunar toolbar#location-toolbar > toolitem > widget > widget.linked.path-bar > button.path-bar-button:not(:checked) {
+    background-color: {{ raisedHot }};
+    background-image: none;
+    box-shadow: none;
+    border-color: {{ line }};
+    color: {{ inkSec }};
+}
+
+.thunar toolbar .path-bar button label,
+.thunar toolbar .path-bar button image,
+.thunar toolbar .path-bar button.path-bar-button label,
+.thunar toolbar .path-bar button.path-bar-button image,
+.thunar toolbar .path-bar button.location-button label,
+.thunar toolbar .path-bar button.location-button image,
+.thunar toolbar .path-bar button.path-bar-button:not(:checked) label,
+.thunar toolbar .path-bar button.path-bar-button:not(:checked) image,
+.thunar toolbar .path-bar button.location-button:not(:checked) label,
+.thunar toolbar .path-bar button.location-button:not(:checked) image {
+    color: {{ inkSec }};
+}
+
+/* Path Bar - Inactive Buttons (Hover) */
+.thunar toolbar .path-bar button:hover:not(:checked),
+.thunar toolbar .path-bar button.path-bar-button:hover:not(:checked),
+.thunar toolbar .path-bar button.location-button:hover:not(:checked),
+window.thunar toolbar#location-toolbar > toolitem > widget > widget.linked.path-bar > button:hover:not(:checked),
+window.thunar toolbar#location-toolbar > toolitem > widget > widget.linked.path-bar > button.path-bar-button:hover:not(:checked) {
+    background-color: {{ washCurrentHover }};
+    background-image: none;
+    box-shadow: none;
+    border-color: {{ inkFaint }};
+    color: {{ inkMain }};
+}
+
+.thunar toolbar .path-bar button:hover:not(:checked) label,
+.thunar toolbar .path-bar button:hover:not(:checked) image,
+.thunar toolbar .path-bar button.path-bar-button:hover:not(:checked) label,
+.thunar toolbar .path-bar button.path-bar-button:hover:not(:checked) image,
+.thunar toolbar .path-bar button.location-button:hover:not(:checked) label,
+.thunar toolbar .path-bar button.location-button:hover:not(:checked) image {
+    color: {{ inkMain }};
+}
+
+/* Path Bar - Active Directory Button (:checked and :checked:hover) */
+.thunar toolbar .path-bar button:checked,
+.thunar toolbar .path-bar button:checked:hover,
+.thunar toolbar .path-bar button.path-bar-button:checked,
+.thunar toolbar .path-bar button.path-bar-button:checked:hover,
+.thunar toolbar .path-bar button.location-button:checked,
+.thunar toolbar .path-bar button.location-button:checked:hover,
+window.thunar toolbar#location-toolbar > toolitem > widget > widget.linked.path-bar > button:checked,
+window.thunar toolbar#location-toolbar > toolitem > widget > widget.linked.path-bar > button.toggle.path-bar-button:checked,
+window.thunar toolbar#location-toolbar > toolitem > widget > widget.linked.path-bar > button.toggle.path-bar-button:checked:hover {
+    background-color: {{ accent }};
+    background-image: none;
+    box-shadow: none;
+    border-color: {{ accent }};
+    color: {{ onAccent }};
+}
+
+.thunar toolbar .path-bar button:checked label,
+.thunar toolbar .path-bar button:checked image,
+.thunar toolbar .path-bar button:checked:hover label,
+.thunar toolbar .path-bar button:checked:hover image,
+.thunar toolbar .path-bar button.path-bar-button:checked label,
+.thunar toolbar .path-bar button.path-bar-button:checked image,
+.thunar toolbar .path-bar button.path-bar-button:checked:hover label,
+.thunar toolbar .path-bar button.path-bar-button:checked:hover image,
+.thunar toolbar .path-bar button.location-button:checked label,
+.thunar toolbar .path-bar button.location-button:checked image,
+.thunar toolbar .path-bar button.location-button:checked:hover label,
+.thunar toolbar .path-bar button.location-button:checked:hover image,
+window.thunar toolbar#location-toolbar > toolitem > widget > widget.linked.path-bar > button:checked label,
+window.thunar toolbar#location-toolbar > toolitem > widget > widget.linked.path-bar > button:checked:hover label,
+window.thunar toolbar#location-toolbar > toolitem > widget > widget.linked.path-bar > button.toggle.path-bar-button:checked label,
+window.thunar toolbar#location-toolbar > toolitem > widget > widget.linked.path-bar > button.toggle.path-bar-button:checked:hover label {
+    color: {{ onAccent }};
+}
+
+/* Entries (Location Bar) */
+.thunar entry {
+    background-color: {{ raisedHot }};
+    background-image: none;
+    box-shadow: none;
+    color: {{ inkMain }};
+    border-color: {{ line }};
+}
+
+.thunar entry:focus {
+    background-color: {{ washCurrentHover }};
+    background-image: none;
+    box-shadow: none;
+    border-color: {{ accent }};
+}
+
+/* Tabs (Notebook) */
+.thunar notebook,
+.thunar notebook header {
+    background-color: {{ ground }};
+    border-color: {{ line }};
+}
+
+.thunar notebook tab {
+    background-color: {{ ground }};
+    color: {{ inkSec }};
+    border-color: transparent;
+}
+
+.thunar notebook tab label,
+.thunar notebook tab button image {
+    color: {{ inkSec }};
+}
+
+.thunar notebook tab:hover:not(:checked) {
+    background-color: {{ raised }};
+    color: {{ inkMain }};
+    border-color: {{ line }};
+}
+
+.thunar notebook tab:hover:not(:checked) label,
+.thunar notebook tab:hover:not(:checked) button image {
+    color: {{ inkMain }};
+}
+
+.thunar notebook tab:checked {
+    background-color: {{ raisedHot }};
+    color: {{ inkMain }};
+    border-color: {{ line }};
+}
+
+.thunar notebook tab:checked label,
+.thunar notebook tab:checked button image {
+    color: {{ inkMain }};
+}
+
+.thunar notebook tab button:hover image {
+    color: {{ accent }};
+}
+
+/* Statusbar */
+.thunar statusbar,
+.thunar statusbar label {
+    background-color: {{ ground }};
+    color: {{ inkSec }};
+    border-color: {{ line }};
+}
+
+/* Scrollbars */
+.thunar scrollbar {
+    background-color: {{ ground }};
+}
+
+.thunar scrollbar slider {
+    background-color: {{ line }};
+}
+
+.thunar scrollbar slider:hover {
+    background-color: {{ inkSec }};
+}
+
+.thunar scrollbar slider:active {
+    background-color: {{ accent }};
+}
+
+/* Attached Thunar Menus (e.g., Ctrl+M Menubar Dropdowns & Submenus) */
+.thunar menu,
+.thunar .menu {
+    background-color: {{ raised }};
+    border-color: {{ line }};
+    color: {{ inkMain }};
+}
+
+.thunar menu menuitem,
+.thunar .menu menuitem {
+    background-color: transparent;
+    color: {{ inkMain }};
+}
+
+.thunar menu menuitem:not(:hover):not(:disabled) > label,
+.thunar menu menuitem:not(:hover):not(:disabled) > box > label,
+.thunar menu menuitem:not(:hover):not(:disabled) > arrow,
+.thunar menu menuitem:not(:hover):not(:disabled) > image,
+.thunar .menu menuitem:not(:hover):not(:disabled) > label,
+.thunar .menu menuitem:not(:hover):not(:disabled) > box > label {
+    color: {{ inkMain }};
+}
+
+.thunar menu menuitem:not(:hover):not(:disabled) > accelerator,
+.thunar menu menuitem:not(:hover):not(:disabled) > box > accelerator {
+    color: {{ inkSec }};
+}
+
+.thunar menu menuitem:hover:not(:disabled),
+.thunar .menu menuitem:hover:not(:disabled) {
+    background-color: {{ accent }};
+    color: {{ onAccent }};
+}
+
+.thunar menu menuitem:hover:not(:disabled) > label,
+.thunar menu menuitem:hover:not(:disabled) > box > label,
+.thunar menu menuitem:hover:not(:disabled) > accelerator,
+.thunar menu menuitem:hover:not(:disabled) > box > accelerator,
+.thunar menu menuitem:hover:not(:disabled) > arrow,
+.thunar menu menuitem:hover:not(:disabled) > image,
+.thunar .menu menuitem:hover:not(:disabled) > label,
+.thunar .menu menuitem:hover:not(:disabled) > box > label,
+.thunar .menu menuitem:hover:not(:disabled) > arrow,
+.thunar .menu menuitem:hover:not(:disabled) > image {
+    color: {{ onAccent }};
+}
+
+.thunar menu menuitem:disabled,
+.thunar menu menuitem:disabled > label,
+.thunar menu menuitem:disabled > box > label,
+.thunar menu menuitem:disabled > accelerator,
+.thunar menu menuitem:disabled > arrow,
+.thunar menu menuitem:disabled > image,
+.thunar .menu menuitem:disabled,
+.thunar .menu menuitem:disabled > label {
+    color: {{ inkFaint }};
+}
+
+.thunar menu menuitem > check,
+.thunar menu menuitem > radio {
+    color: {{ inkSec }};
+}
+
+.thunar menu menuitem > check:checked,
+.thunar menu menuitem > radio:checked {
+    color: {{ accent }};
+}
+
+.thunar menu menuitem:hover:not(:disabled) > check,
+.thunar menu menuitem:hover:not(:disabled) > radio,
+.thunar menu menuitem:hover:not(:disabled) > check:checked,
+.thunar menu menuitem:hover:not(:disabled) > radio:checked {
+    color: {{ onAccent }};
+}
+
+.thunar menu separator,
+.thunar .menu separator {
+    background-color: {{ line }};
+}

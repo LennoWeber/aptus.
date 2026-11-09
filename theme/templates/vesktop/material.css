@@ -1,0 +1,94 @@
+/**
+ * @name Noctalia Material
+ * @version 3.0.6
+ * @description A fork of 'Material Discord' for Noctalia Shell
+ * @author CapnKitten
+ *
+ * @website http://github.com/CapnKitten
+ * @source https://github.com/CapnKitten/BetterDiscord/blob/master/Themes/Material-Discord/css/source.css
+ * @donate https://paypal.me/capnkitten
+ * @invite jzJkA6Z
+ */
+
+@import url("https://capnkitten.github.io/BetterDiscord/Themes/Material-Discord/css/source.css");
+
+/* Material You addon */
+@import url("https://capnkitten.github.io/BetterDiscord/Themes/Material-Discord/css/addons/material-you/source.css");
+
+
+
+
+/* MATERIAL YOU DARK THEME SETTINGS */
+.theme-dark {
+    --saturation-modifier: 0.31;
+    --lightness-modifier: 0.225;
+    --text-lightness-modifier: 1.0;
+}
+
+/* MATERIAL YOU LIGHT THEME SETTINGS */
+.theme-light {
+    --saturation-modifier: 0.74;
+    --lightness-modifier: 2.125;
+    --text-lightness-modifier: 1.0;
+}
+
+:root, .theme-dark, .theme-light {
+  /* See options at https://github.com/CapnKitten/Material-Discord */
+  /* Accent */
+  --accent-hue: {{ accent | hue }};
+  --accent-saturation: {{ accent | saturation }}%;
+  --accent-lightness: {{ accent | lightness }}%;
+  --accent-text-color: {{ onAccent }};
+
+  /* App */
+  --app-bg: {{ ground }};
+  --main-color: {{ ground }};
+  --main-alt: {{ ground }};
+  --server-color: {{ ground }};
+  --status-picker-color: {{ raised }};
+  --sidebar-panel-color: {{ raised }};
+  --chat-color: {{ ground }};
+  --tooltip-color: {{ ground }};
+  --tooltip-text-color: {{ inkMain }};
+
+  /* Message */
+  --message-color: {{ raised }};
+  --message-color-hover: hsl(
+    var(--accent-hue),
+    calc(var(--accent-saturation) * var(--saturation-modifier) * var(--saturation-factor)),
+    calc(var(--accent-lightness) * var(--lightness-modifier) * var(--ui-darkness-modifier) * 4)
+  ) !important;
+  --message-color-alt: {{ onAccent }};
+  --attachment-color: {{ onAccent }};
+  --main-textarea-color: {{ accent }};
+  --main-textarea-button-color: {{ onAccent }};
+  --main-textarea-color-alt: {{ accent }};
+  --main-textarea-border: {{ raised }};
+
+  /* Card */
+  --card-color-filled: {{ raised }};
+  --card-color-hover: {{ accent }};
+  --card-color-active: {{ accent }};
+  --card-color-alt: {{ washCurrent }};
+  --card-color-alt-hover: {{ accent }};
+  --card-border-color: {{ raised }};
+  --card-header-text-color: {{ inkMain }};
+
+  /* Slider & Switch */
+  --switch-knob-color: {{ raised }};
+  --switch-slider-color: {{ ground }};
+
+  /* Input */
+  --input-text-color: {{ inkMain }};
+
+  /* Misc */
+  --app-watermark-one: "Noctalia";
+  --app-watermark-two: "Discord";
+
+  /* Ensure channels-default is different from the active one - works in dark mode / light mode is another story... */
+  --text-tertiary: hsl(
+        var(--accent-hue),
+        calc(var(--accent-saturation) * var(--saturation-modifier) * 0.78 * var(--saturation-factor)),
+        calc(var(--accent-lightness) * var(--lightness-modifier) * var(--ui-darkness-modifier) * var(--text-lightness-modifier) * 3.0)
+    ) !important;
+}

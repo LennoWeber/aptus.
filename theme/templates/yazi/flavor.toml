@@ -1,0 +1,917 @@
+# : Manager [[[
+
+[mgr]
+cwd = { fg = "{{ inkMain }}" }
+
+# Find
+find_keyword = { fg = "{{ crit }}", bold = true, italic = true, underline = true }
+find_position = { fg = "{{ crit }}", bold = true, italic = true }
+
+# Marker
+marker_copied = { fg = "{{ accentWash }}", bg = "{{ accentWash }}" }
+marker_cut = { fg = "{{ accentWash }}", bg = "{{ accentWash }}" }
+marker_marked = { fg = "{{ crit }}", bg = "{{ crit }}" }
+marker_selected = { fg = "{{ accent }}", bg = "{{ accent }}" }
+
+# Count
+count_copied = { fg = "{{ inkMain }}", bg = "{{ accentWash }}" }
+count_cut = { fg = "{{ inkMain }}", bg = "{{ accentWash }}" }
+count_selected = { fg = "{{ onAccent }}", bg = "{{ accent }}" }
+
+# Border
+border_style  = { fg = "{{ accent }}" }
+
+# : ]]]
+
+
+# : Status [[[
+
+[status]
+overall = { fg = "{{ accent }}" }
+sep_left  = { open = "", close = "" }
+sep_right = { open = "", close = "" }
+
+# Progress
+progress_label = { bold = true }
+progress_normal = { fg = "{{ accent }}", bg = "{{ ground }}" }
+progress_error = { fg = "{{ crit }}", bg = "{{ ground }}" }
+
+# Permissions
+perm_type = { fg = "{{ accent }}" }
+perm_write = { fg = "{{ accent }}" }
+perm_exec = { fg = "{{ crit }}" }
+perm_read = { fg = "{{ accentWash }}" }
+perm_sep = { fg = "{{ accentWash }}" }
+
+# : ]]]
+
+
+# : Mode [[[
+
+[mode]
+
+normal_main = { bg = "{{ accent }}", fg = "{{ onAccent }}", bold = true }
+normal_alt  = { bg = "{{ raised }}", fg = "{{ inkSec }}" }
+
+select_main = { bg = "{{ accent }}", fg = "{{ onAccent }}", bold = true }
+select_alt  = { bg = "{{ raised }}", fg = "{{ inkSec }}" }
+
+unset_main = { bg = "{{ accent }}", fg = "{{ onAccent }}", bold = true }
+unset_alt  = { bg = "{{ raised }}", fg = "{{ inkSec }}" }
+
+# : ]]]
+
+
+# : Input [[[
+
+[input]
+border = { fg = "{{ accent }}" }
+title = {}
+value = { fg = "{{ inkMain }}" }
+selected = { reversed = true }
+
+# : ]]]
+
+
+# : Tabs [[[
+
+[tabs]
+active = { fg = "{{ ground }}", bold = true, bg = "{{ accent }}" }
+inactive = { fg = "{{ accent }}", bg = "{{ ground }}" }
+sep_inner = { open = "", close = "" }
+
+# : ]]]
+
+
+# : Completion [[[
+
+[cmp]
+border = { fg = "{{ accent }}", bg = "{{ onAccent }}" }
+
+# : ]]]
+
+
+# : Tasks [[[
+
+[tasks]
+border = { fg = "{{ accent }}" }
+title = {}
+hovered = { fg = "{{ accentWash }}", underline = true }
+
+# : ]]]
+
+
+# : Which [[[
+
+[which]
+cols = 3
+mask = { bg = "{{ ground }}" }
+cand = { fg = "{{ accent }}" }
+rest = { fg = "{{ onAccent }}" }
+desc = { fg = "{{ inkMain }}" }
+separator = " ▶ "
+separator_style = { fg = "{{ inkMain }}" }
+
+# : ]]]
+
+# : Spotter [[[
+
+[spot]
+border   = { fg = "{{ accent }}" }
+title    = { fg = "{{ accent }}" }
+tbl_col  = { fg = "{{ inkMain }}" }
+tbl_cell = { fg = "{{ inkMain }}", bg = "{{ ground }}" }
+
+# : ]]]
+
+
+# : Help [[[
+
+[help]
+on = { fg = "{{ inkMain }}" }
+run = { fg = "{{ inkMain }}" }
+hovered = { reversed = true, bold = true }
+footer = { fg = "{{ onAccent }}", bg = "{{ accent }}" }
+
+# : ]]]
+
+
+# : Notify [[[
+
+[notify]
+title_info = { fg = "{{ accent }}" }
+title_warn = { fg = "{{ accent }}" }
+title_error = { fg = "{{ crit }}" }
+
+# : ]]]
+
+
+# : File-specific styles [[[
+
+[filetype]
+
+rules = [
+    # Images
+    { mime = "image/*", fg = "{{ accent }}" },
+
+    # Media
+    { mime = "{audio,video}/*", fg = "{{ accent }}" },
+
+    # Archives
+    { mime = "application/{zip,rar,7z*,tar,gzip,xz,zstd,bzip*,lzma,compress,archive,cpio,arj,xar,ms-cab*}", fg = "{{ accent }}" },
+
+    # Documents
+    { mime = "application/{pdf,doc,rtf}", fg = "{{ accent }}" },
+
+    # Special files
+    { mime = "*", is = "orphan", fg = "{{ crit }}", bg = "{{ raisedHot }}" },
+    { mime = "application/*exec*", fg = "{{ crit }}" },
+
+    # Fallback
+    { url = "*", fg = "{{ inkMain }}" },
+    { url = "*/", fg = "{{ accent }}" },
+]
+
+# : ]]]
+
+# : Icons {{{
+
+[icon]
+globs = []
+dirs  = [
+	{ name = ".config", text = "", fg = "{{ accent }}" },
+	{ name = ".git", text = "", fg = "{{ accent }}" },
+	{ name = ".github", text = "", fg = "{{ accent }}" },
+	{ name = ".npm", text = "", fg = "{{ accent }}" },
+	{ name = "Desktop", text = "", fg = "{{ accent }}" },
+	{ name = "Development", text = "", fg = "{{ accent }}" },
+	{ name = "Documents", text = "", fg = "{{ accent }}" },
+	{ name = "Downloads", text = "", fg = "{{ accent }}" },
+	{ name = "Library", text = "", fg = "{{ accent }}" },
+	{ name = "Movies", text = "", fg = "{{ accent }}" },
+	{ name = "Music", text = "", fg = "{{ accent }}" },
+	{ name = "Pictures", text = "", fg = "{{ accent }}" },
+	{ name = "Public", text = "", fg = "{{ accent }}" },
+	{ name = "Videos", text = "", fg = "{{ accent }}" },
+]
+files = [
+	{ name = ".babelrc", text = "", fg = "{{ accent }}" },
+	{ name = ".bash_profile", text = "", fg = "{{ accent }}" },
+	{ name = ".bashrc", text = "", fg = "{{ accent }}" },
+	{ name = ".clang-format", text = "", fg = "{{ accent }}" },
+	{ name = ".clang-tidy", text = "", fg = "{{ accent }}" },
+	{ name = ".codespellrc", text = "󰓆", fg = "{{ accent }}" },
+	{ name = ".condarc", text = "", fg = "{{ accent }}" },
+	{ name = ".dockerignore", text = "󰡨", fg = "{{ accent }}" },
+	{ name = ".ds_store", text = "", fg = "{{ accent }}" },
+	{ name = ".editorconfig", text = "", fg = "{{ accent }}" },
+	{ name = ".env", text = "", fg = "{{ accent }}" },
+	{ name = ".eslintignore", text = "", fg = "{{ accent }}" },
+	{ name = ".eslintrc", text = "", fg = "{{ accent }}" },
+	{ name = ".git-blame-ignore-revs", text = "", fg = "{{ accent }}" },
+	{ name = ".gitattributes", text = "", fg = "{{ accent }}" },
+	{ name = ".gitconfig", text = "", fg = "{{ accent }}" },
+	{ name = ".gitignore", text = "", fg = "{{ accent }}" },
+	{ name = ".gitlab-ci.yml", text = "", fg = "{{ accent }}" },
+	{ name = ".gitmodules", text = "", fg = "{{ accent }}" },
+	{ name = ".gtkrc-2.0", text = "", fg = "{{ accent }}" },
+	{ name = ".gvimrc", text = "", fg = "{{ accent }}" },
+	{ name = ".justfile", text = "", fg = "{{ accent }}" },
+	{ name = ".luacheckrc", text = "", fg = "{{ accent }}" },
+	{ name = ".luaurc", text = "", fg = "{{ accent }}" },
+	{ name = ".mailmap", text = "󰊢", fg = "{{ accent }}" },
+	{ name = ".nanorc", text = "", fg = "{{ accent }}" },
+	{ name = ".npmignore", text = "", fg = "{{ accent }}" },
+	{ name = ".npmrc", text = "", fg = "{{ accent }}" },
+	{ name = ".nuxtrc", text = "󱄆", fg = "{{ accent }}" },
+	{ name = ".nvmrc", text = "", fg = "{{ accent }}" },
+	{ name = ".pnpmfile.cjs", text = "", fg = "{{ accent }}" },
+	{ name = ".pre-commit-config.yaml", text = "󰛢", fg = "{{ accent }}" },
+	{ name = ".prettierignore", text = "", fg = "{{ accent }}" },
+	{ name = ".prettierrc", text = "", fg = "{{ accent }}" },
+	{ name = ".prettierrc.cjs", text = "", fg = "{{ accent }}" },
+	{ name = ".prettierrc.js", text = "", fg = "{{ accent }}" },
+	{ name = ".prettierrc.json", text = "", fg = "{{ accent }}" },
+	{ name = ".prettierrc.json5", text = "", fg = "{{ accent }}" },
+	{ name = ".prettierrc.mjs", text = "", fg = "{{ accent }}" },
+	{ name = ".prettierrc.toml", text = "", fg = "{{ accent }}" },
+	{ name = ".prettierrc.yaml", text = "", fg = "{{ accent }}" },
+	{ name = ".prettierrc.yml", text = "", fg = "{{ accent }}" },
+	{ name = ".pylintrc", text = "", fg = "{{ accent }}" },
+	{ name = ".settings.json", text = "", fg = "{{ accent }}" },
+	{ name = ".SRCINFO", text = "󰣇", fg = "{{ accent }}" },
+	{ name = ".vimrc", text = "", fg = "{{ accent }}" },
+	{ name = ".Xauthority", text = "", fg = "{{ accent }}" },
+	{ name = ".xinitrc", text = "", fg = "{{ accent }}" },
+	{ name = ".Xresources", text = "", fg = "{{ accent }}" },
+	{ name = ".xsession", text = "", fg = "{{ accent }}" },
+	{ name = ".zprofile", text = "", fg = "{{ accent }}" },
+	{ name = ".zshenv", text = "", fg = "{{ accent }}" },
+	{ name = ".zshrc", text = "", fg = "{{ accent }}" },
+	{ name = "_gvimrc", text = "", fg = "{{ accent }}" },
+	{ name = "_vimrc", text = "", fg = "{{ accent }}" },
+	{ name = "AUTHORS", text = "", fg = "{{ accent }}" },
+	{ name = "AUTHORS.txt", text = "", fg = "{{ accent }}" },
+	{ name = "brewfile", text = "", fg = "{{ accent }}" },
+	{ name = "bspwmrc", text = "", fg = "{{ accent }}" },
+	{ name = "build", text = "", fg = "{{ accent }}" },
+	{ name = "build.gradle", text = "", fg = "{{ accent }}" },
+	{ name = "build.zig.zon", text = "", fg = "{{ accent }}" },
+	{ name = "bun.lock", text = "", fg = "{{ accent }}" },
+	{ name = "bun.lockb", text = "", fg = "{{ accent }}" },
+	{ name = "cantorrc", text = "", fg = "{{ accent }}" },
+	{ name = "checkhealth", text = "󰓙", fg = "{{ accent }}" },
+	{ name = "cmakelists.txt", text = "", fg = "{{ accent }}" },
+	{ name = "code_of_conduct", text = "", fg = "{{ accent }}" },
+	{ name = "code_of_conduct.md", text = "", fg = "{{ accent }}" },
+	{ name = "commit_editmsg", text = "", fg = "{{ accent }}" },
+	{ name = "commitlint.config.js", text = "󰜘", fg = "{{ accent }}" },
+	{ name = "commitlint.config.ts", text = "󰜘", fg = "{{ accent }}" },
+	{ name = "compose.yaml", text = "󰡨", fg = "{{ accent }}" },
+	{ name = "compose.yml", text = "󰡨", fg = "{{ accent }}" },
+	{ name = "config", text = "", fg = "{{ accent }}" },
+	{ name = "containerfile", text = "󰡨", fg = "{{ accent }}" },
+	{ name = "copying", text = "", fg = "{{ accent }}" },
+	{ name = "copying.lesser", text = "", fg = "{{ accent }}" },
+	{ name = "Directory.Build.props", text = "", fg = "{{ accent }}" },
+	{ name = "Directory.Build.targets", text = "", fg = "{{ accent }}" },
+	{ name = "Directory.Packages.props", text = "", fg = "{{ accent }}" },
+	{ name = "docker-compose.yaml", text = "󰡨", fg = "{{ accent }}" },
+	{ name = "docker-compose.yml", text = "󰡨", fg = "{{ accent }}" },
+	{ name = "dockerfile", text = "󰡨", fg = "{{ accent }}" },
+	{ name = "eslint.config.cjs", text = "", fg = "{{ accent }}" },
+	{ name = "eslint.config.js", text = "", fg = "{{ accent }}" },
+	{ name = "eslint.config.mjs", text = "", fg = "{{ accent }}" },
+	{ name = "eslint.config.ts", text = "", fg = "{{ accent }}" },
+	{ name = "ext_typoscript_setup.txt", text = "", fg = "{{ accent }}" },
+	{ name = "favicon.ico", text = "", fg = "{{ accent }}" },
+	{ name = "fp-info-cache", text = "", fg = "{{ accent }}" },
+	{ name = "fp-lib-table", text = "", fg = "{{ accent }}" },
+	{ name = "FreeCAD.conf", text = "", fg = "{{ accent }}" },
+	{ name = "Gemfile", text = "", fg = "{{ accent }}" },
+	{ name = "gnumakefile", text = "", fg = "{{ accent }}" },
+	{ name = "go.mod", text = "", fg = "{{ accent }}" },
+	{ name = "go.sum", text = "", fg = "{{ accent }}" },
+	{ name = "go.work", text = "", fg = "{{ accent }}" },
+	{ name = "gradle-wrapper.properties", text = "", fg = "{{ accent }}" },
+	{ name = "gradle.properties", text = "", fg = "{{ accent }}" },
+	{ name = "gradlew", text = "", fg = "{{ accent }}" },
+	{ name = "groovy", text = "", fg = "{{ accent }}" },
+	{ name = "gruntfile.babel.js", text = "", fg = "{{ accent }}" },
+	{ name = "gruntfile.coffee", text = "", fg = "{{ accent }}" },
+	{ name = "gruntfile.js", text = "", fg = "{{ accent }}" },
+	{ name = "gruntfile.ts", text = "", fg = "{{ accent }}" },
+	{ name = "gtkrc", text = "", fg = "{{ accent }}" },
+	{ name = "gulpfile.babel.js", text = "", fg = "{{ accent }}" },
+	{ name = "gulpfile.coffee", text = "", fg = "{{ accent }}" },
+	{ name = "gulpfile.js", text = "", fg = "{{ accent }}" },
+	{ name = "gulpfile.ts", text = "", fg = "{{ accent }}" },
+	{ name = "hypridle.conf", text = "", fg = "{{ accent }}" },
+	{ name = "hyprland.conf", text = "", fg = "{{ accent }}" },
+	{ name = "hyprlandd.conf", text = "", fg = "{{ accent }}" },
+	{ name = "hyprlock.conf", text = "", fg = "{{ accent }}" },
+	{ name = "hyprpaper.conf", text = "", fg = "{{ accent }}" },
+	{ name = "hyprsunset.conf", text = "", fg = "{{ accent }}" },
+	{ name = "i18n.config.js", text = "󰗊", fg = "{{ accent }}" },
+	{ name = "i18n.config.ts", text = "󰗊", fg = "{{ accent }}" },
+	{ name = "i3blocks.conf", text = "", fg = "{{ accent }}" },
+	{ name = "i3status.conf", text = "", fg = "{{ accent }}" },
+	{ name = "index.theme", text = "", fg = "{{ accent }}" },
+	{ name = "ionic.config.json", text = "", fg = "{{ accent }}" },
+	{ name = "Jenkinsfile", text = "", fg = "{{ accent }}" },
+	{ name = "justfile", text = "", fg = "{{ accent }}" },
+	{ name = "kalgebrarc", text = "", fg = "{{ accent }}" },
+	{ name = "kdeglobals", text = "", fg = "{{ accent }}" },
+	{ name = "kdenlive-layoutsrc", text = "", fg = "{{ accent }}" },
+	{ name = "kdenliverc", text = "", fg = "{{ accent }}" },
+	{ name = "kritadisplayrc", text = "", fg = "{{ accent }}" },
+	{ name = "kritarc", text = "", fg = "{{ accent }}" },
+	{ name = "license", text = "", fg = "{{ accent }}" },
+	{ name = "license.md", text = "", fg = "{{ accent }}" },
+	{ name = "lxde-rc.xml", text = "", fg = "{{ accent }}" },
+	{ name = "lxqt.conf", text = "", fg = "{{ accent }}" },
+	{ name = "makefile", text = "", fg = "{{ accent }}" },
+	{ name = "mix.lock", text = "", fg = "{{ accent }}" },
+	{ name = "mpv.conf", text = "", fg = "{{ accent }}" },
+	{ name = "next.config.cjs", text = "", fg = "{{ accent }}" },
+	{ name = "next.config.js", text = "", fg = "{{ accent }}" },
+	{ name = "next.config.ts", text = "", fg = "{{ accent }}" },
+	{ name = "node_modules", text = "", fg = "{{ accent }}" },
+	{ name = "nuxt.config.cjs", text = "󱄆", fg = "{{ accent }}" },
+	{ name = "nuxt.config.js", text = "󱄆", fg = "{{ accent }}" },
+	{ name = "nuxt.config.mjs", text = "󱄆", fg = "{{ accent }}" },
+	{ name = "nuxt.config.ts", text = "󱄆", fg = "{{ accent }}" },
+	{ name = "package-lock.json", text = "", fg = "{{ accent }}" },
+	{ name = "package.json", text = "", fg = "{{ accent }}" },
+	{ name = "PKGBUILD", text = "", fg = "{{ accent }}" },
+	{ name = "platformio.ini", text = "", fg = "{{ accent }}" },
+	{ name = "playwright.config.cjs", text = "", fg = "{{ accent }}" },
+	{ name = "playwright.config.cts", text = "", fg = "{{ accent }}" },
+	{ name = "playwright.config.js", text = "", fg = "{{ accent }}" },
+	{ name = "playwright.config.mjs", text = "", fg = "{{ accent }}" },
+	{ name = "playwright.config.mts", text = "", fg = "{{ accent }}" },
+	{ name = "playwright.config.ts", text = "", fg = "{{ accent }}" },
+	{ name = "pnpm-lock.yaml", text = "", fg = "{{ accent }}" },
+	{ name = "pnpm-workspace.yaml", text = "", fg = "{{ accent }}" },
+	{ name = "pom.xml", text = "", fg = "{{ accent }}" },
+	{ name = "prettier.config.cjs", text = "", fg = "{{ accent }}" },
+	{ name = "prettier.config.js", text = "", fg = "{{ accent }}" },
+	{ name = "prettier.config.mjs", text = "", fg = "{{ accent }}" },
+	{ name = "prettier.config.ts", text = "", fg = "{{ accent }}" },
+	{ name = "prisma.config.mts", text = "", fg = "{{ accent }}" },
+	{ name = "prisma.config.ts", text = "", fg = "{{ accent }}" },
+	{ name = "procfile", text = "", fg = "{{ accent }}" },
+	{ name = "PrusaSlicer.ini", text = "", fg = "{{ accent }}" },
+	{ name = "PrusaSlicerGcodeViewer.ini", text = "", fg = "{{ accent }}" },
+	{ name = "py.typed", text = "", fg = "{{ accent }}" },
+	{ name = "QtProject.conf", text = "", fg = "{{ accent }}" },
+	{ name = "rakefile", text = "", fg = "{{ accent }}" },
+	{ name = "readme", text = "󰂺", fg = "{{ accent }}" },
+	{ name = "readme.md", text = "󰂺", fg = "{{ accent }}" },
+	{ name = "rmd", text = "", fg = "{{ accent }}" },
+	{ name = "robots.txt", text = "󰚩", fg = "{{ accent }}" },
+	{ name = "security", text = "󰒃", fg = "{{ accent }}" },
+	{ name = "security.md", text = "󰒃", fg = "{{ accent }}" },
+	{ name = "settings.gradle", text = "", fg = "{{ accent }}" },
+	{ name = "svelte.config.js", text = "", fg = "{{ accent }}" },
+	{ name = "sxhkdrc", text = "", fg = "{{ accent }}" },
+	{ name = "sym-lib-table", text = "", fg = "{{ accent }}" },
+	{ name = "tailwind.config.js", text = "󱏿", fg = "{{ accent }}" },
+	{ name = "tailwind.config.mjs", text = "󱏿", fg = "{{ accent }}" },
+	{ name = "tailwind.config.ts", text = "󱏿", fg = "{{ accent }}" },
+	{ name = "tmux.conf", text = "", fg = "{{ accent }}" },
+	{ name = "tmux.conf.local", text = "", fg = "{{ accent }}" },
+	{ name = "tsconfig.json", text = "", fg = "{{ accent }}" },
+	{ name = "unlicense", text = "", fg = "{{ accent }}" },
+	{ name = "vagrantfile", text = "", fg = "{{ accent }}" },
+	{ name = "vercel.json", text = "", fg = "{{ accent }}" },
+	{ name = "vite.config.cjs", text = "", fg = "{{ accent }}" },
+	{ name = "vite.config.cts", text = "", fg = "{{ accent }}" },
+	{ name = "vite.config.js", text = "", fg = "{{ accent }}" },
+	{ name = "vite.config.mjs", text = "", fg = "{{ accent }}" },
+	{ name = "vite.config.mts", text = "", fg = "{{ accent }}" },
+	{ name = "vite.config.ts", text = "", fg = "{{ accent }}" },
+	{ name = "vitest.config.cjs", text = "", fg = "{{ accent }}" },
+	{ name = "vitest.config.cts", text = "", fg = "{{ accent }}" },
+	{ name = "vitest.config.js", text = "", fg = "{{ accent }}" },
+	{ name = "vitest.config.mjs", text = "", fg = "{{ accent }}" },
+	{ name = "vitest.config.mts", text = "", fg = "{{ accent }}" },
+	{ name = "vitest.config.ts", text = "", fg = "{{ accent }}" },
+	{ name = "vlcrc", text = "󰕼", fg = "{{ accent }}" },
+	{ name = "webpack", text = "󰜫", fg = "{{ accent }}" },
+	{ name = "weston.ini", text = "", fg = "{{ accent }}" },
+	{ name = "workspace", text = "", fg = "{{ accent }}" },
+	{ name = "wrangler.jsonc", text = "", fg = "{{ accent }}" },
+	{ name = "wrangler.toml", text = "", fg = "{{ accent }}" },
+	{ name = "xdph.conf", text = "", fg = "{{ accent }}" },
+	{ name = "xmobarrc", text = "", fg = "{{ accent }}" },
+	{ name = "xmobarrc.hs", text = "", fg = "{{ accent }}" },
+	{ name = "xmonad.hs", text = "", fg = "{{ accent }}" },
+	{ name = "xorg.conf", text = "", fg = "{{ accent }}" },
+	{ name = "xsettingsd.conf", text = "", fg = "{{ accent }}" },
+]
+exts = [
+	{ name = "3gp", text = "", fg = "{{ accent }}" },
+	{ name = "3mf", text = "󰆧", fg = "{{ accent }}" },
+	{ name = "7z", text = "", fg = "{{ accent }}" },
+	{ name = "a", text = "", fg = "{{ accent }}" },
+	{ name = "aac", text = "", fg = "{{ accent }}" },
+	{ name = "ada", text = "", fg = "{{ accent }}" },
+	{ name = "adb", text = "", fg = "{{ accent }}" },
+	{ name = "ads", text = "", fg = "{{ accent }}" },
+	{ name = "ai", text = "", fg = "{{ accent }}" },
+	{ name = "aif", text = "", fg = "{{ accent }}" },
+	{ name = "aiff", text = "", fg = "{{ accent }}" },
+	{ name = "android", text = "", fg = "{{ accent }}" },
+	{ name = "ape", text = "", fg = "{{ accent }}" },
+	{ name = "apk", text = "", fg = "{{ accent }}" },
+	{ name = "apl", text = "", fg = "{{ accent }}" },
+	{ name = "app", text = "", fg = "{{ accent }}" },
+	{ name = "applescript", text = "", fg = "{{ accent }}" },
+	{ name = "asc", text = "󰦝", fg = "{{ accent }}" },
+	{ name = "asm", text = "", fg = "{{ accent }}" },
+	{ name = "ass", text = "󰨖", fg = "{{ accent }}" },
+	{ name = "astro", text = "", fg = "{{ accent }}" },
+	{ name = "avif", text = "", fg = "{{ accent }}" },
+	{ name = "awk", text = "", fg = "{{ accent }}" },
+	{ name = "azcli", text = "", fg = "{{ accent }}" },
+	{ name = "bak", text = "󰁯", fg = "{{ accent }}" },
+	{ name = "bash", text = "", fg = "{{ accent }}" },
+	{ name = "bat", text = "", fg = "{{ accent }}" },
+	{ name = "bazel", text = "", fg = "{{ accent }}" },
+	{ name = "bib", text = "󱉟", fg = "{{ accent }}" },
+	{ name = "bicep", text = "", fg = "{{ accent }}" },
+	{ name = "bicepparam", text = "", fg = "{{ accent }}" },
+	{ name = "bin", text = "", fg = "{{ accent }}" },
+	{ name = "blade.php", text = "", fg = "{{ accent }}" },
+	{ name = "blend", text = "󰂫", fg = "{{ accent }}" },
+	{ name = "blp", text = "󰺾", fg = "{{ accent }}" },
+	{ name = "bmp", text = "", fg = "{{ accent }}" },
+	{ name = "bqn", text = "", fg = "{{ accent }}" },
+	{ name = "brep", text = "󰻫", fg = "{{ accent }}" },
+	{ name = "bz", text = "", fg = "{{ accent }}" },
+	{ name = "bz2", text = "", fg = "{{ accent }}" },
+	{ name = "bz3", text = "", fg = "{{ accent }}" },
+	{ name = "bzl", text = "", fg = "{{ accent }}" },
+	{ name = "c", text = "", fg = "{{ accent }}" },
+	{ name = "c++", text = "", fg = "{{ accent }}" },
+	{ name = "cache", text = "", fg = "{{ accent }}" },
+	{ name = "cast", text = "", fg = "{{ accent }}" },
+	{ name = "cbl", text = "", fg = "{{ accent }}" },
+	{ name = "cc", text = "", fg = "{{ accent }}" },
+	{ name = "ccm", text = "", fg = "{{ accent }}" },
+	{ name = "cfc", text = "", fg = "{{ accent }}" },
+	{ name = "cfg", text = "", fg = "{{ accent }}" },
+	{ name = "cfm", text = "", fg = "{{ accent }}" },
+	{ name = "cjs", text = "", fg = "{{ accent }}" },
+	{ name = "clj", text = "", fg = "{{ accent }}" },
+	{ name = "cljc", text = "", fg = "{{ accent }}" },
+	{ name = "cljd", text = "", fg = "{{ accent }}" },
+	{ name = "cljs", text = "", fg = "{{ accent }}" },
+	{ name = "cmake", text = "", fg = "{{ accent }}" },
+	{ name = "cob", text = "", fg = "{{ accent }}" },
+	{ name = "cobol", text = "", fg = "{{ accent }}" },
+	{ name = "coffee", text = "", fg = "{{ accent }}" },
+	{ name = "conda", text = "", fg = "{{ accent }}" },
+	{ name = "conf", text = "", fg = "{{ accent }}" },
+	{ name = "config.ru", text = "", fg = "{{ accent }}" },
+	{ name = "cow", text = "󰆚", fg = "{{ accent }}" },
+	{ name = "cp", text = "", fg = "{{ accent }}" },
+	{ name = "cpp", text = "", fg = "{{ accent }}" },
+	{ name = "cppm", text = "", fg = "{{ accent }}" },
+	{ name = "cpy", text = "", fg = "{{ accent }}" },
+	{ name = "cr", text = "", fg = "{{ accent }}" },
+	{ name = "crdownload", text = "", fg = "{{ accent }}" },
+	{ name = "cs", text = "󰌛", fg = "{{ accent }}" },
+	{ name = "csh", text = "", fg = "{{ accent }}" },
+	{ name = "cshtml", text = "󱦗", fg = "{{ accent }}" },
+	{ name = "cson", text = "", fg = "{{ accent }}" },
+	{ name = "csproj", text = "󰪮", fg = "{{ accent }}" },
+	{ name = "css", text = "", fg = "{{ accent }}" },
+	{ name = "csv", text = "", fg = "{{ accent }}" },
+	{ name = "cts", text = "", fg = "{{ accent }}" },
+	{ name = "cu", text = "", fg = "{{ accent }}" },
+	{ name = "cue", text = "󰲹", fg = "{{ accent }}" },
+	{ name = "cuh", text = "", fg = "{{ accent }}" },
+	{ name = "cxx", text = "", fg = "{{ accent }}" },
+	{ name = "cxxm", text = "", fg = "{{ accent }}" },
+	{ name = "d", text = "", fg = "{{ accent }}" },
+	{ name = "d.ts", text = "", fg = "{{ accent }}" },
+	{ name = "dart", text = "", fg = "{{ accent }}" },
+	{ name = "db", text = "", fg = "{{ accent }}" },
+	{ name = "dconf", text = "", fg = "{{ accent }}" },
+	{ name = "desktop", text = "", fg = "{{ accent }}" },
+	{ name = "diff", text = "", fg = "{{ accent }}" },
+	{ name = "dll", text = "", fg = "{{ accent }}" },
+	{ name = "doc", text = "󰈬", fg = "{{ accent }}" },
+	{ name = "Dockerfile", text = "󰡨", fg = "{{ accent }}" },
+	{ name = "dockerignore", text = "󰡨", fg = "{{ accent }}" },
+	{ name = "docx", text = "󰈬", fg = "{{ accent }}" },
+	{ name = "dot", text = "󱁉", fg = "{{ accent }}" },
+	{ name = "download", text = "", fg = "{{ accent }}" },
+	{ name = "drl", text = "", fg = "{{ accent }}" },
+	{ name = "dropbox", text = "", fg = "{{ accent }}" },
+	{ name = "dump", text = "", fg = "{{ accent }}" },
+	{ name = "dwg", text = "󰻫", fg = "{{ accent }}" },
+	{ name = "dxf", text = "󰻫", fg = "{{ accent }}" },
+	{ name = "ebook", text = "", fg = "{{ accent }}" },
+	{ name = "ebuild", text = "", fg = "{{ accent }}" },
+	{ name = "edn", text = "", fg = "{{ accent }}" },
+	{ name = "eex", text = "", fg = "{{ accent }}" },
+	{ name = "ejs", text = "", fg = "{{ accent }}" },
+	{ name = "el", text = "", fg = "{{ accent }}" },
+	{ name = "elc", text = "", fg = "{{ accent }}" },
+	{ name = "elf", text = "", fg = "{{ accent }}" },
+	{ name = "elm", text = "", fg = "{{ accent }}" },
+	{ name = "eln", text = "", fg = "{{ accent }}" },
+	{ name = "env", text = "", fg = "{{ accent }}" },
+	{ name = "eot", text = "", fg = "{{ accent }}" },
+	{ name = "epp", text = "", fg = "{{ accent }}" },
+	{ name = "epub", text = "", fg = "{{ accent }}" },
+	{ name = "erb", text = "", fg = "{{ accent }}" },
+	{ name = "erl", text = "", fg = "{{ accent }}" },
+	{ name = "ex", text = "", fg = "{{ accent }}" },
+	{ name = "exe", text = "", fg = "{{ accent }}" },
+	{ name = "exs", text = "", fg = "{{ accent }}" },
+	{ name = "f#", text = "", fg = "{{ accent }}" },
+	{ name = "f3d", text = "󰻫", fg = "{{ accent }}" },
+	{ name = "f90", text = "󱈚", fg = "{{ accent }}" },
+	{ name = "fbx", text = "󰆧", fg = "{{ accent }}" },
+	{ name = "fcbak", text = "", fg = "{{ accent }}" },
+	{ name = "fcmacro", text = "", fg = "{{ accent }}" },
+	{ name = "fcmat", text = "", fg = "{{ accent }}" },
+	{ name = "fcparam", text = "", fg = "{{ accent }}" },
+	{ name = "fcscript", text = "", fg = "{{ accent }}" },
+	{ name = "fcstd", text = "", fg = "{{ accent }}" },
+	{ name = "fcstd1", text = "", fg = "{{ accent }}" },
+	{ name = "fctb", text = "", fg = "{{ accent }}" },
+	{ name = "fctl", text = "", fg = "{{ accent }}" },
+	{ name = "fdmdownload", text = "", fg = "{{ accent }}" },
+	{ name = "feature", text = "", fg = "{{ accent }}" },
+	{ name = "fish", text = "", fg = "{{ accent }}" },
+	{ name = "flac", text = "", fg = "{{ accent }}" },
+	{ name = "flc", text = "", fg = "{{ accent }}" },
+	{ name = "flf", text = "", fg = "{{ accent }}" },
+	{ name = "fnl", text = "", fg = "{{ accent }}" },
+	{ name = "fodg", text = "", fg = "{{ accent }}" },
+	{ name = "fodp", text = "", fg = "{{ accent }}" },
+	{ name = "fods", text = "", fg = "{{ accent }}" },
+	{ name = "fodt", text = "", fg = "{{ accent }}" },
+	{ name = "frag", text = "", fg = "{{ accent }}" },
+	{ name = "fs", text = "", fg = "{{ accent }}" },
+	{ name = "fsi", text = "", fg = "{{ accent }}" },
+	{ name = "fsscript", text = "", fg = "{{ accent }}" },
+	{ name = "fsx", text = "", fg = "{{ accent }}" },
+	{ name = "gcode", text = "󰐫", fg = "{{ accent }}" },
+	{ name = "gd", text = "", fg = "{{ accent }}" },
+	{ name = "gemspec", text = "", fg = "{{ accent }}" },
+	{ name = "geom", text = "", fg = "{{ accent }}" },
+	{ name = "gif", text = "", fg = "{{ accent }}" },
+	{ name = "git", text = "", fg = "{{ accent }}" },
+	{ name = "glb", text = "", fg = "{{ accent }}" },
+	{ name = "gleam", text = "", fg = "{{ accent }}" },
+	{ name = "glsl", text = "", fg = "{{ accent }}" },
+	{ name = "gnumakefile", text = "", fg = "{{ accent }}" },
+	{ name = "go", text = "", fg = "{{ accent }}" },
+	{ name = "godot", text = "", fg = "{{ accent }}" },
+	{ name = "gpr", text = "", fg = "{{ accent }}" },
+	{ name = "gql", text = "", fg = "{{ accent }}" },
+	{ name = "gradle", text = "", fg = "{{ accent }}" },
+	{ name = "graphql", text = "", fg = "{{ accent }}" },
+	{ name = "gresource", text = "", fg = "{{ accent }}" },
+	{ name = "gv", text = "󱁉", fg = "{{ accent }}" },
+	{ name = "gz", text = "", fg = "{{ accent }}" },
+	{ name = "h", text = "", fg = "{{ accent }}" },
+	{ name = "haml", text = "", fg = "{{ accent }}" },
+	{ name = "hbs", text = "", fg = "{{ accent }}" },
+	{ name = "heex", text = "", fg = "{{ accent }}" },
+	{ name = "hex", text = "", fg = "{{ accent }}" },
+	{ name = "hh", text = "", fg = "{{ accent }}" },
+	{ name = "hpp", text = "", fg = "{{ accent }}" },
+	{ name = "hrl", text = "", fg = "{{ accent }}" },
+	{ name = "hs", text = "", fg = "{{ accent }}" },
+	{ name = "htm", text = "", fg = "{{ accent }}" },
+	{ name = "html", text = "", fg = "{{ accent }}" },
+	{ name = "http", text = "", fg = "{{ accent }}" },
+	{ name = "huff", text = "󰡘", fg = "{{ accent }}" },
+	{ name = "hurl", text = "", fg = "{{ accent }}" },
+	{ name = "hx", text = "", fg = "{{ accent }}" },
+	{ name = "hxx", text = "", fg = "{{ accent }}" },
+	{ name = "ical", text = "", fg = "{{ accent }}" },
+	{ name = "icalendar", text = "", fg = "{{ accent }}" },
+	{ name = "ico", text = "", fg = "{{ accent }}" },
+	{ name = "ics", text = "", fg = "{{ accent }}" },
+	{ name = "ifb", text = "", fg = "{{ accent }}" },
+	{ name = "ifc", text = "󰻫", fg = "{{ accent }}" },
+	{ name = "ige", text = "󰻫", fg = "{{ accent }}" },
+	{ name = "iges", text = "󰻫", fg = "{{ accent }}" },
+	{ name = "igs", text = "󰻫", fg = "{{ accent }}" },
+	{ name = "image", text = "", fg = "{{ accent }}" },
+	{ name = "img", text = "", fg = "{{ accent }}" },
+	{ name = "import", text = "", fg = "{{ accent }}" },
+	{ name = "info", text = "", fg = "{{ accent }}" },
+	{ name = "ini", text = "", fg = "{{ accent }}" },
+	{ name = "ino", text = "", fg = "{{ accent }}" },
+	{ name = "ipynb", text = "", fg = "{{ accent }}" },
+	{ name = "iso", text = "", fg = "{{ accent }}" },
+	{ name = "ixx", text = "", fg = "{{ accent }}" },
+	{ name = "jar", text = "", fg = "{{ accent }}" },
+	{ name = "java", text = "", fg = "{{ accent }}" },
+	{ name = "jl", text = "", fg = "{{ accent }}" },
+	{ name = "jpeg", text = "", fg = "{{ accent }}" },
+	{ name = "jpg", text = "", fg = "{{ accent }}" },
+	{ name = "js", text = "", fg = "{{ accent }}" },
+	{ name = "json", text = "", fg = "{{ accent }}" },
+	{ name = "json5", text = "", fg = "{{ accent }}" },
+	{ name = "jsonc", text = "", fg = "{{ accent }}" },
+	{ name = "jsx", text = "", fg = "{{ accent }}" },
+	{ name = "jwmrc", text = "", fg = "{{ accent }}" },
+	{ name = "jxl", text = "", fg = "{{ accent }}" },
+	{ name = "kbx", text = "󰯄", fg = "{{ accent }}" },
+	{ name = "kdb", text = "", fg = "{{ accent }}" },
+	{ name = "kdbx", text = "", fg = "{{ accent }}" },
+	{ name = "kdenlive", text = "", fg = "{{ accent }}" },
+	{ name = "kdenlivetitle", text = "", fg = "{{ accent }}" },
+	{ name = "kicad_dru", text = "", fg = "{{ accent }}" },
+	{ name = "kicad_mod", text = "", fg = "{{ accent }}" },
+	{ name = "kicad_pcb", text = "", fg = "{{ accent }}" },
+	{ name = "kicad_prl", text = "", fg = "{{ accent }}" },
+	{ name = "kicad_pro", text = "", fg = "{{ accent }}" },
+	{ name = "kicad_sch", text = "", fg = "{{ accent }}" },
+	{ name = "kicad_sym", text = "", fg = "{{ accent }}" },
+	{ name = "kicad_wks", text = "", fg = "{{ accent }}" },
+	{ name = "ko", text = "", fg = "{{ accent }}" },
+	{ name = "kpp", text = "", fg = "{{ accent }}" },
+	{ name = "kra", text = "", fg = "{{ accent }}" },
+	{ name = "krz", text = "", fg = "{{ accent }}" },
+	{ name = "ksh", text = "", fg = "{{ accent }}" },
+	{ name = "kt", text = "", fg = "{{ accent }}" },
+	{ name = "kts", text = "", fg = "{{ accent }}" },
+	{ name = "lck", text = "", fg = "{{ accent }}" },
+	{ name = "leex", text = "", fg = "{{ accent }}" },
+	{ name = "less", text = "", fg = "{{ accent }}" },
+	{ name = "lff", text = "", fg = "{{ accent }}" },
+	{ name = "lhs", text = "", fg = "{{ accent }}" },
+	{ name = "lib", text = "", fg = "{{ accent }}" },
+	{ name = "license", text = "", fg = "{{ accent }}" },
+	{ name = "liquid", text = "", fg = "{{ accent }}" },
+	{ name = "lock", text = "", fg = "{{ accent }}" },
+	{ name = "log", text = "󰌱", fg = "{{ accent }}" },
+	{ name = "lrc", text = "󰨖", fg = "{{ accent }}" },
+	{ name = "lua", text = "", fg = "{{ accent }}" },
+	{ name = "luac", text = "", fg = "{{ accent }}" },
+	{ name = "luau", text = "", fg = "{{ accent }}" },
+	{ name = "m", text = "", fg = "{{ accent }}" },
+	{ name = "m3u", text = "󰲹", fg = "{{ accent }}" },
+	{ name = "m3u8", text = "󰲹", fg = "{{ accent }}" },
+	{ name = "m4a", text = "", fg = "{{ accent }}" },
+	{ name = "m4v", text = "", fg = "{{ accent }}" },
+	{ name = "magnet", text = "", fg = "{{ accent }}" },
+	{ name = "makefile", text = "", fg = "{{ accent }}" },
+	{ name = "markdown", text = "", fg = "{{ accent }}" },
+	{ name = "material", text = "", fg = "{{ accent }}" },
+	{ name = "md", text = "", fg = "{{ accent }}" },
+	{ name = "md5", text = "󰕥", fg = "{{ accent }}" },
+	{ name = "mdx", text = "", fg = "{{ accent }}" },
+	{ name = "mint", text = "󰌪", fg = "{{ accent }}" },
+	{ name = "mjs", text = "", fg = "{{ accent }}" },
+	{ name = "mk", text = "", fg = "{{ accent }}" },
+	{ name = "mkv", text = "", fg = "{{ accent }}" },
+	{ name = "ml", text = "", fg = "{{ accent }}" },
+	{ name = "mli", text = "", fg = "{{ accent }}" },
+	{ name = "mm", text = "", fg = "{{ accent }}" },
+	{ name = "mo", text = "", fg = "{{ accent }}" },
+	{ name = "mobi", text = "", fg = "{{ accent }}" },
+	{ name = "mojo", text = "", fg = "{{ accent }}" },
+	{ name = "mov", text = "", fg = "{{ accent }}" },
+	{ name = "mp3", text = "", fg = "{{ accent }}" },
+	{ name = "mp4", text = "", fg = "{{ accent }}" },
+	{ name = "mpp", text = "", fg = "{{ accent }}" },
+	{ name = "msf", text = "", fg = "{{ accent }}" },
+	{ name = "mts", text = "", fg = "{{ accent }}" },
+	{ name = "mustache", text = "", fg = "{{ accent }}" },
+	{ name = "nfo", text = "", fg = "{{ accent }}" },
+	{ name = "nim", text = "", fg = "{{ accent }}" },
+	{ name = "nix", text = "", fg = "{{ accent }}" },
+	{ name = "norg", text = "", fg = "{{ accent }}" },
+	{ name = "nswag", text = "", fg = "{{ accent }}" },
+	{ name = "nu", text = "", fg = "{{ accent }}" },
+	{ name = "o", text = "", fg = "{{ accent }}" },
+	{ name = "obj", text = "󰆧", fg = "{{ accent }}" },
+	{ name = "odf", text = "", fg = "{{ accent }}" },
+	{ name = "odg", text = "", fg = "{{ accent }}" },
+	{ name = "odin", text = "󰟢", fg = "{{ accent }}" },
+	{ name = "odp", text = "", fg = "{{ accent }}" },
+	{ name = "ods", text = "", fg = "{{ accent }}" },
+	{ name = "odt", text = "", fg = "{{ accent }}" },
+	{ name = "oga", text = "", fg = "{{ accent }}" },
+	{ name = "ogg", text = "", fg = "{{ accent }}" },
+	{ name = "ogv", text = "", fg = "{{ accent }}" },
+	{ name = "ogx", text = "", fg = "{{ accent }}" },
+	{ name = "opus", text = "", fg = "{{ accent }}" },
+	{ name = "org", text = "", fg = "{{ accent }}" },
+	{ name = "otf", text = "", fg = "{{ accent }}" },
+	{ name = "out", text = "", fg = "{{ accent }}" },
+	{ name = "part", text = "", fg = "{{ accent }}" },
+	{ name = "patch", text = "", fg = "{{ accent }}" },
+	{ name = "pck", text = "", fg = "{{ accent }}" },
+	{ name = "pcm", text = "", fg = "{{ accent }}" },
+	{ name = "pdf", text = "", fg = "{{ accent }}" },
+	{ name = "php", text = "", fg = "{{ accent }}" },
+	{ name = "pl", text = "", fg = "{{ accent }}" },
+	{ name = "pls", text = "󰲹", fg = "{{ accent }}" },
+	{ name = "ply", text = "󰆧", fg = "{{ accent }}" },
+	{ name = "pm", text = "", fg = "{{ accent }}" },
+	{ name = "png", text = "", fg = "{{ accent }}" },
+	{ name = "po", text = "", fg = "{{ accent }}" },
+	{ name = "pot", text = "", fg = "{{ accent }}" },
+	{ name = "pp", text = "", fg = "{{ accent }}" },
+	{ name = "ppt", text = "󰈧", fg = "{{ accent }}" },
+	{ name = "pptx", text = "󰈧", fg = "{{ accent }}" },
+	{ name = "prisma", text = "", fg = "{{ accent }}" },
+	{ name = "pro", text = "", fg = "{{ accent }}" },
+	{ name = "ps1", text = "󰨊", fg = "{{ accent }}" },
+	{ name = "psb", text = "", fg = "{{ accent }}" },
+	{ name = "psd", text = "", fg = "{{ accent }}" },
+	{ name = "psd1", text = "󰨊", fg = "{{ accent }}" },
+	{ name = "psm1", text = "󰨊", fg = "{{ accent }}" },
+	{ name = "pub", text = "󰷖", fg = "{{ accent }}" },
+	{ name = "pxd", text = "", fg = "{{ accent }}" },
+	{ name = "pxi", text = "", fg = "{{ accent }}" },
+	{ name = "py", text = "", fg = "{{ accent }}" },
+	{ name = "pyc", text = "", fg = "{{ accent }}" },
+	{ name = "pyd", text = "", fg = "{{ accent }}" },
+	{ name = "pyi", text = "", fg = "{{ accent }}" },
+	{ name = "pyo", text = "", fg = "{{ accent }}" },
+	{ name = "pyw", text = "", fg = "{{ accent }}" },
+	{ name = "pyx", text = "", fg = "{{ accent }}" },
+	{ name = "qm", text = "", fg = "{{ accent }}" },
+	{ name = "qml", text = "", fg = "{{ accent }}" },
+	{ name = "qrc", text = "", fg = "{{ accent }}" },
+	{ name = "qss", text = "", fg = "{{ accent }}" },
+	{ name = "query", text = "", fg = "{{ accent }}" },
+	{ name = "R", text = "󰟔", fg = "{{ accent }}" },
+	{ name = "r", text = "󰟔", fg = "{{ accent }}" },
+	{ name = "rake", text = "", fg = "{{ accent }}" },
+	{ name = "rar", text = "", fg = "{{ accent }}" },
+	{ name = "rasi", text = "", fg = "{{ accent }}" },
+	{ name = "razor", text = "󱦘", fg = "{{ accent }}" },
+	{ name = "rb", text = "", fg = "{{ accent }}" },
+	{ name = "res", text = "", fg = "{{ accent }}" },
+	{ name = "resi", text = "", fg = "{{ accent }}" },
+	{ name = "rlib", text = "", fg = "{{ accent }}" },
+	{ name = "rmd", text = "", fg = "{{ accent }}" },
+	{ name = "rproj", text = "󰗆", fg = "{{ accent }}" },
+	{ name = "rs", text = "", fg = "{{ accent }}" },
+	{ name = "rss", text = "", fg = "{{ accent }}" },
+	{ name = "s", text = "", fg = "{{ accent }}" },
+	{ name = "sass", text = "", fg = "{{ accent }}" },
+	{ name = "sbt", text = "", fg = "{{ accent }}" },
+	{ name = "sc", text = "", fg = "{{ accent }}" },
+	{ name = "scad", text = "", fg = "{{ accent }}" },
+	{ name = "scala", text = "", fg = "{{ accent }}" },
+	{ name = "scm", text = "󰘧", fg = "{{ accent }}" },
+	{ name = "scss", text = "", fg = "{{ accent }}" },
+	{ name = "sh", text = "", fg = "{{ accent }}" },
+	{ name = "sha1", text = "󰕥", fg = "{{ accent }}" },
+	{ name = "sha224", text = "󰕥", fg = "{{ accent }}" },
+	{ name = "sha256", text = "󰕥", fg = "{{ accent }}" },
+	{ name = "sha384", text = "󰕥", fg = "{{ accent }}" },
+	{ name = "sha512", text = "󰕥", fg = "{{ accent }}" },
+	{ name = "sig", text = "󰘧", fg = "{{ accent }}" },
+	{ name = "signature", text = "󰘧", fg = "{{ accent }}" },
+	{ name = "skp", text = "󰻫", fg = "{{ accent }}" },
+	{ name = "sldasm", text = "󰻫", fg = "{{ accent }}" },
+	{ name = "sldprt", text = "󰻫", fg = "{{ accent }}" },
+	{ name = "slim", text = "", fg = "{{ accent }}" },
+	{ name = "sln", text = "", fg = "{{ accent }}" },
+	{ name = "slnx", text = "", fg = "{{ accent }}" },
+	{ name = "slvs", text = "󰻫", fg = "{{ accent }}" },
+	{ name = "sml", text = "󰘧", fg = "{{ accent }}" },
+	{ name = "so", text = "", fg = "{{ accent }}" },
+	{ name = "sol", text = "", fg = "{{ accent }}" },
+	{ name = "spec.js", text = "", fg = "{{ accent }}" },
+	{ name = "spec.jsx", text = "", fg = "{{ accent }}" },
+	{ name = "spec.ts", text = "", fg = "{{ accent }}" },
+	{ name = "spec.tsx", text = "", fg = "{{ accent }}" },
+	{ name = "spx", text = "", fg = "{{ accent }}" },
+	{ name = "sql", text = "", fg = "{{ accent }}" },
+	{ name = "sqlite", text = "", fg = "{{ accent }}" },
+	{ name = "sqlite3", text = "", fg = "{{ accent }}" },
+	{ name = "srt", text = "󰨖", fg = "{{ accent }}" },
+	{ name = "ssa", text = "󰨖", fg = "{{ accent }}" },
+	{ name = "ste", text = "󰻫", fg = "{{ accent }}" },
+	{ name = "step", text = "󰻫", fg = "{{ accent }}" },
+	{ name = "stl", text = "󰆧", fg = "{{ accent }}" },
+	{ name = "stories.js", text = "", fg = "{{ accent }}" },
+	{ name = "stories.jsx", text = "", fg = "{{ accent }}" },
+	{ name = "stories.mjs", text = "", fg = "{{ accent }}" },
+	{ name = "stories.svelte", text = "", fg = "{{ accent }}" },
+	{ name = "stories.ts", text = "", fg = "{{ accent }}" },
+	{ name = "stories.tsx", text = "", fg = "{{ accent }}" },
+	{ name = "stories.vue", text = "", fg = "{{ accent }}" },
+	{ name = "stp", text = "󰻫", fg = "{{ accent }}" },
+	{ name = "strings", text = "", fg = "{{ accent }}" },
+	{ name = "styl", text = "", fg = "{{ accent }}" },
+	{ name = "sub", text = "󰨖", fg = "{{ accent }}" },
+	{ name = "sublime", text = "", fg = "{{ accent }}" },
+	{ name = "suo", text = "", fg = "{{ accent }}" },
+	{ name = "sv", text = "󰍛", fg = "{{ accent }}" },
+	{ name = "svelte", text = "", fg = "{{ accent }}" },
+	{ name = "svg", text = "󰜡", fg = "{{ accent }}" },
+	{ name = "svgz", text = "󰜡", fg = "{{ accent }}" },
+	{ name = "svh", text = "󰍛", fg = "{{ accent }}" },
+	{ name = "swift", text = "", fg = "{{ accent }}" },
+	{ name = "t", text = "", fg = "{{ accent }}" },
+	{ name = "tbc", text = "󰛓", fg = "{{ accent }}" },
+	{ name = "tcl", text = "󰛓", fg = "{{ accent }}" },
+	{ name = "templ", text = "", fg = "{{ accent }}" },
+	{ name = "terminal", text = "", fg = "{{ accent }}" },
+	{ name = "test.js", text = "", fg = "{{ accent }}" },
+	{ name = "test.jsx", text = "", fg = "{{ accent }}" },
+	{ name = "test.ts", text = "", fg = "{{ accent }}" },
+	{ name = "test.tsx", text = "", fg = "{{ accent }}" },
+	{ name = "tex", text = "", fg = "{{ accent }}" },
+	{ name = "tf", text = "", fg = "{{ accent }}" },
+	{ name = "tfvars", text = "", fg = "{{ accent }}" },
+	{ name = "tgz", text = "", fg = "{{ accent }}" },
+	{ name = "tmpl", text = "", fg = "{{ accent }}" },
+	{ name = "tmux", text = "", fg = "{{ accent }}" },
+	{ name = "toml", text = "", fg = "{{ accent }}" },
+	{ name = "torrent", text = "", fg = "{{ accent }}" },
+	{ name = "tres", text = "", fg = "{{ accent }}" },
+	{ name = "ts", text = "", fg = "{{ accent }}" },
+	{ name = "tscn", text = "", fg = "{{ accent }}" },
+	{ name = "tsconfig", text = "", fg = "{{ accent }}" },
+	{ name = "tsx", text = "", fg = "{{ accent }}" },
+	{ name = "ttf", text = "", fg = "{{ accent }}" },
+	{ name = "twig", text = "", fg = "{{ accent }}" },
+	{ name = "txt", text = "󰈙", fg = "{{ accent }}" },
+	{ name = "txz", text = "", fg = "{{ accent }}" },
+	{ name = "typ", text = "", fg = "{{ accent }}" },
+	{ name = "typoscript", text = "", fg = "{{ accent }}" },
+	{ name = "ui", text = "", fg = "{{ accent }}" },
+	{ name = "v", text = "󰍛", fg = "{{ accent }}" },
+	{ name = "vala", text = "", fg = "{{ accent }}" },
+	{ name = "vert", text = "", fg = "{{ accent }}" },
+	{ name = "vh", text = "󰍛", fg = "{{ accent }}" },
+	{ name = "vhd", text = "󰍛", fg = "{{ accent }}" },
+	{ name = "vhdl", text = "󰍛", fg = "{{ accent }}" },
+	{ name = "vi", text = "", fg = "{{ accent }}" },
+	{ name = "vim", text = "", fg = "{{ accent }}" },
+	{ name = "vsh", text = "", fg = "{{ accent }}" },
+	{ name = "vsix", text = "", fg = "{{ accent }}" },
+	{ name = "vue", text = "", fg = "{{ accent }}" },
+	{ name = "wasm", text = "", fg = "{{ accent }}" },
+	{ name = "wav", text = "", fg = "{{ accent }}" },
+	{ name = "webm", text = "", fg = "{{ accent }}" },
+	{ name = "webmanifest", text = "", fg = "{{ accent }}" },
+	{ name = "webp", text = "", fg = "{{ accent }}" },
+	{ name = "webpack", text = "󰜫", fg = "{{ accent }}" },
+	{ name = "wma", text = "", fg = "{{ accent }}" },
+	{ name = "wmv", text = "", fg = "{{ accent }}" },
+	{ name = "woff", text = "", fg = "{{ accent }}" },
+	{ name = "woff2", text = "", fg = "{{ accent }}" },
+	{ name = "wrl", text = "󰆧", fg = "{{ accent }}" },
+	{ name = "wrz", text = "󰆧", fg = "{{ accent }}" },
+	{ name = "wv", text = "", fg = "{{ accent }}" },
+	{ name = "wvc", text = "", fg = "{{ accent }}" },
+	{ name = "x", text = "", fg = "{{ accent }}" },
+	{ name = "xaml", text = "󰙳", fg = "{{ accent }}" },
+	{ name = "xcf", text = "", fg = "{{ accent }}" },
+	{ name = "xcplayground", text = "", fg = "{{ accent }}" },
+	{ name = "xcstrings", text = "", fg = "{{ accent }}" },
+	{ name = "xls", text = "󰈛", fg = "{{ accent }}" },
+	{ name = "xlsx", text = "󰈛", fg = "{{ accent }}" },
+	{ name = "xm", text = "", fg = "{{ accent }}" },
+	{ name = "xml", text = "󰗀", fg = "{{ accent }}" },
+	{ name = "xpi", text = "", fg = "{{ accent }}" },
+	{ name = "xslt", text = "󰗀", fg = "{{ accent }}" },
+	{ name = "xul", text = "", fg = "{{ accent }}" },
+	{ name = "xz", text = "", fg = "{{ accent }}" },
+	{ name = "yaml", text = "", fg = "{{ accent }}" },
+	{ name = "yml", text = "", fg = "{{ accent }}" },
+	{ name = "zig", text = "", fg = "{{ accent }}" },
+	{ name = "zip", text = "", fg = "{{ accent }}" },
+	{ name = "zsh", text = "", fg = "{{ accent }}" },
+	{ name = "zst", text = "", fg = "{{ accent }}" },
+	{ name = "🔥", text = "", fg = "{{ accent }}" },
+]
+conds = [
+	# Special files
+	{ if = "orphan", text = "", fg = "{{ accent }}" },
+	{ if = "link", text = "", fg = "{{ accent }}" },
+	{ if = "block", text = "", fg = "{{ accent }}" },
+	{ if = "char", text = "", fg = "{{ accent }}" },
+	{ if = "fifo", text = "", fg = "{{ accent }}" },
+	{ if = "sock", text = "", fg = "{{ accent }}" },
+	{ if = "sticky", text = "", fg = "{{ accent }}" },
+	{ if = "dummy", text = "", fg = "{{ accent }}" },
+
+	# Fallback
+	{ if = "dir", text = "", fg = "{{ accent }}" },
+	{ if = "exec", text = "", fg = "{{ accent }}" },
+	{ if = "!dir", text = "", fg = "{{ accent }}" },
+]
+
+# : }}}

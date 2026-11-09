@@ -1,0 +1,22 @@
+{
+  "wallpaper": "",
+  "alpha": "100",
+  "colors": {
+    "color0": "{{ dark.ground }}",
+    "color1": "",
+    "color2": "",
+    "color3": "{{ accent }}",
+    "color4": "",
+    "color5": "{{ accent }}",
+    "color6": "",
+    "color7": "{{ washCurrentHover }}",
+    "color8": "",
+    "color9": "",
+    "color10": "{{ accent }}",
+    "color11": "",
+    "color12": "",
+    "color13": "{{ accent }}",
+    "color14": "",
+    "color15": "{{ inkMain }}"
+  }
+}

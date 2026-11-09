@@ -1,0 +1,68 @@
+[colors.primary]
+background = '{{ ground }}'
+foreground = '{{ inkMain }}'
+
+[colors.cursor]
+text = '{{ onAccent }}'
+cursor = '{{ accent }}'
+
+[colors.vi_mode_cursor]
+text = '{{ ground }}'
+cursor = '{{ accent }}'
+
+[colors.search.matches]
+foreground = '{{ raised }}'
+background = '{{ accent }}'
+
+[colors.search.focused_match]
+foreground = '{{ raised }}'
+background = '{{ accent }}'
+
+[colors.footer_bar]
+foreground = '{{ raised }}'
+background = '{{ inkMain }}'
+
+[colors.hints.start]
+foreground = '{{ raised }}'
+background = '{{ accent }}'
+
+[colors.hints.end]
+foreground = '{{ raised }}'
+background = '{{ accent }}'
+
+[colors.selection]
+text = '{{ selectionFg }}'
+background = '{{ selectionBg }}'
+
+
+[colors.normal]
+black   = '{{ ansi0 }}'
+red     = '{{ ansi1 }}'
+green   = '{{ ansi2 }}'
+yellow  = '{{ ansi3 }}'
+blue    = '{{ ansi4 }}'
+magenta = '{{ ansi5 }}'
+cyan    = '{{ ansi6 }}'
+white   = '{{ ansi7 }}'
+
+
+[colors.bright]
+black   = '{{ ansi8 }}'
+red     = '{{ ansi9 }}'
+green   = '{{ ansi10 }}'
+yellow  = '{{ ansi11 }}'
+blue    = '{{ ansi12 }}'
+magenta = '{{ ansi13 }}'
+cyan    = '{{ ansi14 }}'
+white   = '{{ ansi15 }}'
+
+
+[colors.dim]
+black   = '{{ ansi0 }}'
+red     = '{{ ansi1 }}'
+green   = '{{ ansi2 }}'
+yellow  = '{{ ansi3 }}'
+blue    = '{{ ansi4 }}'
+magenta = '{{ ansi5 }}'
+cyan    = '{{ ansi6 }}'
+white   = '{{ ansi7 }}'

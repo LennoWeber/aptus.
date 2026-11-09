@@ -1,0 +1,15 @@
+[color]
+foreground = '{{ accent }}'
+
+gradient = 1
+gradient_color_1 = '{{ accentWash }}'
+gradient_color_2 = '{{ accent }}'
+gradient_color_3 = '{{ inkMain }}'
+
+horizontal_gradient = 0
+horizontal_gradient_color_1 = '{{ accentWash }}'
+horizontal_gradient_color_2 = '{{ accent }}'
+horizontal_gradient_color_3 = '{{ inkMain }}'
+horizontal_gradient_color_4 = '{{ accent }}'
+horizontal_gradient_color_5 = '{{ accentWash }}'
+
