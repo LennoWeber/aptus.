@@ -1,0 +1,34 @@
+// The workspace strip (surfaces/bar.md §3): the overview button, one pill per workspace of this
+// monitor, the accent capsule that slides between pills (M-02) and the scratch pill.
+pragma ComponentBehavior: Bound
+import QtQuick
+import qs.core
+import qs.components
+
+Item {
+    id: root
+
+    // The Hyprland monitor name of this bar.
+    property string monitorName: ""
+    // This monitor's strip (hypr.js strip record: pills and scratch).
+    property var strip: ({ pills: [], scratch: null })
+    // bar.workspaces.icons.
+    property bool showIcons: true
+    // The most the strip may take (bar.md §3: 40 % of the bar's width).
+    property real maxWidth: 0
+    // 0 → 1 during the session intro (M-01: pills stagger in 30 ms apart).
+    property real introProgress: 1
+
+    // Icon collapse (bar.js collapseLevel): 0 icons on every pill, 1 numbers on the inactive
+    // pills, 2 numbers only.
+    readonly property int collapse: 0
+    // M-14: the pills in monitor coordinates, [{ workspace, x, y, width, height }].
+    readonly property var pillRects: []
+
+    // The accent capsule's edges in strip coordinates (M-02: the leading edge leads, the trailing
+    // edge follows 40 ms later).
+    property real _capsuleLeft: 0
+    property real _capsuleRight: 0
+    // The active pill's index a moment ago (which edge leads).
+    property int _lastActive: -1
+}

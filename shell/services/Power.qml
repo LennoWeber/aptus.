@@ -21,5 +21,14 @@ Singleton {
     property int timeToFull: 0
     // "power-saver" | "balanced" | "performance"
     property string profile: ""
+    // The service works (S3: battery).
+    readonly property bool available: false
+    // On AC (charging, or full on the charger).
+    property bool pluggedIn: false
+
+    // The battery toasts (05 §8): the warn toast was shown in this discharge; the crit toast's
+    // passive entry (dismissed when plugged in).
+    property bool _warned: false
+    property int _critToast: 0
     function setProfile(name: string): void { Log.info("service.power", "setProfile: not available yet"); }
 }

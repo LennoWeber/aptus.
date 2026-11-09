@@ -857,3 +857,37 @@ fullscreen leave/hot edge, a headless output added and removed with a toast and 
 screenshots at 1920 × 1080 (bar dark and light, toast, OSD, compact activity and card) compared
 with bar.md §2 and notch.md; budgets of 07 §12 (RSS, idle CPU and wakeups, frame times during
 toast/OSD/card morphs) measured; `hyprctl configerrors` empty; no shell-log line above `info`.
+
+### Phase 2 · structures (2026-11-09)
+
+**Done** (types, properties, signals and record shapes only; nothing wired, nothing built):
+- Record shapes as header comments of the new pure-JS libraries: `services/js/notifications.js`
+  (history record, policy context, decision, toast payload, stack), `media.js` (player summary,
+  the active-player rule), `hypr.js` (window, workspace and strip records; the `fixed`
+  assignment of `auto-workspace-monitors.sh`, read-only from `~/.config/hypr/scripts`),
+  `levels.js` (OSD payload, status glyph), `surfaces/bar/js/bar.js` (status item and input,
+  title throttle), `surfaces/notch/js/notch.js` (layer, view, countdown, slot assignment).
+- Bar types: `WorkspaceStrip`, `WorkspacePill` (scratch is a pill with `scratch`),
+  `ActiveWindow`, `Tray`, `TrayItem`, `StatusCluster`, `StatusItem`; `Bar` gains `quiet` and
+  `narrow`; `bar/qmldir` lists them.
+- Notch types: `RestGroup`, `CompactSlot`, `NotchLayer` (one content in the bulge, the 110/60 ms
+  crossfade), `Toast`, `Osd`, `EventLine`, `ActivityCard` (card frame + pager), `MediaCompact`,
+  `MediaCard`, `ProgressCompact`, `ProgressCard`; `MediaActivity`/`ProgressActivity` get their
+  id, slot and source properties; `Notch` gains `hide`, `view` and its private state (layers,
+  hover card, countdowns, OSD/event timers, activity objects, slots, mode); `notch/qmldir`.
+- `Frame`: `shape` (one normalised bulge set) and `shadowBox`.
+- Services: `available` on Hypr, Progress, Media, Audio, Brightness, Power, Network, Privacy,
+  Apps (Notifications had it; `Bt.available` keeps its S1 meaning "an adapter exists");
+  Hypr `screencast`, `layout`, `workspaceNames` and the workspace record documented; Notifications
+  `holding`, `muted` and its private maps; Audio `sourceName`, `testDouble`; Brightness `sysfs`,
+  device names, `max`, `raw`; Power `pluggedIn` and the battery-toast state; Media `pausedSince`;
+  Apps' class cache.
+- Test fakes: `tests/e2e/fakehw.py` (`FakeHardware`), `tests/e2e/fake_mpris.py` (`PlayerState`).
+
+**Changes to the plan found while writing.**
+- `Audio`'s test flag is `testDouble` (`double` is a QML value-type name).
+- The pinned/hover card frame is its own type (`ActivityCard`) so activity cards of other stages
+  only draw their content; the host sets `monitorName`, `activity` and `pinned` on the card item
+  when it has them (documented in phase 3 on `Activity.qml`'s `card`, a shared file).
+- No shared file changes yet: shared changes are made complete in their own commits when they
+  are needed (phase 5/7), not split over phases.

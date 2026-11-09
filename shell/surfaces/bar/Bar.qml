@@ -16,6 +16,12 @@ Item {
     // How far the frame is slid out under a fullscreen window (Frame.hide, M-31); the bar follows.
     property real hide: 0
 
+    // Quiet bar (M-31b, Focus.quietBar): title, tray, date and non-critical status collapse.
+    readonly property bool quiet: false
+    // A monitor narrower than surfaces.bar.narrowMonitorWidth (bar.md §9): date hidden, title
+    // ≤ 240, tray ≤ 2.
+    readonly property bool narrow: false
+
     height: Tokens.barHeight
     // M-01 slides the bar down from above the screen; M-31 slides it up again.
     y: -Tokens.barHeight * (1 - introProgress) - Tokens.barHeight * hide

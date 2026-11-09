@@ -33,6 +33,13 @@ Item {
     readonly property real edgeNow: Tokens.frameEdge * introProgress * (1 - hide)
     readonly property real barNow: Tokens.barHeight * introProgress * (1 - hide)
 
+    // The open bulges normalised once per change (bulge.js normalise), shared by the frame and
+    // the shadow shapes.
+    readonly property var shape: ({ full: null, bulges: [] })
+    // The area the drawer shadow is blurred over: the shadow-casting bodies' bounding box plus
+    // the blur radius (monitor-local), empty when nothing casts one.
+    readonly property rect shadowBox: Qt.rect(0, 0, 0, 0)
+
     opacity: 1 - hide
 
     // The drawer shadow: the open bulge bodies in the shadow colour, blurred and offset (03 §6).

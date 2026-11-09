@@ -1,8 +1,18 @@
 // The media activity: still cover in the left slot, the media card (notch.md §4–§5).
-// Owner: S3. Stub until its stage fills it.
+// Owner: S3. Live while the active player plays, or paused for less than 10 minutes.
 import QtQuick
 import qs.components
 
 Activity {
     id: root
+
+    activity: "media"
+    slot: "left"
+
+    // The active MprisPlayer (Media.active), or null.
+    readonly property var player: null
+    // Paused (priority mediaPaused, cover at 40 % under ink.faint).
+    readonly property bool paused: false
+    // Hidden by "Hide until it changes" until the track changes.
+    property string _hiddenTrack: ""
 }

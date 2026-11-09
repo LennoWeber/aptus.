@@ -14,6 +14,19 @@ Singleton {
     property int kbdLevel: 0
     // 0 = no keyboard light
     property int kbdMax: 0
+    // The service works (S3).
+    readonly property bool available: false
+
+    // The sysfs root ($APTUS_SYSFS, else /sys; under APTUS_TEST without it: none).
+    readonly property string sysfs: ""
+    // The backlight and keyboard-LED device names under class/backlight and class/leds.
+    property string device: ""
+    property string kbdDevice: ""
+    // The backlight's max_brightness and raw value.
+    property int max: 0
+    property int raw: 0
+    // The keyboard level before the last toggle (kbdToggle restores it).
+    property int _kbdBefore: 0
 
     // Backlight step for the hardware keys: direction ±1, fine = 1 % instead of brightness.step (OSD).
     function step(direction: int, fine: bool): void { Log.info("service.brightness", "step: not available yet"); }

@@ -28,12 +28,27 @@ Singleton {
     // HYPRLAND_INSTANCE_SIGNATURE of this session
     property string signature: String(Quickshell.env("HYPRLAND_INSTANCE_SIGNATURE") || "")
 
-    // [{ id, name, monitor, windows: int, urgent: bool, special: bool, active: bool, focused: bool }]
+    // Workspace records (hypr.js): [{ id, name, label, monitor, windows, apps, urgent, special,
+    // active, focused }], normal workspaces in id order, then the special ones.
     property var workspaces: []
     // monitor name → the special workspace shown on it ("" none), e.g. "special:scratch"
     property var specialOpen: ({})
     // window addresses with the urgent flag
     property var urgent: []
+
+    // The service works (S3): workspaces, urgent, special and the title patching are live.
+    readonly property bool available: false
+    // A screencast (screen sharing) is running (`screencast` event; Privacy reads it).
+    property bool screencast: false
+    // The active keyboard layout's name (`activelayout`; the layout OSD).
+    property string layout: ""
+    // Workspace id → name from Paths.workspacesState (applied with renameWorkspace).
+    property var workspaceNames: ({})
+
+    // Window addresses, most recently focused first (MRU app order on the pills).
+    property var _focusOrder: []
+    // Urgent workspaces already told about with a toast (once per urgency).
+    property var _urgentToasted: ({})
 
     // Run a dispatcher, given as the Lua expression Hyprland 0.57 takes ("hl.dsp.focus({ window = 'address:0x…' })").
     function dispatch(lua: string): void {

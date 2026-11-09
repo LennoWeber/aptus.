@@ -27,4 +27,29 @@ Item {
     readonly property real restWidth: 0
     // The item whose area takes pointer input (bar band part plus the bulge), for the input mask.
     readonly property Item maskItem: null
+
+    // How far the frame is slid out under a fullscreen window (Frame.hide, M-31): the rest group
+    // leaves with the bar; passive content the arbitration allows stays above the window.
+    property real hide: 0
+
+    // What the notch shows now (notch.js view): rest, hidden, toast, osd, event, card, result, mode.
+    readonly property var view: ({ kind: "rest", key: "", entry: null, activity: "", mode: "" })
+    // The layers on screen: the current one and those still fading out (notch.js layer records).
+    property var _layers: []
+    property int _layerSerial: 0
+    // The activity whose card is open by hover ("" none; a pinned card is monitor.notch).
+    property string _hoverCard: ""
+    // The pointer is over the bulge (toast countdown pause, pinned-card timeout, hover collapse).
+    property bool _bulgeHovered: false
+    // Toast countdowns by passive entry id (notch.js countdown records).
+    property var _countdowns: ({})
+    // When the shown OSD / event entry was born or first shown (their collapse timers).
+    property real _osdBorn: 0
+    property int _eventShown: 0
+    // Activity id → this monitor's Activity object (one per registered activity).
+    property var _activities: ({})
+    // The compact slots after arbitration (notch.js slot assignment).
+    readonly property var _slots: ({ left: "", right: "", waiting: [] })
+    // The interactive mode loaded now ("" none); the back handler registered for it.
+    property string _mode: ""
 }

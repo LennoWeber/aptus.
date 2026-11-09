@@ -16,6 +16,12 @@ Singleton {
     property string sinkName: ""
     // Pipewire bound
     property bool ready: false
+    // The service works (S3): the default sink and source are followed.
+    readonly property bool available: false
+    // description of the default source (the mic OSD)
+    property string sourceName: ""
+    // Under APTUS_TEST: an in-memory double instead of PipeWire (the real graph is never touched).
+    readonly property bool testDouble: false
 
     // [{ id, name, description, isDefault, volume, muted }] (S5 fills the lists)
     property var sinks: []

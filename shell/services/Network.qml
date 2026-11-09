@@ -23,6 +23,8 @@ Singleton {
     property int strength: 0
     property bool vpnActive: false
     property string vpnName: ""
+    // The service works (S3: status).
+    readonly property bool available: false
     function setWifiEnabled(on: bool): void { Log.info("service.network", "setWifiEnabled: not available yet"); }
     function setAirplane(on: bool): void { Log.info("service.network", "setAirplane: not available yet"); }
     function connectVpn(name: string): void { Log.info("service.network", "connectVpn: not available yet"); }
