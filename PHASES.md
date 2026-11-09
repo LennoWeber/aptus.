@@ -709,3 +709,136 @@ holds; `StandardAnimation`, `StandardColorAnimation`, `SnappySpring`; `Motion.ca
 **Checked:** `tests/run`: pytest 97, qmltestrunner 159, lint 121 files 0 warnings; `pytest
 tests/e2e`: 12/12. A nested run (shell start, overview open and Esc, theme toggle): screenshots
 right, shell log without warnings (only the portal's app-id note of the nested session).
+
+---
+
+## S2 · Isolation
+
+### Phase 1 · plan (2026-11-09)
+
+**Goal** (11 §2 row S2, brief `.claude/briefs/s2.md`). `aptus-lease` (take | update | release |
+recover | status), `aptus-guard`, `aptus-recover.service`, the renderer with every target of 02 §4
+and its reload hook (`aptus-theme render | apply | targets`, `theme/targets.toml`,
+`theme/templates/<target>/…`), `aptus doctor isolation` (all eight checks of 02 §10), the `Lease`
+service (read-only) and `Theme`'s render requests, `aptus-session start` with recover → render →
+preflight → take → env import → guard, install/uninstall of the recovery unit and the check-8
+baseline. Probes P-04 (steps for Lenno), P-05, P-06, P-07 (nested). D-03 untracking: list and
+commands for the main session only.
+
+**Facts found while reading** (read-only; `~/.config/umbriel` and `~/.local/state/noctalia` never
+opened):
+- Noctalia is 5.4.1 (native). Its built-in templates are listed in
+  `/usr/share/noctalia/assets/templates/builtin.toml` (`gtk3`, `gtk4`, `kcolorscheme`, `qt`,
+  `kitty`, `ghostty`, `foot`, `alacritty`, `btop`, `cava`, `hyprland`, compositors, `umbriel`, …);
+  community templates come from the `noctalia-dev/community-templates` catalogue (`zen-browser`,
+  `pywalfox`, `thunderbird`, `discord`, `claude-code`, `antigravity`, `vscode`, `steam`, `brave`,
+  `hyprtoolkit`, `papirus-icons`, `spicetify`, `libreoffice`, `fuzzel`, `thunar`, `tmux`,
+  `starship`, `fastfetch`, `neovim`, `lazyvim`, `yazi`, `bat`, …). Noctalia's docs: the enabled ids
+  are `[theme.templates] builtin_ids` / `community_ids` (with `enable_builtin_templates`,
+  `enable_community_templates`) and `[theme.templates.user.<id>]`, read from
+  `~/.config/noctalia/*.toml` with `~/.local/state/noctalia/settings.toml` as the final overlay.
+  `~/.config/noctalia` is empty here, so the coverage check (runtime code, read-only) reads the
+  file 02 §4 names; tests use fixtures.
+- The `thunar` community template writes a GTK 3 extension with literal colours
+  (`gtk-3.0/noctalia-extensions/thunar.thunar.css`), imported from Noctalia's `noctalia.css`: not
+  in 02 §4; it becomes target `thunar` (lease, only if present) so Thunar does not keep Noctalia's
+  colours.
+- LibreOffice's artifact is `~/.local/state/noctalia/libreoffice-theme-staging/Theme_Colors.xcu`,
+  inside Noctalia's state, which I-1 forbids: the `libreoffice` bake cannot exist; it stays
+  Noctalia's whatever `isolation.bakeTargets` says (doctor and the targets list say why).
+- `hyprland.lock` in `$XDG_RUNTIME_DIR/hypr/<sig>/` holds Hyprland's pid; `XDG_SESSION_ID` is
+  inherited by `aptus-session`; a session left on another VT is logind state `online`, not
+  `active`.
+- Leased files reached through a stow link into `~/dotfiles`: `hypr/hyprtoolkit.conf` (tracked),
+  `nvim/lua/matugen.lua` (tracked), `nvim/colors/noctalia.lua`, `btop/themes/noctalia.theme`
+  (untracked). The kitty theme (scoped, tracked) and fastfetch's stale copy are tracked too.
+
+**Decisions where the spec is silent** (each written into the spec in the phase that builds it):
+1. **Test safety.** Under `APTUS_TEST=1` every tool with an effect outside the process (`dconf`,
+   `systemctl`, `systemd-run`, `loginctl`, `dbus-send`, `tmux`, `nvim`, `pywalfox`, `spicetify`,
+   `bat`) is looked up only in `$HOME/.aptus-test/bin` (fakes that record their calls); without a
+   fake the step is skipped and logged. `aptus-lease`, `aptus-guard` and `aptus-theme` refuse to
+   run when `APTUS_TEST=1` and HOME is not a directory below the system temp dir (or is the
+   passwd home): `paths.require_safe_home`. Signals go only to processes whose environment carries
+   this session's signature (and, under test, this HOME).
+2. **Preflight** (02 §5.3): "another active graphical session" = a logind session of this user
+   with class `user`, type `wayland`/`x11`/`mir`, state `active` or `online`, id ≠ this session's
+   `XDG_SESSION_ID`. A `noctalia` process of this user (02 §8) also means scope-only.
+3. **Environment import only while the lease is held**: in scope-only mode another session may be
+   using the user manager, so nothing is imported (02 §6).
+4. **Journal.** Step 5 records each slot's `before` and its *planned* `after` (status `pending`);
+   step 7 marks them `held`. An update records the old hash as `after_prev` before writing. So a
+   crash at any point leaves enough to recognise aptus's own paint. Release per slot: equal to
+   `before` → nothing to write; else (own paint or a conflict, saved under `conflicts/`) restore
+   `before` and verify; a failed slot keeps the journal in `releasing`.
+5. **ini-sections** (kdeglobals): blocks = preamble + `[header]` sections (verbatim text); a
+   section matches the globs by its header name (`Colors:Header][Inactive` matches `Colors:*`);
+   `before` stores each matching section with the name of the non-matching block before it
+   (anchor). Write and restore remove the matching sections and insert the new ones after their
+   anchors (unknown anchor: end of file); everything else stays byte-identical, also a missing
+   final newline.
+6. **dconf**: the fixed key set of 02 §5.5; `gtk-theme` is recorded, never written.
+7. **Template language** (08 §4) with the roles of `resolve` (+ `ansi0`…`ansi15`, `mode`,
+   `accent.name`, `papirus.folder`, `gnome.accent`, `font.*`, `cursor.*`). aptus's templates keep
+   the structure of Noctalia's (same variable names, includes, sections), so the wiring keeps
+   working; colours come from a fixed Noctalia-role → aptus-role table (written into 08 §4).
+8. **Generations**: `gen-<n>/` holds every output, `resolved.json` and `inputs.json` (the
+   wallpaper inputs the shell passed, reused by the session-start render). The shell watches
+   `current/resolved.json` (07 §7 said `shell.json`; one file, renamed in the spec).
+9. **Coverage**: enabled ids (built-in, community, `user:<id>`) against the targets' `noctalia`
+   lists; ids whose output only another compositor reads (`umbriel`, `niri`, `sway`, `labwc`,
+   `mango`, `scroll`) are inert in Hyprland (an `[inert]` table in `targets.toml`); a user template
+   is also covered when its output path is a target's slot.
+10. **Golden files**: full outputs for Ember/jade and Linen/jade, plus a hash manifest of every
+    target for 2 palettes × 6 accents (07 §13).
+11. **Doctor rules** made exact: check 2 accepts a slot changed after the release time (Noctalia
+    wrote it in Umbriel) and fails a restored slot that differs without being touched since; a
+    changed dconf value is a warning. Check 7 compares `~/.local/share/fonts` with the install
+    baseline and fails on any of aptus's own font files. Check 8: a changed file whose mtime lies
+    inside a recorded lease period fails; outside every lease period it is Lenno's change in
+    Umbriel.
+12. **Recovery unit**: `DefaultDependencies=no`, `Before=default.target`, plus
+    `After=dbus.socket` (dconf writes need the bus), `ExecStart=%h/.local/bin/aptus-lease recover`,
+    installed as a link into the repo and enabled with `systemctl --user enable`.
+13. **Guard**: `aptus-guard <hyprland-pid> <signature>`; pidfd + SIGTERM through a self-pipe;
+    releases only a lease owned by that pid and signature; a 30 s tick retries queued bakes
+    (spicetify, only when opted in); writes `guard.state` (`ok`, `scope-only`, `failed`).
+    `aptus-session stop` (logout path) stops the guard unit, which releases.
+14. **Lease service**: journal, `guard.state` and `session.json` read-only; `notice` (the notch's
+    one-time message: "Another session is open — some apps keep Noctalia's colours.", "Noctalia
+    is running — some apps keep Noctalia's colours.", "Some apps could not be themed — they keep
+    Noctalia's colours."), `warning` for the bar, `statusLine` for settings (settings.md §7).
+15. **Theme service**: after a resolution change (mode, accent, glass, contrast, ground alpha) and
+    `frame.edge`/`motion.reduce`, debounced 250 ms after the crossfade, runs `aptus-theme apply
+    --inputs <json>` with the resolved mode and the wallpaper inputs; exposes `lastApply`,
+    `failed`.
+
+**Files** (new unless noted):
+
+| Area | Files |
+|---|---|
+| launchers | `bin/aptus-lease`, `bin/aptus-guard`, `bin/aptus-theme`; `bin/aptus` unchanged (dispatch is in `cli.py`) |
+| lease | `lib/aptus/lease/{__init__,journal,slots,recover,preflight,system,guard,cli}.py`, `lib/aptus/lease/kinds/{__init__,file,ini,dconf}.py` |
+| theme | `lib/aptus/theme/{__init__,palette,resolve,sun,inputs,targets,noctalia,render,scope,own,hooks,apply,cli}.py` |
+| doctor | `lib/aptus/doctor/isolation.py`; `doctor/__init__.py` (wiring) |
+| changed | `paths.py` (new paths, `require_safe_home`), `session.py` (start/stop), `cli.py` (`theme`, `lease`), `install/__init__.py` (leased slots in `check_action`, unit link + enable, baseline, uninstall of 02 §11) |
+| data | `theme/targets.toml`, `theme/templates/<target>/…` (36 rows + thunar), `systemd/aptus-recover.service` |
+| shell | `shell/services/Lease.qml`, `shell/services/lease.js`, `shell/services/Theme.qml`, `shell/core/Tokens.qml` (the TODO(S2) spot only) |
+| tests | `tests/unit/test_{lease_kinds,lease_journal,lease,exit_matrix,guard,preflight,theme_resolve,theme_render,theme_apply,hooks,coverage,doctor_isolation,session_s2,install_s2}.py`, `tests/unit/slotfix.py` (fixtures from the real slot files), `tests/golden/`, `tests/qml/tst_lease.qml`, `tests/e2e/test_s2.py` |
+| spec | 02 (§4 thunar and libreoffice rows, §5.3, §5.5, §6, §7 unit, §10 rules), 07 (§7, §13), 08 (§4, §5 manifest schema, §7), probes.md (P-04…P-07) |
+
+**Risks.** (a) A template that changes the wiring's variable names would break an app in Hyprland:
+templates are derived from Noctalia's own and checked in the nested session (GTK 3, kitty,
+Ghostty). (b) FileView may not notice a swapped `current` symlink: probed in phase 5; fallback:
+watch a stable file written by rename. (c) Python and JS colour maths must be byte-identical: a
+test resolves every combination in both. (d) Exact restore of kdeglobals: tests over the real
+file. (e) The guard must outlive Hyprland and never act on a foreign lease: tested with a real
+child process named `Hyprland` and a real pidfd. (f) Time: 37 targets; the template translation is
+mechanical and may go to a helper (sonnet, lower).
+
+**Checks (end of S2).** `tests/run` green; exit-matrix tests (logout, SIGKILL, power-off, crash
+mid-take, crash mid-release, user manager stop) end with every slot hash equal to the baseline;
+scope-only with a fake Umbriel session; the refusal on a real HOME; each doctor check passes and
+fails once; golden files; nested: `aptus-session start` takes the lease in the temporary HOME,
+kitty/Ghostty/a GTK 3 app show aptus paint, `hyprctl configerrors` empty, killing the nested
+Hyprland restores every slot.
