@@ -1,0 +1,437 @@
+# theme/targets.toml: the target manifest (08-theming §5). One entry per row of 02-isolation §4.
+# Adding an app is adding an entry here and its template under theme/templates/<id>/.
+#
+# Fields:
+#   id         stable id (settings page, journal slot ids "<id>.<name>")
+#   row        row of 02-isolation §4
+#   noctalia   Noctalia template ids this entry covers (02 §4 coverage rule)
+#   mechanism  lease | scope | own | bake | never   (02 §3)
+#   kind       lease/bake: file | ini-sections | dconf   (02 §5.5; default file)
+#   files      [{ template, out, slot | dest }]: template below theme/templates, out inside the
+#              generation, slot = the leased artifact (lease/bake; may hold one `*`), dest = the Own
+#              file. `template`/`out`/`slot` at the top level are the one-file shorthand.
+#   sections   ini-sections: header globs
+#   dconf      dconf: key (in /org/gnome/desktop/interface/) → value template; "" = record only
+#   scope      scope: { into, mirror, replace } or { into, source, begin, end }
+#   own        own: a builtin step besides writing `files` (icons | qt6ct | bat)
+#   when       always | exists:<path> | which:<command>   (false → skipped, "Not installed")
+#   present    true: lease only the slots that exist ("only if present" in 02 §4)
+#   reload     none | signal:<comm>:<SIG> | exec:<command> | builtin:<name> | bake:<process>:<command>
+#   note       shown on the settings page
+
+# Noctalia templates whose output only another compositor reads: nothing in Hyprland loads them.
+[inert]
+umbriel = "Umbriel's own config: never touched (02 §4 row 32)"
+niri = "read only by niri"
+sway = "read only by sway"
+labwc = "read only by labwc"
+mango = "read only by mango"
+scroll = "read only by scroll"
+
+[[target]]
+id        = "gtk3"
+row       = 1
+noctalia  = ["gtk3"]
+mechanism = "lease"
+template  = "gtk3/noctalia.css"
+out       = "gtk3/noctalia.css"
+slot      = "~/.config/gtk-3.0/noctalia.css"
+when      = "exists:~/.config/gtk-3.0"
+reload    = "none"
+
+[[target]]
+id        = "thunar"
+row       = 37
+noctalia  = ["thunar"]
+mechanism = "lease"
+template  = "thunar/thunar.thunar.css"
+out       = "thunar/thunar.thunar.css"
+slot      = "~/.config/gtk-3.0/noctalia-extensions/thunar.thunar.css"
+present   = true
+reload    = "none"
+note      = "Noctalia's GTK 3 extension for Thunar (literal colours)"
+
+[[target]]
+id        = "gtk4"
+row       = 2
+noctalia  = ["gtk4"]
+mechanism = "lease"
+template  = "gtk4/noctalia.css"
+out       = "gtk4/noctalia.css"
+slot      = "~/.config/gtk-4.0/noctalia.css"
+when      = "exists:~/.config/gtk-4.0"
+reload    = "none"
+
+[[target]]
+id        = "dconf"
+row       = 3
+mechanism = "lease"
+kind      = "dconf"
+reload    = "none"
+note      = "live through GSettings and the settings portal"
+[target.dconf]
+color-scheme        = "'prefer-{{ mode }}'"
+icon-theme          = "'aptus-icons-{{ mode }}'"
+accent-color        = "'{{ gnome.accent }}'"
+font-name           = "'{{ font.uiApp }}'"
+document-font-name  = "'{{ font.documentApp }}'"
+monospace-font-name = "'{{ font.monoApp }}'"
+gtk-theme           = ""
+
+[[target]]
+id        = "kde"
+row       = 4
+noctalia  = ["kcolorscheme"]
+mechanism = "lease"
+kind      = "ini-sections"
+template  = "kde/kdeglobals"
+out       = "kde/kdeglobals"
+slot      = "~/.config/kdeglobals"
+sections  = ["Colors:*", "ColorEffects:*", "WM"]
+when      = "exists:~/.config/kdeglobals"
+reload    = "builtin:kde"
+
+[[target]]
+id        = "qt6ct"
+row       = 5
+noctalia  = ["qt"]
+mechanism = "own"
+own       = "qt6ct"
+files     = [
+  { template = "qt6ct/qt6ct.conf", out = "qt6ct/qt6ct.conf", dest = "~/.config/qt6ct/qt6ct.conf" },
+  { template = "qt6ct/aptus.conf", out = "qt6ct/aptus.conf", dest = "~/.config/qt6ct/colors/aptus.conf" },
+]
+when      = "which:qt6ct"
+reload    = "none"
+note      = "read only with QT_QPA_PLATFORMTHEME=qt6ct, which only Hyprland sets"
+
+[[target]]
+id        = "kitty"
+row       = 6
+noctalia  = ["kitty"]
+mechanism = "scope"
+template  = "kitty/noctalia.conf"
+out       = "kitty/noctalia.conf"
+scope     = { into = "kitty", mirror = "~/.config/kitty", replace = "themes/noctalia.conf" }
+when      = "exists:~/.config/kitty"
+reload    = "signal:kitty:SIGUSR1"
+
+[[target]]
+id        = "ghostty"
+row       = 7
+noctalia  = ["ghostty"]
+mechanism = "lease"
+template  = "ghostty/noctalia"
+out       = "ghostty/noctalia"
+slot      = "~/.config/ghostty/themes/noctalia"
+when      = "exists:~/.config/ghostty"
+reload    = "signal:ghostty:SIGUSR2"
+
+[[target]]
+id        = "foot"
+row       = 8
+noctalia  = ["foot"]
+mechanism = "lease"
+template  = "foot/noctalia"
+out       = "foot/noctalia"
+slot      = "~/.config/foot/themes/noctalia"
+when      = "exists:~/.config/foot"
+reload    = "none"
+
+[[target]]
+id        = "alacritty"
+row       = 9
+noctalia  = ["alacritty"]
+mechanism = "lease"
+template  = "alacritty/noctalia.toml"
+out       = "alacritty/noctalia.toml"
+slot      = "~/.config/alacritty/themes/noctalia.toml"
+when      = "exists:~/.config/alacritty"
+reload    = "none"
+
+[[target]]
+id        = "btop"
+row       = 10
+noctalia  = ["btop"]
+mechanism = "lease"
+template  = "btop/noctalia.theme"
+out       = "btop/noctalia.theme"
+slot      = "~/.config/btop/themes/noctalia.theme"
+when      = "exists:~/.config/btop"
+reload    = "none"
+
+[[target]]
+id        = "cava"
+row       = 11
+noctalia  = ["cava"]
+mechanism = "lease"
+template  = "cava/noctalia"
+out       = "cava/noctalia"
+slot      = "~/.config/cava/themes/noctalia"
+when      = "exists:~/.config/cava"
+reload    = "none"
+
+[[target]]
+id        = "fuzzel"
+row       = 12
+noctalia  = ["fuzzel"]
+mechanism = "lease"
+template  = "fuzzel/noctalia"
+out       = "fuzzel/noctalia"
+slot      = "~/.config/fuzzel/themes/noctalia"
+when      = "exists:~/.config/fuzzel"
+reload    = "none"
+
+[[target]]
+id        = "tmux"
+row       = 13
+noctalia  = ["tmux"]
+mechanism = "lease"
+template  = "tmux/noctalia.conf"
+out       = "tmux/noctalia.conf"
+slot      = "~/.config/tmux/themes/noctalia.conf"
+when      = "exists:~/.config/tmux"
+reload    = "builtin:tmux"
+
+[[target]]
+id        = "starship"
+row       = 14
+noctalia  = ["starship"]
+mechanism = "scope"
+template  = "starship/palette.toml"
+out       = "starship/palette.toml"
+scope     = { into = "starship.toml", source = "~/.config/starship.toml", begin = "# >>> NOCTALIA STARSHIP PALETTE >>>", end = "# <<< NOCTALIA STARSHIP PALETTE <<<" }
+when      = "exists:~/.config/starship.toml"
+reload    = "none"
+
+[[target]]
+id        = "fastfetch"
+row       = 15
+noctalia  = ["fastfetch"]
+mechanism = "lease"
+template  = "fastfetch/noctalia.jsonc"
+out       = "fastfetch/noctalia.jsonc"
+slot      = "~/.config/fastfetch/themes/noctalia.jsonc"
+when      = "exists:~/.config/fastfetch"
+reload    = "none"
+
+[[target]]
+id        = "nvim"
+row       = 16
+noctalia  = ["lazyvim"]
+mechanism = "lease"
+template  = "nvim/noctalia.lua"
+out       = "nvim/noctalia.lua"
+slot      = "~/.config/nvim/colors/noctalia.lua"
+when      = "exists:~/.config/nvim"
+reload    = "builtin:nvim"
+
+[[target]]
+id        = "nvim-matugen"
+row       = 17
+noctalia  = ["neovim"]
+mechanism = "lease"
+template  = "nvim-matugen/matugen.lua"
+out       = "nvim-matugen/matugen.lua"
+slot      = "~/.config/nvim/lua/matugen.lua"
+when      = "exists:~/.config/nvim"
+reload    = "builtin:nvim"
+
+[[target]]
+id        = "zen-chrome"
+row       = 18
+noctalia  = ["zen-browser"]
+mechanism = "lease"
+files     = [
+  { template = "zen-chrome/zen-userChrome.css", out = "zen-chrome/zen-userChrome.css", slot = "~/.cache/noctalia/zen-browser/zen-userChrome.css" },
+  { template = "zen-chrome/zen-userContent.css", out = "zen-chrome/zen-userContent.css", slot = "~/.cache/noctalia/zen-browser/zen-userContent.css" },
+]
+when      = "exists:~/.cache/noctalia/zen-browser"
+reload    = "none"
+
+[[target]]
+id        = "pywalfox"
+row       = 19
+noctalia  = ["pywalfox"]
+mechanism = "lease"
+template  = "pywalfox/colors.json"
+out       = "pywalfox/colors.json"
+slot      = "~/.cache/wal/colors.json"
+when      = "exists:~/.cache/wal"
+reload    = "exec:pywalfox update"
+
+[[target]]
+id        = "thunderbird"
+row       = 20
+noctalia  = ["thunderbird"]
+mechanism = "lease"
+template  = "thunderbird/noctalia.css"
+out       = "thunderbird/noctalia.css"
+slot      = "~/.cache/noctalia/thunderbird/noctalia.css"
+when      = "exists:~/.cache/noctalia/thunderbird"
+reload    = "none"
+
+[[target]]
+id        = "vesktop"
+row       = 21
+noctalia  = ["discord"]
+mechanism = "lease"
+files     = [
+  { template = "vesktop/noctalia.theme.css", out = "vesktop/noctalia.theme.css", slot = "~/.config/vesktop/themes/noctalia.theme.css" },
+  { template = "vesktop/noctalia.theme.css", out = "vesktop/flatpak.theme.css", slot = "~/.var/app/dev.vencord.Vesktop/config/vesktop/themes/noctalia.theme.css" },
+]
+present   = true
+reload    = "none"
+
+[[target]]
+id        = "claude-code"
+row       = 22
+noctalia  = ["claude-code"]
+mechanism = "lease"
+template  = "claude-code/noctalia.json"
+out       = "claude-code/noctalia.json"
+slot      = "~/.claude/themes/noctalia.json"
+when      = "exists:~/.claude/themes"
+reload    = "none"
+
+[[target]]
+id        = "gemini"
+row       = 23
+noctalia  = ["antigravity"]
+mechanism = "lease"
+template  = "gemini/theme.json"
+out       = "gemini/theme.json"
+slot      = "~/.gemini/config/theme.json"
+when      = "exists:~/.gemini/config"
+reload    = "none"
+
+[[target]]
+id        = "vscode"
+row       = 24
+noctalia  = ["vscode"]
+mechanism = "lease"
+files     = [
+  { template = "vscode/NoctaliaTheme-color-theme.json", out = "vscode/code.json", slot = "~/.vscode/extensions/noctalia.noctaliatheme-*/themes/NoctaliaTheme-color-theme.json" },
+  { template = "vscode/NoctaliaTheme-color-theme.json", out = "vscode/codium.json", slot = "~/.vscode-oss/extensions/noctalia.noctaliatheme-*/themes/NoctaliaTheme-color-theme.json" },
+  { template = "vscode/NoctaliaTheme-color-theme.json", out = "vscode/antigravity.json", slot = "~/.antigravity-ide/extensions/noctalia.noctaliatheme-*/themes/NoctaliaTheme-color-theme.json" },
+]
+present   = true
+reload    = "none"
+note      = "Reload Window in the editor"
+
+[[target]]
+id        = "steam"
+row       = 25
+noctalia  = ["steam"]
+mechanism = "lease"
+template  = "steam/matugen.css"
+out       = "steam/matugen.css"
+slot      = "~/.steam/steam/steamui/skins/Material-Theme/css/main/colors/matugen.css"
+present   = true
+reload    = "none"
+
+[[target]]
+id        = "brave"
+row       = 26
+noctalia  = ["brave"]
+mechanism = "lease"
+template  = "brave/manifest.json"
+out       = "brave/manifest.json"
+slot      = "~/.cache/noctalia/brave-theme/manifest.json"
+present   = true
+reload    = "none"
+
+[[target]]
+id        = "hyprtoolkit"
+row       = 27
+noctalia  = ["hyprtoolkit"]
+mechanism = "lease"
+template  = "hyprtoolkit/hyprtoolkit.conf"
+out       = "hyprtoolkit/hyprtoolkit.conf"
+slot      = "~/.config/hypr/hyprtoolkit.conf"
+when      = "exists:~/.config/hypr"
+reload    = "none"
+
+[[target]]
+id        = "icons"
+row       = 28
+noctalia  = ["papirus-icons"]
+mechanism = "own"
+own       = "icons"
+when      = "exists:/usr/share/icons/Papirus"
+reload    = "none"
+note      = "aptus-icons-{dark,light}: Papirus with the accent's folder colour, selected by the leased icon-theme key"
+
+[[target]]
+id        = "cursor"
+row       = 29
+mechanism = "lease"
+kind      = "dconf"
+reload    = "none"
+note      = "plus XCURSOR_THEME, XCURSOR_SIZE, HYPRCURSOR_SIZE in env.lua"
+[target.dconf]
+cursor-theme = "'{{ cursor.theme }}'"
+cursor-size  = "{{ cursor.size }}"
+
+[[target]]
+id        = "spicetify"
+row       = 30
+noctalia  = ["spicetify"]
+mechanism = "bake"
+files     = [
+  { template = "spicetify/Comfy.color.ini", out = "spicetify/Comfy.color.ini", slot = "~/.config/spicetify/Themes/Comfy/color.ini" },
+  { template = "spicetify/Colorful.color.ini", out = "spicetify/Colorful.color.ini", slot = "~/.config/spicetify/Themes/Colorful/color.ini" },
+]
+present   = true
+reload    = "bake:spotify:spicetify apply"
+note      = "opt-in (isolation.bakeTargets); changes Spotify in Umbriel too until switched back"
+
+[[target]]
+id        = "libreoffice"
+row       = 31
+noctalia  = ["libreoffice"]
+mechanism = "never"
+note      = "its artifact lives in ~/.local/state/noctalia, which aptus never writes (I-1)"
+
+[[target]]
+id        = "yazi"
+row       = 33
+noctalia  = ["yazi"]
+mechanism = "scope"
+template  = "yazi/theme.toml"
+out       = "yazi/theme.toml"
+scope     = { into = "yazi", mirror = "~/.config/yazi", replace = "theme.toml" }
+when      = "exists:~/.config/yazi"
+reload    = "none"
+
+[[target]]
+id        = "bat"
+row       = 34
+noctalia  = ["bat"]
+mechanism = "own"
+own       = "bat"
+files     = [
+  { template = "bat/aptus.tmTheme", out = "bat/aptus.tmTheme", dest = "~/.cache/aptus/bat-src/themes/aptus.tmTheme" },
+]
+when      = "which:bat"
+reload    = "none"
+note      = "BAT_THEME=aptus with BAT_CACHE_PATH=~/.cache/aptus/bat"
+
+[[target]]
+id        = "hyprland"
+row       = 35
+noctalia  = ["hyprland"]
+mechanism = "own"
+files     = [
+  { template = "hyprland/generated.lua", out = "hyprland/generated.lua", dest = "~/.local/state/aptus/hypr/generated.lua" },
+]
+reload    = "builtin:hyprland"
+
+[[target]]
+id        = "hyprlock"
+row       = 36
+mechanism = "own"
+files     = [
+  { template = "hyprlock/hyprlock.conf", out = "hyprlock/hyprlock.conf", dest = "~/.local/state/aptus/hyprlock.conf" },
+]
+reload    = "none"

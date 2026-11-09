@@ -26,6 +26,12 @@ class StartReport:
     reasons: list[str] = field(default_factory=list)
     # Steps that failed but did not stop the start (07 §3 "On failure").
     warnings: list[str] = field(default_factory=list)
+    # The notch's one-time message for this session ("" when there is nothing to say; Lease.notice).
+    notice: str = ""
+    # The theme generation rendered at start (0: none, the apps keep Noctalia's paint).
+    generation: int = 0
+    # The guard unit was started (else release happens at the next login through recover).
+    guard: bool = False
 
 
 def check_environment(env: Mapping[str, str]) -> str | None:

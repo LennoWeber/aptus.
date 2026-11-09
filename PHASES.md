@@ -842,3 +842,28 @@ scope-only with a fake Umbriel session; the refusal on a real HOME; each doctor 
 fails once; golden files; nested: `aptus-session start` takes the lease in the temporary HOME,
 kitty/Ghostty/a GTK 3 app show aptus paint, `hyprctl configerrors` empty, killing the nested
 Hyprland restores every slot.
+
+### Phase 2 · structures (2026-11-09)
+
+**Done.** Data structures only, no behaviour:
+- `lease/journal.py` (`State`, `SlotStatus`, `Owner`, `SlotRecord`, `Journal`: 02 §5.2),
+  `lease/slots.py` (`SlotSpec`: what the renderer hands the lease), `lease/ops.py` (the reports of
+  take, update, release, status; added to the plan so the CLI and the session share them),
+  `lease/kinds/` (`Snapshot`; ini `Block`/`Section`), `lease/system.py` (`ToolResult`, `Proc`),
+  `lease/preflight.py` (`LoginSession`, `Preflight`), `lease/guard.py` (`GuardState`).
+- `theme/inputs.py` (`Inputs`), `theme/targets.py` (`Mechanism`, `FileOut`, `ScopeSpec`, `Target`,
+  `Manifest`, `Coverage`), `theme/noctalia.py` (`Enabled`), `theme/render.py` (`TemplateError`,
+  `Generation`), `theme/hooks.py` (`Hook`, `HookResult`), `theme/apply.py` (`Report`).
+- `doctor/isolation.py` (`Baseline`), `session.py` (`StartReport.notice`, `.generation`, `.guard`).
+- `paths.py`: 23 new paths (templates, manifest, recovery unit, scope dirs, icons/fonts/themes,
+  qt6ct, baseline, doctor stamp, bake queue, the test tool dir, the read-only Noctalia/Umbriel/
+  greetd paths, tmux sockets) filled in `resolve()` (constructor arguments only, so every caller
+  keeps working), `UnsafeHome`.
+- `theme/targets.toml`: the full manifest, 36 entries (rows 1–37 of 02 §4 without Umbriel's
+  row 32) plus the `[inert]` table; `systemd/aptus-recover.service`.
+- `Lease.qml`: `state`, `journal`, `guard`, `mode`, `reasons`, `failedSlots`, `notice`, `warning`,
+  `statusLine`. `Theme.qml`: `failed`, `generation`, `_pendingInputs`.
+
+**Checked.** Every module imports; the manifest parses (36 targets, rows 1–37 except 32); paths
+resolve in a test HOME (greetd and tmux paths inside it); `tests/run` green (97 unit, 159 QML),
+qmllint 0 warnings.

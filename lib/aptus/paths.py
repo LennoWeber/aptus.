@@ -75,10 +75,39 @@ class Paths:
     cache_bat: Path            # ~/.cache/aptus/bat
     cache_agenda_http: Path    # ~/.cache/aptus/agenda-http
 
+    # S2 isolation (02, 08)
+    templates: Path            # <repo>/theme/templates
+    targets: Path              # <repo>/theme/targets.toml
+    recover_unit_repo: Path    # <repo>/systemd/aptus-recover.service
+    recover_unit: Path         # ~/.config/systemd/user/aptus-recover.service (a link into the repo)
+    theme_own: Path            # theme/own.json: Own files aptus created (uninstall removes only those)
+    scope_kitty: Path          # scope/kitty (KITTY_CONFIG_DIRECTORY)
+    scope_yazi: Path           # scope/yazi (YAZI_CONFIG_HOME)
+    scope_starship: Path       # scope/starship.toml (STARSHIP_CONFIG)
+    bat_source: Path           # ~/.cache/aptus/bat-src (themes/aptus.tmTheme, built into cache_bat)
+    icons: Path                # ~/.local/share/icons (aptus-icons-{dark,light} live here)
+    fonts: Path                # ~/.local/share/fonts (never written; doctor check 7)
+    user_themes: Path          # ~/.local/share/themes (doctor check 7: no adw-gtk3*)
+    qt6ct_conf: Path           # ~/.config/qt6ct/qt6ct.conf (Own, inert outside Hyprland)
+    qt6ct_colors: Path         # ~/.config/qt6ct/colors/aptus.conf
+    baseline: Path             # install/baseline.json (02 §10 check 8, written by install.sh)
+    doctor_stamp: Path         # lease/doctor-check: the time of the last isolation check (check 2)
+    bake_queue: Path           # <runtime>/bake-queue.json (bakes waiting for their app to close)
+    test_bin: Path             # $HOME/.aptus-test/bin: the only place tools come from under APTUS_TEST
+    noctalia_config: Path      # ~/.config/noctalia (*.toml overlays; read-only)
+    noctalia_settings: Path    # ~/.local/state/noctalia/settings.toml (read-only; never written, I-1)
+    umbriel_config: Path       # ~/.config/umbriel (read-only; never written, I-1)
+    greetd_config: Path        # /etc/greetd/config.toml ($HOME/.aptus-test/etc/… in tests; read-only)
+    tmux_sockets: Path         # ${TMUX_TMPDIR:-/tmp}/tmux-<uid> ($HOME/.aptus-test/tmux-<uid> in tests)
+
     def make_runtime(self) -> Path:
         """Create <runtime> (private, 0700) if needed and return it."""
         self.runtime.mkdir(parents=True, exist_ok=True, mode=0o700)
         return self.runtime
+
+
+class UnsafeHome(RuntimeError):
+    """APTUS_TEST=1 with a HOME that is not a temporary directory: a writer refuses to run."""
 
 
 ENV_TEST = "APTUS_TEST"
@@ -119,6 +148,9 @@ def resolve(env: Mapping[str, str] | None = None) -> Paths:
     theme = state / "theme"
     hypr_state = state / "hypr"
     hypr_config_dir = config_home / "hypr"
+    test_root = home / ".aptus-test"
+    install_state = state / "install"
+    tmux_tmp = Path(env.get("TMUX_TMPDIR") or "/tmp")
     return Paths(
         test=test, home=home,
         config_home=config_home, state_home=state_home, cache_home=cache_home,
@@ -137,7 +169,7 @@ def resolve(env: Mapping[str, str] | None = None) -> Paths:
         generated_lua=hypr_state / "generated.lua", binds_local=hypr_state / "binds.local.lua",
         agenda=state / "agenda.json", clipboard_db=state / "clipboard.db",
         hyprlock_conf=state / "hyprlock.conf", locked_marker=state / "locked",
-        install_state=state / "install", v1_backup=state_home / "aptus-v1-backup",
+        install_state=install_state, v1_backup=state_home / "aptus-v1-backup",
         local_bin=home / ".local" / "bin",
         hypr_config_dir=hypr_config_dir, hyprland_lua=hypr_config_dir / "hyprland.lua",
         hypr_aptus_link=hypr_config_dir / "aptus",
@@ -146,6 +178,23 @@ def resolve(env: Mapping[str, str] | None = None) -> Paths:
         guard_state=runtime / "guard.state", clip_changed=runtime / "clip.changed",
         session_status=runtime / "session.json", intro_flag_prefix=runtime / "intro.",
         cache_bat=cache / "bat", cache_agenda_http=cache / "agenda-http",
+        templates=repo / "theme" / "templates", targets=repo / "theme" / "targets.toml",
+        recover_unit_repo=repo / "systemd" / "aptus-recover.service",
+        recover_unit=config_home / "systemd" / "user" / "aptus-recover.service",
+        theme_own=theme / "own.json",
+        scope_kitty=state / "scope" / "kitty", scope_yazi=state / "scope" / "yazi",
+        scope_starship=state / "scope" / "starship.toml",
+        bat_source=cache / "bat-src",
+        icons=data_home / "icons", fonts=data_home / "fonts", user_themes=data_home / "themes",
+        qt6ct_conf=config_home / "qt6ct" / "qt6ct.conf",
+        qt6ct_colors=config_home / "qt6ct" / "colors" / "aptus.conf",
+        baseline=install_state / "baseline.json", doctor_stamp=lease / "doctor-check",
+        bake_queue=runtime / "bake-queue.json", test_bin=test_root / "bin",
+        noctalia_config=config_home / "noctalia",
+        noctalia_settings=state_home / "noctalia" / "settings.toml",
+        umbriel_config=config_home / "umbriel",
+        greetd_config=(test_root / "etc" if test else Path("/etc")) / "greetd" / "config.toml",
+        tmux_sockets=(test_root if test else tmux_tmp) / f"tmux-{os.getuid()}",
     )
 
 

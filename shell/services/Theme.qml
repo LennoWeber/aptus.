@@ -8,9 +8,15 @@ import qs.core
 Singleton {
     id: root
 
-    // JSON summary of the last aptus-theme apply (S2)
+    // JSON summary of the last aptus-theme apply (S2; lib/aptus/theme/apply.py Report)
     property string lastApply: ""
     property bool applying: false
+    // Target id → why, from the last apply's "failed" (the shell toasts only these).
+    property var failed: ({})
+    // The theme generation the last apply produced (0: none yet).
+    property int generation: 0
+    // The resolve inputs of the last request, as JSON (lib/aptus/theme/inputs.py Inputs).
+    property string _pendingInputs: ""
 
     // S1: each setter writes Config (appearance.*), which re-resolves Tokens; S2 adds aptus-theme
     // apply on top (the app slots of 08 §5). Each returns "" or why Config refused the value.
