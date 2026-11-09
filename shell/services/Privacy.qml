@@ -8,9 +8,9 @@ import qs.core
 Singleton {
     id: root
 
-    // TODO(phase): outside Paths.test, a PwObjectTracker over Pipewire.nodes (streams and video
-    //   sources; a LazyLoader that is never active under the test) → _rebuild on every node or
-    //   state change, within bar.privacyAppearMaxMs. Under the test both stay empty.
+    // TODO(phase): outside Paths.test (a LazyLoader never active under the test): Pipewire.nodes
+    //   and Pipewire.linkGroups (PwNode has no state: a camera is in use while its Video/Source has
+    //   an Active link group) → _rebuild, coalesced, within surfaces.bar.privacyAppearMaxMs.
     // apps using the microphone
     property var mic: []
     // apps using a camera

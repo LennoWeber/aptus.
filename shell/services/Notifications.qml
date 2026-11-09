@@ -14,11 +14,12 @@ Singleton {
     readonly property bool available: false
 
     // TODO(phase): the NotificationServer (actions, images, body markup and hyperlinks, inline
-    //   reply, persistence; keepOnReload false) → _arrive; an Instantiator over its tracked
-    //   notifications whose Connections catch in-place replaces (replaces_id → _arrive) and
-    //   `closed` by the sender (_senderClosed); a FileView + 2 s debounce for
-    //   Paths.notificationsState; `holding` from Dnd.on, Focus.running and the active monitor's
-    //   fullscreen (notch.overFullscreen) with _releaseHeld when it clears; a stack-window timer.
+    //   reply, persistence, extraHints ["value"] for progressOf; keepOnReload true) → _arrive.
+    // TODO(phase): an Instantiator over its tracked notifications: property changes of a replace
+    //   (replaces_id) → _arrive, coalesced; `closed` by the sender → _senderClosed.
+    // TODO(phase): a FileView on Paths.notificationsState, written 2 s after a change (_changed).
+    // TODO(phase): `holding` from Focus.running, Dnd.on and the active monitor's fullscreen
+    //   (unless notch.overFullscreen is "all"); when it clears with held > 0 → _releaseHeld.
 
     // Today's list, newest first (≤ notifications.historyMax): notifications.js records
     property var history: []
@@ -28,6 +29,8 @@ Singleton {
     // held by DND, focus or a fullscreen window, for the summary toast
     property int held: 0
     // aptus owns org.freedesktop.Notifications
+    // TODO(phase): NotificationServer reports no ownership: a one-shot GetServerInformation call
+    //   (gdbus) after start; true when the answer names Quickshell (P-20).
     property bool serverActive: false
 
     // What holds toasts now: "" | "dnd" | "focus" | "fullscreen" (the summary's wording).
@@ -48,8 +51,9 @@ Singleton {
     property string _heldReason: ""
 
     // IPC `notch toast <json>` (test only): a fake notification through the real interruption policy.
-    // TODO(phase): a record from the JSON fields (appName, summary, body, urgency, actions, image)
-    //   with the next _injectSerial id, through _receive with no live object.
+    // TODO(phase): only under Paths.test (07 §7: test only); a record from the JSON fields
+    //   (appName, summary, body, urgency, actions, image) with the next _injectSerial id, through
+    //   _receive with no live object.
     function inject(payload: var): void { Log.info("service.notifications", "inject: not available yet"); }
 
     // The toast's actions (notch.md §6): the default action ("") or a button; dismisses unless
@@ -83,6 +87,9 @@ Singleton {
     function _toast(record: var, priority: int): void { throw new Error("not implemented"); }
     // The hold ended: one summary toast for the held notifications.
     function _releaseHeld(): void { throw new Error("not implemented"); }
+    // Copy the record's image into Paths.notifCache (today.md §6: it survives the sender's temp
+    // files and a restart); image-data (image://qsimage) is grabbed to a PNG there.
+    function _cacheImage(record: var, live: var): void { throw new Error("not implemented"); }
     // The history changed: recount unread, write the state file (debounced).
     function _changed(): void { throw new Error("not implemented"); }
 }

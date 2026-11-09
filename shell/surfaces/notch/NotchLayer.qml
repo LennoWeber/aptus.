@@ -15,6 +15,15 @@ Item {
     // A plain crossfade (an in-place update such as replaces_id, or reduced motion): no entrance
     // choreography of the content.
     property bool plain: false
+    // What the content needs (set by the Notch): the monitor, the passive entry's payload (updated
+    // in place: stack, replaces_id, OSD value), the Component of a mode or result card, the mode's
+    // args, the live activities and whether the card is pinned (ActivityCard).
+    property string monitorName: ""
+    property var payload: ({})
+    property Component component: null
+    property var args: ({})
+    property var activities: []
+    property bool pinned: false
 
     // The size the content wants for the bulge.
     // TODO(phase): the content's bulgeWidth/bulgeHeight (notch.js bulgeSize).
@@ -27,7 +36,9 @@ Item {
     // TODO(phase): the Loader's item.
     readonly property Item content: null
 
-    // TODO(phase): a Loader of Toast / Osd / EventLine / ActivityCard / the mode component by
-    //   record.kind; opacity in after morphInDelayMs (content rise 8), out in morphOutMs; `plain`
+    // TODO(phase): a Loader by record.kind: Toast (payload, entrance = !plain), Osd, EventLine,
+    //   ActivityCard (activities, current = record.activity, pinned), result and mode: `component`
+    //   (args, monitorName; a mode's active false while leaving).
+    // TODO(phase): opacity in after morphInDelayMs (content rise 8), out in morphOutMs; `plain`
     //   swaps in place without the rise (replaces_id, M-06 not replayed).
 }

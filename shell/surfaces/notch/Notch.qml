@@ -20,8 +20,8 @@ Item {
     property var activityComponents: ({})
     property var cardComponents: ({})
     // The notch's part of the frame shape.
-    // TODO(phase): dock top, centred, width/height from the current layer's bulge size (0 at rest)
-    //   on spring.notch, coves 0 → Tokens.cove over the first 120 ms (M-06); under `hide` it stays.
+    // TODO(phase): dock top, centred, size of the current layer (0 at rest) on spring.notch, or the
+    //   mode's sizeSpring; coves 0 → Tokens.cove over toast.coveGrow (M-06); stays under `hide`.
     readonly property BulgeSpec bulge: BulgeSpec {}
     // The rest clock's rectangle in monitor coordinates (M-20 hand-off to Today).
     // TODO(phase): the RestGroup's clockRect.
@@ -30,13 +30,21 @@ Item {
     // TODO(phase): the rest group's width with the compact slots (≤ centreGroupMaxWidth).
     readonly property real restWidth: 0
     // The item whose area takes pointer input (bar band part plus the bulge), for the input mask.
-    // TODO(phase): an item covering the rest group and the bulge; while a card is pinned, the
-    //   whole monitor below the bar band (the outside catcher → _outsideClicked).
+    // TODO(phase): covers the centre group and the bulge; under `hide` only a bulge the arbitration
+    //   allows (the rest group is gone); while a card is pinned the whole monitor (catcher).
     readonly property Item maskItem: null
 
     // How far the frame is slid out under a fullscreen window (Frame.hide, M-31): the rest group
     // leaves with the bar; passive content the arbitration allows stays above the window.
     property real hide: 0
+    // The quiet bar (M-31b) and a narrow monitor (bar.md §7, §9) hide the date (MonitorShell
+    // passes the Bar's own values).
+    property bool quiet: false
+    property bool narrow: false
+    // The toast's inline reply field is open and needs the keyboard (notch.md §6): MonitorShell
+    // grants it like a pinned card's.
+    // TODO(phase): the shown toast's `replying`.
+    readonly property bool wantsKeyboard: false
 
     // What the notch shows now (notch.js view): rest, hidden, toast, osd, event, card, result, mode.
     // TODO(phase): notch.js viewOf(monitor's state, _hoverCard, active monitor); changes → _sync.
@@ -59,7 +67,8 @@ Item {
     // Activity id → this monitor's Activity object (one per registered activity).
     property var _activities: ({})
     // The compact slots after arbitration (notch.js slot assignment).
-    // TODO(phase): notch.js assignSlots of the live _activities (cached compact widths).
+    // TODO(phase): notch.js assignSlots of the live _activities (cached compact widths); none
+    //   while an interactive mode is open; under `hide` only recording (notch.md §2, §9).
     readonly property var _slots: ({ left: "", right: "", waiting: [] })
     // The interactive mode whose back handler is registered: the one loaded now, also while it
     // still fades out after monitor.notch moved on ("" none).
@@ -79,6 +88,8 @@ Item {
     function _toastActivated(entry: var, action: string): void { throw new Error("not implemented"); }
     function _toastDismissed(entry: var): void { throw new Error("not implemented"); }
     function _toastMenu(entry: var, x: real, y: real): void { throw new Error("not implemented"); }
+    // The inline reply was sent: Notifications.reply, then the toast closes.
+    function _toastReplied(entry: var, text: string): void { throw new Error("not implemented"); }
     // The toast menu's rows: Mute <App> for 1 hour, Turn on Do not disturb, Notification settings.
     function _toastMenuTriggered(entry: var, row: var): void { throw new Error("not implemented"); }
     // A compact activity's right-click menu (notch.md §4): the activity's own rows plus
@@ -97,12 +108,22 @@ Item {
     function _modeEntered(mode: string, item: var): void { throw new Error("not implemented"); }
     function _modeLeft(mode: string): void { throw new Error("not implemented"); }
 
-    // TODO(phase): an Instantiator over activityComponents filling _activities (monitorName set);
-    //   the RestGroup (introProgress, unread from Notifications, slides with `hide`); CompactSlot
-    //   left/right of the clock (hover → _openCard(id, false), leave → a 400 ms Timer →
-    //   _closeHoverCard, click → _openCard(id, true), middle → Activity.middleClick, right →
-    //   _activityMenu); a Repeater of NotchLayer over _layers (toast signals → _toast*, gone →
-    //   _layerGone; a mode layer → _modeEntered/_modeLeft); a HoverHandler on the bulge →
-    //   _bulgeHovered; a 100 ms Timer → _countdownTick while a toast shows; a single-shot Timer →
-    //   _expire at dueEntries' next; the scrim of an interactive mode; the outside catcher.
+    // TODO(phase): an Instantiator over activityComponents filling _activities (monitorName set).
+    // TODO(phase): the RestGroup: monitorName, showDate = bar.clock.showDate && !narrow && !quiet,
+    //   unread/unreadAllowlisted from Notifications, clockTaken = the mode's takesClock; slides
+    //   out with `hide` and fades in with introProgress (M-01).
+    // TODO(phase): CompactSlot left/right of the clock: hover rest → _openCard(id, false) only
+    //   with notch.hoverExpand; leave → activityHover.leave Timer → _closeHoverCard; click →
+    //   _openCard(id, true); middle → Activity.middleClick; right → _activityMenu.
+    // TODO(phase): a Repeater of NotchLayer over _layers (gone → _layerGone): toast signals →
+    //   _toastActivated/_toastDismissed/_toastReplied/_toastMenu; result card closeRequested →
+    //   _dismissEntry, its hovered pauses the countdown; ActivityCard picked → _openCard.
+    // TODO(phase): a mode layer: args = monitor.notchArgs (again on notchSerial), active false while
+    //   leaving, closeRequested → SurfaceManager.close, clockRect = Notch.clockRect, scrim;
+    //   _modeEntered/_modeLeft.
+    // TODO(phase): a HoverHandler on the bulge → _bulgeHovered.
+    // TODO(phase): a single-shot Timer at the shown toast's countdownLeft → _countdownTick, and
+    //   one at dueEntries' next → _expire (no polling).
+    // TODO(phase): the outside catcher (a MouseArea below the bar band while a card is pinned) →
+    //   _outsideClicked.
 }

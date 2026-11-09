@@ -31,4 +31,5 @@ Item {
     // TODO(phase): the pill (height 24, radius 12, raised on hover), a Repeater of StatusItem
     //   (right to left, M-04 open/close with _leaving), click on padding → Deck top; the item
     //   signals → _open / _wheel / _middle / _right.
+    // TODO(phase): the battery item turning crit (≤ batteryCritPercent, discharging) → its nudge().
 }

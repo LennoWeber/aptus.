@@ -48,8 +48,13 @@ Item {
     // Move the capsule to the active pill (M-02: the leading edge first).
     function _placeCapsule(): void { throw new Error("not implemented"); }
 
-    // TODO(phase): the overview button (grid_view, 28 px; click opens the overview), a Repeater
-    //   of WorkspacePill over strip.pills (stagger 30 ms with introProgress), the scratch pill
-    //   (click → Hypr.toggleScratch), the accent capsule (spring.snappy, trail 40 ms), wheel on the
-    //   strip → _wheel; strip/active changes → _placeCapsule; urgent records → pill.nudge().
+    // TODO(phase): the overview button (grid_view, overviewButtonSize; click opens the overview,
+    //   tooltip "Overview  Super+Tab"); a click on the strip's background opens it too.
+    // TODO(phase): a Repeater of WorkspacePill over strip.pills: appear staggered by
+    //   workspaceStaggerMs from introProgress; showIcons = showIcons && (collapse 0, or 1 and the
+    //   pill active); clicked → _go, middleClicked → _moveHere, rightClicked → _menu, wheelStep →
+    //   _wheel; an urgent record that was not urgent → pill.nudge().
+    // TODO(phase): the scratch pill (clicked → Hypr.toggleScratch); the accent capsule
+    //   (spring.snappy, trail workspace.trailDelay); strip/active changes → _placeCapsule; wheel on
+    //   the background → _wheel.
 }

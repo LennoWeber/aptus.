@@ -24,6 +24,12 @@ Item {
     // M-04 progress: width 0 → 1, then the glyph 0 → 1.
     property real _open: 0
     property real _glyph: 0
+    // M-36: the nudge's scale and when it last ran (ms; the battery item at critical, 04 §M-36).
+    property real _nudge: 1
+    property real _lastNudge: 0
+
+    // One nudge (M-36), unless one ran within nudge.minInterval.
+    function nudge(): void { throw new Error("not implemented"); }
 
     // TODO(phase): Glyph (ink by item.ink; bolt overlay; extra glyph; percentage text), Tooltip
     //   item.tooltip, width animated with M-04 by `shown`; MouseArea → the signals.

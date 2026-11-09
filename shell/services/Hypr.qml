@@ -22,8 +22,8 @@ Singleton {
     // names of the monitors whose active workspace has a fullscreen window (SurfaceManager input)
     property var fullscreenMonitors: Hyprland.monitors.values.filter(m => m.activeWorkspace && m.activeWorkspace.hasFullscreen).map(m => m.name)
     // every mapped toplevel: { address, class, title, monitor, workspace, x, y, width, height, floating, pinned, fullscreen, focusHistoryId }
-    // TODO(phase): S1 hand-off: no eager map on every toplevel change; _rebuildWindows sets it
-    //   once per toplevel refresh, _onTitle patches titles in place.
+    // TODO(phase): S1 hand-off: no eager map; _rebuildWindows sets it, coalesced, when a
+    //   toplevel's lastIpcObject changes (refreshes update objects in place) or one comes or goes.
     property var windows: Hyprland.toplevels.values.map(t => _client(t)).filter(w => w.address !== "")
     // the current submap
     property string submap: ""
@@ -175,8 +175,8 @@ Singleton {
         function onRawEvent(event: HyprlandEvent): void {
             // TODO(phase): windowtitlev2 → _onTitle; urgent → _onUrgent; activespecialv2 →
             //   _onActiveSpecial; screencast → _onScreencast; activelayout → _onLayout;
-            //   activewindowv2 → _onActiveWindow; workspace/window events → _rebuildWorkspaces after
-            //   the refresh lands (Hyprland.workspaces/toplevels change), a renamed workspace too.
+            //   activewindowv2 → _onActiveWindow; workspace/window events → _rebuildWorkspaces once
+            //   the refresh lands (lastIpcObjectChanged of the objects, coalesced; renames too).
             if (event.name === "submap") root.submap = event.data;
             else if (root._windowEvents.indexOf(event.name) >= 0) root._refresh(["toplevels", "workspaces"]);
             if (event.name === "fullscreen" || event.name === "workspacev2" || event.name === "monitoraddedv2"

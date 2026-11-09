@@ -38,8 +38,8 @@ Singleton {
     property var streams: []
 
     // Volume step for the hardware keys: direction ±1, fine = 1 % instead of audio.step (shows the OSD).
-    // TODO(phase): levels.js step on the percent scale (max 150 with audio.allowBoost, else 100;
-    //   a key step unmutes, as the hardware convention), setVolume, then _osd("volume").
+    // TODO(phase): levels.js step on the percent scale (max osd.volumeBoostMax with
+    //   audio.allowBoost, else osd.volumeMax), setVolume, then _osd("volume").
     function stepVolume(direction: int, fine: bool): void { Log.info("service.audio", "stepVolume: not available yet"); }
     // TODO(phase): setMuted(!muted) + _osd("volume"); setMicMuted(!micMuted) + _osd("mic").
     function toggleMute(): void { Log.info("service.audio", "toggleMute: not available yet"); }

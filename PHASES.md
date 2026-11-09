@@ -1030,3 +1030,56 @@ commit in phase 7, smallest change):
 
 **Checked.** `tests/lint.sh`: 146 files, 0 warnings. No body, type or signature changed in
 this phase (the diff adds comments only).
+
+### Review of phase 4 (fresh reviewer, diff d485811..55bf77e)
+
+Gaps of earlier phases found by the review are filled with that phase's rules (structures and
+signatures only, marked [2] / [3]); markers with phase-4 rules.
+
+| # | Finding | Result |
+|---|---|---|
+| 1 | The inline reply cannot get the keyboard (`MonitorState.keyboard` is mode or pinned card only) | Fixed without touching rules.js: [2] `Notch.wantsKeyboard` (the shown toast's `replying`), shared change `MonitorShell` (`keyboardFocus` also while `notch.wantsKeyboard`); Esc is handled by the field itself, not the Esc ladder; spec fix 05 §2 (toasts never take the keyboard, except the open reply field) |
+| 2 | No handler for `Toast.replied` | Fixed: [3] `Notch._toastReplied(entry, text)` |
+| 3 | NotchLayer has no inputs for what it loads; no "result" kind | Fixed: [2] `monitorName`, `payload`, `component`, `args`, `activities`, `pinned`; the loader marker names result cards |
+| 4 | Mode host and card contracts not wired | Fixed: markers for args/notchSerial, active, closeRequested, clockRect, takesClock (M-20), scrim, sizeSpring; result card closeRequested/hovered; ActivityCard picked |
+| 5 | Unread dot colours wrong | Fixed: `ink.sec`, `accent` when allowlisted |
+| 6 | `bar.clock.format` does not exist | Fixed: HH:mm via format.js time |
+| 7 | Quiet and narrow do not reach the date; RestGroup has no introProgress | Fixed: [2] `Notch.quiet`, `Notch.narrow` (shared change MonitorShell passes the Bar's); showDate = setting && !narrow && !quiet; the Notch fades the rest group with introProgress |
+| 8 | `notch.hoverExpand` ignored | Fixed in the CompactSlot wiring marker |
+| 9 | Compact slots during a mode and under fullscreen | Fixed in the `_slots` marker (none under a mode; only recording under `hide`) |
+| 10 | maskItem under `hide` would swallow clicks over a fullscreen window | Fixed in the marker |
+| 11 | Refresh results update `lastIpcObject` in place; the model changes only on add/remove | Fixed: rebuild on `lastIpcObjectChanged`, coalesced (checked in phase 5) |
+| 12 | PwNode has no state; camera "in use" undetectable | Fixed: a camera is in use while its Video/Source has an Active link group (`Pipewire.linkGroups`); status.js node field `linked` replaces `running` [2] |
+| 13 | `extraHints ["value"]` needed for the progress hint | Fixed in the server marker |
+| 14 | Images not cached | Fixed: [3] `Notifications._cacheImage(record, live)` into `Paths.notifCache` |
+| 15 | `serverActive` has no source; doctor fallback | Marker: a one-shot GetServerInformation call. The doctor check is the P-20 fallback only; decided after the probe |
+| 16 | Record has no hold reason | Fixed: [2] record field `held` |
+| 17 | M-36 nudges the battery at critical | Fixed: [2] `StatusItem._nudge`, `_lastNudge`, [3] `nudge()`, marker in StatusCluster |
+| 18 | Media fallbacks without metadata | Fixed: app icon on `raised`, the player's name as title |
+| 19 | `_hiddenTrack` per monitor | Fixed: [2] `Media.hiddenTrack`, `Media.hidden`; [3] `Media.hideUntilChanged()`; removed from MediaActivity |
+| 20 | "a key step unmutes" not in the spec | Fixed: dropped (the spec is the source) |
+| 21 | "Nothing to play" only for XF86AudioPlay | Fixed: toggle only |
+| 22 | RestGroup clockRect comment vs marker | Fixed: item coordinates, the Notch maps |
+| 23 | Brightness is lazy; the first key finds no device | Accepted: shared change `shell/shell.qml` (Brightness in the eager services list) |
+| 24 | Spec/shared list incomplete | Fixed: list below |
+| 25 | Bar marker lacks window/fallback/introProgress/primary tray monitor | Fixed |
+| 26 | WorkspaceStrip wiring incomplete | Fixed |
+| 27 | `CompactSlot.hovered` marker | Fixed |
+| 28 | `inject` without `Paths.test` guard | Fixed in the marker |
+| 29 | UPower percentage 0..1 | Fixed in the marker |
+| 30 | 100 ms polling; "40 %" literal; long markers | Fixed: single-shot timers at the deadline; `stripMaxWidthFraction`; Notch and Notifications markers split per change point |
+| 31 | windowtitlev2 named twice in Hypr | Rejected: two change points (leave the refresh list, route to `_onTitle`) |
+| 32 | `keepOnReload false` undecided | Decided: `true` (a dev reload keeps the server and the live objects, so actions of shown toasts keep working) |
+
+**Shared change points, complete list after this review** (each its own `S3 shared:` commit):
+`shell/windows/MonitorShell.qml` (Notch `hide`, `quiet`, `narrow`; `keyboardFocus` also while
+`notch.wantsKeyboard`), `shell/shell.qml` (Brightness eager), `shell/core/js/rules.js` (TODO(S3)
+comment), `shell/core/js/bulge.js` + `shell/components/Bulge.qml` (shape), `hypr/binds.lua` +
+`shell/registry/Shortcuts.qml` (Caps Lock), `shell/registry/Ipc.qml` (summaries),
+`shell/config/settings-schema.json` + `design/10-settings.md` (showDate wording),
+`tests/e2e/nested.py` (fake hardware), `design/probes.md`. Spec lines: 05 §2 (reply field takes
+the keyboard), 05 §6 / 07 / 09 / notch.md §11 (Caps Lock through a bind and `hl.get_devices()`,
+no Keyboard service), 07 §6 (Brightness: `APTUS_SYSFS`, re-read after own writes, no watch),
+bar.md §8 (`activespecialv2`; camera = a Video/Source with an active PipeWire link).
+
+Checked after the fixes: `tests/lint.sh` 146 files, 0 warnings.

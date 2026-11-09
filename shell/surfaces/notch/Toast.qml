@@ -40,7 +40,8 @@ Item {
 
     // Open the inline reply field (the reply action) and give it the keyboard.
     function openReply(): void { throw new Error("not implemented"); }
-    // Close the reply field (Esc returns to the toast; back() of the Esc ladder).
+    // Close the reply field (Esc in the field returns to the toast; the field has the keyboard
+    // through Notch.wantsKeyboard, not the shell's Esc ladder).
     function closeReply(): bool { throw new Error("not implemented"); }
 
     // TODO(phase): app icon 24 (or payload.glyph), app · time (micro), ✕ on hover, title (crit

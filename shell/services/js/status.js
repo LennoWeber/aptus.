@@ -3,9 +3,10 @@
 // events (surfaces/notch.md §7): privacy streams, the VPN read from nmcli, and the event payloads
 // of Bluetooth, Wi-Fi and the charger.
 //
-// A PipeWire node as Privacy reads it (plain fields off a PwNode):
+// A PipeWire node as Privacy reads it (plain fields off a PwNode; PwNode has no state):
 //   { isStream: bool, mediaClass: string ("Stream/Input/Audio", "Video/Source", …),
-//     app: string (application.name, else node.name), running: bool }
+//     app: string (application.name, else node.name), linked: bool (an Active link group
+//     reads from it: a camera source in use) }
 //
 // The privacy summary: { mic: [app], camera: [app] } (distinct names, first seen first).
 //

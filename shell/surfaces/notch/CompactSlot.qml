@@ -19,6 +19,7 @@ Item {
     // The width the slot wants (the compact item's implicit width, 0 when empty).
     // TODO(phase): the compact item's implicitWidth (0 without an activity), cached per activity.
     readonly property real openWidth: 0
+    // TODO(phase): the MouseArea's containsMouse.
     readonly property bool hovered: false
 
     // The pointer rested activityHover.rest ms on the slot / left it.

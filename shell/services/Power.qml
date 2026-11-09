@@ -12,7 +12,7 @@ Singleton {
     property var profiles: []
 
     // TODO(phase): hasBattery … timeToFull from UPower.displayDevice (isLaptopBattery, isPresent;
-    //   read only), percentage changes → _checkBattery.
+    //   percentage 0..1 × 100; read only); percentage changes → _checkBattery.
     property bool hasBattery: false
     // 0..100
     property real percentage: 0

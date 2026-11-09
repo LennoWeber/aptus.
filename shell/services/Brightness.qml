@@ -32,7 +32,7 @@ Singleton {
     property int _kbdBefore: 0
 
     // Backlight step for the hardware keys: direction ±1, fine = 1 % instead of brightness.step (OSD).
-    // TODO(phase): levels.js step on the percent scale, never below osd.brightnessMin (05 §6),
+    // TODO(phase): levels.js step on the percent scale, never below surfaces.osd.brightnessMin (05 §6),
     //   set, _osd("brightness"); inert without a backlight.
     function step(direction: int, fine: bool): void { Log.info("service.brightness", "step: not available yet"); }
     // Keyboard light one level up or down (inert without an LED).

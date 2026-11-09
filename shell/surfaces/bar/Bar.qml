@@ -36,10 +36,14 @@ Item {
     readonly property real _sideWidth: Math.max(0, (width - notchWidth) / 2 - _inset - Tokens.gapBarZone)
 
     // Zones (S3 fills them: workspaces and window title left, tray and status right).
-    // TODO(phase): left: WorkspaceStrip (Hypr.stripFor(monitor.name), maxWidth 40 % of the bar,
-    //   bar.workspaces.icons) then ActiveWindow (bar.title.show, bar.js titleWidth with narrow;
-    //   quiet collapses it); right: StatusCluster (quiet) then Tray (bar.tray.*, narrowTrayMax,
-    //   bar.tray.monitor; quiet collapses it). Settings via Config.
+    // TODO(phase): left: WorkspaceStrip (monitorName, Hypr.stripFor(monitor.name), maxWidth =
+    //   stripMaxWidthFraction of the bar, bar.workspaces.icons, introProgress).
+    // TODO(phase): left: ActiveWindow while bar.title.show and not quiet: window = Hypr.activeWindow
+    //   when it is on this monitor's active workspace, fallback = that workspace's name, maxWidth =
+    //   bar.js titleWidth(the space left, narrow).
+    // TODO(phase): right: StatusCluster (quiet), then Tray unless quiet: maxItems bar.tray.max
+    //   (narrowTrayMax on a narrow monitor), hidden, order; shown = bar.tray.monitor "all", or this
+    //   is the primary monitor (10-settings: the external one when connected, else eDP-1).
     Row {
         id: leftZone
         x: root._inset

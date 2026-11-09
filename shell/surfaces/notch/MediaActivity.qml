@@ -15,8 +15,6 @@ Activity {
     // Paused (priority mediaPaused, cover at 40 % under ink.faint).
     // TODO(phase): the player is not playing (Media.pausedSince > 0).
     readonly property bool paused: false
-    // Hidden by "Hide until it changes" until the track changes.
-    property string _hiddenTrack: ""
 
     // Middle click: play/pause (notch.md §4).
     function middleClick(): void { throw new Error("not implemented"); }
@@ -24,6 +22,7 @@ Activity {
     function menuTriggered(row: var): void { throw new Error("not implemented"); }
 
     // TODO(phase): live while the player plays, or paused for less than compactPausedHideMs, and
-    //   its track is not _hiddenTrack; priority media / mediaPaused; compact MediaCompact, card
-    //   MediaCard; menu [Hide until it changes]; a Timer for the paused hide.
+    //   not Media.hidden; priority media / mediaPaused; a Timer for the paused hide.
+    // TODO(phase): compact MediaCompact, card MediaCard; menu [Hide until it changes] →
+    //   Media.hideUntilChanged.
 }
