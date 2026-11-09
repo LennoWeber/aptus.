@@ -1041,3 +1041,50 @@ the error cases:
 **Checked.** A script walks every function of `lib/aptus`: each one that raises
 `NotImplementedError` carries a `TODO(S2)` (192 markers, 174 placeholders). Every module imports.
 `tests/run` green (97 unit, 159 QML), qmllint 0 warnings.
+
+### Phase 5 · probe (2026-11-09, thrown away)
+
+**Done.** The risky parts were tried with throwaway code: drafts of the pure cores (palette,
+resolve, sun, render, ini, journal, ops, release, guard, invariants) and probe scripts, all kept
+outside the repo as the reference for phase 7. Every app probe ran in a nested Hyprland with a
+temporary HOME. The probe results are in design/probes.md.
+
+**Checked.**
+- Parity: the drafted `palette`, `resolve` and `sun` against `colour.js`, `resolve.js` and
+  `sun.js`, the JS run under node with the QML pragmas stripped.
+  - resolve: 7,808 input combinations (mode × accent incl. wallpaper × contrast × glass ×
+    wallpaper hue, chroma and lightness × current accent), **0 differences**.
+  - sun: 138 cases (4 locations and none, 24 days, and the DST days at 00:30, 02:30 and 23:59),
+    **0 differences**.
+- Templates: all 36 rendered with the drafted render core for dark and light × the six accents
+  (432 renders). No placeholder error. Every JSON and TOML output parses, and every Lua output
+  compiles (`luajit -b`).
+- ini-sections: a read-only copy of the real `kdeglobals` and 3,000 random files, checking
+  identity, take→restore round trip, planned = digest, and foreign edits surviving a restore.
+  The real file passed. The random files found two design faults (fixed in the draft, now
+  2,993/3,000; the 7 left are a probe artefact, `[General]` at EOF without a newline):
+  1. `planned != digest`: splice places sections by their anchors, so the file order can differ
+     from the rendered order, and a section that lacked a final newline gets one. **Phase 7:**
+     `sections_sha256` hashes the sections sorted by name, each ending in one newline.
+  2. Round trip: a file without a final newline gets one when a section is appended after its
+     last block, and restore cannot tell. **Phase 7:** `before` records `eof_newline`; restore
+     drops the added newline when the file again ends in a non-leased block.
+- dconf: every key of the target exists in the installed `org.gnome.desktop.interface` schema.
+  Every `gnome` accent is in the `accent-color` enum. Every `papirus` folder colour has
+  `folder-<colour>.svg` in Papirus.
+- logind: `/run/systemd/users/1000` (`SESSIONS=3 2`) was last replaced at login. logind rewrites
+  it by rename. **Phase 7:** the guard compares `(st_ino, st_mtime_ns)`, not the mtime alone, and
+  on a change asks `loginctl` (preflight.sessions).
+- P-04 (read-only pre-check): the user manager reports ready at basic.target, not at
+  default.target. The recovery unit therefore races the session start, and it cannot move before
+  basic.target (the dconf restore would deadlock). The designed fallback applies: 02 §7, the exit
+  matrix row and the unit comment are updated, and Lenno's steps are in probes.md.
+- P-05 (no: new windows only, fallback), P-06 (pass), P-07 (pass), FileView (a swapped symlink is
+  not seen; Tokens watches `state/theme/resolved.json`). 02 §4 row 1 and the 08 reload table now
+  carry the P-05 result.
+- Not probed: yazi with `YAZI_CONFIG_HOME` and a mirror. A miss only means yazi keeps Noctalia's
+  flavor inside aptus, which is no leak; e2e checks the mirror layout.
+
+**Shapes phase 7:**
+- `render` rounds HSL with `floor(x + 0.5)` (the draft used Python's banker's `round`).
+- The two ini fixes and the guard's inode check above.

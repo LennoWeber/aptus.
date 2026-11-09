@@ -1,8 +1,9 @@
 # aptus-recover.service: the only user unit aptus installs (02-isolation §7, I-4).
 # Runs `aptus-lease recover` when the user manager starts. It acts only when the lease journal says a
 # lease is held and its Hyprland is gone (power loss, kernel panic, a guard that never ran), and then
-# puts Noctalia's paint back. It can only restore, never take. Ordered before default.target, so it
-# finishes before the user manager reports ready, i.e. before greetd starts the next session (P-04).
+# puts Noctalia's paint back. It can only restore, never take. It starts with the user manager and
+# races the next session's start: the manager reports ready at basic.target, and the dconf restore
+# cannot be ordered before basic.target (dconf.service comes after it). 02 §7, probe P-04.
 [Unit]
 Description=aptus: give Noctalia's paint back after a Hyprland session that did not end cleanly
 DefaultDependencies=no

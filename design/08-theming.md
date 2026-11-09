@@ -171,7 +171,7 @@ Triggered by: session start (render + take), any change of mode/accent/glass/con
 
 | Target | Hook | Effect |
 |---|---|---|
-| GTK 3 / 4 | none (probe P-05 decides whether a `gtk-theme` nudge is safe; by default none, because `gtk-theme` is never written) | new windows; libadwaita light/dark is live through `color-scheme` |
+| GTK 3 / 4 | none (probe P-05: a running GTK 3 app does not re-read user CSS, and `gtk-theme` is never written) | new windows; libadwaita light/dark is live through `color-scheme` |
 | dconf keys | written by the lease | live via GSettings and the settings portal |
 | KDE / Qt (kdeglobals) | `dbus-send --session --type=signal /KGlobalSettings org.kde.KGlobalSettings.notifyChange int32:0 int32:0` | running KDE apps repaint |
 | qt6ct | none | next app start |

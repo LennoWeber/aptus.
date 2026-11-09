@@ -86,7 +86,7 @@ means the file is tracked in `~/dotfiles`.
 
 | # | Target | Noctalia's artifact (paint) | Noctalia's wiring (never touched) | aptus mechanism | How it refreshes in Hyprland |
 |---|---|---|---|---|---|
-| 1 | GTK 3 apps (Nemo, Thunar, …) | `~/.config/gtk-3.0/noctalia.css` | `gtk-3.0/gtk.css` (`@import`, Thunar rules) | **Lease** file | new windows; running apps on `gtk-theme` toggle (probe P-05) |
+| 1 | GTK 3 apps (Nemo, Thunar, …) | `~/.config/gtk-3.0/noctalia.css` | `gtk-3.0/gtk.css` (`@import`, Thunar rules) | **Lease** file | new windows (probe P-05: running GTK 3 apps keep their CSS; `gtk-theme` is never written) |
 | 2 | GTK 4 / libadwaita apps | `~/.config/gtk-4.0/noctalia.css` | `gtk-4.0/gtk.css` | **Lease** file | as above; light/dark is live via the portal |
 | 3 | GNOME interface keys | dconf `color-scheme` (Noctalia sync), `icon-theme` (Papirus hook) | — | **Lease** dconf keys (§5.5) | live (GSettings + portal signals) |
 | 4 | KDE / Qt colour scheme (Dolphin, Okular, KDE dialogs) | `[Colors:*]`, `[ColorEffects:*]`, `[WM]` in `~/.config/kdeglobals`; `~/.local/share/color-schemes/noctalia.colors` | `[General] ColorScheme` | **Lease** INI sections of `kdeglobals` (`noctalia.colors` untouched) | running KDE apps via the `org.kde.KGlobalSettings.notifyChange` D-Bus signal |
@@ -317,19 +317,23 @@ aptus-recover.service (the only installed user unit; WantedBy=default.target; Ty
 | `aptus-session` itself is killed | guard is independent; the lease stays held while Hyprland runs | at Hyprland exit |
 | User manager stops (last session ended) | guard gets SIGTERM, releases | before the manager finishes stopping |
 | Reboot / shutdown from Hyprland | aptus logout path first; otherwise guard on SIGTERM | before the user manager stops |
-| Power loss, kernel panic, hard reset | `aptus-recover.service` at the next login | before the next session's compositor starts (probe P-04) |
+| Power loss, kernel panic, hard reset | `aptus-recover.service` at the next login | as the user manager starts, racing the session start; normally done before the compositor's first client (probe P-04) |
 | Log out of Hyprland and into Umbriel within 10 s (user manager survives) | guard released at Hyprland exit, env unset; portals read the restored dconf values live | before Umbriel starts |
 | Umbriel session already open on another VT when Hyprland starts | no lease is taken (preflight, §5.3), scope-only mode | — |
 | Switching VTs, suspend and resume | nothing changes; the lease stays held because Hyprland is alive | — |
 
-### Ordering guarantee for crash recovery (probe P-04)
-`pam_systemd` starts `user@1000.service` during login and waits for it. `aptus-recover.service` is
-ordered `Before=default.target` with `DefaultDependencies=no`, so it finishes before the user manager
-reports ready, which is before greetd starts the session command. P-04 verifies this with
-`systemd-analyze --user critical-chain` and timestamps in `journalctl --user -b`. Fallback if the
-order cannot be guaranteed: the window is the first second of an Umbriel login after a power loss
-during Hyprland; recovery still completes then, and only apps launched in that second could start
-with aptus colours.
+### Ordering for crash recovery (probe P-04)
+`pam_systemd` starts `user@1000.service` during login and waits until it reports ready; greetd
+starts the session command after that. The user manager reports ready when it reaches
+**basic.target**, not default.target (P-04 pre-check, [probes.md](probes.md): `user@1000.service`
+became active 0.2 ms after basic.target and 20 ms before default.target). `aptus-recover.service`
+cannot be ordered before basic.target: its dconf restore needs `dconf.service`, which is ordered
+after basic.target, so that order would deadlock until the timeout. The unit therefore keeps
+`DefaultDependencies=no` and `Before=default.target`: it starts the moment the user manager starts
+and races the session start. **The designed fallback applies:** the window is the first second of
+an Umbriel login after a power loss during Hyprland; recovery still completes then, only apps
+launched in that window could start with aptus colours, and the restored dconf values reach
+running apps live through the settings portal. P-04 measures the real margin on the laptop.
 
 ## 8. Things that must never happen in Hyprland
 
