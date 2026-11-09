@@ -1,59 +1,171 @@
 """Own targets (02 §3 Own, 08 §8): files only aptus reads, or that are inert outside Hyprland.
-own.json records every file and directory aptus created, so uninstall removes only those."""
+own.json records every file and directory aptus created (before creating it), so uninstall
+removes only those."""
 from __future__ import annotations
 
+import json
+import os
+import shutil
 from collections.abc import Sequence
 from pathlib import Path
 
-from ..lease import invariants
+from .. import atomic
+from ..lease import invariants, system
 from ..paths import Paths
+from . import render, targets
 from .render import Generation
 from .targets import Target
 
 ICON_SIZES = ("16x16", "22x22", "24x24", "32x32", "48x48", "64x64")
 ICON_THEMES = ("aptus-icons-dark", "aptus-icons-light")
+FOLDER_KEY = "X-Aptus-Folder"
+BAT_TIMEOUT = 60.0
+
+
+class OwnError(RuntimeError):
+    """An Own file could not be written (it exists and is not aptus's, or a tool failed)."""
+
+
+def _aptus_dir(paths: Paths, dest: Path) -> bool:
+    """A dest inside aptus's state or cache dir is aptus's by definition (generated.lua)."""
+    return any(_inside(dest, root) for root in (paths.state, paths.cache))
+
+
+def _inside(path: Path, root: Path) -> bool:
+    p, r = os.path.normpath(path), os.path.normpath(root)
+    return p == r or p.startswith(r + os.sep)
 
 
 def write_files(paths: Paths, target: Target, gen: Generation) -> list[Path]:
     """Copy the target's rendered files to their `dest` (atomic); returns the destinations. A dest
-    that exists but is not in own.json (a qt6ct.conf of Lenno's) is never overwritten: that file
-    fails with "exists and is not aptus's"."""
-    # TODO(S2): per FileOut: dest = targets.expand; invariants.writable(dest, own); exists and not
-    #   recorded → failed; mkdir parents (below HOME); atomic.write_bytes; record new ones.
-    raise NotImplementedError
+    outside aptus's own dirs that exists but is not in own.json (a qt6ct.conf of Lenno's) is never
+    overwritten: OwnError "exists and is not aptus's" (the other files are written)."""
+    mine = set(recorded(paths))
+    written, refused = [], []
+    for f in target.files:
+        dest = targets.expand(paths, f.dest)
+        invariants.writable(paths, dest, kind="own")
+        if os.path.lexists(dest) and dest not in mine and not _aptus_dir(paths, dest):
+            refused.append(str(dest))
+            continue
+        if not os.path.lexists(dest):
+            record(paths, [dest])
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        atomic.write_bytes(dest, render.output(gen, f).read_bytes(), 0o644)
+        written.append(dest)
+    if refused:
+        raise OwnError(f"{', '.join(refused)} exists and is not aptus's")
+    return written
+
+
+def _index(theme: str, mode: str, folder: str) -> str:
+    dirs = [f"{size}/places" for size in ICON_SIZES]
+    out = ["[Icon Theme]", f"Name={theme}",
+           "Comment=Papirus with the aptus accent's folder colour (written by aptus-theme)",
+           f"Inherits=Papirus-{mode.capitalize()},hicolor", f"{FOLDER_KEY}={folder}",
+           f"Directories={','.join(dirs)}", ""]
+    for size in ICON_SIZES:
+        out += [f"[{size}/places]", "Context=Places", f"Size={size.split('x')[0]}", "Type=Fixed", ""]
+    return "\n".join(out)
+
+
+def _current_folder(theme_dir: Path) -> str:
+    try:
+        for line in (theme_dir / "index.theme").read_text(encoding="utf-8").splitlines():
+            if line.startswith(FOLDER_KEY + "="):
+                return line.split("=", 1)[1]
+    except OSError:
+        pass
+    return ""
+
+
+def _build_icons(paths: Paths, build: Path, theme: str, mode: str, folder: str) -> None:
+    build.mkdir(mode=0o755)
+    (build / "index.theme").write_text(_index(theme, mode, folder), encoding="utf-8")
+    prefix = f"folder-{folder}"
+    for size in ICON_SIZES:
+        src = paths.papirus / size / "places"
+        dst = build / size / "places"
+        dst.mkdir(parents=True)
+        for icon in sorted(src.glob(f"{prefix}*.svg")) if src.is_dir() else []:
+            rest = icon.name[len(prefix):]
+            if rest == ".svg" or rest.startswith("-"):
+                os.symlink(icon, dst / ("folder" + rest))
 
 
 def icons(paths: Paths, folder: str) -> list[Path]:
     """aptus-icons-{dark,light}: index.theme inheriting Papirus-Dark/-Light and hicolor, and per
     size a places/ directory of `folder*.svg` symlinks to Papirus's `folder-<folder>*.svg`.
-    Rebuilt only when the folder colour changed; Papirus is never modified."""
-    # TODO(S2): per theme: build .<theme>.new: index.theme (Inherits Papirus-Dark|Light,hicolor;
-    #   Directories for ICON_SIZES places); symlinks folder*.svg →
-    #   papirus/<size>/places/folder-<folder>*.svg; rename over; skip when index.theme
-    #   names the same folder.
-    for mode in ("dark", "light"):
-        invariants.writable(paths, paths.icons / f"aptus-icons-{mode}", kind="own")
-    raise NotImplementedError
+    Rebuilt only when the folder colour changed (built aside, then renamed over); Papirus is
+    never modified. Returns the theme directories rebuilt."""
+    if not paths.papirus.is_dir():
+        raise OwnError(f"{paths.papirus} is missing")
+    rebuilt = []
+    for theme in ICON_THEMES:
+        mode = theme.rsplit("-", 1)[1]
+        theme_dir = paths.icons / theme
+        invariants.writable(paths, theme_dir, kind="own")
+        if _current_folder(theme_dir) == folder:
+            continue
+        record(paths, [theme_dir])
+        build, old = theme_dir.with_name(f"{theme}.new"), theme_dir.with_name(f"{theme}.old")
+        for p in (build, old):
+            invariants.writable(paths, p, kind="own")
+        paths.icons.mkdir(parents=True, exist_ok=True)
+        shutil.rmtree(build, ignore_errors=True)
+        shutil.rmtree(old, ignore_errors=True)
+        _build_icons(paths, build, theme, mode, folder)
+        if theme_dir.exists():
+            os.rename(theme_dir, old)
+        os.rename(build, theme_dir)
+        shutil.rmtree(old, ignore_errors=True)
+        atomic.fsync_dir(paths.icons)
+        rebuilt.append(theme_dir)
+    return rebuilt
 
 
-def bat(paths: Paths) -> bool:
-    """`bat cache --build --source <bat_source> --target <cache_bat>` (BAT_CACHE_PATH in Hyprland)."""
-    # TODO(S2): system.run bat cache --build --source bat_source --target cache_bat.
-    raise NotImplementedError
+def bat(paths: Paths) -> None:
+    """`bat cache --build --source <bat_source> --target <cache_bat>` (BAT_CACHE_PATH in
+    Hyprland), never into bat's shared default cache. OwnError when bat failed."""
+    invariants.writable(paths, paths.cache_bat, kind="own")
+    if not os.path.lexists(paths.cache_bat):
+        record(paths, [paths.cache_bat])
+    paths.cache_bat.mkdir(parents=True, exist_ok=True)
+    r = system.run(paths, ["bat", "cache", "--build", "--source", str(paths.bat_source),
+                           "--target", str(paths.cache_bat)], timeout=BAT_TIMEOUT)
+    if r.skipped:
+        raise OwnError("bat is not installed")
+    if r.code != 0:
+        raise OwnError(f"bat cache --build exited {r.code}: {r.stderr.strip()[:200]}")
 
 
 def record(paths: Paths, created: Sequence[Path]) -> None:
-    """Add paths to own.json (only those aptus created, never a file that existed before)."""
-    # TODO(S2): own.json list, add new paths, atomic.write_json.
-    raise NotImplementedError
+    """Add paths to own.json (only those aptus creates, never a file that existed before; called
+    before creating them, so a crash in between still leaves them recorded)."""
+    have = [str(p) for p in recorded(paths)]
+    new = [str(p) for p in created if str(p) not in have]
+    if not new:
+        return
+    invariants.writable(paths, paths.theme_own, kind="state")
+    paths.theme.mkdir(parents=True, exist_ok=True, mode=0o700)
+    atomic.write_json(paths.theme_own, {"v": 1, "created": sorted(have + new)}, 0o600)
 
 
 def recorded(paths: Paths) -> list[Path]:
-    # TODO(S2): own.json list as Paths ([] when missing).
-    raise NotImplementedError
+    """own.json's paths ([] when missing or unreadable)."""
+    try:
+        raw = json.loads(paths.theme_own.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return []
+    items = raw.get("created", []) if isinstance(raw, dict) else []
+    return [Path(p) for p in items if isinstance(p, str) and os.path.isabs(p)]
 
 
 def apply(paths: Paths, target: Target, gen: Generation) -> None:
-    """Write one Own target (files, then its builtin step)."""
-    # TODO(S2): write_files; own == 'icons' → icons(resolved papirus); 'bat' → bat().
-    raise NotImplementedError
+    """Write one Own target (files, then its builtin step) under the theme lock."""
+    with render.lock(paths):
+        write_files(paths, target, gen)
+        if target.own == "icons":
+            icons(paths, gen.resolved["papirus"])
+        elif target.own == "bat":
+            bat(paths)

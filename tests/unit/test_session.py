@@ -1,4 +1,5 @@
-"""aptus-session start/stop in S1 (scope-only)."""
+"""aptus-session start/stop without any fake tools: scope-only (no guard, so no lease), nothing
+reaches a user manager. The lease path with fakes is in test_s2_session.py."""
 from __future__ import annotations
 
 import json
@@ -8,6 +9,7 @@ from pathlib import Path
 import pytest
 
 from aptus import session
+from aptus.lease import preflight
 from aptus.paths import get
 
 HYPR_ENV = {"XDG_CURRENT_DESKTOP": "Hyprland", "HYPRLAND_INSTANCE_SIGNATURE": "sig1"}
@@ -50,7 +52,9 @@ def test_not_hyprland_exits_zero(monkeypatch: pytest.MonkeyPatch, no_exec: list,
 def test_scope_only_report(forbidden: list) -> None:
     report = session.start(get(), {**HYPR_ENV, "APTUS_TEST": "1"})
     assert report.mode is session.Mode.SCOPE_ONLY
-    assert "S2" in report.reasons
+    assert report.reasons == ["the guard did not start"]
+    assert report.notice == preflight.NOTICE_FAILED
+    assert report.generation == 1 and not report.guard
     assert report.warnings == []
     assert forbidden == []
 
@@ -60,7 +64,7 @@ def test_test_mode_skips_units_and_env(forbidden: list, test_home: Path,
     import os
     before = dict(os.environ)
     report = session.start(get(), {**HYPR_ENV, "APTUS_TEST": "1"})
-    assert "test mode" in report.reasons
+    assert not report.guard
     assert forbidden == []                       # no systemctl, systemd-run, import-environment
     assert dict(os.environ) == before
     assert not get().systemd_user.exists()       # no units written
@@ -74,7 +78,9 @@ def test_status_written(no_exec: list, monkeypatch: pytest.MonkeyPatch) -> None:
     assert len(no_exec) == 1
     data = json.loads(get().session_status.read_text())
     assert data["mode"] == "scope-only" and data["signature"] == "sig1"
-    assert data["test"] is True and "S2" in data["reasons"] and data["warnings"] == []
+    assert data["test"] is True and data["reasons"] == ["the guard did not start"]
+    assert data["warnings"] == [] and data["generation"] == 1 and data["guard"] is False
+    assert data["notice"] == preflight.NOTICE_FAILED
     assert get().runtime.stat().st_mode & 0o777 == 0o700
 
 
@@ -82,5 +88,5 @@ def test_stop_is_noop(forbidden: list, test_home: Path) -> None:
     before = sorted(p for p in test_home.rglob("*"))
     assert session.main(["stop"]) == 0
     assert forbidden == []
-    after = sorted(p for p in test_home.rglob("*") if not p.name.startswith("aptus-session.log"))
-    assert after == [p for p in before if not p.name.startswith("aptus-session.log")]
+    after = sorted(p for p in test_home.rglob("*") if not p.name.startswith("aptus-"))
+    assert after == [p for p in before if not p.name.startswith("aptus-")]

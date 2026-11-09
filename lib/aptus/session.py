@@ -10,9 +10,14 @@ from dataclasses import dataclass, field
 from enum import Enum
 
 from . import atomic, hypr
+from .lease import guard, journal, ops, preflight, system
+from .lease.invariants import InvariantError
+from .lease.journal import JournalError
 from .log import setup
-from .paths import Paths, get
+from .paths import Paths, UnsafeHome, get, require_safe_home
+from .theme import apply, inputs, render, targets
 from .theme.render import Generation
+from .theme.targets import Manifest
 
 
 class Mode(Enum):
@@ -53,48 +58,104 @@ IMPORT_VARS = ("APTUS_SESSION", "QT_QPA_PLATFORMTHEME", "XCURSOR_THEME", "XCURSO
 
 
 def recover_step(paths: Paths, report: StartReport) -> None:
-    """Step 1: recover (a leftover lease of a dead owner is released first); a failure is a
-    warning, and take refuses afterwards if a journal is still there."""
-    # TODO(S2): ops.recover; hooks.run_reloads of its reloads (no signature yet needed: this
-    #   session's); JournalError/LeaseError → report.warnings.
-    raise NotImplementedError
+    """Step 1: recover (a leftover lease of a dead owner is released first, with its hooks and
+    the environment it imported); a failure is a warning, and take refuses afterwards if a
+    journal is still there."""
+    try:
+        rel = ops.recover(paths)
+    except (JournalError, ops.LeaseError, InvariantError) as e:
+        report.warnings.append(f"recover: {e}")
+        return
+    if rel.acted and guard.after_release(paths, rel, "") == guard.GuardState.FAILED:
+        report.warnings.append(f"recover: not restored: {', '.join(sorted(rel.failed))}")
 
 
-def render_step(paths: Paths, report: StartReport) -> Generation | None:
+def load_manifest(paths: Paths, report: StartReport) -> Manifest | None:
+    try:
+        return targets.load(paths.targets, paths.templates)
+    except (targets.ManifestError, OSError) as e:
+        report.warnings.append(f"targets.toml: {e}")
+        return None
+
+
+def render_step(paths: Paths, manifest: Manifest, report: StartReport) -> Generation | None:
     """Step 2: render a generation from settings.json; when the renderer fails, the last good
     generation (render.current), else None: no lease then (08 §9)."""
-    # TODO(S2): inputs.from_settings; targets.load; render.render; exceptions → warning and
-    #   render.current(paths).
-    raise NotImplementedError
+    try:
+        gen = render.render(paths, inputs.from_settings(paths), manifest)
+    except Exception as e:  # noqa: BLE001 - the session starts whatever the renderer does
+        report.warnings.append(f"render: {type(e).__name__}: {e}")
+        return render.current(paths)
+    for tid, why in sorted(gen.failed.items()):
+        report.warnings.append(f"render {tid}: {why}")
+    return gen
 
 
 def start_guard(paths: Paths, env: Mapping[str, str]) -> bool:
     """Step 3, before any slot is written: `systemd-run --user --unit=aptus-guard --collect …
     aptus-guard <hyprland-pid> <signature>`; True when the unit is active. No guard, no lease."""
-    # TODO(S2): ops.owner(env).hyprland_pid; system.run systemd-run (skipped under test without a
-    #   fake → False); then `systemctl --user is-active aptus-guard.service`.
-    raise NotImplementedError
+    log = logging.getLogger("aptus.session")
+    try:
+        who = ops.owner(paths, env)
+    except ops.LeaseError as e:
+        log.warning("no guard: %s", e)
+        return False
+    r = system.run(paths, ["systemd-run", "--user", f"--unit={guard.UNIT}", "--collect", "--quiet",
+                           "--property=Type=exec", str(paths.bin / "aptus-guard"),
+                           str(who.hyprland_pid), who.hyprland_signature])
+    if r.skipped or r.code != 0:
+        log.warning("systemd-run aptus-guard failed: %s", r.stderr.strip() or "not available")
+        return False
+    r = system.run(paths, ["systemctl", "--user", "is-active", "--quiet", f"{guard.UNIT}.service"])
+    return not r.skipped and r.code == 0
 
 
-def lease_step(paths: Paths, env: Mapping[str, str], gen: Generation, report: StartReport) -> None:
+def lease_step(paths: Paths, env: Mapping[str, str], manifest: Manifest, gen: Generation,
+               report: StartReport) -> None:
     """Step 4: ops.take with the generation's slot specs (preflight inside); sets report.mode,
     reasons and notice. Any failure leaves the session scope-only with NOTICE_FAILED."""
-    # TODO(S2): apply.slot_specs; ops.take(paths, env, specs, ops.owner(env), gen.n);
-    #   preflight not ok → reasons/notice; error or LeaseError → scope-only, NOTICE_FAILED.
-    raise NotImplementedError
+    try:
+        taken = ops.take(paths, env, apply.slot_specs(paths, manifest, gen), ops.owner(paths, env),
+                         gen.n)
+    except (ops.LeaseError, InvariantError, JournalError, OSError, ValueError) as e:
+        report.reasons.append("the lease failed")
+        report.warnings.append(f"take: {e}")
+        report.notice = preflight.NOTICE_FAILED
+        return
+    if taken.held:
+        report.mode = Mode.LEASE
+        return
+    if taken.preflight is not None and not taken.preflight.ok:
+        report.reasons += taken.preflight.reasons
+        report.notice = taken.preflight.notice
+        return
+    report.reasons.append("the lease failed")
+    report.warnings.append(f"take: {taken.error}")
+    report.notice = preflight.NOTICE_FAILED
 
 
 def import_environment(paths: Paths, env: Mapping[str, str]) -> bool:
     """Step 5: `systemctl --user import-environment IMPORT_VARS` (only while the lease is held:
     a scope-only session must not reach an open Umbriel's user manager)."""
-    # TODO(S2): system.run with the names; skipped/failed → False and a warning.
-    raise NotImplementedError
+    r = system.run(paths, ["systemctl", "--user", "import-environment", *IMPORT_VARS])
+    if r.skipped or r.code != 0:
+        logging.getLogger("aptus.session").warning("import-environment failed: %s",
+                                                   r.stderr.strip() or "not available")
+        return False
+    return True
 
 
 def stop_guard(paths: Paths) -> bool:
     """`systemctl --user stop aptus-guard.service`: the guard releases on SIGTERM."""
-    # TODO(S2): system.run; True when it succeeded.
-    raise NotImplementedError
+    r = system.run(paths, ["systemctl", "--user", "stop", f"{guard.UNIT}.service"], timeout=30)
+    return not r.skipped and r.code == 0
+
+
+def _signature(env: Mapping[str, str]) -> str:
+    try:
+        return hypr.signature(env)
+    except hypr.HyprError:
+        return ""
 
 
 def start(paths: Paths, env: Mapping[str, str]) -> StartReport:
@@ -102,36 +163,48 @@ def start(paths: Paths, env: Mapping[str, str]) -> StartReport:
     preflight), the environment import (lease only), then the scope and Own targets and hooks of
     the generation (apply.apply_generation, also scope-only). Never raises: each failure becomes a
     warning and, where it matters, scope-only mode."""
-    # TODO(S2): require_safe_home (UnsafeHome → scope-only, nothing written); recover_step;
-    #   gen = render_step; no gen → scope-only "render failed"; guard = start_guard; no guard →
-    #   scope-only "guard did not start"; else lease_step; held → import_environment;
-    #   apply.apply_generation(paths, manifest, gen, signature); report.generation, report.guard.
-    #   The S1 body below stays until then.
-    log = logging.getLogger("aptus.session")
     report = StartReport()
+    try:
+        require_safe_home(paths)
+    except UnsafeHome as e:
+        report.reasons.append("unsafe HOME")
+        report.warnings.append(str(e))
+        return report
     paths.make_runtime()
     paths.state.mkdir(parents=True, exist_ok=True)
-    test = paths.test
-    # Steps 1–5 of 02 §7. In S1 none of them runs: the lease, the renderer and the guard arrive
-    # with S2, and importing the environment without the guard would leak into Umbriel's manager.
-    for step in ("aptus-lease recover", "aptus-theme render", "aptus-lease take",
-                 "systemctl --user import-environment", "systemd-run aptus-guard and bound units"):
-        log.info("skipped: %s (%s)", step, "S2; test mode" if test else "S2")
-    report.mode = Mode.SCOPE_ONLY
-    report.reasons.append("S2")
-    if test:
-        report.reasons.append("test mode")
+    recover_step(paths, report)
+    manifest = load_manifest(paths, report)
+    gen = render_step(paths, manifest, report) if manifest is not None else None
+    report.guard = start_guard(paths, env)
+    if gen is None or manifest is None:
+        report.reasons.append("no theme generation")
+        return report
+    report.generation = gen.n
+    if not report.guard:
+        report.reasons.append("the guard did not start")
+        report.notice = preflight.NOTICE_FAILED
+    else:
+        lease_step(paths, env, manifest, gen, report)
+    if report.mode is Mode.LEASE and not import_environment(paths, env):
+        report.warnings.append("systemctl --user import-environment failed")
+    try:
+        applied = apply.apply_generation(paths, manifest, gen, _signature(env))
+        report.warnings += [f"apply {tid}: {why}" for tid, why in sorted(applied.failed.items())]
+    except Exception as e:  # noqa: BLE001
+        report.warnings.append(f"apply: {type(e).__name__}: {e}")
     return report
 
 
 def write_status(paths: Paths, report: StartReport) -> None:
     """<runtime>/session.json for `aptus msg shell state`, the Lease service and the doctor."""
-    # TODO(S2): add "notice", "generation", "guard" (the Lease service reads them).
     paths.make_runtime()
     atomic.write_json(paths.session_status, {
         "mode": report.mode.value,
         "reasons": report.reasons,
         "warnings": report.warnings,
+        "notice": report.notice,
+        "generation": report.generation,
+        "guard": report.guard,
         "pid": os.getpid(),
         "signature": os.environ.get(hypr.ENV_SIG, ""),
         "started": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
@@ -146,15 +219,27 @@ def exec_supervisor(paths: Paths) -> None:
 
 
 def stop(paths: Paths) -> int:
-    """The logout path's last step: nothing to release before S2; returns 0."""
-    # TODO(S2): stop_guard (the guard releases); not running → ops.release directly when this
-    #   session (HYPRLAND_INSTANCE_SIGNATURE) holds the lease; 0 unless that release failed.
-    logging.getLogger("aptus.session").info("stop: nothing to release before S2")
-    return 0
+    """The logout path's last step: stop the guard (it releases on SIGTERM); without a running
+    guard release directly when this session (HYPRLAND_INSTANCE_SIGNATURE) holds the lease, with
+    the hooks and the environment as the guard would. 0 unless that release failed."""
+    if stop_guard(paths):
+        return 0
+    sig = _signature(os.environ)
+    try:
+        j = journal.load(paths)
+    except JournalError as e:
+        logging.getLogger("aptus.session").error("stop: %s", e)
+        return 1
+    if not sig or j is None or j.owner is None or not ops.held_by(paths, sig):
+        return 0
+    rel = ops.release(paths, expect=(sig, j.owner.hyprland_pid))
+    return 1 if guard.after_release(paths, rel, sig) == guard.GuardState.FAILED else 0
 
 
 def main(argv: Sequence[str]) -> int:
     log = setup("session")
+    setup("lease", "aptus-session")
+    setup("theme", "aptus-session")
     p = get()
     if list(argv) == ["stop"]:
         return stop(p)

@@ -3,7 +3,9 @@ the mode `auto` resolves to now, the wallpaper analysis the shell passes (or the
 and the settings that shape Own files (frame.edge, motion.reduce) and bakes."""
 from __future__ import annotations
 
-from dataclasses import dataclass
+import json
+import math
+from dataclasses import asdict, dataclass
 from datetime import datetime
 from typing import Any
 
@@ -26,32 +28,109 @@ class Inputs:
     bake_targets: tuple[str, ...] = () # isolation.bakeTargets
 
 
+# camelCase key (resolve.js, the shell's --inputs) → field name
+_FIELDS = {"mode": "mode", "accent": "accent", "contrast": "contrast", "glass": "glass",
+           "modeSetting": "mode_setting", "wallpaperHue": "wallpaper_hue",
+           "wallpaperChroma": "wallpaper_chroma", "wallpaperLightness": "wallpaper_lightness",
+           "currentAccent": "current_accent", "frameEdge": "frame_edge",
+           "reduceMotion": "reduce_motion", "bakeTargets": "bake_targets"}
+_TYPES = {"mode": str, "accent": str, "contrast": str, "glass": bool, "mode_setting": str,
+          "wallpaper_hue": (int, float), "wallpaper_chroma": (int, float),
+          "wallpaper_lightness": (int, float), "current_accent": str, "frame_edge": int,
+          "reduce_motion": bool, "bake_targets": (list, tuple)}
+
+
+def _valid(spec: dict[str, Any], value: Any) -> bool:
+    t = spec.get("type")
+    if t == "enum":
+        return value in spec.get("values", [])
+    if t == "bool":
+        return isinstance(value, bool)
+    if t == "list":
+        return isinstance(value, list) and all(v in spec.get("values", []) for v in value)
+    if t == "object":
+        return value is None and spec.get("nullable", False) or isinstance(value, dict)
+    return True
+
+
 def setting(schema: dict[str, Any], settings: dict[str, Any], key: str) -> Any:
-    """settings.json value of a dotted key, else the schema default (no validation: the shell's
-    Config owns that; a value outside an enum falls back to the default)."""
-    # TODO(S2): walk the dotted key in settings; missing or outside the schema enum →
-    #   schema['keys'][key]['default'].
-    raise NotImplementedError
+    """settings.json value of a key (the file is flat: {"v": 2, "appearance.mode": …}), else the
+    schema default (a value outside the schema's type or enum falls back to the default; the
+    shell's Config reports it)."""
+    spec = schema["keys"][key]
+    if key in settings and _valid(spec, settings[key]):
+        return settings[key]
+    return spec["default"]
+
+
+def _read_json(path: Path) -> dict[str, Any]:
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    return raw if isinstance(raw, dict) and "v" in raw else {}
 
 
 def from_settings(paths: Paths, now: datetime | None = None) -> Inputs:
     """The inputs at session start: settings.json (mode with `auto` resolved by sun.py, accent,
     contrast, glass, frame.edge, motion.reduce, isolation.bakeTargets) and the wallpaper inputs of
     the current generation's inputs.json (the shell's last values; −1 without one)."""
-    # TODO(S2): settings.json (missing or broken → {}), the schema; auto → sun.mode_at(now,
-    #   weather.location); motion.reduce auto → off (no GNOME setting read); wallpaper
-    #   values and current_accent from render.current(paths).inputs.
-    raise NotImplementedError
+    from . import render, sun
+    schema = json.loads(paths.schema.read_text(encoding="utf-8"))
+    settings = _read_json(paths.settings)
+
+    def get(key: str) -> Any:
+        return setting(schema, settings, key)
+    mode_setting = get("appearance.mode")
+    mode = sun.mode_at(now or datetime.now(), get("weather.location")) \
+        if mode_setting == "auto" else mode_setting
+    last = render.current(paths)
+    prev = last.inputs if last is not None and last.inputs is not None else None
+    return Inputs(mode=mode, accent=get("appearance.accent"), contrast=get("appearance.contrast"),
+                  glass=bool(get("appearance.glass")), mode_setting=mode_setting,
+                  wallpaper_hue=prev.wallpaper_hue if prev else -1,
+                  wallpaper_chroma=prev.wallpaper_chroma if prev else -1,
+                  wallpaper_lightness=prev.wallpaper_lightness if prev else -1,
+                  current_accent=last.resolved.get("accentName", "jade") if last else "jade",
+                  frame_edge=int(get("frame.edge")), reduce_motion=get("motion.reduce") == "on",
+                  bake_targets=tuple(get("isolation.bakeTargets")))
+
+
+def from_dict(raw: Any) -> Inputs:
+    """to_dict's shape back to Inputs; ValueError for unknown keys, wrong types, a missing
+    mode/accent/contrast/glass, or a mode that is not dark or light."""
+    if not isinstance(raw, dict):
+        raise ValueError("inputs must be a JSON object")
+    unknown = sorted(set(raw) - set(_FIELDS))
+    if unknown:
+        raise ValueError(f"unknown inputs: {', '.join(unknown)}")
+    kw: dict[str, Any] = {}
+    for key, value in raw.items():
+        name = _FIELDS[key]
+        want = _TYPES[name]
+        if isinstance(value, bool) and want is not bool and bool not in (want if isinstance(want, tuple) else (want,)):
+            raise ValueError(f"{key}: a boolean is not allowed")
+        if not isinstance(value, want):
+            raise ValueError(f"{key}: wrong type {type(value).__name__}")
+        if isinstance(value, float) and not math.isfinite(value):
+            raise ValueError(f"{key}: not a finite number")
+        kw[name] = tuple(value) if name == "bake_targets" else value
+    for need in ("mode", "accent", "contrast", "glass"):
+        if need not in kw:
+            raise ValueError(f"inputs without {need}")
+    if kw["mode"] not in ("dark", "light"):
+        raise ValueError(f"mode {kw['mode']!r} (auto is resolved before)")
+    return Inputs(**kw)
 
 
 def from_json(text: str) -> Inputs:
     """The shell's `--inputs` JSON (to_dict's shape); ValueError for a malformed one."""
-    # TODO(S2): json.loads; dict with known keys only (camelCase); types checked; ValueError.
-    raise NotImplementedError
+    return from_dict(json.loads(text))
 
 
 def to_dict(inputs: Inputs) -> dict[str, Any]:
     """camelCase keys as resolve.js takes them (mode, accent, contrast, glass, wallpaperHue, …)."""
-    # TODO(S2): camelCase as resolve.js reads them, plus modeSetting, frameEdge, reduceMotion,
-    #   bakeTargets.
-    raise NotImplementedError
+    d = asdict(inputs)
+    out = {key: d[name] for key, name in _FIELDS.items()}
+    out["bakeTargets"] = list(inputs.bake_targets)
+    return out

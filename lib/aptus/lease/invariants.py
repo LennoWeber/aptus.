@@ -86,12 +86,14 @@ def never_paths(paths: Paths) -> list[Path]:
 
 
 def _own_allowed(paths: Paths, where: str) -> bool:
-    """Own files (08 §8): aptus's state and cache, the two qt6ct files, aptus-icons-{dark,light}."""
+    """Own files (08 §8): aptus's state and cache, the two qt6ct files, aptus-icons-{dark,light}
+    (and their .new/.old siblings while one is rebuilt)."""
     if _under(where, paths.state) or _under(where, paths.cache):
         return True
     if where in (_real(paths.qt6ct_conf), _real(paths.qt6ct_colors)):
         return True
-    return any(_under(where, paths.icons / f"aptus-icons-{m}") for m in ("dark", "light"))
+    return any(_under(where, paths.icons / f"aptus-icons-{m}{suffix}")
+               for m in ("dark", "light") for suffix in ("", ".new", ".old"))
 
 
 def writable(paths: Paths, target: Path, *, kind: str, no_link: bool = False) -> None:
