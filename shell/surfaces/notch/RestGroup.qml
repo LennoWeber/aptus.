@@ -15,7 +15,7 @@ Item {
     property bool showDate: true
     // Today has unread notifications; one of them is from an allowlisted app (accent dot).
     property bool unread: false
-    property bool unreadAccent: false
+    property bool unreadAllowlisted: false
     // A notch mode took the clock over (M-20): the clock hides while it is open.
     property bool clockTaken: false
 

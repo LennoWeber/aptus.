@@ -948,3 +948,31 @@ libraries while writing. Every nested session needs the fake backlight (the brie
 rule, and e2e tests share one session per pytest run, so a per-module fixture would come too
 late): planned as `S3 shared: tests/e2e/nested.py` (the harness builds `FakeHardware` into its
 temporary root and passes `APTUS_SYSFS` and the fake `PATH` to the nested Hyprland).
+
+### Review of phase 2 (fresh reviewer, diff `4278cdb..23e617c`)
+
+It arrived while phase 3 was being written; the structure fixes follow phase-2 rules and are
+committed separately ("phase 2: review fixes"), the fake player's fields went into phase 3's file
+rewrite.
+
+| # | Finding | Result |
+|---|---|---|
+| 1 | no logic, wiring or bodies in the phase | — |
+| 2 | `NotchLayer.layer` shadows the FINAL `Item.layer` (qmllint, and Qt refuses to load it) | fixed: `record` |
+| 3 | MonitorState's payload comment says `toast { notification }`, `osd { kind, value, label, device }` | fixed in `S3 shared: shell/core/MonitorState.qml` (points at the S3 shapes; the result-card variant stays and is notch.js view kind `result`) |
+| 4 | `Notch._eventShown` is an `int` holding ms | fixed: `_eventId` (int) + `_eventShownAt` (real) |
+| 5 | `Toast.replying` readonly but set by the toast itself | fixed: writable |
+| 6 | bar.js battery input names differ from `Power` | fixed: the input uses the services' names |
+| 7 | device-change detection specified twice (poster and `Osd._lastDevice`) | fixed: the poster owns it (`Audio._osdSink`/`_osdSource`), `Osd` only times the 1 s |
+| 8 | `Bt.available` means "an adapter exists", unlike the other services | rejected: Ipc guards no Bt function, S5 builds on the S1 meaning; the bar reads `available && enabled` |
+| 9 | Brightness has no monitor for the OSD | rejected: the brightness OSD goes to `hypr.js INTERNAL` (eDP-1) when it is connected, else the active monitor; no state needed |
+| 10 | no `nameFor` for empty titles and tooltips | done in phase 3 (`Apps.nameFor`, `bar.js workspaceTooltip`) |
+| 11 | nothing models `bar.title.show` | rejected: wiring (Bar shows the title only when the setting is on and not quiet), no structure |
+| 12 | fake player lacks cover, shuffle/loop support, a no-metadata mode | fixed in phase 3 (`art_url`, `shuffle`/`loop_status` with `None` = unsupported, `bare`) |
+| 13 | plan says `Bulge.qml` normalises once, structure puts `shape` on Frame | the structure holds: Frame computes `shape` once and both Bulge items take it through a new `shape` input (shared change, phase 7) |
+| 14 | `Notch._osdBorn` repeats the entry's `born` | fixed: removed (the OSD timer runs from `born`) |
+| 15 | `Notch._mode` repeats `monitor.notch` | fixed: comment says it is the mode whose back handler is registered, also while it fades out |
+| 16 | duplicate placeholders (`pillRects`, `hovered`) | fixed: comments name the source (strip coordinates mapped by Bar; `Notch._bulgeHovered` drives timing) |
+| 17 | right-click signals named three ways | fixed: `rightClicked(real x, real y)` everywhere |
+| 18 | `Tray.maxItems: 3` duplicates the setting's default | fixed: `0`, the Bar binds `bar.tray.max` / `narrowTrayMax` |
+| 19 | `RestGroup.unreadAccent` vs `Notifications.unreadAllowlisted` | fixed: `unreadAllowlisted` |

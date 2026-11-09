@@ -10,8 +10,8 @@
 //     section: the Deck section it opens ("power", "sound", "bluetooth", "network", "dnd",
 //       "privacy"), quietKeeps: bool (stays in the quiet bar, M-31b) }
 //
-// The status input (what Bar/StatusCluster read from the services):
-//   { battery: { present, percent, charging, timeToEmpty, timeToFull, profile },
+// The status input (what StatusCluster reads from the services, with the services' own names):
+//   { battery: { hasBattery, percentage, charging, timeToEmpty, timeToFull, profile } (Power),
 //     volume: { level 0..1.5, muted, device }, bluetooth: { enabled, connected: [{ name, battery }] },
 //     network: { kind, online, ssid, strength, vpn: "" | name },
 //     dnd: { on, until: "" | "HH:mm", focus: bool }, privacy: { mic: [app], camera: [app],

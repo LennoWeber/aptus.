@@ -9,7 +9,7 @@ Item {
     id: root
 
     // The layer record (notch.js): { uid, kind, key, entryId, activity, mode, leaving }.
-    property var layer: ({})
+    property var record: ({})
     // False once a newer layer replaced this one: it fades out, then the Notch drops it.
     property bool shown: true
     // A plain crossfade (an in-place update such as replaces_id, or reduced motion): no entrance

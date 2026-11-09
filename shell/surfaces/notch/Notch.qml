@@ -39,18 +39,22 @@ Item {
     property int _layerSerial: 0
     // The activity whose card is open by hover ("" none; a pinned card is monitor.notch).
     property string _hoverCard: ""
-    // The pointer is over the bulge (toast countdown pause, pinned-card timeout, hover collapse).
+    // The pointer is over the bulge (the source for the toast countdown pause, the pinned-card
+    // timeout and the hover collapse; a content item's own `hovered` only drives its looks).
     property bool _bulgeHovered: false
     // Toast countdowns by passive entry id (notch.js countdown records).
     property var _countdowns: ({})
-    // When the shown OSD / event entry was born or first shown (their collapse timers).
-    property real _osdBorn: 0
-    property int _eventShown: 0
+    // The event entry shown now and since when (ms): it leaves surfaces.event.ms after it first
+    // showed. (The OSD collapses osd.collapseAfter after its entry's `born`, which every post with
+    // its key resets, so it needs no field here.)
+    property int _eventId: 0
+    property real _eventShownAt: 0
     // Activity id → this monitor's Activity object (one per registered activity).
     property var _activities: ({})
     // The compact slots after arbitration (notch.js slot assignment).
     readonly property var _slots: ({ left: "", right: "", waiting: [] })
-    // The interactive mode loaded now ("" none); the back handler registered for it.
+    // The interactive mode whose back handler is registered: the one loaded now, also while it
+    // still fades out after monitor.notch moved on ("" none).
     property string _mode: ""
 
     // The view changed: update the layers (notch.js nextLayers) and the timers of what shows.

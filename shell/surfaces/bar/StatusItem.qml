@@ -17,7 +17,7 @@ Item {
 
     signal clicked()
     signal middleClicked()
-    signal rightClicked()
+    signal rightClicked(real x, real y)
     signal wheelStep(int direction)
 
     // M-04 progress: width 0 → 1, then the glyph 0 → 1.

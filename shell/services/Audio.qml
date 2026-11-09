@@ -22,6 +22,10 @@ Singleton {
     property string sourceName: ""
     // Under APTUS_TEST: an in-memory double instead of PipeWire (the real graph is never touched).
     readonly property bool testDouble: false
+    // The sink and source names of the last volume / mic OSD (the next OSD after a change names
+    // the new device, notch.md §8).
+    property string _osdSink: ""
+    property string _osdSource: ""
 
     // [{ id, name, description, isDefault, volume, muted }] (S5 fills the lists)
     property var sinks: []

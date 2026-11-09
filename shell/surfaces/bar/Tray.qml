@@ -12,7 +12,7 @@ Item {
     // The Hyprland monitor name of this bar.
     property string monitorName: ""
     // bar.tray.max (2 on a narrow monitor), bar.tray.hidden, bar.tray.order.
-    property int maxItems: 3
+    property int maxItems: 0
     property var hiddenIds: []
     property var order: []
     // The tray shows on this monitor (bar.tray.monitor).

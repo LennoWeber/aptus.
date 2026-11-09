@@ -22,7 +22,8 @@ Item {
     // Icon collapse (bar.js collapseLevel): 0 icons on every pill, 1 numbers on the inactive
     // pills, 2 numbers only.
     readonly property int collapse: 0
-    // M-14: the pills in monitor coordinates, [{ workspace, x, y, width, height }].
+    // M-14: the pills in strip coordinates, [{ workspace, x, y, width, height }] (Bar.pillRects
+    // maps them to monitor coordinates).
     readonly property var pillRects: []
 
     // The accent capsule's edges in strip coordinates (M-02: the leading edge leads, the trailing

@@ -8,7 +8,8 @@
 //     level: number | -1 (no level bar), max: number (100, or 150 with audio.allowBoost),
 //     dots: -1 | count of filled dots (keyboard light), steps: count of dots,
 //     value: string (the text after the level: "45", "Muted", "Caps Lock on"),
-//     device: string ("" or the device name shown for 1 s instead of the value on a device change) }
+//     device: string ("" or the device name shown for 1 s instead of the value; the poster
+//       sets it only on its first OSD after the device changed, and tracks that itself) }
 //
 // A status glyph: { glyph, ink: "main" | "sec" | "warn" | "crit" | "faint", overlay: "" | "bolt" }.
 

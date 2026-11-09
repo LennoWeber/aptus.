@@ -16,7 +16,7 @@ Item {
     readonly property real bulgeWidth: 0
     readonly property real bulgeHeight: 0
 
-    // The device name shows instead of the value (osd.deviceNameMs after a device change).
+    // The device name shows instead of the value for osd.deviceNameMs after a payload brought a
+    // `device` (the poster sets it only on the first OSD after a device change, levels.js).
     property bool _deviceShown: false
-    property string _lastDevice: ""
 }

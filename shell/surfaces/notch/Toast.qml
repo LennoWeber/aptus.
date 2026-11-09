@@ -21,7 +21,7 @@ Item {
     readonly property real bulgeHeight: 0
     readonly property bool hovered: false
     // The inline reply field is open (takes the keyboard; the countdown stops).
-    readonly property bool replying: false
+    property bool replying: false
 
     // The body or a button was clicked: the action id ("" = the default action).
     signal activated(string action)
@@ -29,7 +29,7 @@ Item {
     signal dismissed()
     signal replied(string text)
     // A right click at a point in this item's coordinates.
-    signal menuRequested(real x, real y)
+    signal rightClicked(real x, real y)
 
     // M-06 entrance progress of the icon, title and body (0 → 1).
     property real _icon: 1
