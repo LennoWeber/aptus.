@@ -6,12 +6,17 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
+from .journal import SlotKind
+
 
 @dataclass(frozen=True)
 class SlotSpec:
     id: str                          # "<target>.<name>", stable across sessions
-    kind: str                        # "file" | "ini-sections" | "dconf"
-    target: str                      # targets.toml id (reload hook, settings page)
+    kind: SlotKind
+    target: str                      # targets.toml id (settings page)
+    reload: str = "none"             # the target's reload hook (recorded in the journal)
+    create: bool = True              # a missing artifact is created (its parent must exist);
+                                     # False ("only if present"): a missing one is skipped
     path: Path | None = None         # file / ini-sections: the slot (expanded, not resolved)
     content: bytes | None = None     # file: the rendered bytes; ini-sections: the rendered INI text
     sections: tuple[str, ...] = ()   # ini-sections: header globs ("Colors:*", "WM")

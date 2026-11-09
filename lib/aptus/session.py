@@ -12,6 +12,7 @@ from enum import Enum
 from . import atomic, hypr
 from .log import setup
 from .paths import Paths, get
+from .theme.render import Generation
 
 
 class Mode(Enum):
@@ -43,6 +44,49 @@ def check_environment(env: Mapping[str, str]) -> str | None:
     if not env.get(hypr.ENV_SIG):
         return f"{hypr.ENV_SIG} is not set"
     return None
+
+
+# Imported into the systemd user environment while the lease is held (02 §6 "yes" rows); the
+# guard unsets them again (lease.guard.UNSET).
+IMPORT_VARS = ("APTUS_SESSION", "QT_QPA_PLATFORMTHEME", "XCURSOR_THEME", "XCURSOR_SIZE",
+               "HYPRCURSOR_SIZE")
+
+
+def recover_step(paths: Paths, report: StartReport) -> None:
+    """Step 1: aptus-lease recover (a leftover lease of a dead owner is released first)."""
+    raise NotImplementedError
+
+
+def render_step(paths: Paths, report: StartReport) -> Generation | None:
+    """Step 2: render a generation from settings.json; None when the renderer failed (the apps
+    keep Noctalia's paint, 08 §9)."""
+    raise NotImplementedError
+
+
+def lease_step(paths: Paths, env: Mapping[str, str], gen: Generation, report: StartReport) -> None:
+    """Step 3: preflight, then take with the generation's slot specs; sets report.mode, reasons
+    and notice. Any failure leaves the session scope-only."""
+    raise NotImplementedError
+
+
+def theme_step(paths: Paths, env: Mapping[str, str], gen: Generation, report: StartReport) -> None:
+    """Scope and Own targets of the generation and the reload hooks (also in scope-only mode)."""
+    raise NotImplementedError
+
+
+def import_environment(paths: Paths, env: Mapping[str, str]) -> bool:
+    """Step 4: `systemctl --user import-environment IMPORT_VARS` (only while the lease is held)."""
+    raise NotImplementedError
+
+
+def start_guard(paths: Paths, env: Mapping[str, str]) -> bool:
+    """Step 5: `systemd-run --user --unit=aptus-guard … aptus-guard <hyprland-pid> <signature>`."""
+    raise NotImplementedError
+
+
+def stop_guard(paths: Paths) -> bool:
+    """`systemctl --user stop aptus-guard.service`: the guard releases on SIGTERM."""
+    raise NotImplementedError
 
 
 def start(paths: Paths, env: Mapping[str, str]) -> StartReport:

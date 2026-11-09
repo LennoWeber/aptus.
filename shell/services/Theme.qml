@@ -28,6 +28,20 @@ Singleton {
     function setAccent(name: string): string { return _set("appearance.accent", name); }
     function setGlass(on: bool): string { return _set("appearance.glass", on); }
 
+    // Ask for an `aptus-theme apply` with the current resolution: debounced 250 ms, started after
+    // the shell's own crossfade (08 §6), one run at a time (a request during a run runs after it).
+    function requestApply(): void {
+        // phase 7
+    }
+    // The --inputs JSON for aptus-theme (lib/aptus/theme/inputs.py to_dict) from Tokens and Config.
+    function _inputs(): var {
+        return ({});
+    }
+    // Parse the JSON report on stdout into lastApply, failed and generation; warn for failures.
+    function _applied(stdout: string, exitCode: int): void {
+        // phase 7
+    }
+
     function _set(key: string, value: var): string {
         const why = Config.set(key, value);
         if (why) Log.warn("service.theme", key + " = " + JSON.stringify(value) + " refused: " + why);

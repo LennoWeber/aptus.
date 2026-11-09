@@ -7,15 +7,20 @@
 #   noctalia   Noctalia template ids this entry covers (02 §4 coverage rule)
 #   mechanism  lease | scope | own | bake | never   (02 §3)
 #   kind       lease/bake: file | ini-sections | dconf   (02 §5.5; default file)
-#   files      [{ template, out, slot | dest }]: template below theme/templates, out inside the
-#              generation, slot = the leased artifact (lease/bake; may hold one `*`), dest = the Own
-#              file. `template`/`out`/`slot` at the top level are the one-file shorthand.
+#   files      [{ template, out, name, slot | dest | at, missing_only }]: template below
+#              theme/templates, out inside the generation, name in the slot id "<id>.<name>"
+#              (default "artifact"), slot = the leased artifact (lease/bake; may hold one `*`),
+#              dest = the Own file, at = the path inside a scope mirror (missing_only: only when the
+#              mirrored directory lacks it). `template`/`out`/`slot`/`name` at the top level are
+#              the one-file shorthand. Paths: `~`, {config} {state} {cache} {data} (XDG bases).
 #   sections   ini-sections: header globs
 #   dconf      dconf: key (in /org/gnome/desktop/interface/) → value template; "" = record only
-#   scope      scope: { into, mirror, replace } or { into, source, begin, end }
-#   own        own: a builtin step besides writing `files` (icons | qt6ct | bat)
+#   requires   dconf: key → target id; the key is only recorded when that target is not applied
+#   scope      scope: { into, mirror } (with files' `at`) or { into, source, begin, end }
+#   own        own: a builtin step besides writing `files` (icons | bat)
 #   when       always | exists:<path> | which:<command>   (false → skipped, "Not installed")
-#   present    true: lease only the slots that exist ("only if present" in 02 §4)
+#   present    true: lease only the slots that exist ("only if present" in 02 §4); otherwise a
+#              missing artifact is created when its directory exists (release deletes it again)
 #   reload     none | signal:<comm>:<SIG> | exec:<command> | builtin:<name> | bake:<process>:<command>
 #   note       shown on the settings page
 
@@ -77,6 +82,8 @@ font-name           = "'{{ font.uiApp }}'"
 document-font-name  = "'{{ font.documentApp }}'"
 monospace-font-name = "'{{ font.monoApp }}'"
 gtk-theme           = ""
+[target.requires]
+icon-theme          = "icons"
 
 [[target]]
 id        = "kde"
@@ -84,6 +91,7 @@ row       = 4
 noctalia  = ["kcolorscheme"]
 mechanism = "lease"
 kind      = "ini-sections"
+name      = "colors"
 template  = "kde/kdeglobals"
 out       = "kde/kdeglobals"
 slot      = "~/.config/kdeglobals"
@@ -96,10 +104,9 @@ id        = "qt6ct"
 row       = 5
 noctalia  = ["qt"]
 mechanism = "own"
-own       = "qt6ct"
 files     = [
-  { template = "qt6ct/qt6ct.conf", out = "qt6ct/qt6ct.conf", dest = "~/.config/qt6ct/qt6ct.conf" },
-  { template = "qt6ct/aptus.conf", out = "qt6ct/aptus.conf", dest = "~/.config/qt6ct/colors/aptus.conf" },
+  { template = "qt6ct/qt6ct.conf", out = "qt6ct/qt6ct.conf", dest = "{config}/qt6ct/qt6ct.conf" },
+  { template = "qt6ct/aptus.conf", out = "qt6ct/aptus.conf", dest = "{config}/qt6ct/colors/aptus.conf" },
 ]
 when      = "which:qt6ct"
 reload    = "none"
@@ -110,9 +117,10 @@ id        = "kitty"
 row       = 6
 noctalia  = ["kitty"]
 mechanism = "scope"
-template  = "kitty/noctalia.conf"
-out       = "kitty/noctalia.conf"
-scope     = { into = "kitty", mirror = "~/.config/kitty", replace = "themes/noctalia.conf" }
+files     = [
+  { template = "kitty/noctalia.conf", out = "kitty/noctalia.conf", at = "themes/noctalia.conf" },
+]
+scope     = { into = "kitty", mirror = "{config}/kitty" }
 when      = "exists:~/.config/kitty"
 reload    = "signal:kitty:SIGUSR1"
 
@@ -200,7 +208,7 @@ noctalia  = ["starship"]
 mechanism = "scope"
 template  = "starship/palette.toml"
 out       = "starship/palette.toml"
-scope     = { into = "starship.toml", source = "~/.config/starship.toml", begin = "# >>> NOCTALIA STARSHIP PALETTE >>>", end = "# <<< NOCTALIA STARSHIP PALETTE <<<" }
+scope     = { into = "starship.toml", source = "{config}/starship.toml", begin = "# >>> NOCTALIA STARSHIP PALETTE >>>", end = "# <<< NOCTALIA STARSHIP PALETTE <<<" }
 when      = "exists:~/.config/starship.toml"
 reload    = "none"
 
@@ -208,12 +216,8 @@ reload    = "none"
 id        = "fastfetch"
 row       = 15
 noctalia  = ["fastfetch"]
-mechanism = "lease"
-template  = "fastfetch/noctalia.jsonc"
-out       = "fastfetch/noctalia.jsonc"
-slot      = "~/.config/fastfetch/themes/noctalia.jsonc"
-when      = "exists:~/.config/fastfetch"
-reload    = "none"
+mechanism = "never"
+note      = "Noctalia's hook merges the colours into config.jsonc (Lenno's config); the theme file alone paints nothing"
 
 [[target]]
 id        = "nvim"
@@ -277,8 +281,12 @@ row       = 21
 noctalia  = ["discord"]
 mechanism = "lease"
 files     = [
-  { template = "vesktop/noctalia.theme.css", out = "vesktop/noctalia.theme.css", slot = "~/.config/vesktop/themes/noctalia.theme.css" },
-  { template = "vesktop/noctalia.theme.css", out = "vesktop/flatpak.theme.css", slot = "~/.var/app/dev.vencord.Vesktop/config/vesktop/themes/noctalia.theme.css" },
+  { template = "vesktop/midnight.css", out = "vesktop/noctalia.theme.css", name = "midnight", slot = "{config}/vesktop/themes/noctalia.theme.css" },
+  { template = "vesktop/material.css", out = "vesktop/noctalia-material.theme.css", name = "material", slot = "{config}/vesktop/themes/noctalia-material.theme.css" },
+  { template = "vesktop/system24.css", out = "vesktop/discord-system24.css", name = "system24", slot = "{config}/vesktop/themes/discord-system24.css" },
+  { template = "vesktop/midnight.css", out = "vesktop/flatpak-noctalia.theme.css", name = "flatpak-midnight", slot = "~/.var/app/dev.vencord.Vesktop/config/vesktop/themes/noctalia.theme.css" },
+  { template = "vesktop/material.css", out = "vesktop/flatpak-noctalia-material.theme.css", name = "flatpak-material", slot = "~/.var/app/dev.vencord.Vesktop/config/vesktop/themes/noctalia-material.theme.css" },
+  { template = "vesktop/system24.css", out = "vesktop/flatpak-discord-system24.css", name = "flatpak-system24", slot = "~/.var/app/dev.vencord.Vesktop/config/vesktop/themes/discord-system24.css" },
 ]
 present   = true
 reload    = "none"
@@ -298,12 +306,8 @@ reload    = "none"
 id        = "gemini"
 row       = 23
 noctalia  = ["antigravity"]
-mechanism = "lease"
-template  = "gemini/theme.json"
-out       = "gemini/theme.json"
-slot      = "~/.gemini/config/theme.json"
-when      = "exists:~/.gemini/config"
-reload    = "none"
+mechanism = "never"
+note      = "Noctalia's hook copies the theme seeds into ~/.gemini/config/config.json (app settings); theme.json alone paints nothing"
 
 [[target]]
 id        = "vscode"
@@ -311,9 +315,9 @@ row       = 24
 noctalia  = ["vscode"]
 mechanism = "lease"
 files     = [
-  { template = "vscode/NoctaliaTheme-color-theme.json", out = "vscode/code.json", slot = "~/.vscode/extensions/noctalia.noctaliatheme-*/themes/NoctaliaTheme-color-theme.json" },
-  { template = "vscode/NoctaliaTheme-color-theme.json", out = "vscode/codium.json", slot = "~/.vscode-oss/extensions/noctalia.noctaliatheme-*/themes/NoctaliaTheme-color-theme.json" },
-  { template = "vscode/NoctaliaTheme-color-theme.json", out = "vscode/antigravity.json", slot = "~/.antigravity-ide/extensions/noctalia.noctaliatheme-*/themes/NoctaliaTheme-color-theme.json" },
+  { template = "vscode/NoctaliaTheme-color-theme.json", out = "vscode/NoctaliaTheme-color-theme.json", name = "code", slot = "~/.vscode/extensions/noctalia.noctaliatheme-*/themes/NoctaliaTheme-color-theme.json" },
+  { template = "vscode/NoctaliaTheme-color-theme.json", out = "vscode/NoctaliaTheme-color-theme.json", name = "codium", slot = "~/.vscode-oss/extensions/noctalia.noctaliatheme-*/themes/NoctaliaTheme-color-theme.json" },
+  { template = "vscode/NoctaliaTheme-color-theme.json", out = "vscode/NoctaliaTheme-color-theme.json", name = "antigravity", slot = "~/.antigravity-ide/extensions/noctalia.noctaliatheme-*/themes/NoctaliaTheme-color-theme.json" },
 ]
 present   = true
 reload    = "none"
@@ -334,12 +338,8 @@ reload    = "none"
 id        = "brave"
 row       = 26
 noctalia  = ["brave"]
-mechanism = "lease"
-template  = "brave/manifest.json"
-out       = "brave/manifest.json"
-slot      = "~/.cache/noctalia/brave-theme/manifest.json"
-present   = true
-reload    = "none"
+mechanism = "never"
+note      = "Noctalia's hook installs the theme into ~/.local/share/noctalia and Brave's preferences; aptus touches neither"
 
 [[target]]
 id        = "hyprtoolkit"
@@ -379,8 +379,8 @@ row       = 30
 noctalia  = ["spicetify"]
 mechanism = "bake"
 files     = [
-  { template = "spicetify/Comfy.color.ini", out = "spicetify/Comfy.color.ini", slot = "~/.config/spicetify/Themes/Comfy/color.ini" },
-  { template = "spicetify/Colorful.color.ini", out = "spicetify/Colorful.color.ini", slot = "~/.config/spicetify/Themes/Colorful/color.ini" },
+  { template = "spicetify/Comfy.color.ini", out = "spicetify/Comfy.color.ini", name = "comfy", slot = "{config}/spicetify/Themes/Comfy/color.ini" },
+  { template = "spicetify/Colorful.color.ini", out = "spicetify/Colorful.color.ini", name = "colorful", slot = "{config}/spicetify/Themes/Colorful/color.ini" },
 ]
 present   = true
 reload    = "bake:spotify:spicetify apply"
@@ -398,11 +398,15 @@ id        = "yazi"
 row       = 33
 noctalia  = ["yazi"]
 mechanism = "scope"
-template  = "yazi/theme.toml"
-out       = "yazi/theme.toml"
-scope     = { into = "yazi", mirror = "~/.config/yazi", replace = "theme.toml" }
+files     = [
+  { template = "yazi/flavor.toml", out = "yazi/flavor.toml", at = "flavors/noctalia.yazi/flavor.toml" },
+  { template = "yazi/tmtheme.xml", out = "yazi/tmtheme.xml", at = "flavors/noctalia.yazi/tmtheme.xml" },
+  { template = "yazi/theme.toml", out = "yazi/theme.toml", at = "theme.toml", missing_only = true },
+]
+scope     = { into = "yazi", mirror = "{config}/yazi" }
 when      = "exists:~/.config/yazi"
 reload    = "none"
+note      = "Noctalia's yazi flavor, wired by [flavor] in theme.toml (aptus adds one only when there is none)"
 
 [[target]]
 id        = "bat"
@@ -411,11 +415,11 @@ noctalia  = ["bat"]
 mechanism = "own"
 own       = "bat"
 files     = [
-  { template = "bat/aptus.tmTheme", out = "bat/aptus.tmTheme", dest = "~/.cache/aptus/bat-src/themes/aptus.tmTheme" },
+  { template = "bat/aptus.tmTheme", out = "bat/aptus.tmTheme", dest = "{cache}/aptus/bat-src/themes/aptus.tmTheme" },
 ]
 when      = "which:bat"
 reload    = "none"
-note      = "BAT_THEME=aptus with BAT_CACHE_PATH=~/.cache/aptus/bat"
+note      = "BAT_THEME=aptus with BAT_CACHE_PATH=~/.cache/aptus/bat; built with --target there, never into bat's shared default cache"
 
 [[target]]
 id        = "hyprland"
@@ -423,7 +427,7 @@ row       = 35
 noctalia  = ["hyprland"]
 mechanism = "own"
 files     = [
-  { template = "hyprland/generated.lua", out = "hyprland/generated.lua", dest = "~/.local/state/aptus/hypr/generated.lua" },
+  { template = "hyprland/generated.lua", out = "hyprland/generated.lua", dest = "{state}/aptus/hypr/generated.lua" },
 ]
 reload    = "builtin:hyprland"
 
@@ -432,6 +436,6 @@ id        = "hyprlock"
 row       = 36
 mechanism = "own"
 files     = [
-  { template = "hyprlock/hyprlock.conf", out = "hyprlock/hyprlock.conf", dest = "~/.local/state/aptus/hyprlock.conf" },
+  { template = "hyprlock/hyprlock.conf", out = "hyprlock/hyprlock.conf", dest = "{state}/aptus/hyprlock.conf" },
 ]
 reload    = "none"

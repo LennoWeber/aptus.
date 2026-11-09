@@ -30,6 +30,7 @@ class Action:
 
 
 KINDS = ("mkdir", "link", "move", "edit-hyprland")
+WANTS_LINK = "default.target.wants/aptus-recover.service"   # below the user unit directory
 
 
 def check_action(paths: Paths, action: Action) -> None:
@@ -80,6 +81,18 @@ def check_action(paths: Paths, action: Action) -> None:
     if action.kind == "link" and action.target is not None and not under(real(action.target, follow=True),
                                                                        paths.repo):
         refuse("a link that does not point into the repository")
+
+
+def leased_paths(paths: Paths) -> list[Path]:
+    """Every slot path of the lease and bake targets in theme/targets.toml (globs expanded),
+    which no install action may touch (02 §5: only aptus-lease writes them)."""
+    raise NotImplementedError
+
+
+def systemctl_user(paths: Paths, args: Sequence[str]) -> None:
+    """`systemctl --user <args>` through lease.system (a fake under test); RuntimeError when it
+    fails or is not available."""
+    raise NotImplementedError
 
 
 def _bin_links(paths: Paths) -> list[tuple[Path, Path]]:

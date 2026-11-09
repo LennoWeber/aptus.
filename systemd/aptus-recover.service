@@ -10,7 +10,8 @@ Before=default.target
 # dconf writes go through the session bus
 Wants=dbus.socket
 After=dbus.socket
-ConditionPathExists=%h/.local/state/aptus/lease/journal.json
+# %S is $XDG_STATE_HOME for the user manager
+ConditionPathExists=%S/aptus/lease/journal.json
 
 [Service]
 Type=oneshot

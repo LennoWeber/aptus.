@@ -27,4 +27,9 @@ Singleton {
     property bool warning: false
     // One line for the settings page ("Lease held · 31 slots", "Scope-only · another session is open").
     property string statusLine: ""
+
+    // Re-read the three files and update every property above from lease.js summarize().
+    function refresh(): void {
+        // phase 7
+    }
 }

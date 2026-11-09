@@ -1,0 +1,10 @@
+#!/usr/bin/python3 -I
+# aptus-theme: thin launcher into lib/aptus (07 §2).
+import os
+import sys
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), "lib"))
+
+import aptus.theme.cli  # noqa: E402
+
+sys.exit(aptus.theme.cli.main(sys.argv[1:]))

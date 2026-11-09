@@ -867,3 +867,96 @@ Hyprland restores every slot.
 **Checked.** Every module imports; the manifest parses (36 targets, rows 1–37 except 32); paths
 resolve in a test HOME (greetd and tmux paths inside it); `tests/run` green (97 unit, 159 QML),
 qmllint 0 warnings.
+
+### Review of phase 2 (fresh subagent, phase-2 diff only)
+
+14 findings and 3 test-safety notes. The fixes went into the phase-3 commit, because phase 3 had
+started on the same files.
+
+**Fixed.**
+1. Noctalia's post-hooks copy the paint elsewhere for fastfetch (merged into `config.jsonc`),
+   Antigravity/Gemini (merged into `config.json`) and Brave (installed into
+   `~/.local/share/noctalia` and Brave's preferences). The leased theme file alone paints
+   nothing, and Brave's real target is Noctalia's own data. Checked against the fetched
+   templates. On this machine `config.jsonc` has comments, so Noctalia's own merge fails, and it
+   does not include the theme. All three are now `never` with a note. 02 §4 is updated in
+   phase 7.
+2. Vesktop: all six Noctalia outputs (midnight, material, system24; native and Flatpak).
+3. Yazi: Noctalia writes `flavors/noctalia.yazi/{flavor.toml,tmtheme.xml}`, wired by `[flavor]`
+   in `theme.toml`. The scope mirror now replaces the two flavor files and adds a `theme.toml`
+   only when there is none (`missing_only`). `ScopeSpec.replace` is gone; each `FileOut` has an
+   `at` path inside the mirror.
+4. `FileOut.name` gives the slot id `<target>.<name>` (default `artifact`). A `*` slot appends
+   `.<sha256(path)[:8]>`, so ids stay stable and safe as file names.
+5. `SlotSpec.create`. A missing artifact is created only when its directory exists, so release
+   deletes exactly what aptus created and never a directory. With `present`, a missing artifact
+   is skipped.
+6. `Target.requires` (dconf key → target): `icon-theme` is only recorded when `icons` was not
+   applied, so GTK never falls back to hicolor.
+7. `SlotRecord.reload`: release and recover do not depend on a manifest changed since the take.
+8. `before` records `link` (readlink) for file and ini slots, and `mode` for ini.
+9. Own destinations use `{config}`/`{state}`/`{cache}`/`{data}` placeholders (XDG bases, the same
+   as `paths.py`). The unit uses `ConditionPathExists=%S/aptus/lease/journal.json`.
+10. Partly: a `SlotKind` enum; `Status.state: State | None`, `Status.owner: Owner | None`;
+    `Manifest` is not frozen.
+12. `Coverage.kept` for Noctalia ids that a `never` target keeps on purpose.
+13. The doctor stamp moved to `state/doctor-check` (not `lease/`), documented as the doctor's
+    only write.
+14. `recover_unit` and `scope_*` are derived from `systemd_user` and `scope`.
+- Test safety: a `nvim_sockets` path (`runtime_home`, inside HOME in tests); the bat note says
+  `--target` is `cache_bat` and never bat's shared cache. The Own-destination allowlist is a
+  phase-6 invariant.
+
+**Rejected.**
+- 10, the rest. `apply.Report.mode` stays a string: `session` imports the theme package, so
+  sharing `session.Mode` would be circular. Hook kinds and result states stay strings checked
+  against a constant tuple, as `install.KINDS` does. Each layer encodes "record only" in its own
+  way: TOML has no null (`""`), the spec has `value=None`, the journal has `write=False`. Each is
+  the natural form for its layer. The `-1` sentinels stay, to match `resolve.js` (parity).
+- 11. The spec updates (02 §4/§5.2, 07 §7, 08 §5) come with phase 7, when the structures are
+  final, in one consistent edit. They are listed in the phase-1 plan.
+
+### Phase 3 · signatures (2026-11-09)
+
+**Done.** Signatures, docstrings and constants. Every body is `raise NotImplementedError`, or an
+empty QML body marked "phase 7":
+- lease: `system` (`TOOLS`, `tool`, `run`, `boot_id`, `comm`, `environ`, `processes`,
+  `session_processes`, `signal_session`).
+- lease kinds: one interface for all three kinds (`read`, `digest`, `before_digest`, `planned`,
+  `write`, `restore`, `current`) plus `module` and `sha256`. ini adds `split`, `matches`,
+  `extract`, `splice`, `sections_sha256`. dconf adds `KEYS`, `RECORD_ONLY`, `check_key`,
+  `read_key`, `write_key`, `reset_key`.
+- lease journal and ops: journal `load`/`save`/`archive`/`last_released`/`to_dict`/`from_dict`;
+  ops `lock` (re-entrant within one process), `owner`, `take`, `update`, `release`, `status`,
+  `held_by`, `save_conflict`.
+- lease preflight, recover, guard and CLI:
+  - preflight: `sessions`, `others`, `noctalia`, `check`, and the three notice texts.
+  - recover: `socket_accepts`, `owner_alive`, `recover`.
+  - guard: `write_state`, `pidfd`, `wait`, `release_if_ours`, `unset_environment`, `run`,
+    `main`, `UNSET`.
+  - `lease/cli.py`.
+- theme: `palette` (port of colour.js), `resolve` (`ROLES`, `resolve`, `accent_for`,
+  `ground_alpha`), `sun`, `inputs` (`setting`, `from_settings`, `from_json`, `to_dict`), and
+  `targets` (`load`, `parse_target`, `expand`, `active`, `slots`, `coverage`).
+- theme, continued: `noctalia` (`sources`, `merge`, `enabled`), `render` (`FILTERS`,
+  `PLACEHOLDER`, `context`, `apply_filter`, `render_text`, `input_hash`, `current`, `render`,
+  `prune`), `scope` (`mirror`, `marked`, `swap`), `own` (`write_files`, `icons`, `bat`, `record`)
+  and `hooks` (`parse`, `run_all`, the four builtins, `bake`, `retry_queued`).
+- theme apply and CLI: `apply` (`slot_specs`, `lease_mode`, `apply`, `report_json`) and
+  `theme/cli.py`.
+- elsewhere:
+  - `paths.require_safe_home`.
+  - `session`: `IMPORT_VARS`, `recover_step`, `render_step`, `lease_step`, `theme_step`,
+    `import_environment`, `start_guard`, `stop_guard`.
+  - `install`: `leased_paths`, `systemctl_user`, `WANTS_LINK`.
+  - `doctor/isolation`: the eight `check_*`, `lease_periods`, `fingerprint`, `watched_files`,
+    and the baseline functions.
+  - Launchers `bin/aptus-{lease,guard,theme}`.
+  - `shell/services/lease.js` (`parseGuard`, `failedSlots`, `summarize`); `Lease.refresh()`;
+    `Theme.requestApply()`, `_inputs()`, `_applied()`.
+- Not done: test skeletons. The tests are written with the implementation in phase 7. Extending
+  `install.KINDS` waits for phase 7 too: an S1 test pins the tuple, and a kind without handling
+  would pass `check_action`.
+
+**Checked.** Every module of `lib/aptus` imports. `tests/run` is green (97 unit tests, the QML
+tests) and qmllint reports 0 warnings.

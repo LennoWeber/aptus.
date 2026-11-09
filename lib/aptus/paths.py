@@ -91,7 +91,7 @@ class Paths:
     qt6ct_conf: Path           # ~/.config/qt6ct/qt6ct.conf (Own, inert outside Hyprland)
     qt6ct_colors: Path         # ~/.config/qt6ct/colors/aptus.conf
     baseline: Path             # install/baseline.json (02 §10 check 8, written by install.sh)
-    doctor_stamp: Path         # lease/doctor-check: the time of the last isolation check (check 2)
+    doctor_stamp: Path         # doctor-check: the time of the last isolation check (check 2), the doctor's only write
     bake_queue: Path           # <runtime>/bake-queue.json (bakes waiting for their app to close)
     test_bin: Path             # $HOME/.aptus-test/bin: the only place tools come from under APTUS_TEST
     noctalia_config: Path      # ~/.config/noctalia (*.toml overlays; read-only)
@@ -99,6 +99,7 @@ class Paths:
     umbriel_config: Path       # ~/.config/umbriel (read-only; never written, I-1)
     greetd_config: Path        # /etc/greetd/config.toml ($HOME/.aptus-test/etc/… in tests; read-only)
     tmux_sockets: Path         # ${TMUX_TMPDIR:-/tmp}/tmux-<uid> ($HOME/.aptus-test/tmux-<uid> in tests)
+    nvim_sockets: Path         # the directory of nvim.* server sockets: <runtime_home> (inside HOME in tests)
 
     def make_runtime(self) -> Path:
         """Create <runtime> (private, 0700) if needed and return it."""
@@ -151,6 +152,8 @@ def resolve(env: Mapping[str, str] | None = None) -> Paths:
     test_root = home / ".aptus-test"
     install_state = state / "install"
     tmux_tmp = Path(env.get("TMUX_TMPDIR") or "/tmp")
+    scope = state / "scope"
+    systemd_user = config_home / "systemd" / "user"
     return Paths(
         test=test, home=home,
         config_home=config_home, state_home=state_home, cache_home=cache_home,
@@ -165,7 +168,7 @@ def resolve(env: Mapping[str, str] | None = None) -> Paths:
         lease_slots=lease / "slots", lease_conflicts=lease / "conflicts",
         lease_history=lease / "history",
         theme=theme, theme_current=theme / "current",
-        scope=state / "scope", hypr_state=hypr_state,
+        scope=scope, hypr_state=hypr_state,
         generated_lua=hypr_state / "generated.lua", binds_local=hypr_state / "binds.local.lua",
         agenda=state / "agenda.json", clipboard_db=state / "clipboard.db",
         hyprlock_conf=state / "hyprlock.conf", locked_marker=state / "locked",
@@ -173,28 +176,29 @@ def resolve(env: Mapping[str, str] | None = None) -> Paths:
         local_bin=home / ".local" / "bin",
         hypr_config_dir=hypr_config_dir, hyprland_lua=hypr_config_dir / "hyprland.lua",
         hypr_aptus_link=hypr_config_dir / "aptus",
-        systemd_user=config_home / "systemd" / "user",
+        systemd_user=systemd_user,
         restart_flag=runtime / "restart", dev_flag=runtime / "dev",
         guard_state=runtime / "guard.state", clip_changed=runtime / "clip.changed",
         session_status=runtime / "session.json", intro_flag_prefix=runtime / "intro.",
         cache_bat=cache / "bat", cache_agenda_http=cache / "agenda-http",
         templates=repo / "theme" / "templates", targets=repo / "theme" / "targets.toml",
         recover_unit_repo=repo / "systemd" / "aptus-recover.service",
-        recover_unit=config_home / "systemd" / "user" / "aptus-recover.service",
+        recover_unit=systemd_user / "aptus-recover.service",
         theme_own=theme / "own.json",
-        scope_kitty=state / "scope" / "kitty", scope_yazi=state / "scope" / "yazi",
-        scope_starship=state / "scope" / "starship.toml",
+        scope_kitty=scope / "kitty", scope_yazi=scope / "yazi",
+        scope_starship=scope / "starship.toml",
         bat_source=cache / "bat-src",
         icons=data_home / "icons", fonts=data_home / "fonts", user_themes=data_home / "themes",
         qt6ct_conf=config_home / "qt6ct" / "qt6ct.conf",
         qt6ct_colors=config_home / "qt6ct" / "colors" / "aptus.conf",
-        baseline=install_state / "baseline.json", doctor_stamp=lease / "doctor-check",
+        baseline=install_state / "baseline.json", doctor_stamp=state / "doctor-check",
         bake_queue=runtime / "bake-queue.json", test_bin=test_root / "bin",
         noctalia_config=config_home / "noctalia",
         noctalia_settings=state_home / "noctalia" / "settings.toml",
         umbriel_config=config_home / "umbriel",
         greetd_config=(test_root / "etc" if test else Path("/etc")) / "greetd" / "config.toml",
         tmux_sockets=(test_root if test else tmux_tmp) / f"tmux-{os.getuid()}",
+        nvim_sockets=runtime_home,
     )
 
 
@@ -213,3 +217,10 @@ def get() -> Paths:
 def inside(path: Path, root: Path) -> bool:
     """Whether `path` (resolved, symlinks followed) is `root` or below it."""
     return Path(path).resolve().is_relative_to(Path(root).resolve())
+
+
+def require_safe_home(paths: Paths) -> None:
+    """Under APTUS_TEST=1 raise UnsafeHome unless HOME is a directory below the system temporary
+    directory and is not the passwd home of this user; outside tests a no-op. Every writer of a
+    leased slot, a scope mirror or an Own file calls it first."""
+    raise NotImplementedError

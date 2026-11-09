@@ -10,7 +10,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
+from pathlib import Path
 from typing import Any
+
+from ..paths import Paths
 
 
 class State(str, Enum):
@@ -18,6 +21,12 @@ class State(str, Enum):
     HELD = "held"              # every slot carries aptus paint
     RELEASING = "releasing"    # restoring; stays here while a slot failed (recover retries)
     RELEASED = "released"      # moved to history/
+
+
+class SlotKind(str, Enum):
+    FILE = "file"
+    INI = "ini-sections"
+    DCONF = "dconf"
 
 
 class SlotStatus(str, Enum):
@@ -40,13 +49,16 @@ class Owner:
 @dataclass
 class SlotRecord:
     """One leased item. `before`/`after` shapes by kind (02 §5.2):
-    file:  before {exists, sha256, mode, size}, after {sha256}
-    ini-sections: before {exists, sections_sha256, sections: [{name, anchor, text}]},
+    file:  before {exists, sha256, mode, size, link}, after {sha256}
+    ini-sections: before {exists, mode, link, sections_sha256, sections: [{name, anchor, text}]},
                   after {sections_sha256}
-    dconf: before {set, value}, after {value}"""
+    dconf: before {set, value}, after {value}
+    `link` is readlink(path) ("" when path is not a symlink), for the doctor."""
     id: str                    # "<target>.<name>" (e.g. "gtk3.artifact", "dconf.color-scheme")
-    kind: str                  # "file" | "ini-sections" | "dconf"
-    target: str                # the targets.toml id whose reload hook runs for this slot
+    kind: SlotKind
+    target: str                # the targets.toml id of this slot
+    reload: str = "none"       # that target's reload hook, kept here so release and recover do
+                               # not depend on a manifest that may have changed since the take
     path: str = ""             # file / ini-sections: the configured path (expanded)
     write_path: str = ""       # the resolved file aptus writes (path with symlinks followed)
     key: str = ""              # dconf: the full key path
@@ -67,3 +79,50 @@ class Journal:
     theme_generation: int = 0
     slots: list[SlotRecord] = field(default_factory=list)
     released_at: str = ""      # ISO 8601, set when the state becomes released
+
+
+HISTORY_KEEP = 10              # released journals kept in history/ (02 §5.1)
+
+
+class JournalError(RuntimeError):
+    """journal.json exists but cannot be read or parsed: nothing may act on it automatically."""
+
+
+def now() -> str:
+    """Local time, ISO 8601 with offset, seconds precision."""
+    raise NotImplementedError
+
+
+def to_dict(j: Journal) -> dict[str, Any]:
+    """The JSON shape of 02 §5.2 (enums as their values)."""
+    raise NotImplementedError
+
+
+def from_dict(d: dict[str, Any]) -> Journal:
+    """Inverse of to_dict; JournalError for an unknown version, state or slot kind."""
+    raise NotImplementedError
+
+
+def load(paths: Paths) -> Journal | None:
+    """The journal, None when there is none; JournalError when it is unreadable."""
+    raise NotImplementedError
+
+
+def save(paths: Paths, j: Journal) -> None:
+    """Write journal.json atomically (atomic.write_json: temp, fsync, rename, fsync dir)."""
+    raise NotImplementedError
+
+
+def archive(paths: Paths, j: Journal) -> Path:
+    """Write the released journal to history/<time>.json, remove journal.json and the slots/
+    copies it referenced, keep the newest HISTORY_KEEP entries; returns the history file."""
+    raise NotImplementedError
+
+
+def last_released(paths: Paths) -> Journal | None:
+    """The newest journal in history/ (the doctor compares slots against its `before`)."""
+    raise NotImplementedError
+
+
+def slot(j: Journal, slot_id: str) -> SlotRecord | None:
+    raise NotImplementedError
