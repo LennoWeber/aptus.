@@ -20,9 +20,9 @@ QtObject {
     // [{ id: int, kind: "toast" | "osd" | "event", key: string, payload: var, priority: int, born: ms,
     //   waited: bool }] (rules.js: waited = queued behind a blocking surface).
     // `key` replaces an entry of the same key (one OSD per kind, a notification's replaces_id).
-    // Payload conventions: toast { notification } or { card: "capture" | "colour" | "stillOpen",
-    // …card fields, flyFrom: {x,y,width,height} (M-23) }; osd { kind, value, label, device };
-    // event { text, glyph }.
+    // Payload conventions: toast: a notification toast (services/js/notifications.js) or
+    // { card: "capture" | "colour" | "stillOpen", …card fields, flyFrom: {x,y,width,height} (M-23) };
+    // osd: services/js/levels.js; event { text, glyph }.
     property var passive: []
     // The arbitration result of notch.md §9: { kind: "osd" | "toast" | "event" | "card" | "rest" |
     // "hidden", entry } (entry: a passive entry, or for "card" the pinned activity id).
