@@ -25,7 +25,10 @@ var GLYPHS = { muted: "volume_off", mic: "mic", micOff: "mic_off", bright: "ligh
                screen: "screen_share" }
 
 // The battery's status glyph (bar.md §6: warn ≤ 15 %, crit ≤ 7 %, bolt while charging).
-function batteryGlyph(percent, charging, warnAt, critAt) { throw new Error("not implemented") }
+function batteryGlyph(percent, charging, warnAt, critAt) {
+    invariant(critAt > 0 && critAt < warnAt && warnAt <= 100, "battery thresholds " + critAt + "/" + warnAt)
+    throw new Error("not implemented")
+}
 // The volume glyph by level (0..1.5) or muted.
 function volumeGlyph(level, muted) { throw new Error("not implemented") }
 // The network's status glyph: Wi-Fi strength (4 steps), lan, or wifi_off (faint) offline.
@@ -33,15 +36,43 @@ function networkGlyph(kind, online, strength) { throw new Error("not implemented
 // The brightness glyph by level (0..1).
 function brightnessGlyph(level) { throw new Error("not implemented") }
 // One key step on a percent scale: the next multiple of `stepPercent` in `direction`, clamped.
-function step(percent, direction, stepPercent, min, max) { throw new Error("not implemented") }
+function step(percent, direction, stepPercent, min, max) {
+    invariant(direction === 1 || direction === -1, "step direction " + direction)
+    invariant(stepPercent > 0 && min < max, "step " + stepPercent + " in " + min + ".." + max)
+    throw new Error("not implemented")
+}
 // OSD payloads (notch.md §8).
-function volumeOsd(level, muted, boost, device) { throw new Error("not implemented") }
+function volumeOsd(level, muted, boost, device) {
+    invariant(isFinite(level), "volume level " + level)
+    // TODO(phase): checkOsd(result), as for every OSD payload below.
+    throw new Error("not implemented")
+}
 function micOsd(muted, device) { throw new Error("not implemented") }
-function brightnessOsd(level) { throw new Error("not implemented") }
-function kbdOsd(level, max) { throw new Error("not implemented") }
+function brightnessOsd(level) {
+    invariant(isFinite(level), "brightness level " + level)
+    throw new Error("not implemented")
+}
+function kbdOsd(level, max) {
+    invariant(max >= 1 && level >= 0 && level <= max, "keyboard light " + level + "/" + max)
+    throw new Error("not implemented")
+}
 function capsOsd(on) { throw new Error("not implemented") }
 function layoutOsd(name) { throw new Error("not implemented") }
 // The OSD kinds the Deck has a slider for (volume, mic, brightness): while the Deck is open on
 // the monitor its slider moves instead and no OSD is posted (notch.md §8). One place for the rule;
 // Audio._osd and Brightness._osd ask it.
-function deckReplaces(kind) { throw new Error("not implemented") }
+function deckReplaces(kind) {
+    invariant(OSD_KINDS.indexOf(kind) >= 0, "unknown OSD kind " + kind)
+    throw new Error("not implemented")
+}
+
+// Invariants (phase 6): they throw "levels invariant: …" (thresholds, steps and OSD kinds come
+// from tokens and the services, not from the hardware: a level is clamped, never refused).
+var OSD_KINDS = ["volume", "mic", "brightness", "kbd", "caps", "layout"]
+function invariant(cond, message) { if (!cond) throw new Error("levels invariant: " + message) }
+// An OSD payload: a known kind and glyph, a level within its maximum or none, dots within steps.
+function checkOsd(p) {
+    invariant(p && OSD_KINDS.indexOf(p.kind) >= 0 && typeof p.glyph === "string" && p.glyph !== "", "broken OSD payload")
+    invariant(p.level === -1 || (p.level >= 0 && p.level <= p.max), p.kind + " level " + p.level + "/" + p.max)
+    invariant(p.dots === -1 || (p.dots >= 0 && p.dots < p.steps), p.kind + " dots " + p.dots + "/" + p.steps)
+}

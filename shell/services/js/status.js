@@ -22,13 +22,22 @@ var EVENT_GLYPHS = { headphones: "headphones", bluetooth: "bluetooth_connected",
 // "mic" | "camera" | "" for one node.
 function privacyKind(node) { throw new Error("not implemented") }
 // The privacy summary of every node.
-function privacy(nodes) { throw new Error("not implemented") }
+function privacy(nodes) {
+    invariant(Array.isArray(nodes), "nodes is not a list")
+    throw new Error("not implemented")
+}
 // The active VPN's name from `nmcli -t -f NAME,TYPE connection show --active` ("" none;
 // types vpn and wireguard).
-function vpnFrom(text) { throw new Error("not implemented") }
+function vpnFrom(text) {
+    invariant(typeof text === "string", "nmcli output is not a string")
+    throw new Error("not implemented")
+}
 // "Headphones connected · 70 %": a Bluetooth device's name and battery (-1 unknown); its bluez
 // icon name picks the glyph (audio-headset / audio-headphones → headphones).
 function btConnectedEvent(name, icon, battery) { throw new Error("not implemented") }
 // "Charging" (plugged in while discharging) and "Wi-Fi off".
 function chargingEvent() { throw new Error("not implemented") }
 function wifiOffEvent() { throw new Error("not implemented") }
+
+// Invariants (phase 6): they throw "status invariant: …".
+function invariant(cond, message) { if (!cond) throw new Error("status invariant: " + message) }

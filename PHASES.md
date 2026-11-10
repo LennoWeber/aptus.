@@ -1127,3 +1127,69 @@ it to see what S3 adds.
 | 4 | image-data images (`image://qsimage`) cannot be copied to the cache | the toast shows the live image; the history keeps no image for them (today.md §6 note in phase 7) |
 | 4 | tray submenus come from a nested `QsMenuOpener` read when the menu opens; DBusMenu may load children lazily | phase 7: checked with a real tray item; else the row opens the item's own menu |
 | — | not probed yet: Caps Lock bind, a real tray item, output removal with surfaces open, the hot edge push, brightness on the fake sysfs (needs the nested.py change) | phase 7 |
+
+### Phase 6 · invariants (2026-11-10)
+
+**Done** (assertions only; the stubs keep their `throw`, no TODO removed, new `TODO(phase)` markers
+for the postconditions):
+- Every S3 JS library has an `invariant()` that throws "<lib> invariant: …", and every public
+  function checks its input before the stub's throw. Rule: tokens, settings, internal state and
+  the callers' arguments are checked; data from the hardware, Hyprland or D-Bus is clamped, never
+  refused (a refused battery reading would break the bar).
+  - `notch.js`: a legal notch state and passive top (`viewOf`); `checkLayers` (positive unique
+    uids, a key and a layer kind each, never two current layers), `checkView` (the key is its
+    identity, a card names a known activity, a mode a known mode, rest/hidden carry nothing), the
+    serial ahead of every uid; `checkCandidates` (known activities once each, a side, a width) and
+    `checkSlots` (two different activities, no candidate lost); toast heights ascending; a known
+    bulge kind and an event width range; `checkPassive` (rules.js kinds, unique ids) and positive
+    passive timings once entries exist (Motion gives 0 before tokens load); `checkCountdown` (one
+    without a total never runs); pager ids once and a ±1 step; a real `Date`.
+  - `notifications.js`: `checkRecord` (non-zero integer id, an app name, a freedesktop urgency, no
+    `default`/`inline-reply` among the actions, progress −1 or 0–100, a known hold reason),
+    `checkContext` (a known `notch.overFullscreen`), `checkDecision` (critical is never held or
+    sent to Today; priority 2 exactly for critical toasts), `checkTiming`, `checkStack` (≤ 3
+    icons, distinct apps), a stack toast only for ≥ 2 and a live passive id, a held summary only
+    for ≥ 1 and a known reason, a system toast with a title and a timeout unless critical,
+    strings into the markup functions, `checkHistory` (each id once), history limits ≥ 1.
+  - `hypr.js`: unique monitor names, workspace ids and focus order; a name limit ≥ 2; the strip
+    mode; a ±1 wheel step; `isAddress` ("0x" plus hex digits) for `bumpFocus` and `patchTitle`;
+    `checkStrip` (pills once each, in id order, one active at most, no special workspace).
+  - `levels.js`: battery thresholds 0 < crit < warn ≤ 100, a ±1 step of a positive size inside
+    min < max, a keyboard level inside 1..max, finite OSD levels, known OSD kinds; `checkOsd`.
+  - `media.js` (each player key once, a list for `media.ignore`), `status.js` (a node list, a
+    string from nmcli), `bar.js` (`checkBarTokens`: thresholds and title widths in order; the
+    `bar.battery.percent` / `bar.bluetooth` enums; strip widths ≥ 0; the throttle state; tray max
+    a whole number ≥ 0; a Deck section; a window for the window menu, a normal workspace for the
+    pill menu; `checkMenu`: an id and label per row, each id once, submenus too).
+- QML guards (refuse and log, never throw): `Brightness._refused` (under APTUS_TEST only a tree
+  from `APTUS_SYSFS` and only `aptus_test…` devices are written; `fakehw.py` now names its devices
+  `aptus_test_backlight` and `aptus_test::kbd_backlight`, so a real `brightnessctl` that slipped
+  onto PATH finds no such device: before, the fake used the real names `intel_backlight` and
+  `tpacpi::kbd_backlight`), `Audio._refused` (under APTUS_TEST every setter writes the double,
+  never PipeWire), `Notifications.inject` (refused outside the test).
+- Tests: the S3 QML tests are now real (55 cases across levels, medialogic, statuslogic,
+  hyprmodel, barlogic, notchlogic, notifylogic, glyphs) plus one `test_invariants_reject_broken_state`
+  per library (7: the refused cases, and the `check*` helpers accepting good input) and
+  `test_restart_ids_do_not_collide`: 63 in all. `tst_glyphs` shapes every glyph name S3 uses (the JS lists,
+  the menus, the names written in the QML) with the bundled font and requires one icon-wide glyph.
+
+**Checked.** On the branch: the 7 invariant tests pass against the stubs (each check fires before
+the stub's throw); the other S3 cases fail with "not implemented" until phase 7 (56 cases);
+unit 97 passed; qmllint 146 files, 0 warnings. Against the probe (scratch copy of `s3-probe` with
+the checks inserted into its functions by script): every S3 test passes except
+`test_restart_ids_do_not_collide`; the glyph test fails as it should when a bogus name is added.
+
+**Found** (fixed in phase 7):
+- Notification ids restart at 1 with every shell start, but read-back history records kept their
+  old ids: the first new notification replaced (and `markRead`/`removeRecord` would hit) an
+  unrelated old record. Read-back records get `ARCHIVE_ID − index` (`ARCHIVE_ID` = −1000000,
+  below every server and injected id); the record comment says so.
+- The probe's `Hypr._onActiveWindow` turns an empty `activewindowv2` (no window focused) into the
+  address "0x" and bumps it into the focus order; `isAddress` refuses it, phase 7 ignores the
+  empty event.
+- The probe's `StatusCluster` passes `Config.get(...)` for the two bar enums, which is undefined
+  until Config has loaded; the enum check would log at start. Phase 7 passes the schema defaults
+  as fallbacks.
+- The fake hardware used the real device names (above).
+- From phase 5: the structural gaps of its table come over with the probe code in phase 7;
+  nothing in it belongs to phase 6.

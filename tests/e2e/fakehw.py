@@ -19,10 +19,12 @@ def brightnessctl_script() -> str:
 @dataclass
 class FakeHardware:
     root: Path                      # the folder holding sysfs/ and bin/
-    backlight: str = "intel_backlight"
+    # Test device names only (Brightness refuses any other under APTUS_TEST): a real
+    # brightnessctl that slipped onto PATH finds no such device.
+    backlight: str = "aptus_test_backlight"
     backlight_max: int = 400
     backlight_now: int = 200
-    kbd: str = "tpacpi::kbd_backlight"
+    kbd: str = "aptus_test::kbd_backlight"
     kbd_max: int = 2
     kbd_now: int = 0
 

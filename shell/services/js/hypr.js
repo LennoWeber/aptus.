@@ -28,26 +28,82 @@ var INTERNAL = "eDP-1"
 var SCRATCH = "special:scratch"
 
 // The fixed workspace ids of `monitor` given every monitor name in Hyprland's order ([] = none).
-function fixedIds(monitorNames, monitor) { throw new Error("not implemented") }
+function fixedIds(monitorNames, monitor) {
+    invariant(Array.isArray(monitorNames) && unique(monitorNames), "monitor names " + monitorNames)
+    throw new Error("not implemented")
+}
 // Workspace records from Hyprland's workspaces ([{ id, name, monitor, windows }]), the window
 // records, monitors ([{ name, activeWorkspace }]), the focused monitor, the focus order
 // (addresses, MRU), urgent addresses and workspace names (id → name).
-function workspaceRecords(workspaces, windows, monitors, focusedMonitor, focusOrder, urgent, names, maxChars) { throw new Error("not implemented") }
+function workspaceRecords(workspaces, windows, monitors, focusedMonitor, focusOrder, urgent, names, maxChars) {
+    invariant(maxChars >= 2, "name limit " + maxChars)
+    invariant(unique(workspaces.map(function (w) { return w.id })), "a workspace id twice")
+    invariant(unique(focusOrder), "an address twice in the focus order")
+    throw new Error("not implemented")
+}
 // Distinct app classes on a workspace, most recently focused first.
-function appsOf(windows, workspaceId, focusOrder) { throw new Error("not implemented") }
+function appsOf(windows, workspaceId, focusOrder) {
+    invariant(unique(focusOrder), "an address twice in the focus order")
+    throw new Error("not implemented")
+}
 // The pill's label: the name (≤ maxChars, ellipsised) or the id.
-function labelOf(id, name, maxChars) { throw new Error("not implemented") }
+function labelOf(id, name, maxChars) {
+    invariant(maxChars >= 2, "name limit " + maxChars)
+    throw new Error("not implemented")
+}
 // One monitor's strip (mode: "used" | "fixed").
-function stripFor(records, monitor, mode, monitorNames, specialOpen) { throw new Error("not implemented") }
+function stripFor(records, monitor, mode, monitorNames, specialOpen) {
+    invariant(mode === "used" || mode === "fixed", "strip mode " + mode)
+    invariant(unique(records.map(function (r) { return r.id })), "a workspace record twice")
+    // TODO(phase): checkStrip(result).
+    throw new Error("not implemented")
+}
 // The previous / next used workspace id of a strip from `current` (wheel), or `current`.
-function neighbour(strip, current, direction) { throw new Error("not implemented") }
+function neighbour(strip, current, direction) {
+    invariant(direction === 1 || direction === -1, "wheel direction " + direction)
+    throw new Error("not implemented")
+}
 // `windowtitlev2` data ("address,title") → { address: "0x…", title }.
-function parseTitleEvent(data) { throw new Error("not implemented") }
+function parseTitleEvent(data) {
+    invariant(typeof data === "string", "event data is not a string")
+    throw new Error("not implemented")
+}
 // The window list with one title replaced, or null when the address is unknown (then refresh).
-function patchTitle(windows, address, title) { throw new Error("not implemented") }
+function patchTitle(windows, address, title) {
+    invariant(isAddress(address), "address " + address)
+    throw new Error("not implemented")
+}
 // The focus order with `address` first.
-function bumpFocus(order, address) { throw new Error("not implemented") }
+function bumpFocus(order, address) {
+    invariant(unique(order), "an address twice in the focus order")
+    invariant(isAddress(address), "address " + address)
+    throw new Error("not implemented")
+}
 // An event's data split into `count` fields at the first count-1 commas (the last field keeps
 // its commas: titles, layout names), e.g. `activespecialv2` "id,name,monitor", `screencast`
 // "state,owner", `activelayout` "keyboard,layout".
-function splitEvent(data, count) { throw new Error("not implemented") }
+function splitEvent(data, count) {
+    invariant(typeof data === "string", "event data is not a string")
+    invariant(count >= 1 && Math.floor(count) === count, "field count " + count)
+    throw new Error("not implemented")
+}
+
+// Invariants (phase 6): they throw "hypr invariant: …". Hyprland's own data is taken as it comes
+// (ids and names unique); what is checked is the model's own state and the callers' arguments.
+function invariant(cond, message) { if (!cond) throw new Error("hypr invariant: " + message) }
+function unique(list) {
+    for (var i = 0; i < list.length; i++) if (list.indexOf(list[i]) !== i) return false
+    return true
+}
+// A window address as Hyprland writes it ("0x" and hex digits; never the bare "0x" of an empty
+// `activewindowv2`).
+function isAddress(a) { return typeof a === "string" && /^0x[0-9a-fA-F]+$/.test(a) }
+// A strip: its pills unique and in id order, the active one among them, a scratch pill only for
+// the scratch workspace.
+function checkStrip(strip) {
+    var ids = strip.pills.map(function (p) { return p.id })
+    invariant(unique(ids), "a pill twice")
+    invariant(ids.every(function (id, i) { return i === 0 || ids[i - 1] < id }), "pills out of order")
+    invariant(strip.pills.filter(function (p) { return p.active }).length <= 1, "two active pills")
+    invariant(strip.pills.every(function (p) { return !p.special }), "a special workspace as a pill")
+}

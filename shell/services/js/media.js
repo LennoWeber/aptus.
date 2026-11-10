@@ -14,6 +14,16 @@
 // (The card's time texts are core/js/format.js clockDuration.)
 
 // The key of the active player among summaries (already without ignored players), or "".
-function pickActive(players) { throw new Error("not implemented") }
+function pickActive(players) {
+    invariant(Array.isArray(players), "players is not a list")
+    invariant(players.every(function (p, i) { return players.map(function (q) { return q.key }).indexOf(p.key) === i }), "a player twice")
+    throw new Error("not implemented")
+}
 // The player is listed in media.ignore.
-function isIgnored(player, ignore) { throw new Error("not implemented") }
+function isIgnored(player, ignore) {
+    invariant(Array.isArray(ignore), "media.ignore is not a list")
+    throw new Error("not implemented")
+}
+
+// Invariants (phase 6): they throw "media invariant: …".
+function invariant(cond, message) { if (!cond) throw new Error("media invariant: " + message) }

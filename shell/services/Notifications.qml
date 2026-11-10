@@ -54,7 +54,11 @@ Singleton {
     // TODO(phase): only under Paths.test (07 §7: test only); a record from the JSON fields
     //   (appName, summary, body, urgency, actions, image) with the next _injectSerial id, through
     //   _receive with no live object.
-    function inject(payload: var): void { Log.info("service.notifications", "inject: not available yet"); }
+    function inject(payload: var): void {
+        // Invariant (phase 6): fake notifications exist only in a test shell.
+        if (!Paths.test) { Log.warn("service.notifications", "inject refused outside the test"); return; }
+        Log.info("service.notifications", "inject: not available yet");
+    }
 
     // The toast's actions (notch.md §6): the default action ("") or a button; dismisses unless
     // the notification is resident. Without a default action: focus the app's window.

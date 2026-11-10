@@ -46,7 +46,19 @@ Singleton {
     // Read the backlight and LED files under `sysfs` (sysfs has no inotify: after every own write).
     function _read(): void { throw new Error("not implemented"); }
     // brightnessctl -d <device> set <value> (from PATH; the e2e tests put a fake first).
-    function _write(device: string, value: int): void { throw new Error("not implemented"); }
+    function _write(device: string, value: int): void {
+        if (_refused(device)) return;
+        throw new Error("not implemented");
+    }
+    // Invariant (phase 6): a test shell never writes the real backlight or keyboard light. Under
+    // APTUS_TEST only a tree from APTUS_SYSFS is written, and only its test devices (fakehw.py
+    // names them aptus_test…: a real brightnessctl that slipped onto PATH finds no such device).
+    function _refused(dev: string): bool {
+        if (!Paths.test) return false;
+        if (sysfs !== "" && sysfs !== "/sys" && dev.indexOf("aptus_test") === 0) return false;
+        Log.error("service.brightness", "write to " + dev + " under " + (sysfs || "no sysfs") + " refused in a test");
+        return true;
+    }
     // Post the OSD ("brightness" on the monitor showing eDP-1, "kbd" on the active one), unless
     // the Deck is open there and has a slider for it (levels.js deckReplaces).
     function _osd(kind: string): void { throw new Error("not implemented"); }
