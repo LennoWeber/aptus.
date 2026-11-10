@@ -95,6 +95,18 @@ bind("kbd-down",      "XF86KbdBrightnessDown",        G("kbd-down"),      "Media
 bind("kbd-toggle",    "XF86KbdLightOnOff",            G("kbd-toggle"),    "Media and hardware", "Keyboard light on/off", L)
 bind("media-play",    "XF86AudioPlay",                G("media-toggle"),  "Media and hardware", "Play / pause", L)
 bind("media-pause",   "XF86AudioPause",               G("media-toggle"),  "Media and hardware", "Play / pause | hidden", L)
+-- Caps Lock keeps its effect (non-consuming); on release the main keyboard's state names the
+-- OSD (notch.md §8: "Caps Lock on" / "off").
+local function caps_osd()
+  for _, d in ipairs(hl.get_devices() or {}) do
+    if d.type == "keyboard" and d.main then
+      hl.dispatch(G(d.caps_lock and "capslock-on" or "capslock-off"))
+      return
+    end
+  end
+end
+bind("capslock",      "Caps_Lock",                    caps_osd,           "Media and hardware", "Caps Lock OSD | hidden",
+     { locked = true, release = true, non_consuming = true })
 bind("media-next",    "XF86AudioNext",                G("media-next"),    "Media and hardware", "Next track", L)
 bind("media-prev",    "XF86AudioPrev",                G("media-prev"),    "Media and hardware", "Previous track", L)
 
