@@ -20,13 +20,14 @@ def parser() -> argparse.ArgumentParser:
     sub = p.add_subparsers(dest="command", metavar="command")
     m = sub.add_parser("msg", help="call the shell over IPC: aptus msg <target> <function> [args…]")
     m.add_argument("args", nargs=argparse.REMAINDER)
-    d = sub.add_parser("doctor", help="check config, dependencies (and isolation from S2 on)")
+    d = sub.add_parser("doctor", help="check isolation, config and dependencies")
     d.add_argument("groups", nargs="*", choices=("isolation", "config", "deps"), metavar="group")
     lg = sub.add_parser("logs", help="the journal of the shell, the session tools and units")
     lg.add_argument("-f", "--follow", action="store_true", help="keep printing new lines")
     lg.add_argument("component", nargs="?", help="one tag or unit, e.g. shell or aptus-guard")
-    for name in ("theme", "lease"):
-        x = sub.add_parser(name, help="arrives with S2")
+    for name, text in (("theme", "render, apply, targets (aptus-theme)"),
+                       ("lease", "take, update, release, recover, status (aptus-lease)")):
+        x = sub.add_parser(name, help=text)
         x.add_argument("args", nargs=argparse.REMAINDER)
     dv = sub.add_parser("dev", help="live reload of the shell: aptus dev [on|off]")
     dv.add_argument("state", nargs="?", choices=("on", "off"))
@@ -137,11 +138,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         return doctor.main(args.groups)
     if args.command == "logs":
         return cmd_logs(args.follow, args.component)
-    if args.command in ("theme", "lease"):
-        # TODO(S2): theme → aptus.theme.cli.main(args.args); lease → aptus.lease.cli.main(args.args);
-        #   help texts in parser() ("render, apply, targets" / "take, update, release, recover, status").
-        print(f"aptus {args.command}: not available until S2", file=sys.stderr)
-        return 2
+    if args.command == "theme":
+        from .theme import cli as theme_cli
+        return theme_cli.main(args.args)
+    if args.command == "lease":
+        from .lease import cli as lease_cli
+        return lease_cli.main(args.args)
     if args.command == "dev":
         if args.state is None:
             print("dev mode " + ("on" if paths.get().dev_flag.exists() else "off"))

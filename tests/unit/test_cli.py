@@ -79,4 +79,6 @@ def test_version(capsys: pytest.CaptureFixture[str]) -> None:
     assert capsys.readouterr().out.strip() == f"aptus {cli.VERSION}"
     assert cli.VERSION.startswith("2.")
     assert cli.main([]) == 2
-    assert cli.main(["theme"]) == 2             # arrives with S2
+    with pytest.raises(SystemExit) as e:         # a subcommand is required
+        cli.main(["theme"])
+    assert e.value.code == 2

@@ -8,6 +8,7 @@ from pathlib import Path
 
 import pytest
 
+import s2_fakes as fakes
 from aptus import install
 from aptus.install import hyprlua
 from aptus.paths import get
@@ -16,9 +17,24 @@ NOCT_LUA = 'local noctalia = "noctalia msg"\nhl.on("hyprland.start", function()\
            '    hl.exec_cmd("noctalia")\nend)\nhl.bind("SUPER + M", hl.dsp.exit())\n'
 
 
+@pytest.fixture(autouse=True)
+def systemctl(test_home: Path) -> None:
+    """A systemctl in the temporary HOME: enable/disable make and remove the wants link."""
+    fakes.tool(test_home, "systemctl", """\
+        wants = os.path.join(os.environ["HOME"], ".config/systemd/user/default.target.wants")
+        if args[:2] == ["--user", "enable"]:
+            os.makedirs(wants, exist_ok=True)
+            os.symlink("../" + args[2], os.path.join(wants, args[2]))
+        elif args[:2] == ["--user", "disable"]:
+            os.unlink(os.path.join(wants, args[2]))
+        """)
+
+
 def snapshot(home: Path) -> dict[str, str]:
     out = {}
     for p in sorted(home.rglob("*")):
+        if ".aptus-test" in p.parts:
+            continue
         out[str(p.relative_to(home))] = (os.readlink(p) if p.is_symlink()
                                          else "" if p.is_dir() else p.read_text())
     return out
@@ -50,10 +66,15 @@ def test_plan_lists_links() -> None:
     text = install.describe(actions)
     assert "~/.local/bin/aptus-session" in text and "→" in text
     assert snapshot(p.home) == {".aptus-run": ""} or snapshot(p.home) == {}   # planning writes nothing
+    assert links[p.recover_unit] == p.recover_unit_repo
+    assert {a.kind for a in actions} >= {"enable-unit", "baseline"}
     # After applying the base install, planning again finds nothing left to link.
     install.apply(p, actions)
     assert (p.local_bin / "aptus").is_symlink()
     assert os.readlink(p.hypr_aptus_link) == str(p.hypr_repo)
+    assert [c[1:] for c in fakes.calls(p.home, "systemctl")] == [
+        ["--user", "daemon-reload"], ["--user", "enable", "aptus-recover.service"]]
+    assert json.loads(p.baseline.read_text())["files"]                # fingerprints recorded
     assert [a for a in install.plan(p) if a.kind != "mkdir"] == []
 
 
@@ -110,14 +131,14 @@ def test_nothing_without_approval(monkeypatch: pytest.MonkeyPatch,
     p.hyprland_lua.parent.mkdir(parents=True)
     p.hyprland_lua.write_text(NOCT_LUA)
     before = snapshot(p.home)
-    answers = iter(["n", ""])
+    answers = iter(["n", "", ""])
     monkeypatch.setattr(builtins, "input", lambda prompt="": next(answers))
     assert install.main([]) == 0
     out = capsys.readouterr().out
     # without the aptus link the block would break hyprland.lua: not even offered
     assert "Nothing changed." in out and "skipped, the block requires" in out
     assert snapshot(p.home) == before
-    answers = iter(["y", "n", "no"])
+    answers = iter(["y", "n", "n", "no"])
     monkeypatch.setattr(builtins, "input", lambda prompt="": next(answers))
     p.hyprland_lua.write_text(NOCT_LUA)
     before_lua = p.hyprland_lua.read_text()
@@ -134,7 +155,7 @@ def test_nothing_without_approval(monkeypatch: pytest.MonkeyPatch,
     asked: list[str] = []
     monkeypatch.setattr(builtins, "input", lambda prompt="": asked.append(prompt) or "y")
     assert install.main([]) == 0
-    assert len(asked) == 2                                        # v1, hyprland (base done above)
+    assert len(asked) == 3                              # v1, recover, hyprland (base done above)
     text = p.hyprland_lua.read_text()
     assert hyprlua.BLOCK_BEGIN in text and "noctalia" not in text.split(hyprlua.BLOCK_BEGIN)[0]
     assert len(list(p.install_state.glob("hyprland.lua.*"))) == 1          # backup first
@@ -150,13 +171,16 @@ def test_uninstall_plan(monkeypatch: pytest.MonkeyPatch) -> None:
     (p.scope / "kitty" / "theme.conf").write_text("x")
     actions = install.plan_uninstall(p)
     kinds = {(a.kind, a.approval) for a in actions}
-    assert ("link", "") in kinds and ("move", "") in kinds
+    assert ("link", "") in kinds and ("move", "") in kinds and ("disable-unit", "") in kinds
+    assert any(a.kind == "link" and a.path == p.recover_unit for a in actions)
     assert ("edit-hyprland", "hyprland") in kinds and ("edit-hyprland", "restore") in kinds
     assert all(a.target is None for a in actions if a.kind == "link")      # unlinks only
     assert any(a.kind == "move" and a.path == p.scope for a in actions)    # moved, not deleted
     # Without the restore group the Noctalia lines stay out.
     install.apply(p, [a for a in actions if a.approval != "restore"])
     assert not (p.local_bin / "aptus").exists() and not p.hypr_aptus_link.exists()
+    assert not os.path.lexists(p.recover_unit)
+    assert fakes.calls(p.home, "systemctl")[-1][1:] == ["--user", "disable", "aptus-recover.service"]
     assert hyprlua.BLOCK_BEGIN not in p.hyprland_lua.read_text()
     assert "noctalia" not in p.hyprland_lua.read_text()
     (moved,) = list(p.install_state.rglob("theme.conf"))
@@ -183,7 +207,10 @@ def test_check_action_refuses() -> None:
           Action("link", p.local_bin / "aptus", None), Action("move", p.config / "old", p.v1_backup / "old"),
           Action("move", p.scope, p.install_state / "uninstalled" / "scope"),
           Action("edit-hyprland", p.hyprland_lua, p.install_state / "removed.lua"),
-          Action("mkdir", p.systemd_user / "aptus-recover.service")]
+          Action("mkdir", p.systemd_user / "aptus-recover.service"),
+          Action("enable-unit", p.systemd_user / install.WANTS_LINK),
+          Action("disable-unit", p.systemd_user / install.WANTS_LINK),
+          Action("baseline", p.baseline), Action("release-lease", p.lease_journal)]
     for a in ok:
         check_action(p, a)
     bad = [(Action("rm", p.state), "unknown kind"),
@@ -203,7 +230,13 @@ def test_check_action_refuses() -> None:
            (Action("link", p.local_bin / "aptus", Path("/usr/bin/true")), "does not point into"),
            (Action("link", p.local_bin / "aptus", Path("bin/aptus")), "not an absolute, normalised"),
            (Action("edit-hyprland", p.config_home / "hypr" / "other.lua"), "not hyprland.lua"),
-           (Action("edit-hyprland", p.hyprland_lua, p.home / "removed.lua"), "not hyprland.lua")]
+           (Action("edit-hyprland", p.hyprland_lua, p.home / "removed.lua"), "not hyprland.lua"),
+           (Action("mkdir", p.config_home / "gtk-3.0/noctalia.css"), "a leased slot"),
+           (Action("move", p.config_home / "kdeglobals", p.v1_backup / "k"), "a leased slot"),
+           (Action("enable-unit", p.systemd_user / "x.service"), "user unit other"),
+           (Action("enable-unit", p.state / "x"), "acts only on"),
+           (Action("baseline", p.state / "baseline.json"), "acts only on"),
+           (Action("release-lease", p.state / "journal.json"), "acts only on")]
     for a, why in bad:
         with pytest.raises(RuntimeError, match="install invariant: .*" + why):
             check_action(p, a)
@@ -212,7 +245,8 @@ def test_check_action_refuses() -> None:
     os.symlink(p.repo / "hypr" / "init.lua", p.hyprland_lua)
     with pytest.raises(RuntimeError, match="inside the repository"):
         check_action(p, Action("edit-hyprland", p.hyprland_lua, p.install_state / "removed.lua"))
-    assert install.KINDS == ("mkdir", "link", "move", "edit-hyprland")
+    assert install.KINDS == ("mkdir", "link", "move", "edit-hyprland", "enable-unit",
+                             "disable-unit", "baseline", "release-lease")
     with pytest.raises(RuntimeError, match="install invariant"):
         install.apply(p, [Action("mkdir", p.state), Action("mkdir", Path("/tmp/elsewhere"))])
     assert not p.state.exists()                 # nothing ran: the whole plan is checked first
@@ -227,7 +261,7 @@ def test_declined_v1_leaves_the_blocked_link_out(monkeypatch: pytest.MonkeyPatch
     (p.local_bin / "aptus").write_text("old script")
     p.hyprland_lua.parent.mkdir(parents=True)
     p.hyprland_lua.write_text(NOCT_LUA)
-    answers = iter(["y", "n", "y"])
+    answers = iter(["y", "n", "y", "y"])
     monkeypatch.setattr(builtins, "input", lambda prompt="": next(answers))
     assert install.main([]) == 0
     out = capsys.readouterr().out
