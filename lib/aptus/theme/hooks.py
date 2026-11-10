@@ -232,12 +232,21 @@ def update_queue(paths: Paths, add: Mapping[str, str] | None = None,
 
 def retry_queued(paths: Paths) -> list[HookResult]:
     """The guard's tick: run each queued bake whose app has closed meanwhile; what ran (applied
-    or failed) leaves the queue."""
+    or failed) leaves the queue. Under the theme lock, taken without waiting: while an apply
+    holds it the tick is skipped, so the guard never stops watching Hyprland for it."""
+    from . import render
+    if not load_queue(paths):
+        return []
     results = []
-    for tid, reload in load_queue(paths).items():
-        r = bake(paths, tid, parse(reload))
-        if r.state != "queued":
-            results.append(r)
-    if results:
-        update_queue(paths, remove={r.target for r in results})
+    try:
+        with render.lock(paths, timeout=0):
+            for tid, reload in load_queue(paths).items():
+                r = bake(paths, tid, parse(reload))
+                if r.state != "queued":
+                    results.append(r)
+            if results:
+                update_queue(paths, remove={r.target for r in results})
+    except render.LockBusy:
+        _log.debug("bake retry skipped: the theme lock is busy")
+        return []
     return results

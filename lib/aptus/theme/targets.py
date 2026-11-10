@@ -6,6 +6,7 @@ from __future__ import annotations
 import glob
 import hashlib
 import os
+import re
 import tomllib
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
@@ -97,6 +98,7 @@ _TARGET_KEYS = {"id", "row", "noctalia", "mechanism", "kind", "files", "template
 _FILE_KEYS = {"template", "out", "name", "slot", "dest", "at", "missing_only"}
 _SCOPE_KEYS = {"into", "mirror", "source", "begin", "end"}
 _OWN_STEPS = ("", "icons", "bat")
+TARGET_ID = re.compile(r"[a-z0-9][a-z0-9-]*")   # a path component in the generation and slot ids
 _PREFIXES = {"{config}": "config_home", "{state}": "state_home", "{cache}": "cache_home",
              "{data}": "data_home"}
 
@@ -115,6 +117,9 @@ def load(path: Path, templates: Path | None = None) -> Manifest:
         raise ManifestError(f"unknown top-level keys {sorted(unknown)}")
     parsed = tuple(parse_target(t) for t in raw.get("target", []))
     ids = [t.id for t in parsed]
+    bad = [i for i in ids if not TARGET_ID.fullmatch(i)]
+    if bad:
+        raise ManifestError(f"target ids {bad}: lowercase letters, digits and '-' only")
     dup = sorted({i for i in ids if ids.count(i) > 1})
     if dup:
         raise ManifestError(f"duplicate target ids {dup}")

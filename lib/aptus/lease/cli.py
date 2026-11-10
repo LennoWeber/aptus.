@@ -77,7 +77,11 @@ def cmd_take(paths: Paths) -> int:
 
 
 def cmd_update(paths: Paths, ids: Sequence[str]) -> int:
-    """Update the slots of the given target ids (all when none) from the current generation."""
+    """Update the slots of the given target ids (all when none) from the current generation;
+    only from the Hyprland session that holds the lease (HYPRLAND_INSTANCE_SIGNATURE)."""
+    if not ops.holds(paths, _signature()):
+        print("aptus-lease update: this session does not hold the lease", file=sys.stderr)
+        return 1
     gen = _generation(paths)
     manifest = targets.load(paths.targets, paths.templates)
     report = ops.update(paths, apply.slot_specs(paths, manifest, gen, ids), gen.n)
@@ -97,6 +101,8 @@ def finish_release(paths: Paths, report: ops.ReleaseReport, signature: str) -> i
 
 
 def cmd_release(paths: Paths) -> int:
+    """The manual escape hatch (and uninstall's release-lease): releases whatever lease is held,
+    also a live session's, which then goes on scope-only (02 §5.6)."""
     return finish_release(paths, ops.release(paths), _signature())
 
 

@@ -96,8 +96,10 @@ def check_journal(paths: Paths) -> Check:
         return Check(name, True, "no lease")
     if s.state == State.HELD and s.owner_alive:
         return Check(name, True, f"held by Hyprland {s.owner.hyprland_pid if s.owner else '?'}")
-    why = "its Hyprland is gone" if not s.owner_alive else f"state {s.state.value}"
-    return Check(name, False, f"lease {s.state.value}, {why}: run aptus-lease recover")
+    if s.owner_alive:
+        return Check(name, False, f"lease {s.state.value} while its Hyprland runs: the guard "
+                     "retries at Hyprland's exit; `aptus-lease release` gives it back now")
+    return Check(name, False, f"lease {s.state.value}, its Hyprland is gone: run aptus-lease recover")
 
 
 def _epoch(iso: str) -> float:

@@ -72,15 +72,26 @@ def matches(name: str | None, globs: Sequence[str]) -> bool:
     return name is not None and any(fnmatch.fnmatchcase(name, g) for g in globs)
 
 
+def _anchor(name: str | None, seen: dict[str, int]) -> str:
+    """The anchor of a block that is not leased: its header name ("" for the preamble), and for a
+    name seen before also "\n<k>" (k-th repeat; a header name never holds a newline), so a file
+    with a repeated header gets its sections back in the same place."""
+    key = "" if name is None else name
+    k = seen.get(key, 0)
+    seen[key] = k + 1
+    return key if k == 0 else f"{key}\n{k}"
+
+
 def extract(text: str, globs: Sequence[str]) -> list[Section]:
     """The matching sections of `text`, in order, each with its anchor."""
     out: list[Section] = []
     anchor: str | None = None
+    seen: dict[str, int] = {}
     for b in split(text):
         if matches(b.name, globs):
             out.append(Section(b.name or "", anchor, b.text))
         else:
-            anchor = "" if b.name is None else b.name
+            anchor = _anchor(b.name, seen)
     return out
 
 
@@ -100,11 +111,12 @@ def splice(text: str, globs: Sequence[str], sections: Sequence[Section]) -> str:
 
     for sec in groups.pop(None, []):
         emit(sec.text)
+    seen: dict[str, int] = {}
     for b in split(text):
         if matches(b.name, globs):
             continue
         emit(b.text)
-        for sec in groups.pop("" if b.name is None else b.name, []):
+        for sec in groups.pop(_anchor(b.name, seen), []):
             emit(sec.text)
     for rest in groups.values():
         for sec in rest:

@@ -55,6 +55,15 @@ def _dconf_specs(paths: Paths, manifest: Manifest, gen: Generation, t: Target) -
     return specs
 
 
+def _rendered(gen: Generation, t: Target) -> bool:
+    """Every output of the target exists in the generation (a target that failed in a generation
+    with no earlier output has none)."""
+    outs = [render.output(gen, f) for f in t.files]
+    if t.dconf:
+        outs.append(gen.path / t.id / render.DCONF_JSON)
+    return all(o.is_file() for o in outs)
+
+
 def _file_specs(paths: Paths, gen: Generation, t: Target) -> list[SlotSpec]:
     return [SlotSpec(id=targets.slot_id(t, f, slot), kind=t.kind, target=t.id, reload=t.reload,
                      create=not t.present, path=slot,
@@ -72,7 +81,7 @@ def slot_specs(paths: Paths, manifest: Manifest, gen: Generation,
     for t in manifest.targets:
         wanted = t.mechanism == Mechanism.LEASE or (t.mechanism == Mechanism.BAKE and _bake_on(gen, t))
         if not wanted or (ids and t.id not in ids) or t.id in gen.failed \
-                or not targets.active(paths, t):
+                or not targets.active(paths, t) or not _rendered(gen, t):
             continue
         specs += _dconf_specs(paths, manifest, gen, t) if t.kind == SlotKind.DCONF \
             else _file_specs(paths, gen, t)
@@ -148,7 +157,7 @@ def apply_generation(paths: Paths, manifest: Manifest, gen: Generation, signatur
     session holds the lease (ops.held_by), else they stay Noctalia's; under the theme lock the
     scope targets and the Own targets; then the reload hooks of what changed; the report.
     aptus-session uses it at start (after take), apply after each render."""
-    lease = bool(signature) and ops.held_by(paths, signature)
+    lease = bool(signature) and ops.holds(paths, signature)
     report = Report(generation=gen.n, mode="lease" if lease else "scope-only")
     changed: dict[str, str] = {}
     leased: list[Target] = []
@@ -172,14 +181,15 @@ def apply_generation(paths: Paths, manifest: Manifest, gen: Generation, signatur
 
 
 def apply(paths: Paths, inputs: Inputs, signature: str, manifest: Manifest | None = None) -> Report:
-    """08 §6: render (unchanged input hash: report unchanged, nothing else), then
-    apply_generation, all under the theme lock so an older request never lands after a newer
-    one."""
+    """08 §6: render, then apply_generation, all under the theme lock so an older request
+    never lands after a newer one. An unchanged input hash reports `unchanged` and does nothing
+    else, unless this session's lease does not carry that generation yet (an earlier apply of
+    it failed or was cut off): then it is applied again."""
     manifest = manifest or targets.load(paths.targets, paths.templates)
     with render.lock(paths):
         gen = render.render(paths, inputs, manifest)
-        if gen.reused:
-            lease = bool(signature) and ops.held_by(paths, signature)
+        lease = bool(signature) and ops.holds(paths, signature)
+        if gen.reused and not (lease and ops.status(paths).generation != gen.n):
             return Report(generation=gen.n, mode="lease" if lease else "scope-only", unchanged=True)
         return apply_generation(paths, manifest, gen, signature)
 

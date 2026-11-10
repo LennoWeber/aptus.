@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 
 from . import atomic, hypr
-from .lease import guard, journal, ops, preflight, system
+from .lease import guard, invariants, journal, ops, preflight, system
 from .lease.invariants import InvariantError
 from .lease.journal import JournalError
 from .log import setup
@@ -63,11 +63,10 @@ def recover_step(paths: Paths, report: StartReport) -> None:
     journal is still there."""
     try:
         rel = ops.recover(paths)
-    except (JournalError, ops.LeaseError, InvariantError) as e:
-        report.warnings.append(f"recover: {e}")
-        return
-    if rel.acted and guard.after_release(paths, rel, "") == guard.GuardState.FAILED:
-        report.warnings.append(f"recover: not restored: {', '.join(sorted(rel.failed))}")
+        if rel.acted and guard.after_release(paths, rel, "") == guard.GuardState.FAILED:
+            report.warnings.append(f"recover: not restored: {', '.join(sorted(rel.failed))}")
+    except Exception as e:  # noqa: BLE001 - the session starts whatever recover does
+        report.warnings.append(f"recover: {type(e).__name__}: {e}")
 
 
 def load_manifest(paths: Paths, report: StartReport) -> Manifest | None:
@@ -93,21 +92,29 @@ def render_step(paths: Paths, manifest: Manifest, report: StartReport) -> Genera
 
 def start_guard(paths: Paths, env: Mapping[str, str]) -> bool:
     """Step 3, before any slot is written: `systemd-run --user --unit=aptus-guard --collect …
-    aptus-guard <hyprland-pid> <signature>`; True when the unit is active. No guard, no lease."""
+    aptus-guard <hyprland-pid> <signature>`; True once the new guard watches (guard.ready within
+    READY_TIMEOUT: an old guard.state is removed first). No guard, no lease."""
     log = logging.getLogger("aptus.session")
     try:
         who = ops.owner(paths, env)
     except ops.LeaseError as e:
         log.warning("no guard: %s", e)
         return False
+    invariants.writable(paths, paths.guard_state, kind="state")
+    paths.guard_state.unlink(missing_ok=True)
     r = system.run(paths, ["systemd-run", "--user", f"--unit={guard.UNIT}", "--collect", "--quiet",
                            "--property=Type=exec", str(paths.bin / "aptus-guard"),
                            str(who.hyprland_pid), who.hyprland_signature])
     if r.skipped or r.code != 0:
         log.warning("systemd-run aptus-guard failed: %s", r.stderr.strip() or "not available")
         return False
-    r = system.run(paths, ["systemctl", "--user", "is-active", "--quiet", f"{guard.UNIT}.service"])
-    return not r.skipped and r.code == 0
+    end = time.monotonic() + guard.READY_TIMEOUT
+    while not guard.ready(paths):
+        if time.monotonic() > end:
+            log.warning("aptus-guard did not report ok within %.0f s", guard.READY_TIMEOUT)
+            return False
+        time.sleep(0.05)
+    return True
 
 
 def lease_step(paths: Paths, env: Mapping[str, str], manifest: Manifest, gen: Generation,
@@ -143,6 +150,19 @@ def import_environment(paths: Paths, env: Mapping[str, str]) -> bool:
                                                    r.stderr.strip() or "not available")
         return False
     return True
+
+
+def environment_step(paths: Paths, env: Mapping[str, str], report: StartReport) -> None:
+    """Step 5 with its race closed: when the guard released between the take and the import
+    (Hyprland gone, another session opened), the variables just imported are unset again and
+    the session goes on scope-only."""
+    if not import_environment(paths, env):
+        report.warnings.append("systemctl --user import-environment failed")
+    if not ops.holds(paths, _signature(env)):
+        guard.unset_environment(paths)
+        report.mode = Mode.SCOPE_ONLY
+        report.reasons.append("the guard released the lease")
+        report.notice = report.notice or preflight.NOTICE_OTHER_SESSION
 
 
 def stop_guard(paths: Paths) -> bool:
@@ -185,8 +205,8 @@ def start(paths: Paths, env: Mapping[str, str]) -> StartReport:
         report.notice = preflight.NOTICE_FAILED
     else:
         lease_step(paths, env, manifest, gen, report)
-    if report.mode is Mode.LEASE and not import_environment(paths, env):
-        report.warnings.append("systemctl --user import-environment failed")
+    if report.mode is Mode.LEASE:
+        environment_step(paths, env, report)
     try:
         applied = apply.apply_generation(paths, manifest, gen, _signature(env))
         report.warnings += [f"apply {tid}: {why}" for tid, why in sorted(applied.failed.items())]
@@ -255,8 +275,15 @@ def main(argv: Sequence[str]) -> int:
     if reason:
         log.info("not starting: %s", reason)
         return 0
-    report = start(p, os.environ)
-    write_status(p, report)
+    try:
+        report = start(p, os.environ)
+    except Exception as e:  # noqa: BLE001 - Hyprland must get its shell whatever start did
+        log.exception("start failed")
+        report = StartReport(reasons=["start failed"], warnings=[f"{type(e).__name__}: {e}"])
+    try:
+        write_status(p, report)
+    except OSError as e:
+        log.error("cannot write session.json: %s", e)
     log.info("mode %s (%s); starting the supervisor", report.mode.value, ", ".join(report.reasons))
     try:
         exec_supervisor(p)

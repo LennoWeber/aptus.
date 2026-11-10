@@ -40,6 +40,8 @@ class GuardState(str, Enum):
 
 TICK = 30.0                    # seconds between bake retries while waiting
 POLL = 1.0                     # seconds between checks of logind's user record
+RETRIES = 4                    # attempts of a release that raised (a busy lock, a full disk)
+BACKOFF = 2.0                  # seconds between those attempts (all of them fit in the 90 s stop)
 UNIT = "aptus-guard"           # the transient unit name (systemd-run --unit)
 # Unset on release (02 §6), each only while it still holds aptus's value: XCURSOR_SIZE stays
 # (Umbriel uses 24 too). Values: APTUS_SESSION=1, QT_QPA_PLATFORMTHEME=qt6ct, the cursor theme
@@ -54,6 +56,22 @@ def write_state(paths: Paths, state: GuardState, detail: str = "") -> None:
     invariants.writable(paths, paths.guard_state, kind="state")
     paths.make_runtime()
     atomic.write_text(paths.guard_state, f"{state.value}\n{detail}\n", 0o644)
+
+
+READY_TIMEOUT = 5.0            # seconds aptus-session waits for a new guard's "ok"
+
+
+def ready(paths: Paths) -> bool:
+    """The guard watches: guard.state says `ok` (written once its pidfd is open and its signal
+    handling is set up) and the unit is active."""
+    try:
+        word = paths.guard_state.read_text(encoding="utf-8").split("\n", 1)[0]
+    except OSError:
+        return False
+    if word != GuardState.OK.value:
+        return False
+    r = system.run(paths, ["systemctl", "--user", "is-active", "--quiet", f"{UNIT}.service"])
+    return not r.skipped and r.code == 0
 
 
 def pidfd(pid: int) -> int:
@@ -80,9 +98,11 @@ def wait(fd: int, stop_fd: int, poll: float, on_poll: Callable[[], bool]) -> str
 
 
 def other_session_opened(paths: Paths, signature: str, pid: int, last: list[Any]) -> bool:
-    """True when logind's user record changed since the last call (inode, mtime) and another
-    open graphical session is listed while this session holds the lease. Its own logind session
-    is the journal owner's. A failing loginctl keeps the lease (logged)."""
+    """True when logind's user record changed since the last conclusive check (inode, mtime)
+    and another open graphical session is listed while this session holds the lease. Its own
+    logind session is the journal owner's. A change is only used up by a check that listed the
+    sessions while the lease was held: one that lands before the take finished, or while
+    loginctl fails (the lease stays held, logged once), is checked again at the next poll."""
     try:
         st = os.stat(paths.logind_user)
         key: Any = (st.st_ino, st.st_mtime_ns)
@@ -90,7 +110,6 @@ def other_session_opened(paths: Paths, signature: str, pid: int, last: list[Any]
         key = None
     if key == last[0]:
         return False
-    last[0] = key
     try:
         j = journal.load(paths)
     except journal.JournalError:
@@ -99,8 +118,11 @@ def other_session_opened(paths: Paths, signature: str, pid: int, last: list[Any]
         return False
     listed = preflight.sessions(paths)
     if listed is None:
-        _log.warning("cannot list login sessions; the lease stays held")
+        if last[0] != ("retry", key):
+            _log.warning("cannot list login sessions; the lease stays held")
+        last[0] = ("retry", key)
         return False
+    last[0] = key
     found = preflight.others(listed, j.owner.logind_session)
     if found:
         _log.warning("another session opened (%s): releasing", ", ".join(s.id for s in found))
@@ -147,16 +169,35 @@ def unset_environment(paths: Paths) -> list[str]:
 
 
 def after_release(paths: Paths, report: ReleaseReport, signature: str) -> GuardState:
-    """The release hooks and the environment, once a release acted; the resulting state."""
+    """Once a release acted: the environment unset (also when a slot failed: Umbriel must not
+    get aptus's variables because of one slot), then the release hooks; the resulting state."""
     if not report.acted:
         return GuardState.RELEASED
+    unset_environment(paths)
     hooks.run_reloads(paths, report.reloads, signature)
     if report.failed:
         _log.error("release failed for %s; recover retries at the next login",
                    ", ".join(sorted(report.failed)))
         return GuardState.FAILED
-    unset_environment(paths)
     return GuardState.RELEASED
+
+
+def give_back(paths: Paths, pid: int, signature: str) -> GuardState:
+    """The guard's release: the environment first while this session holds the lease (a guard
+    killed half-way then leaves no variable behind; recover restores the slots), then
+    release_if_ours and after_release. A release that raises (the lease lock busy for 10 s, a
+    full disk) is tried RETRIES times, BACKOFF apart; then FAILED (recover retries later)."""
+    for attempt in range(1, RETRIES + 1):
+        try:
+            if ops.held_by(paths, signature, pid):
+                unset_environment(paths)
+            return after_release(paths, release_if_ours(paths, pid, signature), signature)
+        except Exception as e:  # noqa: BLE001 - the guard keeps trying, it never just dies
+            _log.warning("release attempt %d of %d failed: %s: %s", attempt, RETRIES,
+                         type(e).__name__, e)
+            if attempt < RETRIES:
+                time.sleep(BACKOFF)
+    return GuardState.FAILED
 
 
 def _stop_pipe() -> int:
@@ -172,11 +213,12 @@ def run(paths: Paths, pid: int, signature: str) -> int:
     (hooks.run_reloads), unset_environment, guard.state, return 0 (1 when the release failed).
     On another session opening: the same release, guard.state scope-only, and keep watching."""
     stop = _stop_pipe()
-    write_state(paths, GuardState.OK)
     try:
         fd: int | None = pidfd(pid)
     except ProcessLookupError:
         fd = None
+    if fd is not None:
+        write_state(paths, GuardState.OK)          # aptus-session takes the lease only after this
     last: list[Any] = [None]
     next_tick = [time.monotonic() + TICK]
 
@@ -194,11 +236,11 @@ def run(paths: Paths, pid: int, signature: str) -> int:
         why = wait(fd, stop, POLL, on_poll)
         if why != "other-session":
             break
-        state = after_release(paths, release_if_ours(paths, pid, signature), signature)
+        state = give_back(paths, pid, signature)
         write_state(paths, GuardState.SCOPE_ONLY if state == GuardState.RELEASED else state,
                     preflight.NOTICE_OTHER_SESSION)
     _log.info("Hyprland %d %s: releasing", pid, why)
-    state = after_release(paths, release_if_ours(paths, pid, signature), signature)
+    state = give_back(paths, pid, signature)
     write_state(paths, state)
     return 1 if state == GuardState.FAILED else 0
 

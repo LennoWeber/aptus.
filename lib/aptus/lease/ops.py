@@ -372,6 +372,17 @@ def held_by(paths: Paths, signature: str, pid: int | None = None) -> bool:
             and (pid is None or j.owner.hyprland_pid == pid))
 
 
+def holds(paths: Paths, signature: str) -> bool:
+    """The session with `signature` holds the lease in state `held` (not taking, not half
+    released): apply's lease mode, the environment import, `aptus-lease update`."""
+    try:
+        j = journal.load(paths)
+    except JournalError:
+        return False
+    return (j is not None and j.state == State.HELD and j.owner is not None
+            and j.owner.hyprland_signature == signature)
+
+
 def save_conflict(paths: Paths, stamp: str, rec: SlotRecord) -> Path:
     """conflicts/<stamp>/<slot id>: what someone else wrote into a leased slot."""
     dest = paths.lease_conflicts / stamp / rec.id

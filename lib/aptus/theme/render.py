@@ -60,9 +60,14 @@ PLACEHOLDER = re.compile(
     r"\{\{\s*([A-Za-z0-9_.]+)\s*(?:\|\s*([a-z]+)(?:\(\s*([A-Za-z0-9_.]+)\s*\))?\s*)?\}\}")
 GEN = re.compile(r"gen-(\d+)")
 DCONF_JSON = "dconf.json"
+FAILED_JSON = "failed.json"            # target id → why, for the targets that failed to render
 _COLOUR = re.compile(r"#[0-9a-f]{6}")
 _held: dict[tuple[str, int], list[int]] = {}   # (lock path, thread) → [fd, depth]
 _log = logging.getLogger("aptus.theme.render")
+
+
+class LockBusy(RuntimeError):
+    """The theme lock stayed busy for the whole timeout."""
 
 
 @contextmanager
@@ -91,7 +96,7 @@ def lock(paths: Paths, timeout: float = LOCK_TIMEOUT) -> Iterator[None]:
         except BlockingIOError:
             if time.monotonic() > end:
                 os.close(fd)
-                raise RuntimeError(f"the theme lock is busy (waited {timeout:.0f} s)") from None
+                raise LockBusy(f"the theme lock is busy (waited {timeout:.0f} s)") from None
             time.sleep(0.05)
     _held[key] = [fd, 1]
     try:
@@ -254,7 +259,13 @@ def current(paths: Paths) -> Generation | None:
         inputs = inputs_mod.from_json((path / "inputs.json").read_text(encoding="utf-8"))
     except (OSError, ValueError):
         inputs = None
-    return Generation(n=n, path=path, input_hash=digest, resolved=resolved, inputs=inputs)
+    try:
+        failed = json.loads((path / FAILED_JSON).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        failed = {}
+    return Generation(n=n, path=path, input_hash=digest, resolved=resolved, inputs=inputs,
+                      failed={str(k): str(v) for k, v in failed.items()}
+                      if isinstance(failed, dict) else {})
 
 
 def _next_n(paths: Paths) -> int:
@@ -321,7 +332,7 @@ def render(paths: Paths, inputs: Inputs, manifest: Manifest) -> Generation:
                 failed[target.id] = f"{type(e).__name__}: {e}"
                 _log.warning("render %s failed: %s", target.id, failed[target.id])
                 _keep_previous(target, prev, build)
-        _finish(paths, build, res, inputs, digest)
+        _finish(paths, build, res, inputs, digest, failed)
         gen = paths.theme / f"gen-{n}"
         os.rename(build, gen)
         atomic.fsync_dir(paths.theme)
@@ -333,8 +344,13 @@ def render(paths: Paths, inputs: Inputs, manifest: Manifest) -> Generation:
                           failed=failed)
 
 
-def _finish(paths: Paths, build: Path, res: dict[str, Any], inputs: Inputs, digest: str) -> None:
+def _finish(paths: Paths, build: Path, res: dict[str, Any], inputs: Inputs, digest: str,
+            failed: dict[str, str]) -> None:
+    """The generation's own files (written into the private build directory, which becomes
+    visible only through the atomic rename to gen-<n>), then fsync of everything."""
     (build / "resolved.json").write_text(json.dumps(res, indent=2) + "\n", encoding="utf-8")
+    (build / FAILED_JSON).write_text(json.dumps(failed, indent=2, sort_keys=True) + "\n",
+                                     encoding="utf-8")
     (build / "inputs.json").write_text(json.dumps(inputs_mod.to_dict(inputs), indent=2) + "\n",
                                        encoding="utf-8")
     (build / ".input-hash").write_text(digest + "\n", encoding="utf-8")

@@ -430,7 +430,10 @@ def _random_ini(rng: random.Random) -> str:
     names = ["General", "KDE", "Icons", "Colors:View", "Colors:Window", "ColorEffects:Disabled",
              "WM", "Colors:Header][Inactive", "Other"]
     out = ["# preamble\n"] if rng.random() < 0.5 else []
-    for n in rng.sample(names, rng.randint(0, len(names))):
+    picked = rng.sample(names, rng.randint(0, len(names)))
+    if picked and rng.random() < 0.4:              # a repeated header (KConfig merges, others may not)
+        picked.insert(rng.randint(0, len(picked)), rng.choice(["General", "KDE", "Other"]))
+    for n in picked:
         out.append(f"[{n}]\n" + "".join(f"k{i}={rng.randint(0, 9)}\n" for i in range(rng.randint(0, 3))))
         if rng.random() < 0.2:
             out.append("\n")
