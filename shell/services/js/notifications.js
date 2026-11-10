@@ -56,7 +56,8 @@ function makeRecord(src, now) {
 function decide(record, ctx) {
     checkRecord(record)
     checkContext(ctx)
-    // TODO(phase): checkDecision(record, result): critical is never held.
+    // TODO(phase): checkDecision(record, result): critical is never held, and keeps priority 2
+    //   also as progress (a progress the Progress service refuses falls back to a toast).
     throw new Error("not implemented")
 }
 // The app is on notifications.allowlist (by app name or desktop entry, case-insensitive).
@@ -101,13 +102,13 @@ function stackPayload(stack, newest, timeout) {
 // The summary toast for `count` held notifications.
 function heldPayload(count, reason, timeout) {
     invariant(count >= 1, "held summary of " + count)
-    invariant(HELD_WHILE[reason] !== undefined, "unknown hold reason " + reason)
+    invariant(isHoldReason(reason), "unknown hold reason " + reason)
     throw new Error("not implemented")
 }
 // A toast the shell raises itself (no notification behind it: battery, urgent workspace): a
 // toast payload with nid 0, the glyph instead of the app icon, no actions.
 function systemToast(title, body, glyph, critical, timeout) {
-    invariant(String(title) !== "", "system toast without a title")
+    invariant(typeof title === "string" && title !== "", "system toast without a title")
     invariant(critical || timeout > 0, "system toast without a timeout")
     throw new Error("not implemented")
 }
@@ -154,14 +155,20 @@ function unreadInfo(history, allowlist) {
     throw new Error("not implemented")
 }
 // Persistence: the state file's JSON text, and the history read back (records not live).
+// keep: the ids the server still tracks at load (after a reload with keepOnReload, which P-23
+// limits to APTUS_DEV runs); their records keep their id, every other one gets ARCHIVE_ID − index.
 function serialise(history) {
     checkHistory(history)
     throw new Error("not implemented")
 }
-function parse(text, now, max, days) {
+function parse(text, now, max, days, keep) {
     invariant(typeof text === "string", "state text is not a string")
     invariant(max >= 1 && days >= 1, "history limits " + max + "/" + days)
-    // TODO(phase): checkHistory(result): read-back records get ARCHIVE_ID − index.
+    invariant(!keep || Array.isArray(keep), "kept ids are not a list")
+    // TODO(phase): the file is data: `held` clamped to a hold reason (else ""), a record failing
+    //   checkRecord or a second one with an id already read is dropped, never thrown (a throw
+    //   would leave the history empty and the next save would overwrite the file); ids re-keyed
+    //   except `keep`; checkHistory(result).
     throw new Error("not implemented")
 }
 
@@ -170,6 +177,8 @@ function parse(text, now, max, days) {
 var SHOWS = ["toast", "today", "held", "progress"]
 var OVER_FULLSCREEN = ["critical", "none", "all"]
 function invariant(cond, message) { if (!cond) throw new Error("notifications invariant: " + message) }
+// A key of HELD_WHILE itself (not one of Object's: "constructor", "toString").
+function isHoldReason(x) { return typeof x === "string" && Object.prototype.hasOwnProperty.call(HELD_WHILE, x) }
 // A record: a non-zero integer id, an app name (the fallback at least), a freedesktop urgency,
 // actions without "default" and "inline-reply" (they are hasDefault and reply), a progress of -1
 // or 0–100, a known hold reason, a time.
@@ -181,7 +190,7 @@ function checkRecord(r) {
     invariant(Array.isArray(r.actions) && r.actions.every(function (a) { return a.id !== "default" && a.id !== "inline-reply" }),
               "record " + r.id + " keeps a default or reply action")
     invariant(r.progress === -1 || (r.progress >= 0 && r.progress <= 100), "record " + r.id + " progress " + r.progress)
-    invariant(r.held === "" || HELD_WHILE[r.held] !== undefined, "record " + r.id + " held " + r.held)
+    invariant(r.held === "" || isHoldReason(r.held), "record " + r.id + " held " + r.held)
     invariant(isFinite(r.time), "record " + r.id + " without a time")
 }
 // The policy context: a known notch.overFullscreen, an allowlist, a muted map, a time.
@@ -189,22 +198,24 @@ function checkContext(c) {
     invariant(c && OVER_FULLSCREEN.indexOf(c.overFullscreen) >= 0, "overFullscreen " + (c && c.overFullscreen))
     invariant(Array.isArray(c.allowlist) && c.muted && typeof c.muted === "object" && isFinite(c.now), "broken policy context")
 }
-// A decision for a record: a known outcome; critical is never held or sent to Today, and only
-// critical passes over fullscreen with its priority (05 §8).
+// A decision for a record: a known outcome; critical is never held or sent to Today, and it has
+// priority 2 whatever it shows (a refused progress falls back to a toast with that priority),
+// nothing else has (05 §8).
 function checkDecision(record, d) {
     invariant(d && SHOWS.indexOf(d.show) >= 0, "decision " + (d && d.show))
     invariant(record.urgency !== CRITICAL || d.show === "toast" || d.show === "progress", "a critical notification is " + d.show)
-    invariant((d.priority === CRITICAL_PRIORITY) === (record.urgency === CRITICAL && d.show === "toast"), "priority " + d.priority)
-    invariant(d.show !== "held" || HELD_WHILE[d.reason] !== undefined, "held without a reason")
+    invariant((d.priority === CRITICAL_PRIORITY) === (record.urgency === CRITICAL), "priority " + d.priority)
+    invariant(d.show !== "held" || isHoldReason(d.reason), "held without a reason")
 }
 // Toast timing (Tokens.surfaces.toast): positive, min ≤ max.
 function checkTiming(t) {
     invariant(t && t.minTimeoutMs > 0 && t.minTimeoutMs <= t.maxTimeoutMs && t.perCharMs >= 0 && t.actionsExtraMs >= 0
               && t.baseTimeoutMs >= 0, "toast timing")
 }
-// A stack: at least one notification, at most three icons, distinct apps.
+// A stack: at least one notification, one to `count` distinct apps, at most three icons.
 function checkStack(s) {
-    invariant(s && s.count >= 1 && s.passiveId >= 0, "broken stack")
+    invariant(s && s.count >= 1 && s.passiveId >= 0 && Array.isArray(s.icons) && Array.isArray(s.apps), "broken stack")
+    invariant(s.apps.length >= 1 && s.apps.length <= s.count, "stack of " + s.count + " with " + s.apps.length + " apps")
     invariant(s.icons.length <= 3 && s.icons.length <= s.apps.length, "stack icons " + s.icons.length)
     invariant(s.apps.every(function (a, i) { return s.apps.indexOf(a) === i }), "an app twice in a stack")
 }

@@ -40,6 +40,18 @@ TestCase {
         compare(records([], { 3: "a very long workspace name" })[2].label.length, 12)
         compare(records([], { 3: "a very long workspace name" })[2].label.slice(-1), "…")
     }
+    function test_hyprland_data_taken_as_it_comes() {
+        // a placeholder with an id already listed is dropped, a monitor listed twice counts once
+        const ws = [{ id: 1, name: "1", monitor: "eDP-1" }, { id: 1, name: "1", monitor: "" },
+                    { id: -1337, name: "mail", monitor: "eDP-1" }, { id: -98, name: "special:scratch", monitor: "eDP-1" }]
+        const r = H.workspaceRecords(ws, [], [{ name: "eDP-1", activeWorkspace: 1 }], "eDP-1", [], [], {}, 12)
+        compare(r.map(x => x.id), [-1337, 1, -98])
+        compare(r[1].monitor, "eDP-1")
+        verify(!r[0].special)                                             // a named workspace, not a special one
+        compare(r[0].label, "mail")
+        verify(r[2].special)
+        compare(H.fixedIds(["DP-3", "DP-3", "eDP-1"], "DP-3"), [1, 2, 3, 4, 5])
+    }
     function test_used_and_fixed_strips() {
         const r = records()
         compare(H.stripFor(r, "eDP-1", "used", ["eDP-1"], {}).pills.map(p => p.id), [1, 2])   // 3 is empty
@@ -95,13 +107,11 @@ TestCase {
     }
 
     function test_invariants_reject_broken_state() {
-        verify(refuses(() => H.fixedIds(["eDP-1", "eDP-1"], "eDP-1")))
+        verify(refuses(() => H.fixedIds(null, "eDP-1")))
         const ws = [{ id: 1, name: "1", monitor: "eDP-1" }]
         const mons = [{ name: "eDP-1", activeWorkspace: 1 }]
         verify(refuses(() => H.workspaceRecords(ws, [], mons, "eDP-1", [], [], {}, 1)))
-        verify(refuses(() => H.workspaceRecords(ws.concat(ws), [], mons, "eDP-1", [], [], {}, 12)))
         verify(refuses(() => H.workspaceRecords(ws, [], mons, "eDP-1", ["0xa", "0xa"], [], {}, 12)))
-        verify(refuses(() => H.appsOf([], 1, ["0xa", "0xa"])))
         verify(refuses(() => H.labelOf(1, "web", 0)))
         verify(refuses(() => H.stripFor([], "eDP-1", "all", ["eDP-1"], {})))
         verify(refuses(() => H.neighbour({ pills: [], scratch: null }, 1, 0)))

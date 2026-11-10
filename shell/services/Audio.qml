@@ -52,13 +52,17 @@ Singleton {
     function setDefaultSink(id: int): void { if (_refused("setDefaultSink")) return; Log.info("service.audio", "setDefaultSink: not available yet"); }
     function setDefaultSource(id: int): void { if (_refused("setDefaultSource")) return; Log.info("service.audio", "setDefaultSource: not available yet"); }
     function setStreamVolume(id: int, volume: real): void { if (_refused("setStreamVolume")) return; Log.info("service.audio", "setStreamVolume: not available yet"); }
-    // Invariant (phase 6): a test shell never writes the real PipeWire graph; under APTUS_TEST
-    // every write goes to the double (a write without it is refused and logged).
+    // Invariant (phase 6): a test shell never writes the real PipeWire graph. Under APTUS_TEST
+    // every write goes to the double, and the PipeWire backend must not exist: a write while it
+    // does (or without the double) is refused and logged.
     function _refused(what: string): bool {
-        if (!Paths.test || testDouble) return false;
-        Log.error("service.audio", what + " refused in a test without the double");
+        if (!Paths.test || (testDouble && !_b)) return false;
+        Log.error("service.audio", what + " refused in a test (" + (_b ? "PipeWire backend loaded" : "no double") + ")");
         return true;
     }
+    // The backend appearing under APTUS_TEST is a broken invariant on its own (the LazyLoader is
+    // never active under the double), logged once when it happens.
+    on_BChanged: if (Paths.test && _b) Log.error("service.audio", "PipeWire backend loaded in a test");
 
     // Post the OSD of a kind ("volume" | "mic") on the active monitor, unless the Deck is open
     // there (its slider moves instead, notch.md §8; levels.js deckReplaces).

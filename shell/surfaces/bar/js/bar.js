@@ -74,7 +74,8 @@ function windowMenu(window, monitors, monitor) {
 }
 // The pill menu rows (bar.md §3) for a workspace record; monitors: [name]; current monitor.
 function pillMenu(record, monitors, monitor) {
-    invariant(record && record.id > 0 && !record.special && Array.isArray(monitors), "pill menu of a special or no workspace")
+    // (a named workspace has a negative id too: `special` alone tells a special one)
+    invariant(record && !record.special && Array.isArray(monitors), "pill menu of a special or no workspace")
     // TODO(phase): checkMenu(result).
     throw new Error("not implemented")
 }

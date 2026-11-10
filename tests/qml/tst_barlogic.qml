@@ -126,6 +126,7 @@ TestCase {
         verify(refuses(() => B.deckArgs("", false)))
         verify(refuses(() => B.windowMenu(null, [], "eDP-1")))
         verify(refuses(() => B.pillMenu({ id: -98, windows: 1, special: true }, [], "eDP-1")))
+        verify(!refuses(() => B.pillMenu({ id: -1337, windows: 1, special: false }, [], "eDP-1")))   // a named workspace
         // menu rows: an id and a label each, each id once (separators aside), submenus too
         verify(accepts(() => B.checkMenu([{ id: "a", label: "A" }, { separator: true }, { id: "b", label: "B", submenu: [{ id: "c", label: "C" }] }])))
         verify(refuses(() => B.checkMenu([{ id: "a", label: "A" }, { id: "a", label: "B" }])))

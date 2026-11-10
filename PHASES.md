@@ -1203,4 +1203,33 @@ the checks inserted into its functions by script): every S3 test passes except
   as fallbacks.
 - The fake hardware used the real device names (above).
 - From phase 5: the structural gaps of its table come over with the probe code in phase 7;
-  nothing in it belongs to phase 6.
+  nothing in it belongs to phase 6. (Wrong: see the review below and the phase-5 catch-up.)
+
+### Review of phase 6 (fresh reviewer, diff 664e61d..26db87c)
+
+The reviewer ran the seven invariant tests (pass) and read the diff against the skill's rules.
+18 findings; all fixed but the alternative in 10:
+
+| # | Finding | Response |
+|---|---|---|
+| 1 | The phase-5 catch-up was never done; its table said "added" | fixed: catch-up commit (phase 5 section above), then the invariants for it (Brightness `_queue`, Audio `_b`, below) |
+| 2 | `test_persistence_round_trip` still expected the old ids [2, 1] | fixed: times [3000, 2000], ids `ARCHIVE_ID`, `ARCHIVE_ID − 1` |
+| 3 | `checkOsd` and the `isFinite`/`level ≤ max` preconditions refuse hardware levels (a sink at 130 % from pavucontrol) | fixed: only the maximum is checked (`volumeOsd(level, muted, max, device)` now takes it from `osd.volumeMax`/`volumeBoostMax` instead of a boost flag); the level is clamped into 0..max, NaN is 0; tests for 130 %, NaN, a keyboard level above max |
+| 4 | `hypr.js` refused duplicate workspace ids and monitor names (Hyprland data; a placeholder can repeat an id for a moment) | fixed: a later duplicate is dropped (TODO), a monitor listed twice counts once; test; `Hypr._onTitle` skips an event whose address is not one before `patchTitle` (phase 7) |
+| 5 | A damaged state file could empty the history and the next save overwrite it | fixed: `parse` clamps `held`, drops a record failing `checkRecord` and a repeated id; test with `"held":"asleep"`, `"constructor"`, urgency 7 |
+| 6 | Re-keying breaks the link to notifications the server still tracks after a reload with `keepOnReload` | fixed: `parse(…, keep)`; records whose id the server tracks at load keep it. P-23: a reload happens only with `APTUS_DEV` (file watching), a normal start is a new process with nothing tracked, so `keep` is empty there |
+| 7 | The Audio guard was a tautology once `testDouble` = `Paths.test` | fixed: a write is refused while the PipeWire backend exists under APTUS_TEST (`_b`), and the backend appearing there is logged |
+| 8 | `checkSlots` only counted | fixed: every candidate exactly once, each slot on its own side; tests |
+| 9 | A critical progress notification had priority 0, so its fallback toast lost priority 2 | fixed: priority 2 exactly for critical, whatever it shows (`decide` too, phase 7) |
+| 10 | The suite is red at the phase-6 commit (the behaviour cases fail on the stubs) | noted here: from phase 6 until the phase-7 commit `tests/run` is red by design (stubs keep their `throw`); the behaviour cases came in phase 6 because the checks were run against the probe with them (a check that refuses good input shows there). Keeping the skips instead: rejected for that reason |
+| 11 | `HELD_WHILE[x] !== undefined` accepts "constructor" | fixed: `isHoldReason` (own keys only) |
+| 12 | `systemToast` accepted a missing title | fixed: a non-empty string |
+| 13 | `checkStack` without list checks; apps not bound by count; a test fixture with no apps | fixed: lists, 1 ≤ apps ≤ count; fixture fixed |
+| 14 | `pillMenu` took a negative id for special; named workspaces have negative ids (−1337 down) | fixed: `special` alone; `workspaceRecords` tells special by the name (`special`, `special:…`); tests |
+| 15 | No postconditions for `dropLayer` and `nextLayers` | fixed: `dropLayer` only drops a leaving layer; `checkNext` (one current layer with the view's key, none at rest/hidden, the serial never back) |
+| 16 | Brightness compared the sysfs root with "/sys" only | fixed: under APTUS_TEST the tree must lie inside HOME (the Paths rule); the e2e fake hardware moves into the test HOME |
+| 17 | `appsOf` re-checked the focus order per workspace | fixed: `workspaceRecords` checks it once |
+| 18 | The `dropLayer` refusal test tripped the wrong check | fixed: one current layer, refused because it is current |
+
+**Checked.** qmllint 146 files, 0 warnings; the 7 invariant tests pass against the stubs; the
+behaviour cases fail with "not implemented" (finding 10).

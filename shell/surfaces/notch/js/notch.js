@@ -40,12 +40,13 @@ function nextLayers(layers, view, serial) {
     checkLayers(layers)
     invariant(layers.every(function (l) { return l.uid <= serial }), "serial " + serial + " behind a layer uid")
     checkView(view)
-    // TODO(phase): checkLayers(result.layers): never two current layers.
+    // TODO(phase): checkNext(view, serial, result).
     throw new Error("not implemented")
 }
 // The layers without the one that finished leaving.
 function dropLayer(layers, uid) {
     checkLayers(layers)
+    invariant(layers.every(function (l) { return l.uid !== uid || l.leaving }), "layer " + uid + " is current")
     throw new Error("not implemented")
 }
 // The compact slots (notch.md §4): per slot the live candidate with the highest priority; when
@@ -161,11 +162,25 @@ function checkCandidates(candidates) {
     }
     invariant(unique(candidates.map(function (c) { return c.id })), "an activity is a candidate twice")
 }
-// A slot assignment: two different activities (or none), every other candidate waits.
+// The layers after a view: checkLayers; the serial never goes back; rest and hidden leave no
+// current layer, any other view exactly one, and it is the view's (its key).
+function checkNext(view, serial, result) {
+    checkLayers(result.layers)
+    invariant(result.serial >= serial, "serial went back to " + result.serial)
+    var current = result.layers.filter(function (l) { return !l.leaving })
+    if (view.kind === "rest" || view.kind === "hidden") invariant(current.length === 0, "a current layer at " + view.kind)
+    else invariant(current.length === 1 && current[0].key === view.key, "the view " + view.key + " has no current layer")
+}
+// A slot assignment: every candidate exactly once (in a slot or waiting), the slots on their
+// own side.
 function checkSlots(slots, candidates) {
     invariant(slots.left === "" || slots.left !== slots.right, "one activity in both slots")
-    invariant(slots.waiting.length + (slots.left ? 1 : 0) + (slots.right ? 1 : 0) === candidates.length,
-              "a candidate is lost or shown twice")
+    var placed = (slots.left ? [slots.left] : []).concat(slots.right ? [slots.right] : [], slots.waiting)
+    invariant(placed.length === candidates.length && unique(placed)
+              && candidates.every(function (c) { return placed.indexOf(c.id) >= 0 }), "a candidate is lost or shown twice")
+    var side = function (id) { return candidates.filter(function (c) { return c.id === id })[0].slot }
+    invariant((!slots.left || side(slots.left) === "left") && (!slots.right || side(slots.right) === "right"),
+              "an activity in the other side's slot")
 }
 // Passive entries (rules.js): legal kinds, unique ids, a birth time.
 function checkPassive(passive) {

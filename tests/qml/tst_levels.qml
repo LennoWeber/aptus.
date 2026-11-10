@@ -50,18 +50,23 @@ TestCase {
         compare(L.step(0.57 * 100, 1, 5, 0, 100), 60) // float input from a 0..1 level
     }
     function test_osd_payloads() {
-        const v = L.volumeOsd(0.45, false, false, "")
+        const v = L.volumeOsd(0.45, false, 100, "")
         compare(v.kind, "volume")
         compare(v.level, 45)
         compare(v.max, 100)
         compare(v.value, "45")
-        compare(L.volumeOsd(0.45, false, true, "").max, 150)
-        const m = L.volumeOsd(0.45, true, false, "Headphones")
+        compare(L.volumeOsd(0.45, false, 150, "").max, 150)
+        const m = L.volumeOsd(0.45, true, 100, "Headphones")
         compare(m.value, "Muted")
         compare(m.device, "Headphones")
         compare(L.micOsd(true, "").glyph, "mic_off")
         compare(L.micOsd(true, "").level, -1)
         compare(L.brightnessOsd(0.4).level, 40)
+        // hardware levels are clamped, never refused (another app set the sink to 130 %)
+        compare(L.volumeOsd(1.3, false, 100, "").level, 100)
+        compare(L.volumeOsd(NaN, false, 100, "").level, 0)
+        compare(L.brightnessOsd(undefined).level, 0)
+        compare(L.kbdOsd(3, 2).dots, 2)
         const k = L.kbdOsd(1, 2)
         compare(k.dots, 1)
         compare(k.steps, 3)
@@ -94,10 +99,8 @@ TestCase {
         verify(refuses(() => L.step(50, 0, 5, 0, 100)))
         verify(refuses(() => L.step(50, 1, 0, 0, 100)))
         verify(refuses(() => L.step(50, 1, 5, 100, 100)))
-        verify(refuses(() => L.kbdOsd(3, 2)))
         verify(refuses(() => L.kbdOsd(0, 0)))                           // no light, no OSD
-        verify(refuses(() => L.volumeOsd(NaN, false, false, "")))
-        verify(refuses(() => L.brightnessOsd(undefined)))
+        verify(refuses(() => L.volumeOsd(0.5, false, 0, "")))           // a maximum from the tokens
         verify(refuses(() => L.deckReplaces("weather")))
         // an OSD payload: a level within its maximum, dots within the steps
         const p = { kind: "volume", glyph: "volume_up", ink: "main", level: 45, max: 100, dots: -1, steps: 0, value: "45", device: "" }

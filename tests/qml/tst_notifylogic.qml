@@ -85,7 +85,7 @@ TestCase {
         compare(N.stackStep(b.stack, rec({ id: 3 }), 9, "eDP-1", 4000, 8000).stack.apps, ["Chat", "Mail"])   // the same app again
         verify(!N.stackStep(b.stack, rec({ id: 3 }), 9, "DP-3", 4000, 8000).joins)                // another monitor
         verify(!N.stackStep(b.stack, rec({ id: 3 }), 9, "eDP-1", 20000, 8000).joins)              // after the window
-        verify(!N.stackStep({ passiveId: 0, monitor: "eDP-1", count: 2, icons: [], apps: [], last: 3000 }, rec({}), 9, "eDP-1", 4000, 8000).joins)
+        verify(!N.stackStep({ passiveId: 0, monitor: "eDP-1", count: 2, icons: ["chat", "mail"], apps: ["Chat", "Mail"], last: 3000 }, rec({}), 9, "eDP-1", 4000, 8000).joins)
         let s = a.stack
         for (let i = 0; i < 5; i++) s = N.stackStep(s, rec({ id: 10 + i, appName: "App" + i, appIcon: "i" + i }), 9, "eDP-1", 1000, 8000).stack
         compare(s.icons.length, 3)                                                                   // three icons at most
@@ -146,7 +146,8 @@ TestCase {
         const b = rec({ id: 2 })
         b.time = 3000
         const back = N.parse(N.serialise([b, a]), 3000, 100, 7)
-        compare(back.map(x => x.id), [2, 1])
+        compare(back.map(x => x.time), [3000, 2000])
+        compare(back.map(x => x.id), [N.ARCHIVE_ID, N.ARCHIVE_ID - 1])     // ids of their own
         compare(back[1].body, a.body)
         verify(back[1].read)
         compare(back[1].held, "dnd")
@@ -155,6 +156,19 @@ TestCase {
         compare(back[1].progress, -1)
         compare(N.parse("not json", 0, 100, 7), [])
         compare(N.parse('{"version":1,"history":[{"id":"x","time":1},null,{"id":5}]}', 0, 100, 7), [])
+        // the server still tracks 2 (a reload with keepOnReload): its record keeps the id
+        compare(N.parse(N.serialise([b, a]), 3000, 100, 7, [2]).map(x => x.id), [2, N.ARCHIVE_ID - 1])
+    }
+    function test_damaged_state_file_keeps_the_rest() {
+        // an unknown hold reason is cleared, a broken record and a repeated id are dropped: the
+        // other records survive (a throw would empty the history and the next save the file)
+        const ok = '{"id":1,"appName":"Mail","summary":"a","urgency":1,"time":2000'
+        const text = '{"version":1,"history":[' + ok + ',"held":"asleep"},' + ok + '},'
+                     + '{"id":2,"appName":"Mail","summary":"b","urgency":7,"time":1000},'
+                     + '{"id":3,"appName":"Mail","summary":"c","urgency":0,"time":1500,"held":"constructor"}]}'
+        const back = N.parse(text, 3000, 100, 7)
+        compare(back.map(x => x.summary), ["a", "c"])
+        compare(back.map(x => x.held), ["", ""])
     }
     function test_fallback_app_and_glyph() {
         const r = N.makeRecord({ id: 3 }, 0)
@@ -228,6 +242,9 @@ TestCase {
         verify(refuses(() => N.checkDecision(record({ urgency: 2 }), { show: "today", priority: 0, reason: "muted" })))
         verify(refuses(() => N.checkDecision(record({ urgency: 2 }), { show: "toast", priority: 0, reason: "" })))
         verify(refuses(() => N.checkDecision(record({}), { show: "toast", priority: 2, reason: "" })))
+        verify(accepts(() => N.checkDecision(record({ urgency: 2 }), { show: "progress", priority: 2, reason: "" })))
+        verify(refuses(() => N.checkDecision(record({ urgency: 2 }), { show: "progress", priority: 0, reason: "" })))
+        verify(refuses(() => N.checkDecision(record({}), { show: "held", priority: 0, reason: "constructor" })))
         verify(refuses(() => N.checkDecision(record({}), { show: "held", priority: 0, reason: "" })))
         verify(refuses(() => N.checkDecision(record({}), { show: "popup", priority: 0, reason: "" })))
         // timing and settings
@@ -240,8 +257,13 @@ TestCase {
         verify(refuses(() => N.stackStep({ passiveId: 3, monitor: "eDP-1", count: 2, icons: ["a"], apps: ["A", "A"], last: 0 }, record({}), 0, "eDP-1", 0, 2000)))
         verify(refuses(() => N.stackPayload({ passiveId: 3, monitor: "eDP-1", count: 1, icons: ["a"], apps: ["A"], last: 0 }, record({}), 4000)))
         verify(refuses(() => N.stackPayload({ passiveId: 0, monitor: "eDP-1", count: 2, icons: ["a"], apps: ["A", "B"], last: 0 }, record({}), 4000)))
+        verify(refuses(() => N.checkStack({ passiveId: 3, monitor: "eDP-1", count: 2, icons: [], apps: [], last: 0 })))
+        verify(refuses(() => N.checkStack({ passiveId: 3, monitor: "eDP-1", count: 1, icons: ["a"], apps: ["A", "B"], last: 0 })))
+        verify(refuses(() => N.checkStack({ passiveId: 3, monitor: "eDP-1", count: 1, icons: null, apps: ["A"], last: 0 })))
         verify(refuses(() => N.heldPayload(0, "dnd", 4000)))
         verify(refuses(() => N.heldPayload(2, "asleep", 4000)))
+        verify(refuses(() => N.heldPayload(2, "toString", 4000)))
+        verify(refuses(() => N.systemToast(undefined, "", "battery_alert", true, 0)))
         verify(refuses(() => N.systemToast("", "", "battery_alert", false, 4000)))
         verify(refuses(() => N.systemToast("Battery low", "", "battery_alert", false, 0)))
         // markup and the history: strings in, each id once
@@ -252,6 +274,7 @@ TestCase {
         verify(refuses(() => N.addToHistory([], record({}), 0, 7, 0)))
         verify(refuses(() => N.trimHistory([], 100, 0, 0)))
         verify(refuses(() => N.parse(null, 0, 100, 7)))
+        verify(refuses(() => N.parse("{}", 0, 100, 7, 2)))
     }
     function test_restart_ids_do_not_collide() {
         // the server's ids start at 1 again with every shell start: a record read back from the

@@ -18,7 +18,8 @@ Singleton {
     // TODO(phase): true once the root was scanned (also with no backlight: the keys stay inert).
     readonly property bool available: false
 
-    // The sysfs root ($APTUS_SYSFS, else /sys; under APTUS_TEST without it: none).
+    // The sysfs root ($APTUS_SYSFS, else /sys; under APTUS_TEST only $APTUS_SYSFS inside HOME,
+    // else none).
     // TODO(phase): from Quickshell.env; a directory listing of class/backlight and class/leds
     //   (first backlight, first *::kbd_backlight) picks device/kbdDevice, then _read.
     readonly property string sysfs: ""
@@ -51,11 +52,13 @@ Singleton {
         throw new Error("not implemented");
     }
     // Invariant (phase 6): a test shell never writes the real backlight or keyboard light. Under
-    // APTUS_TEST only a tree from APTUS_SYSFS is written, and only its test devices (fakehw.py
-    // names them aptus_test…: a real brightnessctl that slipped onto PATH finds no such device).
+    // APTUS_TEST only a tree from APTUS_SYSFS inside the test HOME is written (the rule Paths
+    // applies to the XDG directories), and only its test devices (fakehw.py names them
+    // aptus_test…: a real brightnessctl that slipped onto PATH finds no such device).
     function _refused(dev: string): bool {
         if (!Paths.test) return false;
-        if (sysfs !== "" && sysfs !== "/sys" && dev.indexOf("aptus_test") === 0) return false;
+        const inHome = Paths.home !== "" && sysfs.indexOf(Paths.home + "/") === 0;
+        if (inHome && dev.indexOf("aptus_test") === 0) return false;
         Log.error("service.brightness", "write to " + dev + " under " + (sysfs || "no sysfs") + " refused in a test");
         return true;
     }
@@ -71,5 +74,7 @@ Singleton {
     property var _queue: ({})
     // Start the next queued write when brightnessctl has finished (then _read).
     // TODO(phase): the writer Process' onRunningChanged (arrow parameters in onExited fail qmllint).
+    // Invariant (phase 6): only _write fills the queue (after _refused), one value per device,
+    // a whole number in 0..max; a queued write passes _refused again before its process starts.
     function _next(): void { throw new Error("not implemented"); }
 }

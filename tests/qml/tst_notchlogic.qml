@@ -151,7 +151,16 @@ TestCase {
         verify(refuses(() => T.checkLayers([{ uid: 3, kind: "rest", key: "x", leaving: false }])))
         verify(refuses(() => T.checkLayers([{ uid: 3, kind: "osd", key: "", leaving: false }])))
         verify(refuses(() => T.nextLayers([osd], { kind: "rest", key: "", entry: null, activity: "", mode: "" }, 0)))
-        verify(refuses(() => T.dropLayer([osd, osd], 1)))
+        verify(refuses(() => T.dropLayer([osd], 1)))                       // only a leaving layer is dropped
+        verify(!refuses(() => T.dropLayer([Object.assign({}, osd, { leaving: true })], 1)))
+        // the layers after a view: one current layer for it, none at rest, the serial never back
+        const rest = { kind: "rest", key: "", entry: null, activity: "", mode: "" }
+        const osdView = { kind: "osd", key: "osd", entry: { id: 1 }, activity: "", mode: "" }
+        verify(accepts(() => T.checkNext(osdView, 1, { layers: [osd], serial: 1 })))
+        verify(refuses(() => T.checkNext(rest, 1, { layers: [osd], serial: 1 })))
+        verify(refuses(() => T.checkNext(osdView, 1, { layers: [], serial: 1 })))
+        verify(refuses(() => T.checkNext(osdView, 2, { layers: [osd], serial: 1 })))
+        verify(refuses(() => T.checkNext(osdView, 1, { layers: [Object.assign({}, osd, { key: "toast:n:1", kind: "toast" })], serial: 1 })))
         // slots: known activities once each, a side, a width
         verify(refuses(() => T.assignSlots([{ id: "weather", slot: "left", priority: 1, width: 10 }], 50, 8, 400)))
         verify(refuses(() => T.assignSlots([{ id: "media", slot: "middle", priority: 1, width: 10 }], 50, 8, 400)))
@@ -162,6 +171,9 @@ TestCase {
         verify(accepts(() => T.checkSlots({ left: "timer", right: "media", waiting: [] }, cands)))
         verify(refuses(() => T.checkSlots({ left: "media", right: "media", waiting: [] }, cands)))
         verify(refuses(() => T.checkSlots({ left: "timer", right: "", waiting: [] }, cands)))     // media is lost
+        verify(refuses(() => T.checkSlots({ left: "timer", right: "", waiting: ["timer"] }, cands)))  // and timer twice
+        verify(refuses(() => T.checkSlots({ left: "media", right: "timer", waiting: [] }, cands)))     // the wrong sides
+        verify(accepts(() => T.checkSlots({ left: "timer", right: "", waiting: ["media"] }, cands)))
         // sizes
         verify(refuses(() => T.toastHeight({}, [72, 104])))
         verify(refuses(() => T.toastHeight({}, [104, 72, 132])))

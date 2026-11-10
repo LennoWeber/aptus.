@@ -41,19 +41,18 @@ function step(percent, direction, stepPercent, min, max) {
     invariant(stepPercent > 0 && min < max, "step " + stepPercent + " in " + min + ".." + max)
     throw new Error("not implemented")
 }
-// OSD payloads (notch.md §8).
-function volumeOsd(level, muted, boost, device) {
-    invariant(isFinite(level), "volume level " + level)
-    // TODO(phase): checkOsd(result), as for every OSD payload below.
+// OSD payloads (notch.md §8). A level is the hardware's: clamped into 0..max (NaN is 0), never
+// refused (another app can set the sink above the maximum).
+// max: osd.volumeMax, or osd.volumeBoostMax with audio.allowBoost.
+function volumeOsd(level, muted, max, device) {
+    invariant(max >= 1, "volume maximum " + max)
+    // TODO(phase): checkOsd(result), as for every OSD payload below; the level clamped.
     throw new Error("not implemented")
 }
 function micOsd(muted, device) { throw new Error("not implemented") }
-function brightnessOsd(level) {
-    invariant(isFinite(level), "brightness level " + level)
-    throw new Error("not implemented")
-}
+function brightnessOsd(level) { throw new Error("not implemented") }
 function kbdOsd(level, max) {
-    invariant(max >= 1 && level >= 0 && level <= max, "keyboard light " + level + "/" + max)
+    invariant(max >= 1, "keyboard light maximum " + max)
     throw new Error("not implemented")
 }
 function capsOsd(on) { throw new Error("not implemented") }
