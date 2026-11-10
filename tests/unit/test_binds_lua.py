@@ -38,13 +38,19 @@ local function dsp(path)
     __call = function(_, arg) return { dsp = path, arg = arg } end })
 end
 hl = { dsp = dsp("hl.dsp"),
-       bind = function(chord, action, opts) emit({ call = "bind", chord = chord, action = action, opts = opts }) end,
+       bind = function(chord, action, opts)
+         emit({ call = "bind", chord = chord, action = action, opts = opts })
+         -- a function bind (Caps Lock) runs once per keyboard state; its dispatch is recorded
+         if type(action) == "function" then action(); action() end
+       end,
        unbind = function(chord) emit({ call = "unbind", chord = chord }) end,
        gesture = function(g)
          emit({ call = "gesture", g = g })
          if type(g.action) == "function" then g.action() end   -- records what it dispatches
        end,
-       dispatch = function(a) emit({ call = "dispatch", action = a }) end }
+       dispatch = function(a) emit({ call = "dispatch", action = a }) end,
+       -- the main keyboard, Caps Lock flipping with every call
+       get_devices = function() caps = not caps; return { { type = "keyboard", main = true, caps_lock = caps } } end }
 dofile(arg[1])
 """
 
@@ -66,6 +72,7 @@ def routes() -> set[str]:
 def test_every_shortcut_bound(test_home: Path) -> None:
     calls = run_binds(test_home)
     binds = [c for c in calls if c["call"] == "bind"]
+    binds = [b for b in binds if isinstance(b["action"], dict)]        # function binds dispatch below
     globals_ = {b["action"]["arg"] for b in binds if b["action"]["dsp"] == "hl.dsp.global"}
     gestures = [c for c in calls if c["call"] == "gesture"]
     assert len(gestures) == 2
