@@ -82,7 +82,11 @@ event in the next 12 hours: "Nothing else today" in `ink.meta`, and the card shr
 - Empty: glyph `notifications` + "No notifications".
 - History: the last 200 notifications persist across shell restarts in
   `~/.local/state/aptus/notifications.json`; images are copied into `~/.cache/aptus/notif/` so
-  they survive the sending app clearing its temp files. Notifications older than 7 days are dropped.
+  they survive the sending app clearing its temp files (raw `image-data` hints have no file: the
+  toast shows them, the history keeps no image). Notifications older than 7 days are dropped.
+  Read-back records get ids of their own (the server's ids start at 1 again with every shell
+  start), so a new notification never replaces an old record; after a reload that kept the
+  server's notifications (`keepOnReload`, development runs only) their records keep their ids.
 
 ## 7. Agenda data
 
