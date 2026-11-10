@@ -185,7 +185,7 @@ the geometry retargets the spring, old content fades out over 110 ms, new conten
 | Media | `Quickshell.Services.Mpris` |
 | Timers, focus, recording, progress | aptus services (`Timers`, `Focus`, `Capture`, `Progress`) |
 | Meetings | `Agenda` service ([today.md](today.md) §7) |
-| OSD values | `Audio`, `Brightness`, `Keyboard` services; Caps Lock from Hyprland `activelayout`/device state (`hyprctl devices -j` on the `capslock` event of the keyboard) |
+| OSD values | `Audio`, `Brightness`, `Keyboard` services; the layout from Hyprland `activelayout`; Caps Lock from a non-consuming `Caps_Lock` release bind (`hypr/binds.lua`) that reads the main keyboard's `caps_lock` (`hl.get_devices()`) and dispatches `aptus:capslock-on` / `-off` (Hyprland has no Caps Lock event) |
 
 ## 12. Edge cases
 
