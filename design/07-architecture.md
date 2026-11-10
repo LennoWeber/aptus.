@@ -6,8 +6,8 @@
                       ┌──────────────────────────── Hyprland session ────────────────────────────┐
  greetd → start-hyprland → Hyprland ── hl.on("hyprland.start") ──► aptus-session start           │
                       │                                              │ 1 recover  2 render        │
-                      │                                              │ 3 lease    4 env import    │
-                      │                                              │ 5 units    6 exec ↓         │
+                      │                                              │ 3 guard    4 lease + env   │
+                      │                                              │ 5 apply    6 exec ↓         │
                       │                                       aptus-supervise ──► qs (the shell)  │
                       │                                                            │ children:    │
                       │                                                            ├ aptus-calc   │
@@ -101,11 +101,12 @@ ever needed, is imported only with a namespace (`import QtQuick.Controls as QQC`
 | t (ms, from `hyprland.start`) | Step | Budget | On failure |
 |---|---|---|---|
 | 0 | `aptus-session start` checks `XDG_CURRENT_DESKTOP=Hyprland` and `HYPRLAND_INSTANCE_SIGNATURE`; else exits 0 | 5 | — |
-| 5 | `aptus-lease recover` | 50 | log, continue |
-| 55 | `aptus-theme render` (skipped when the input hash is unchanged: tokens + theme settings + accent + mode + template versions) | 300 (cold) / 10 | keep the last good generation |
-| 60–360 | `aptus-lease take` (preflight, Noctalia-running check) | 150 | scope-only mode |
-| ≤ 510 | `systemctl --user import-environment …` | 30 | log |
-| ≤ 540 | `systemd-run` the guard and its bound units | 60 | the shell shows a warning event; theming still works, release then happens at the next login via recover |
+| 5 | recover (`aptus.lease.ops.recover`, in-process) | 50 | log, continue |
+| 55 | render (skipped when the input hash is unchanged: the resolve context, inputs, manifest, templates) | 300 (cold) / 10 | keep the last good generation |
+| 60–360 | `systemd-run` the guard (then `is-active`) | 60 | no lease: scope-only, the notch says the guard failed |
+| ≤ 420 | take (preflight: other sessions, Noctalia running) | 150 | scope-only mode |
+| ≤ 510 | `systemctl --user import-environment …` (lease only) | 30 | log |
+| ≤ 540 | scope mirrors, Own files and reload hooks of the generation; later stages: the guard's bound units | 60 | log, per target |
 | ≤ 600 | `exec aptus-supervise` → `qs -p shell` | — | — |
 | ≤ 1100 | the shell's first frame on every monitor, then M-01 | 500 | supervisor (§10) |
 
@@ -289,9 +290,13 @@ Quickshell `GlobalShortcut { appid: "aptus"; name: … }`; Hyprland binds `hl.ds
 ### Signals into the shell
 - `aptus-clipd` touches `$XDG_RUNTIME_DIR/aptus/clip.changed` after each store; the shell watches
   it.
-- `aptus-guard` writes `$XDG_RUNTIME_DIR/aptus/guard.state` (`ok` / `scope-only` / `failed`).
-- `aptus-theme apply` writes `~/.local/state/aptus/theme/current` (a symlink swap) and the shell
-  watches `current/shell.json` for palette values when changed outside the shell.
+- `aptus-guard` writes `$XDG_RUNTIME_DIR/aptus/guard.state` (`ok` / `scope-only` / `failed` /
+  `released`, a second line with the notch message); `aptus-session start` writes
+  `session.json` (mode, reasons, notice, generation). The `Lease` service reads both and the
+  journal.
+- `aptus-theme apply` swaps `~/.local/state/aptus/theme/current` and rewrites the stable file
+  `theme/resolved.json` (a FileView does not see a symlink swap, [probes.md](probes.md)); `Tokens`
+  watches it for palette values changed outside the shell and ignores it while `Theme.busy`.
 
 ## 8. Configuration
 
@@ -313,7 +318,7 @@ Quickshell `GlobalShortcut { appid: "aptus"; name: … }`; Hyprland binds `hl.ds
 | `~/.config/aptus/settings.json` | Config | JSON | debounced 300 ms, atomic |
 | `~/.config/aptus/calendars.json` | settings window | JSON, 0600 | on save, atomic |
 | `~/.local/state/aptus/lease/…` | aptus-lease | see [02](02-isolation.md) §5 | under flock |
-| `~/.local/state/aptus/theme/gen-<n>/`, `current` → | aptus-theme | rendered files | atomic dir + symlink swap; last 3 generations kept |
+| `~/.local/state/aptus/theme/gen-<n>/`, `current` →, `resolved.json`, `own.json` | aptus-theme | rendered files; the resolved palette; the Own files aptus created | atomic dir + symlink swap under `theme/lock`; last 3 generations kept |
 | `~/.local/state/aptus/scope/…` | aptus-theme | mirrors (kitty, yazi), `starship.toml` | on render |
 | `~/.local/state/aptus/hypr/generated.lua`, `binds.local.lua` | aptus-theme / settings window | Lua | atomic |
 | `~/.local/state/aptus/wallpaper.json`, `workspaces.json`, `focus.json`, `dnd.json`, `timers.json`, `ui.json` | their service | JSON | on change, atomic |
@@ -382,9 +387,10 @@ a missing or corrupt file by using defaults and logging once.
 | Unit (Python) | lease kinds and journal transitions (crash at every step), INI section surgery, dconf adapter, renderer, agenda recurrence (RRULE/EXDATE/RECURRENCE-ID/all-day/DST), calculator, clip filter | `pytest` with a temporary `HOME`; dconf through a fake adapter; no real user files |
 | Golden | every theme target for both palettes and six accents | rendered output compared byte-for-byte with `tests/golden/` |
 | Shell logic | SurfaceManager transitions, interruption policy, ranking, toast timing | `qmltestrunner` on the core singletons with fake services |
-| End-to-end | real surfaces, binds, IPC | a **nested** Hyprland (`Hyprland --config tests/e2e/hyprland.lua` in a window) with `APTUS_TEST=1`: `HOME` points to a temporary directory, the lease and all units are disabled, scripts drive `hyprctl dispatch` + `aptus msg` and assert on `aptus msg shell state`; screenshots with `grim` of the nested output for visual review |
-| Isolation | the round-trip test of [02-isolation.md](02-isolation.md) §10 | manual, on the laptop, part of acceptance |
+| End-to-end | real surfaces, binds, IPC | a **nested** Hyprland (`Hyprland --config tests/e2e/hyprland.lua` in a window) with `APTUS_TEST=1`: `HOME` points to a temporary directory, every external tool comes only from `$HOME/.aptus-test/bin` (fakes; without one the call is skipped), scripts drive `hyprctl dispatch` + `aptus msg` and assert on `aptus msg shell state`; screenshots with `grim` of the nested output for visual review |
+| Isolation | the round-trip test of [02-isolation.md](02-isolation.md) §10 | automated: `tests/unit/test_s2_session.py` (temporary `HOME`, fakes, the real guard) and `tests/e2e/test_s2.py` (nested Hyprland, copies of the real slot files): logout, `SIGKILL`, power-off, Umbriel open; then manual on the laptop, part of acceptance |
 | Performance | §12 | scripts in `tests/perf/` |
 
 `APTUS_TEST=1` is the hard rule that makes testing safe: with it, no tool writes outside the
-temporary `HOME`, and `aptus-lease` refuses to run.
+temporary `HOME`, and `aptus-lease`, `aptus-guard`, `aptus-theme` and `aptus-session` refuse to
+run (exit 3, before they write anything, even a log) when `HOME` is not a temporary directory.

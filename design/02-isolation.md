@@ -80,7 +80,8 @@ setting.
 
 ## 4. Target table
 
-Every app Noctalia themes today (from `~/.local/state/noctalia/settings.toml`, `[theme.templates]`),
+Every app Noctalia themes today (`[theme.templates]` from `~/.config/noctalia/*.toml` with
+`~/.local/state/noctalia/settings.toml` as the final overlay, read only),
 plus the shared GNOME and KDE settings, plus apps aptus themes that Noctalia does not. "Tracked"
 means the file is tracked in `~/dotfiles`.
 
@@ -100,7 +101,7 @@ means the file is tracked in `~/dotfiles`.
 | 12 | fuzzel | `~/.config/fuzzel/themes/noctalia` | fuzzel.ini include | **Lease** file | next start |
 | 13 | tmux | `~/.config/tmux/themes/noctalia.conf` | `tmux.conf` source | **Lease** file | `tmux source-file` on every running server |
 | 14 | Starship prompt | `~/.cache/noctalia/starship-palette.toml`, injected between `# >>> NOCTALIA STARSHIP PALETTE >>>` markers into the starship config | `starship.toml` | **Scope** `STARSHIP_CONFIG=~/.local/state/aptus/scope/starship.toml`, generated from the user's `starship.toml` with the Noctalia block replaced by aptus's palette | next prompt |
-| 15 | fastfetch | `~/.config/fastfetch/themes/noctalia.jsonc` (tracked) | fastfetch config | **Lease** file | next run |
+| 15 | fastfetch | `~/.config/fastfetch/themes/noctalia.jsonc` (tracked) | Noctalia's hook merges the colours into `config.jsonc` | **Never**: the theme file alone paints nothing, and `config.jsonc` is Lenno's config | — |
 | 16 | Neovim (LazyVim colours) | `~/.config/nvim/colors/noctalia.lua` | `colorscheme noctalia` | **Lease** file | `:colorscheme noctalia` sent to every running nvim server socket |
 | 17 | Neovim (matugen module) | `~/.config/nvim/lua/matugen.lua` (tracked) | `plugins/noctalia.lua` | **Lease** file | same |
 | 18 | Zen browser | `~/.cache/noctalia/zen-browser/zen-userChrome.css`, `zen-userContent.css` | `@import` lines in the profile's `chrome/userChrome.css`, `userContent.css` | **Lease** files | next Zen start (userChrome loads once) |
@@ -108,19 +109,19 @@ means the file is tracked in `~/dotfiles`.
 | 20 | Thunderbird | `~/.cache/noctalia/thunderbird/noctalia.css` | profile chrome import | **Lease** file | next start |
 | 21 | Vesktop / Discord | `~/.config/vesktop/themes/noctalia*.css` (+ Flatpak path) | Vesktop theme setting | **Lease** files, only if present | live (Vesktop watches CSS) |
 | 22 | Claude Code | `~/.claude/themes/noctalia.json` | Claude Code theme setting | **Lease** file | next start |
-| 23 | Gemini / Antigravity CLI | `~/.gemini/config/theme.json` | — | **Lease** file | next start |
+| 23 | Gemini / Antigravity CLI | `~/.gemini/config/theme.json` | Noctalia's hook copies the seeds into `~/.gemini/config/config.json` (app settings) | **Never**: `theme.json` alone paints nothing | — |
 | 24 | VS Code / Antigravity IDE | extension theme JSON under `~/.vscode/extensions/noctalia.*`, `~/.antigravity-ide/extensions/noctalia.*` | selected colour theme | **Lease** files, only if present | window reload |
 | 25 | Steam | `~/.steam/steam/steamui/skins/Material-Theme/css/main/colors/matugen.css` | skin selection | **Lease** file, only if present | Steam restart |
-| 26 | Brave | `~/.cache/noctalia/brave-theme/manifest.json` | loaded extension | **Lease** file, only if present | Brave restart |
+| 26 | Brave | `~/.cache/noctalia/brave-theme/manifest.json` | Noctalia's hook installs it into `~/.local/share/noctalia` and Brave's preferences | **Never**: aptus touches neither | — |
 | 27 | hyprtoolkit apps | `~/.config/hypr/hyprtoolkit.conf` (tracked) | read by hyprtoolkit | **Lease** file | next start |
 | 28 | Icon theme (Papirus folders) | folder colours recoloured inside `~/.local/share/icons/Papirus*`; `icon-theme` key | — | **Own** icon theme `aptus-icons-{dark,light}` in `~/.local/share/icons` (inherits Papirus, its own folder icons are symlinks to the Papirus folder colour nearest the accent), selected through the leased `icon-theme` key; Noctalia's recoloured Papirus copies are never touched | new windows |
 | 29 | Cursor | dconf `cursor-theme`/`cursor-size` (unchanged by Noctalia today) | — | **Lease** keys + **Scope** `XCURSOR_THEME`, `XCURSOR_SIZE`, `HYPRCURSOR_SIZE` | new windows |
 | 30 | Spotify (Spicetify) | `~/.config/spicetify/Themes/{Comfy,Colorful}/color.ini` | baked into Spotify by `spicetify apply` | **Bake**, opt-in (default: stays Noctalia's) | `spicetify apply` while Spotify is closed |
-| 31 | LibreOffice | `~/.local/state/noctalia/libreoffice-theme-staging/Theme_Colors.xcu` | merged into the profile registry | **Bake**, opt-in (default: stays Noctalia's) | while LibreOffice is closed |
+| 31 | LibreOffice | `~/.local/state/noctalia/libreoffice-theme-staging/Theme_Colors.xcu` | merged into the profile registry | **Never**: the artifact lives in Noctalia's state, which aptus never writes (I-1) | — |
 | 32 | Umbriel | `~/.config/umbriel/noctalia.toml` | Umbriel config | **Never** | — |
-| 33 | yazi (not themed by Noctalia) | — | — | **Scope** `YAZI_CONFIG_HOME` → mirror with aptus `theme.toml` | next start |
+| 33 | yazi | `~/.config/yazi/flavors/noctalia.yazi/` | `[flavor]` in `theme.toml` | **Scope** `YAZI_CONFIG_HOME` → a mirror of `~/.config/yazi` whose `flavors/noctalia.yazi` files are aptus's (and an aptus `theme.toml` only when there is none) | next start |
 | 34 | bat (not themed by Noctalia) | — | — | **Scope** `BAT_THEME` + Own theme in aptus's bat cache dir via `BAT_CACHE_PATH` | next run |
-| 35 | Hyprland borders, shadows, background colour | — | — | **Own** (`hyprland.lua` is Hyprland-only) | `hyprctl` at runtime |
+| 35 | Hyprland borders, shadows, background colour | — | — | **Own** (`generated.lua`, loaded only by the aptus block of `hyprland.lua`) | `hyprctl eval` re-reads `generated.lua` (`builtin:hyprland`, [probes.md](probes.md)) |
 | 36 | hyprlock (fallback locker) | — | — | **Own** `~/.local/state/aptus/hyprlock.conf`, always started as `hyprlock -c <that file>`; Lenno's `~/.config/hypr/hyprlock.conf` is never touched | next lock |
 
 **Coverage rule.** On every `aptus-session start` and in `aptus doctor`, aptus reads
@@ -191,8 +192,10 @@ target and never replaces a symlink with a file.
 
 1. `flock lease/lock`.
 2. If `journal.json` exists and `state != released`: run **recover** (§5.7) first.
-3. **Preflight.** If `loginctl` lists another *active graphical* session of this user that is not
-   this Hyprland (for example an Umbriel session left on another VT): **do not take the lease.**
+3. **Preflight.** If `loginctl` lists another *open graphical* session of this user that is not
+   this Hyprland (state `active` or `online`: an Umbriel session left on another VT is `online`),
+   if `loginctl` cannot list the sessions, or if a Noctalia shell of this user runs (§8):
+   **do not take the lease.**
    aptus runs in *scope-only* mode (Own and Scope targets themed, leased targets stay Noctalia's)
    and the notch says once: "Another session is open — some apps keep Noctalia's colours."
 4. For every slot in the enabled target list whose artifact exists or whose key is readable:
@@ -207,7 +210,8 @@ target and never replaces a symlink with a file.
 8. Run each target's reload hook ([08-theming.md](08-theming.md) §7).
 
 If any step fails, aptus releases the slots it already took (5.6) and continues in scope-only mode.
-A failure never blocks the session from starting.
+A failure never blocks the session from starting. Take runs only while `aptus-guard` runs (§7):
+a lease nobody would release at Hyprland's exit is never taken.
 
 ### 5.4 Update (theme or mode changes during the session)
 
@@ -243,6 +247,11 @@ are untouched, so they stay shared between the sessions as they always were.
 6. Failed slots stay in the journal with `state: "releasing"`; recovery retries them at the next
    login and `aptus doctor` reports them.
 
+The guard also releases **during** a session: when logind's record of this user changes and the
+preflight check now finds another open session (Umbriel logged in on another VT), it releases,
+writes `scope-only` and the notch message to `guard.state`, and keeps watching. The session goes
+on scope-only; later renders lease nothing.
+
 ### 5.7 Recover (anything left over)
 
 `aptus-lease recover` runs (a) from `aptus-recover.service` whenever the user manager starts and
@@ -273,9 +282,11 @@ Set with `hl.env` in `hyprland.lua`, so only Hyprland's process tree has them:
 | `BAT_THEME`, `BAT_CACHE_PATH` | `aptus`, `~/.cache/aptus/bat` | no |
 | `XCURSOR_THEME`, `XCURSOR_SIZE`, `HYPRCURSOR_SIZE` | `Adwaita`, `24`, `24` | yes |
 
-Imported with `systemctl --user import-environment` right after the lease is taken. On release the
-guard runs `systemctl --user unset-environment APTUS_SESSION QT_QPA_PLATFORMTHEME XCURSOR_THEME`
-(dbus-broker takes its activation environment from systemd, so this covers D-Bus activation too).
+Imported with `systemctl --user import-environment` right after the lease is taken (scope-only
+imports nothing). On release the guard runs `systemctl --user unset-environment` for
+`APTUS_SESSION QT_QPA_PLATFORMTHEME XCURSOR_THEME HYPRCURSOR_SIZE`, each only while it still has
+aptus's value (someone else's value stays); dbus-broker takes its activation environment from
+systemd, so this covers D-Bus activation too.
 `XCURSOR_SIZE` stays: 24 is also Umbriel's value. The variables Hyprland imports by itself
 (`WAYLAND_DISPLAY`, `XDG_CURRENT_DESKTOP`, `HYPRLAND_INSTANCE_SIGNATURE`) are Hyprland's existing
 behaviour, Umbriel overwrites them on its own start, and aptus leaves them alone.
@@ -287,11 +298,13 @@ behaviour, Umbriel overwrites them on its own start, and aptus leaves them alone
 ```
 Hyprland (started by the greeter via start-hyprland)
  └─ hl.on("hyprland.start") → aptus-session start          (bin/aptus-session)
-     1. aptus-lease recover
-     2. aptus-theme render            → ~/.local/state/aptus/theme/current/
-     3. aptus-lease take              → journal + slots
-     4. systemctl --user import-environment …
-     5. systemd-run --user --unit=aptus-guard  aptus-guard <hyprland-pid>
+     1. recover                        (in-process: aptus.lease.ops.recover)
+     2. render                         → ~/.local/state/aptus/theme/gen-<n>/, current, resolved.json
+     3. systemd-run --user --unit=aptus-guard  aptus-guard <hyprland-pid> <signature>
+        (no running guard → no lease: scope-only)
+     4. take                           → preflight, journal + slots (under the lease flock)
+     5. systemctl --user import-environment …   (lease only)
+     5b. scope mirrors, Own files, reload hooks of the generation (also scope-only)
      6. systemd-run --user --unit=aptus-clipd  --property=BindsTo=aptus-guard.service …
         systemd-run --user --unit=aptus-sunset --property=BindsTo=aptus-guard.service hyprsunset …
         systemd-run --user --unit=aptus-lid   --property=BindsTo=aptus-guard.service \
@@ -300,8 +313,10 @@ Hyprland (started by the greeter via start-hyprland)
 
 aptus-guard (transient user service, outside Hyprland's process tree)
   - pidfd_open(hyprland_pid); poll until it becomes readable (Hyprland exited)
-  - or SIGTERM from the user manager (logout, shutdown)
-  → aptus-lease release; unset env; stop bound units; exit 0
+  - or SIGTERM from the user manager (logout, shutdown, `aptus-session stop`)
+  - meanwhile: logind's user record each second (another session opened → release, scope-only,
+    keep watching, §5.6) and the bake queue every 30 s
+  → release (if this session holds the lease); reload hooks; unset env; guard.state; exit 0
 
 aptus-recover.service (the only installed user unit; WantedBy=default.target; Type=oneshot)
   → aptus-lease recover   (no-op unless a dead owner's lease is found)
@@ -320,6 +335,7 @@ aptus-recover.service (the only installed user unit; WantedBy=default.target; Ty
 | Power loss, kernel panic, hard reset | `aptus-recover.service` at the next login | as the user manager starts, racing the session start; normally done before the compositor's first client (probe P-04) |
 | Log out of Hyprland and into Umbriel within 10 s (user manager survives) | guard released at Hyprland exit, env unset; portals read the restored dconf values live | before Umbriel starts |
 | Umbriel session already open on another VT when Hyprland starts | no lease is taken (preflight, §5.3), scope-only mode | — |
+| Umbriel logs in on another VT while Hyprland runs | guard (logind's user record changed): release, scope-only for the rest of the session | within ~1 s (Umbriel's first second can still see aptus paint) |
 | Switching VTs, suspend and resume | nothing changes; the lease stays held because Hyprland is alive | — |
 
 ### Ordering for crash recovery (probe P-04)
@@ -359,7 +375,7 @@ running apps live through the settings portal. P-04 measures the real margin on 
 | `qt6ct` package | Safe to install: nothing in Umbriel loads it (doctor verifies Umbriel's environment has no `QT_QPA_PLATFORMTHEME`). |
 | `hyprsunset` package | Safe: Noctalia does not reference it; aptus starts it only inside Hyprland. |
 | Battery charge thresholds, logind lid policy | Out of scope: machine-wide, would change Umbriel. aptus uses a logind *inhibitor* that lives only as long as the session (see [surfaces/session.md](surfaces/session.md)). |
-| Leasing a file tracked in `~/dotfiles` | Allowed only when no Scope alternative exists (fastfetch, hyprtoolkit, nvim matugen). During a Hyprland session `git status` in `~/dotfiles` shows them modified; `aptus doctor` says so. Recommended fix: untrack the Noctalia artifacts (D-03). |
+| Leasing a file tracked in `~/dotfiles` | Allowed only when no Scope alternative exists (hyprtoolkit, nvim matugen). During a Hyprland session `git status` in `~/dotfiles` shows them modified; `aptus doctor` says so. Recommended fix: untrack the Noctalia artifacts (D-03). |
 
 ## 10. Audit
 
@@ -386,7 +402,12 @@ kill.
 
 ## 11. Uninstall
 
-`install.sh --uninstall`: releases any held lease, removes the `-- >>> aptus >>>` block from
-`hyprland.lua` and offers to put back the Noctalia lines the install removed ([09-hyprland.md](09-hyprland.md) §1, shown as a diff, applied only on approval), disables `aptus-recover.service`, removes
-`~/.local/state/aptus/scope`, the `aptus-icons-*` themes and `~/.config/qt6ct/qt6ct.conf` if aptus
-created it. Lease history stays for inspection until removed by hand.
+`install.sh --uninstall` (install kinds `release-lease`, `disable-unit`, `link`, `move`,
+`edit-hyprland`; the unit's enable and disable share the approval group `recover`): releases any
+held lease, removes the `-- >>> aptus >>>` block from
+`hyprland.lua` and offers to put back the Noctalia lines the install removed ([09-hyprland.md](09-hyprland.md) §1, shown as a diff, applied only on approval), disables `aptus-recover.service`, moves
+`~/.local/state/aptus/scope` and every file `theme/own.json` lists as created by aptus (the
+`aptus-icons-*` themes, `~/.config/qt6ct/qt6ct.conf`, …) into
+`~/.local/state/aptus/install/uninstalled-<date>/`. Lease history stays for inspection until
+removed by hand. Install enables the unit (`enable-unit`) and records the check-8 baseline
+(`baseline`); neither writes a leased slot (`check_action` refuses any action on one).

@@ -223,3 +223,15 @@ Quickshell 0.3.2 `FileView` with `watchChanges`:
 
 **Path:** after each render, aptus-theme writes `state/theme/resolved.json`, a stable file
 replaced atomically. Tokens watches that file, not `current/…`. 07 §7 is updated with S2.
+
+## `builtin:hyprland`: `hyprctl eval` re-reads generated.lua — **pass** (2026-11-10, nested, S2)
+
+Nested Hyprland 0.57.1, temporary HOME, the aptus block loaded:
+
+| Check | Result |
+|---|---|
+| `hyprctl -j getoption general:col.active_border` | `{"gradient": "ff9acfae 0deg", "set": true}`: the key is `gradient` (gaps report `css`) |
+| `hyprctl eval 'hl.config({ general = { col = { active_border = "rgb(ff0000)" } } })'` | `ok`; `getoption` reports `ffff0000` at once |
+| `tests/e2e/test_s2.py::test_logout`: accent changed through `aptus msg theme accent`, Theme.qml runs `aptus-theme apply` | the hook's chunk (`dofile` of generated.lua, then `hl.config`) logs `reload hyprland: applied`; the border equals generated.lua's new accent; `configerrors` stays empty |
+
+**Path:** as designed (08 §7).
