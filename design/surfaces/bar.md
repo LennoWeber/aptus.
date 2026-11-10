@@ -139,7 +139,7 @@ Items appear and leave with M-04. Privacy items appear within 500 ms of the devi
 | Data | Source | Update |
 |---|---|---|
 | Workspaces, windows per workspace, focused monitor | `Quickshell.Hyprland` (`Hyprland.workspaces`, `Hyprland.toplevels`, `Hyprland.focusedMonitor`) | events |
-| Urgent, fullscreen, special workspace, screencast | `Hyprland.rawEvent` (`urgent`, `fullscreen`, `activespecial`, `screencast`) | events |
+| Urgent, fullscreen, special workspace, screencast | `Hyprland.rawEvent` (`urgent`, `fullscreen`, `activespecialv2`, `screencast`) | events |
 | App icons | toplevel class → `DesktopEntries.heuristicLookup()` → icon name in `aptus-icons-*` | on window open / class change |
 | Workspace names | `~/.local/state/aptus/workspaces.json` (name per workspace id), applied with `renameworkspace` | on change |
 | Tray | `Quickshell.Services.SystemTray` | events |
@@ -147,7 +147,7 @@ Items appear and leave with M-04. Privacy items appear within 500 ms of the devi
 | Volume | `Quickshell.Services.Pipewire` default sink | events |
 | Network | `Quickshell.Networking` (probe P-13), `nmcli monitor` as fallback | events |
 | Bluetooth | `Quickshell.Bluetooth` | events |
-| Privacy | Pipewire nodes with `media.class` `Stream/Input/Audio` (mic), `Video/Source` in use (camera), Hyprland `screencast` events | events |
+| Privacy | Pipewire nodes with `media.class` `Stream/Input/Audio` (mic), `Video/Source` with an active link group or a `Stream/Input/Video` stream (camera), Hyprland `screencast` events; under `APTUS_TEST` nothing (no PipeWire connection) | events |
 
 ## 9. Edge cases
 
