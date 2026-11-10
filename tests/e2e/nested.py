@@ -24,6 +24,7 @@ REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "lib"))
 
 from aptus import hypr, paths  # noqa: E402
+from fakehw import FakeHardware  # noqa: E402
 
 HYPR_RUNTIME = Path(os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}")) / "hypr"
 
@@ -36,6 +37,7 @@ class Nested:
     wayland_display: str = ""       # its socket name (wayland-N)
     proc: subprocess.Popen | None = None
     log: list[str] = field(default_factory=list)
+    hw: FakeHardware | None = None  # the fake backlight and keyboard light (S3, fakehw.py)
     paths: paths.Paths = field(init=False)
 
     def __post_init__(self) -> None:
@@ -62,6 +64,10 @@ class Nested:
         env = {k: v for k, v in os.environ.items() if k not in ("HYPRLAND_INSTANCE_SIGNATURE", "APTUS_DEV")}
         env.update(HOME=str(self.home), HYPRLAND_NO_SD_VARS="1", HYPRLAND_NO_SD_NOTIFY="1",
                    APTUS_TEST="1", APTUS_REAL_HYPRLAND_SIGNATURE=real)
+        # Brightness and the keyboard light act on a fake sysfs tree through a fake brightnessctl
+        # first on PATH (APTUS_SYSFS; never /sys).
+        self.hw = FakeHardware(self.home / ".aptus-test-hw")
+        env.update(self.hw.build())
         hypr_dir = HYPR_RUNTIME
         before = set(os.listdir(hypr_dir)) if hypr_dir.exists() else set()
         log = open(self.root / "hyprland.log", "wb")
