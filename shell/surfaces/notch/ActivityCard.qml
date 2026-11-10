@@ -33,4 +33,14 @@ Item {
 
     // TODO(phase): a Loader of the current activity's card (→ _setUp), PagerDots when more than
     //   one is live; Tab / ←/→ (notch.js pagerStep) → picked while pinned.
+
+    // Found by the probe (phase 5):
+    // The shown activity, whether the pager shows (more than one live activity) and the card's
+    // size: 420 × the activity's cardHeight (+ the pager).
+    // TODO(phase): activities.find(current); notch.js bulgeSize("card", …).
+    readonly property var _activity: null
+    readonly property bool _pager: false
+    readonly property var _size: ({ width: 0, height: 0 })
+    // Page one activity left or right (notch.js pagerStep), then `picked`.
+    function _step(delta: int): void { throw new Error("not implemented"); }
 }

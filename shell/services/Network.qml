@@ -45,4 +45,16 @@ Singleton {
     function _readVpn(text: string): void { throw new Error("not implemented"); }
     // Wi-Fi was switched off: the event "Wi-Fi off" (notch.md §7).
     function _wifiChanged(): void { throw new Error("not implemented"); }
+
+    // Found by the probe (phase 5):
+    // NetworkManager's devices, the Wi-Fi device, a connected wired device and the connected
+    // Wi-Fi network (null when none).
+    // TODO(phase): Networking.devices.values and finds on it (`_wifi` would clash with the
+    //   generated `_wifiChanged`, hence `_wifiDevice`).
+    readonly property var _devices: []
+    readonly property var _wifiDevice: null
+    readonly property var _wired: null
+    readonly property var _wifiNet: null
+    // The connection at start makes no event: the first state after start is taken as it is.
+    property bool _started: false
 }

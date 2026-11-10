@@ -35,4 +35,9 @@ Item {
     // TODO(phase): a Loader of activity.compact (sets activity, monitorName), width animated
     //   (M-05); hover 300 ms (activityHover) → hoverRested, exit → hoverLeft; click, middle,
     //   right → the signals; pulseSerial → one pulse.
+
+    // Found by the probe (phase 5):
+    // One pulse when the activity asks for it (its pulseSerial changes).
+    // TODO(phase): activity ? activity.pulseSerial : 0.
+    readonly property int _pulse: 0
 }

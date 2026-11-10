@@ -24,4 +24,8 @@ Singleton {
     function nameFor(windowClass: string): string { throw new Error("not implemented"); }
     // The desktop entry for a window class or desktop-entry id (heuristicLookup), or null.
     function entryFor(windowClass: string): var { throw new Error("not implemented"); }
+
+    // Found by the probe (phase 5):
+    // { icon, name, id } of a class, cached in _byClass (iconFor and nameFor share one lookup).
+    function _lookup(windowClass: string): var { throw new Error("not implemented"); }
 }

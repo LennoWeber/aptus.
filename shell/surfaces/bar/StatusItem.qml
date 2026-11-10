@@ -33,4 +33,9 @@ Item {
 
     // TODO(phase): Glyph (ink by item.ink; bolt overlay; extra glyph; percentage text), Tooltip
     //   item.tooltip, width animated with M-04 by `shown`; MouseArea → the signals.
+
+    // Found by the probe (phase 5):
+    // The item's width with its label (the cluster's collapse measures it before hiding labels).
+    // TODO(phase): the content row's implicitWidth.
+    readonly property real _fullWidth: 0
 }

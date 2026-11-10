@@ -14,4 +14,13 @@ Item {
 
     // TODO(phase): the 18 px cover (radius 4; trackArtUrl, else the player's app icon on `raised`,
     //   notch.md §12), paused: 40 % ink.faint overlay.
+
+    // Found by the probe (phase 5):
+    // Set by the slot: the activity object (MediaActivity) and its monitor.
+    property var activity: null
+    property string monitorName: ""
+    // The cover's size (notch.compactLeftSlotCoverSize) and the art URL.
+    // TODO(phase): the token; String(player.trackArtUrl).
+    readonly property real _size: 0
+    readonly property string _art: ""
 }

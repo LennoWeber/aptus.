@@ -42,4 +42,9 @@ Singleton {
     // The charger was plugged in or out: plugged in → the event "Charging" (notch.md §7) and the
     // crit toast goes; a new discharge may warn again.
     function _pluggedChanged(): void { throw new Error("not implemented"); }
+
+    // Found by the probe (phase 5):
+    // UPower's display device (read only; null before UPower answers).
+    // TODO(phase): UPower.displayDevice.
+    readonly property var _dev: null
 }

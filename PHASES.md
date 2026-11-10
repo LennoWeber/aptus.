@@ -1128,6 +1128,17 @@ it to see what S3 adds.
 | 4 | tray submenus come from a nested `QsMenuOpener` read when the menu opens; DBusMenu may load children lazily | phase 7: checked with a real tray item; else the row opens the item's own menu |
 | — | not probed yet: Caps Lock bind, a real tray item, output removal with surfaces open, the hot edge push, brightness on the fake sysfs (needs the nested.py change) | phase 7 |
 
+**Catch-up (2026-11-10, after the phase-6 review).** The skill wants the gaps filled in phases
+2–4 with their rules, before phase 6; the table above was first only carried to phase 7. Now done
+in its own commit: a script compared every root-level declaration of the probe's 43 changed files
+with the skeleton (82 missing: the private state, helpers and the two `activity`/`monitorName`
+slot properties) and put them in, each documented, properties with neutral defaults and
+`TODO(phase)` for their binding, functions with stub bodies; plus `TODO(phase)` markers at the
+phase-4 change sites of the table (the layer `ListModel`, the `Qt.callLater` width notes, the
+delegate x, Hypr's coalescing rebuild, the toast's single body line and critical glyph, the round
+play button, image-data, tray submenus). qmllint 146 files, 0 warnings. Child objects (timers,
+instantiators, models) stay `TODO(phase)` markers, as in phase 4.
+
 ### Phase 6 · invariants (2026-11-10)
 
 **Done** (assertions only; the stubs keep their `throw`, no TODO removed, new `TODO(phase)` markers

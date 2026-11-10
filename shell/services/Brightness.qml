@@ -62,4 +62,14 @@ Singleton {
     // Post the OSD ("brightness" on the monitor showing eDP-1, "kbd" on the active one), unless
     // the Deck is open there and has a slider for it (levels.js deckReplaces).
     function _osd(kind: string): void { throw new Error("not implemented"); }
+
+    // Found by the probe (phase 5):
+    // The first scan of `sysfs` has run (available follows it, also without a backlight).
+    property bool _scanned: false
+    // The write waiting for the running brightnessctl: device → value (one process at a time,
+    // the newest value per device wins).
+    property var _queue: ({})
+    // Start the next queued write when brightnessctl has finished (then _read).
+    // TODO(phase): the writer Process' onRunningChanged (arrow parameters in onExited fail qmllint).
+    function _next(): void { throw new Error("not implemented"); }
 }

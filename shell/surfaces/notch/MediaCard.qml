@@ -27,4 +27,16 @@ Item {
     //   _dragPosition, release → Media.seek), 0:42 / −2:18 (clockDuration), previous / play-pause
     //   (36, primary) / next, shuffle and loop when supported (Media.toggleShuffle/cycleLoop); a
     //   1 s Timer re-reads position while shown and playing.
+
+    // Found by the probe (phase 5):
+    // The card's tokens, the track length (0 when the player has none), the position shown (the
+    // drag's while seeking) and the art URL.
+    // TODO(phase): Tokens.surfaces.card; player.length if lengthSupported; _dragPosition ≥ 0 ?
+    //   _dragPosition : _position; String(player.trackArtUrl).
+    readonly property var _c: ({})
+    readonly property real _length: 0
+    readonly property real _shownPos: 0
+    readonly property string _art: ""
+    // TODO(phase): play/pause is the round primary Button of card.mediaPrimaryButtonSize
+    //   (notch.md §5), not an IconButton.
 }

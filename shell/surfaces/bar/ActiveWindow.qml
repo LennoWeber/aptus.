@@ -40,4 +40,11 @@ Item {
     //   out (M-03 with _swap); window/title/class changes → _changed; a Timer for the throttle
     //   delay → _show; click → _menu (bar.md §4), middle click → Hypr.closeWindow, wheel →
     //   Hypr.cycleFocus.
+
+    // Found by the probe (phase 5):
+    // The title and icon the label should show (the shown ones follow through the title throttle
+    // and the crossfade, bar.md §4): the window's title (else its app's name) and its app icon.
+    // TODO(phase): from `window` (Apps.nameFor/iconFor), else `fallback` and no icon.
+    readonly property string _wantTitle: ""
+    readonly property string _wantIcon: ""
 }

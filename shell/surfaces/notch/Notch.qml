@@ -126,4 +126,43 @@ Item {
     //   one at dueEntries' next → _expire (no polling).
     // TODO(phase): the outside catcher (a MouseArea below the bar band while a card is pinned) →
     //   _outsideClicked.
+
+    // Found by the probe (phase 5):
+    // This monitor's name, and whether it is the active one (passive content and hover cards
+    // show there).
+    // TODO(phase): monitor.name; SurfaceManager.activeMonitor === _name.
+    readonly property string _name: ""
+    readonly property bool _isActive: false
+    // The live activities in pager order (by priority).
+    // TODO(phase): the _activities with `live`, by priority.
+    readonly property var _live: []
+    // Activity id → the compact look's width (the slot reports it; assignSlots measures with it).
+    property var _widths: ({})
+    // When the pointer last left a pinned card (0: not pinned, or under the pointer).
+    property real _pinnedSince: 0
+    // The current (not leaving) layer and its content item, or null.
+    property NotchLayer _currentLayer: null
+    property var _currentContent: null
+    // The bar band's height now (slides with the intro and `hide`).
+    // TODO(phase): Tokens.barHeight × introProgress × (1 − hide).
+    readonly property real _barNow: 0
+    // The bulge's target size (the current layer's content size; 0 at rest and hidden), its
+    // animated size (spring.notch, or the mode's sizeSpring) and cove (0 → Tokens.cove).
+    readonly property real _targetW: 0
+    readonly property real _targetH: 0
+    property real _bulgeW: 0
+    property real _bulgeH: 0
+    property real _cove: 0
+    // The payload of a passive entry of this monitor ({} when gone: the layer keeps its last).
+    function _entry(id: int): var { throw new Error("not implemented"); }
+    // A compact slot reports its activity's width (into _widths).
+    function _noteWidth(id: string, w: real): void { throw new Error("not implemented"); }
+    // Find the current layer's item after the layers changed (_currentLayer, _currentContent).
+    function _pickCurrent(): void { throw new Error("not implemented"); }
+    // TODO(phase): the layers also live in a ListModel the Repeater uses, updated in place by uid
+    //   (a Repeater over a JS array recreates every delegate on each change).
+    // TODO(phase): slot width changes reach _noteWidth through Qt.callLater (a direct call loops
+    //   _slots ↔ the slot's width).
+    // TODO(phase): a layer delegate's x comes from the bulge width, not from anchors (its parent
+    //   is null while the Repeater removes it).
 }

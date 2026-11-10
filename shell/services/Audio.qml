@@ -63,4 +63,9 @@ Singleton {
     // Post the OSD of a kind ("volume" | "mic") on the active monitor, unless the Deck is open
     // there (its slider moves instead, notch.md §8; levels.js deckReplaces).
     function _osd(kind: string): void { throw new Error("not implemented"); }
+
+    // Found by the probe (phase 5):
+    // The PipeWire backend object (null under the double; untyped, the Loader's item).
+    // TODO(phase): backend.item.
+    readonly property var _b: null
 }

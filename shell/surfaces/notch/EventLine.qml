@@ -16,4 +16,9 @@ Item {
     readonly property real bulgeHeight: 0
 
     // TODO(phase): glyph + one line of text (body).
+
+    // Found by the probe (phase 5):
+    // 260–360 × 36, from the text's width.
+    // TODO(phase): notch.js bulgeSize("event", payload, { width: the row's implicitWidth + 2 × padToast }).
+    readonly property var _size: ({ width: 0, height: 0 })
 }

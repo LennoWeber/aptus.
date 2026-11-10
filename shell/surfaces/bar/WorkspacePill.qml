@@ -38,4 +38,18 @@ Item {
     // TODO(phase): label (bar type, tabular), ≤ pillMaxIcons AppIcons (Apps.iconFor) and "+n",
     //   wash on hover, urgent dot (warn), scratch ring, tooltip bar.js workspaceTooltip after
     //   600 ms; MouseArea → the signals; appear drives opacity and rise (M-01).
+
+    // Found by the probe (phase 5):
+    // The bar's tokens, the pill's app classes (none for the scratch pill), the icons shown and
+    // those behind "+n".
+    // TODO(phase): Tokens.surfaces.bar; workspace.apps; min/max against bar.pillMaxIcons.
+    readonly property var _bar: ({})
+    readonly property var _apps: []
+    readonly property int _iconCount: 0
+    readonly property int _more: 0
+    // The pill's width with its icons, and with the number only (the strip's collapse measures
+    // every pill at every level, bar.js).
+    // TODO(phase): 2 × pillPadH + the number label's implicitWidth (+ the icons and "+n").
+    readonly property real fullWidth: 0
+    readonly property real numberWidth: 0
 }

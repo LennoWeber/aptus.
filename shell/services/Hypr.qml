@@ -213,4 +213,12 @@ Singleton {
     //   first _rebuildWindows/_rebuildWorkspaces once the first refreshes land (07 §6: a lazy
     //   singleton never relies on on<Prop>Changed for its first value).
     Component.onCompleted: _refresh(["monitors", "toplevels"])
+
+    // Found by the probe (phase 5):
+    // Events after which the workspace list (names, monitors) is stale.
+    // TODO(phase): createworkspacev2, destroyworkspacev2, renameworkspace, moveworkspacev2,
+    //   focusedmonv2, monitoraddedv2, monitorremovedv2; any of them restarts one coalescing
+    //   rebuild Timer (several events per change make one rebuild), and an Instantiator over the
+    //   toplevels rebuilds when a window's lastIpcObject changes.
+    readonly property var _workspaceEvents: []
 }

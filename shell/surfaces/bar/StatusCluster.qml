@@ -32,4 +32,9 @@ Item {
     //   (right to left, M-04 open/close with _leaving), click on padding → Deck top; the item
     //   signals → _open / _wheel / _middle / _right.
     // TODO(phase): the battery item turning crit (≤ batteryCritPercent, discharging) → its nudge().
+
+    // Found by the probe (phase 5):
+    // id → item record of `items` (the delegates look their record up by id).
+    // TODO(phase): from items.
+    readonly property var _byId: ({})
 }

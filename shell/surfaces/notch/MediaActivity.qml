@@ -25,4 +25,12 @@ Activity {
     //   not Media.hidden; priority media / mediaPaused; a Timer for the paused hide.
     // TODO(phase): compact MediaCompact, card MediaCard; menu [Hide until it changes] →
     //   Media.hideUntilChanged.
+
+    // Found by the probe (phase 5):
+    // The paused cover hides compactPausedHideMs after the pause (one timer, no polling).
+    property bool _pausedLong: false
+    // TODO(phase): Media.pausedSince.
+    readonly property real _pausedSince: 0
+    // TODO(phase): a single-shot Timer at the rest of compactPausedHideMs → _pausedLong.
+    property Timer _timer: null
 }

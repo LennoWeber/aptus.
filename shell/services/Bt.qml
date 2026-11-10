@@ -27,4 +27,13 @@ Singleton {
 
     // A device connected: the event "<name> connected · 70 %" (notch.md §7, status.js).
     function _deviceConnected(device: var): void { throw new Error("not implemented"); }
+
+    // Found by the probe (phase 5):
+    // The Bluetooth singleton and its default adapter, untyped (qmllint has no types for them).
+    // TODO(phase): Bluetooth, _bt.defaultAdapter.
+    readonly property var _bt: null
+    readonly property var _adapter: null
+    // Devices already connected at start make no event (they connect while bluez answers): the
+    // first device list after start is taken as it is, without connect events.
+    property bool _started: false
 }

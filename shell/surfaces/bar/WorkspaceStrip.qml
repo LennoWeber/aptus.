@@ -57,4 +57,10 @@ Item {
     // TODO(phase): the scratch pill (clicked → Hypr.toggleScratch); the accent capsule
     //   (spring.snappy, trail workspace.trailDelay); strip/active changes → _placeCapsule; wheel on
     //   the background → _wheel.
+
+    // Found by the probe (phase 5):
+    // The trailing edge's target and side (M-02: the far edge follows trailDelay after the near
+    // one; set when the trail timer fires).
+    property real _trailTo: 0
+    property bool _trailIsLeft: false
 }

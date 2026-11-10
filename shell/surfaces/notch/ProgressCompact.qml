@@ -11,4 +11,9 @@ Item {
     property var item: null
 
     // TODO(phase): Ring 14 (fraction; -1 indeterminate still) + "42 %" (micro, tabular).
+
+    // Found by the probe (phase 5):
+    // Set by the slot: the activity object (ProgressActivity) and its monitor.
+    property var activity: null
+    property string monitorName: ""
 }

@@ -53,4 +53,14 @@ Singleton {
     function hideUntilChanged(): void { throw new Error("not implemented"); }
     // A player was controlled (keys, card): its lastActive is now.
     function _touch(player: var): void { throw new Error("not implemented"); }
+
+    // Found by the probe (phase 5):
+    // The active player's track key (service name, title, artist): a change is a new track (the
+    // card's position resets, the compact cover pulses once).
+    // TODO(phase): active ? [dbusName, trackTitle, trackArtist].join("|") : "".
+    readonly property string trackKey: ""
+    // XF86AudioPlay with no player at all (notch.md §5): the event "Nothing to play".
+    function _nothing(): void { throw new Error("not implemented"); }
+    // A player as the plain record media.js works on (dbusName, identity, playbackState, …).
+    function _summary(p: var): var { throw new Error("not implemented"); }
 }

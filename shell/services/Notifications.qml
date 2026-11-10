@@ -96,4 +96,22 @@ Singleton {
     function _cacheImage(record: var, live: var): void { throw new Error("not implemented"); }
     // The history changed: recount unread, write the state file (debounced).
     function _changed(): void { throw new Error("not implemented"); }
+
+    // Found by the probe (phase 5):
+    // The history limits (settings notifications.historyMax, notifications.historyDays).
+    // TODO(phase): Config.get with these defaults until Config has loaded.
+    readonly property int _max: 200
+    readonly property int _days: 7
+    // The toast of a record is now the passive entry `passiveId` (posted or updated in place).
+    function _setToast(recordId: int, passiveId: int): void { throw new Error("not implemented"); }
+    // Close a record's toast (sender close, activation, dismissal); the record stays in history.
+    function _closeToast(recordId: int): void { throw new Error("not implemented"); }
+    // Forget a record (history trim, removeRecord): its toast and its image copy too.
+    function _drop(id: int): void { throw new Error("not implemented"); }
+    // The monitor holding a passive entry ("" none).
+    function _monitorOf(passiveId: int): string { throw new Error("not implemented"); }
+    // The passive entry still exists (rules.expire can drop a toast entry without telling us).
+    function _alive(passiveId: int): bool { throw new Error("not implemented"); }
+    // TODO(phase): image-data hints (image://qsimage) have no file to copy: the toast shows the
+    //   live image, the history keeps no image for them (today.md §6).
 }

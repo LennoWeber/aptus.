@@ -29,4 +29,11 @@ Item {
 
     // TODO(phase): shownItems/overflowItems from bar.js trayLayout(SystemTray.items, maxItems,
     //   hiddenIds, order); a Row of TrayItem and the expand_more button (→ _overflowMenu).
+
+    // Found by the probe (phase 5):
+    // The items in the bar and those behind the overflow button (bar.js trayLayout).
+    // TODO(phase): bar.js trayLayout(SystemTray.items.values, maxItems, hiddenIds, order).
+    readonly property var _layout: ({ shown: [], overflow: [] })
+    // TODO(phase): submenus come from a nested QsMenuOpener read when the menu opens; DBusMenu may
+    //   load children lazily: checked with a real tray item, else the row opens the item's own menu.
 }

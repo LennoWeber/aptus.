@@ -23,4 +23,9 @@ Item {
 
     // TODO(phase): glyph 20 (ink), Level 180 × 6 (the part over 100 in warn) or dots, value
     //   (tabular, ink.meta); payload.device replaces the value for deviceNameMs (_deviceShown).
+
+    // Found by the probe (phase 5):
+    // The OSD's tokens.
+    // TODO(phase): Tokens.surfaces.osd.
+    readonly property var _o: ({})
 }

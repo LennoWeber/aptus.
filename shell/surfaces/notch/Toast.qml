@@ -49,4 +49,14 @@ Item {
     //   ≤ 3 quiet action buttons, reply Field (takes the keyboard; Enter → replied, Esc →
     //   closeReply), stack icons; click body → activated(""), middle → dismissed, right →
     //   rightClicked; entrance M-06.
+
+    // Found by the probe (phase 5):
+    // The toast's tokens, the stack record (null for a single toast) and the buttons (the
+    // actions, plus Reply when the sender allows it).
+    // TODO(phase): Tokens.surfaces.toast; payload.stack; payload.actions (+ { id: "__reply" }).
+    readonly property var _t: ({})
+    readonly property var _stack: null
+    readonly property var _actions: []
+    // TODO(phase): one body line while buttons show (the 104/132 heights fit one); the critical
+    //   warning glyph for every critical notification (nid ≠ 0), system toasts keep their own.
 }

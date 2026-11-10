@@ -60,4 +60,15 @@ Item {
         spacing: Tokens.gapBarItem
         layoutDirection: Qt.RightToLeft
     }
+
+    // Found by the probe (phase 5):
+    // This monitor's name, its Hyprland record and its active workspace record.
+    // TODO(phase): monitor.name; Hypr.monitors / Hypr.workspaces finds.
+    readonly property string _name: ""
+    readonly property var _hm: null
+    readonly property var _activeWs: null
+    // The primary monitor (10-settings: the external one when connected, else eDP-1): the tray
+    // shows only there.
+    // TODO(phase): from Hypr.monitors.
+    readonly property bool _primary: false
 }

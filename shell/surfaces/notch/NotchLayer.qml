@@ -41,4 +41,8 @@ Item {
     //   (args, monitorName; a mode's active false while leaving).
     // TODO(phase): opacity in after morphInDelayMs (content rise 8), out in morphOutMs; `plain`
     //   swaps in place without the rise (replaces_id, M-06 not replayed).
+
+    // Found by the probe (phase 5):
+    // 0 → 1 fade (in after morphInDelayMs, out over morphOutMs) and the entrance rise.
+    property real _fade: 0
 }
