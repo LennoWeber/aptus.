@@ -20,7 +20,6 @@ import pwd
 import re
 import shutil
 import signal
-import subprocess
 import sys
 from collections.abc import Iterator
 from dataclasses import dataclass
@@ -32,6 +31,7 @@ REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "tests" / "unit"))
 
 import s2_fakes as fakes  # noqa: E402
+import slot_hashes  # noqa: E402
 from nested import Nested, real_signature  # noqa: E402
 
 from aptus import hypr  # noqa: E402
@@ -40,18 +40,11 @@ from aptus.lease import journal, preflight  # noqa: E402
 from aptus.lease.journal import State  # noqa: E402
 from aptus.lease.kinds import dconf as dconf_kind  # noqa: E402
 from aptus.theme import targets  # noqa: E402
-from aptus.theme.targets import Mechanism  # noqa: E402
 
 REAL_HOME = Path(pwd.getpwuid(os.getuid()).pw_dir)
-NEVER_READ = (".config/umbriel", ".config/noctalia", ".local/state/noctalia")
 MAX_COPY = 2 << 20                     # bytes; a bigger slot file is left out of the fixtures
 OWN_SESSION = os.environ.get("XDG_SESSION_ID", "2")   # the nested session inherits it
 UMBRIEL = {"Id": "umbriel-vt", "Class": "user", "Type": "wayland", "State": "online", "Desktop": "Umbriel"}
-
-
-def _never(rel: Path) -> bool:
-    s = str(rel)
-    return any(s == n or s.startswith(n + "/") for n in NEVER_READ)
 
 
 def _real_dir(real: paths_mod.Paths, value: str) -> Path | None:
@@ -60,8 +53,7 @@ def _real_dir(real: paths_mod.Paths, value: str) -> Path | None:
         p = targets.expand(real, value)
     except targets.ManifestError:
         return None
-    rel = p.relative_to(REAL_HOME)
-    return None if _never(rel) else p
+    return None if slot_hashes._never(p.relative_to(REAL_HOME)) else p
 
 
 def copy_real_slots(home: Path) -> list[str]:
@@ -69,42 +61,26 @@ def copy_real_slots(home: Path) -> list[str]:
     followed), and create the directories a target's `when: exists:` and a created slot need.
     Returns the slot paths relative to HOME: the set `snapshot` hashes."""
     real = paths_mod.resolve({"HOME": str(REAL_HOME)})
-    manifest = targets.load(REPO / "theme" / "targets.toml")
-    rels: set[str] = set()
-    for t in manifest.targets:
+    for t in slot_hashes.manifest().targets:
         if t.when.startswith("exists:"):
             d = _real_dir(real, t.when.partition(":")[2])
             if d is not None and d.is_dir():
                 (home / d.relative_to(REAL_HOME)).mkdir(parents=True, exist_ok=True)
-        if t.mechanism not in (Mechanism.LEASE, Mechanism.BAKE):
-            continue
-        for _f, slot in targets.slots(real, t):
-            rel = slot.relative_to(REAL_HOME)
-            if _never(rel):
-                continue
-            rels.add(str(rel))
-            dst = home / rel
-            if slot.parent.is_dir():
-                dst.parent.mkdir(parents=True, exist_ok=True)
-            if slot.is_file() and slot.stat().st_size <= MAX_COPY:
-                shutil.copyfile(slot, dst)
-    return sorted(rels)
+    rels = []
+    for slot in slot_hashes.slots(real):
+        rel = slot.relative_to(REAL_HOME)
+        rels.append(str(rel))
+        if slot.parent.is_dir():
+            (home / rel).parent.mkdir(parents=True, exist_ok=True)
+        if slot.is_file() and slot.stat().st_size <= MAX_COPY:
+            shutil.copyfile(slot, home / rel)
+    return rels
 
 
 def real_dconf() -> dict[str, str]:
     """The real values of every dconf key the manifest leases (`dconf read`, read only)."""
-    manifest = targets.load(REPO / "theme" / "targets.toml")
-    keys = {dconf_kind.KEY_DIR + k for t in manifest.targets for k, _ in t.dconf}
-    out = {}
-    for key in sorted(keys):
-        try:
-            value = subprocess.run(["dconf", "read", key], capture_output=True, text=True,
-                                   timeout=5).stdout.strip()
-        except (OSError, subprocess.TimeoutExpired):
-            value = ""
-        if value:
-            out[key] = value
-    return out
+    values = {k: slot_hashes.dconf_read(k) for k in slot_hashes.dconf_keys()}
+    return {k: v for k, v in values.items() if v}
 
 
 @dataclass
