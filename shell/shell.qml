@@ -29,6 +29,7 @@ ShellRoot {
     Binding { target: Tokens; property: "wallpaperHue"; value: Wallpaper.hue }
     Binding { target: Tokens; property: "wallpaperLightness"; value: Wallpaper.lightness }
     Binding { target: Tokens; property: "wallpaperChroma"; value: Wallpaper.chroma }
+    Binding { target: Tokens; property: "ownRenderBusy"; value: Theme.busy }
     Binding { target: SurfaceManager; property: "activeMonitor"; value: Hypr.focusedMonitor }
     Binding { target: SurfaceManager; property: "currentWindow"; value: Hypr.activeWindow ? Hypr.activeWindow.address : "" }
     Binding { target: SurfaceManager; property: "locked"; value: Session.locked }
