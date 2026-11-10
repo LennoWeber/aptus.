@@ -616,3 +616,55 @@ def test_slot_specs(p, manifest) -> None:
     papirus(p)
     specs = {s.id: s for s in apply.slot_specs(p, manifest, gen)}
     assert specs["dconf.icon-theme"].value == "'aptus-icons-dark'"
+
+
+# --- the phase-7 review fixes ------------------------------------------------------------------
+
+def test_a_reused_generation_remembers_its_failed_targets(p, tmp_path, manifest) -> None:
+    """A target that failed with no earlier output has no file in the generation: the next
+    session start (same inputs, the generation is reused) leaves it out instead of failing the
+    whole take."""
+    (p.config_home / "ghostty").mkdir(parents=True)
+    broken = tmp_path / "templates"
+    shutil_copy_tree(p.templates, broken)
+    (broken / "ghostty/noctalia").write_text("{{ nope }}\n")
+    p2 = dataclasses.replace(p, templates=broken)
+    g1 = render.render(p2, DARK, manifest)
+    assert "ghostty" in g1.failed
+    again = render.render(p2, DARK, manifest)
+    assert again.reused and "ghostty" in again.failed
+    assert "ghostty" in render.current(p2).failed
+    ids = {s.id for s in apply.slot_specs(p2, manifest, again)}
+    assert "ghostty.artifact" not in ids and "dconf.color-scheme" in ids
+    lost = dataclasses.replace(again, failed={})            # an older generation without failed.json
+    assert "ghostty.artifact" not in {s.id for s in apply.slot_specs(p2, manifest, lost)}
+
+
+def test_target_ids_are_path_components(tmp_path) -> None:
+    with pytest.raises(ManifestError, match="lowercase"):
+        targets.load(write_manifest(tmp_path, '[[target]]\nid = "../a"\nmechanism = "never"\n'))
+
+
+def test_bake_retry_skips_a_busy_theme_lock(p) -> None:
+    import time
+    fakes.tool(p.home, "spicetify", "pass\n")
+    hooks.update_queue(p, add={"spicetify": "bake:spotify:spicetify apply"})
+    held, done = threading.Event(), threading.Event()
+
+    def hold() -> None:
+        with render.lock(p):
+            held.set()
+            done.wait(10)
+    th = threading.Thread(target=hold)
+    th.start()
+    try:
+        held.wait(5)
+        t0 = time.monotonic()
+        assert hooks.retry_queued(p) == []
+        assert time.monotonic() - t0 < 1                     # the guard never waits for it
+        assert hooks.load_queue(p) == {"spicetify": "bake:spotify:spicetify apply"}
+    finally:
+        done.set()
+        th.join()
+    (r,) = hooks.retry_queued(p)
+    assert r.state == "applied" and hooks.load_queue(p) == {}

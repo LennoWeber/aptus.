@@ -12,7 +12,7 @@ import pytest
 
 import s2_fakes as fakes
 from aptus import paths as paths_mod
-from aptus.lease import guard, ops
+from aptus.lease import guard, journal, ops
 from aptus.lease.journal import SlotKind
 from aptus.lease.slots import SlotSpec
 
@@ -116,3 +116,87 @@ def test_main_refusals(p) -> None:
     assert guard.main([]) == 2
     assert guard.main(["x", "sig"]) == 2
     assert guard.main([str(os.getpid()), os.environ["APTUS_REAL_HYPRLAND_SIGNATURE"]]) == 3
+
+
+# --- the phase-7 review fixes ------------------------------------------------------------------
+
+def aptus_env(p) -> None:
+    fakes.systemctl(p.home)
+    (p.home / ".aptus-test/systemctl.json").write_text(json.dumps({"env": {
+        "APTUS_SESSION": "1", "QT_QPA_PLATFORMTHEME": "qt6ct", "XCURSOR_SIZE": "24"}}))
+
+
+def test_a_failed_slot_still_unsets_the_environment(p) -> None:
+    aptus_env(p)
+    report = ops.ReleaseReport(acted=True, failed={"gtk3.artifact": "busy"})
+    assert guard.after_release(p, report, "") == guard.GuardState.FAILED
+    assert fakes.user_env(p.home) == {"XCURSOR_SIZE": "24"}
+
+
+def test_give_back_unsets_first_and_retries_a_release_that_raised(p, hypr, monkeypatch) -> None:
+    take(p, hypr)
+    aptus_env(p)
+    monkeypatch.setattr(guard, "BACKOFF", 0)
+    real = guard.release_if_ours
+    calls = []
+
+    def flaky(*args):
+        calls.append(fakes.user_env(p.home))
+        if len(calls) == 1:
+            raise ops.LeaseError("the lease lock is busy")
+        return real(*args)
+    monkeypatch.setattr(guard, "release_if_ours", flaky)
+    assert guard.give_back(p, hypr.pid, hypr.signature) == guard.GuardState.RELEASED
+    assert calls[0] == {"XCURSOR_SIZE": "24"}            # unset before the first attempt
+    assert len(calls) == 2 and journal.load(p) is None
+
+
+def test_give_back_gives_up_after_its_retries(p, hypr, monkeypatch) -> None:
+    take(p, hypr)
+    monkeypatch.setattr(guard, "BACKOFF", 0)
+    calls = []
+    monkeypatch.setattr(guard, "release_if_ours",
+                        lambda *a: calls.append(1) or (_ for _ in ()).throw(OSError("disk full")))
+    assert guard.give_back(p, hypr.pid, hypr.signature) == guard.GuardState.FAILED
+    assert len(calls) == guard.RETRIES and journal.load(p) is not None
+
+
+def test_a_change_before_the_take_is_checked_again_once_held(p, hypr) -> None:
+    """Umbriel opens between preflight and the take: the change seen while nothing was held is
+    not used up."""
+    last: list = [None]
+    fakes.one_session(p.home, "2", {"Id": "7", "Class": "user", "Type": "wayland", "State": "online"})
+    p.logind_user.parent.mkdir(parents=True)
+    p.logind_user.write_text("2 7")
+    assert not guard.other_session_opened(p, hypr.signature, hypr.pid, last)   # nothing held
+    fakes.one_session(p.home)
+    take(p, hypr)
+    fakes.one_session(p.home, "2", {"Id": "7", "Class": "user", "Type": "wayland", "State": "online"})
+    assert guard.other_session_opened(p, hypr.signature, hypr.pid, last)       # same record
+
+
+def test_a_failing_loginctl_is_asked_again(p, hypr) -> None:
+    take(p, hypr)
+    p.logind_user.parent.mkdir(parents=True)
+    p.logind_user.write_text("2 7")
+    fakes.tool(p.home, "loginctl", "code = 1\n")
+    last: list = [None]
+    assert not guard.other_session_opened(p, hypr.signature, hypr.pid, last)
+    fakes.one_session(p.home, "2", {"Id": "7", "Class": "user", "Type": "wayland", "State": "online"})
+    assert guard.other_session_opened(p, hypr.signature, hypr.pid, last)       # no new change needed
+
+
+def test_ready_needs_ok_and_an_active_unit(p) -> None:
+    fakes.systemctl(p.home)
+    assert not guard.ready(p)                                  # no guard.state
+    guard.write_state(p, guard.GuardState.OK)
+    assert not guard.ready(p)                                  # the unit does not run
+    unit = subprocess.Popen(["sleep", "30"])
+    try:
+        (p.home / ".aptus-test/systemd-run.json").write_text(json.dumps({"units": {"aptus-guard": unit.pid}}))
+        assert guard.ready(p)
+        guard.write_state(p, guard.GuardState.RELEASED)
+        assert not guard.ready(p)
+    finally:
+        unit.kill()
+        unit.wait(5)

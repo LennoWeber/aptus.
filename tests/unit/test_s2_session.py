@@ -247,3 +247,55 @@ def test_lease_cli_refuses_the_real_home(tmp_path) -> None:
             assert r.returncode == 3, (tool, home, r.stdout, r.stderr)
             assert "APTUS_TEST=1 but HOME" in r.stderr, r.stderr
     assert {n: (real / n).exists() for n in log_before} == log_before
+
+
+# --- the phase-7 review fixes ------------------------------------------------------------------
+
+def test_a_guard_that_never_reports_ok_means_no_lease(p, world, monkeypatch) -> None:
+    """systemd-run succeeds and the unit is active, but the guard never watches (it died in its
+    imports, say): no lease."""
+    h, snapshot = world
+    before = snapshot()
+    fakes.tool(p.home, "systemd-run", """\
+        import subprocess
+        proc = subprocess.Popen(["sleep", "30"], start_new_session=True)
+        state.setdefault("units", {})["aptus-guard"] = proc.pid
+        """)
+    monkeypatch.setattr(session.guard, "READY_TIMEOUT", 0.5)
+    report = session.start(p, h.env)
+    assert report.mode is session.Mode.SCOPE_ONLY and not report.guard
+    assert report.reasons == ["the guard did not start"]
+    assert snapshot() == before
+
+
+def test_an_import_after_the_guard_released_is_taken_back(p, world) -> None:
+    h, _ = world
+    report = session.StartReport(mode=session.Mode.LEASE)
+    session.environment_step(p, h.env, report)                 # nothing is held (any more)
+    assert fakes.user_env(p.home) == {"XCURSOR_SIZE": "24"}
+    assert report.mode is session.Mode.SCOPE_ONLY
+    assert report.reasons == ["the guard released the lease"]
+
+
+def test_a_failing_recover_does_not_stop_the_session(p, world, monkeypatch) -> None:
+    h, _ = world
+    def boom(*a, **k):
+        raise OSError("disk full")
+    monkeypatch.setattr(session.ops, "recover", boom)
+    report = session.start(p, h.env)
+    assert "recover: OSError: disk full" in report.warnings
+    assert report.mode is session.Mode.SCOPE_ONLY            # take's own recover fails closed
+    assert report.reasons == ["the lease failed"] and report.generation == 1
+    assert session.stop(p) == 0
+
+
+def test_main_starts_the_shell_whatever_start_did(p, monkeypatch) -> None:
+    monkeypatch.setenv("XDG_CURRENT_DESKTOP", "Hyprland")
+    monkeypatch.setenv("HYPRLAND_INSTANCE_SIGNATURE", "aptus-test-sig")
+    monkeypatch.setattr(session, "start", lambda *a: (_ for _ in ()).throw(RuntimeError("bug")))
+    execs = []
+    monkeypatch.setattr(session, "exec_supervisor", lambda paths: execs.append(paths))
+    assert session.main(["start"]) == 1                     # exec_supervisor returned (stub)
+    assert execs
+    status = json.loads(p.session_status.read_text())
+    assert status["reasons"] == ["start failed"] and status["mode"] == "scope-only"

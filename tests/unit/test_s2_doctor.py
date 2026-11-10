@@ -228,3 +228,14 @@ def test_baseline_round_trip(p) -> None:
     assert isolation.load_baseline(p) == b
     p.baseline.write_text("[]")
     assert isolation.load_baseline(p) is None
+
+
+def test_journal_half_released_by_a_live_owner(p, hypr) -> None:
+    take(p, hypr)
+    from aptus.lease import journal
+    from aptus.lease.journal import State
+    j = journal.load(p)
+    j.state = State.RELEASING
+    journal.save(p, j)
+    c = by_name(p)["journal"]
+    assert not c.ok and "the guard retries" in c.detail and "recover" not in c.detail

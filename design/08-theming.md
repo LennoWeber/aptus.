@@ -95,13 +95,19 @@ The result is one JSON object, `resolved.json`, written into every generation.
   inputs, the manifest, and every template file. Equal to the current generation's hash →
   nothing to do (10 ms).
 - **Output:** `~/.local/state/aptus/theme/gen-<n>/` containing each target's rendered file(s)
-  (dconf targets: `<id>/dconf.json`, key → value) and `resolved.json`; then the symlink `current`
+  (dconf targets: `<id>/dconf.json`, key → value), `resolved.json` and `failed.json` (target id →
+  why, so a reused generation still knows which targets have no output); then the symlink `current`
   is swapped atomically to it and `theme/resolved.json` (a stable file the shell watches) is
   rewritten. Every target except `never` is rendered whatever its `when` says (installing an
   app needs no new generation). A target that fails keeps the previous generation's output.
   The last three generations are kept. Render, apply and the guard's bake retry serialise on
   `theme/lock` (flock, re-entrant per thread); the lease's own flock is always taken inside it,
-  never the other way round.
+  never the other way round. The guard's bake retry takes the theme lock without waiting and
+  skips its tick while an apply holds it.
+- **Writes:** the files of a generation (and of a scope mirror or an icon theme) are written
+  into a private build directory (mode 0700, checked by `invariants.writable`) that becomes
+  visible only through one atomic rename; every other file goes through `atomic.py`. Target ids
+  are path components, so `load` accepts only lowercase letters, digits and `-`.
 - **Template language** (deliberately tiny, no logic): `{{ role }}` or `{{ role | filter }}`.
 
 | Filter | Output for `#9acfae` |
@@ -182,6 +188,11 @@ Targets, by id (rows of [02-isolation.md](02-isolation.md) §4): `gtk3`, `gtk4`,
    to `<runtime>/bake-queue.json`; the guard retries it every 30 s.
 5. Report: a JSON summary on stdout (`applied`, `next-start`, `failed` per target); the shell
    shows a toast only for failures.
+
+An unchanged input hash reports `unchanged` and does nothing else, unless this session's lease
+does not carry that generation yet (an earlier apply of it failed or was cut off): then the
+generation is applied again. Lease mode means the journal is `held` by this session; a lease
+half released (`releasing`) is the guard's to finish.
 
 Triggered by: session start (render + take), any change of mode/accent/glass/contrast (debounced
 250 ms, after the shell's own crossfade ends), `auto` transitions, and `aptus theme apply`.

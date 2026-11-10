@@ -223,7 +223,7 @@ again, only `after` changes. `theme_generation` is incremented.
 | Kind | Read | Write | Restore |
 |---|---|---|---|
 | `file` | bytes + mode | temp + rename | temp + rename of `.before`; if `before.exists == false`, unlink |
-| `ini-sections` | parse INI keeping order and comments; extract the listed sections (glob on names) | replace those sections in place, keep every other line byte-identical, temp + rename | put the `before` section text back in the same place; other sections stay as they are now (KDE apps may have written them meanwhile) |
+| `ini-sections` | parse INI keeping order and comments; extract the listed sections (glob on names), each anchored to the block before it (a repeated header counts as a separate anchor) | replace those sections in place, keep every other line byte-identical, temp + rename | put the `before` section text back in the same place; other sections stay as they are now (KDE apps may have written them meanwhile) |
 | `dconf` | `dconf read KEY` (empty output = not set) | `dconf write KEY VALUE` | `dconf write KEY BEFORE`, or `dconf reset KEY` if it was not set |
 
 The dconf key set is fixed: `org.gnome.desktop.interface` `color-scheme`, `gtk-theme` (recorded,
@@ -240,12 +240,22 @@ are untouched, so they stay shared between the sessions as they always were.
      under `conflicts/<time>/<id>`, then restore `before` anyway. Noctalia's state always wins.
    - Verify the restored hash equals `before.sha256`; on mismatch retry once, then mark the slot
      `status: "failed"` and keep going.
-3. Run every target's reload hook again, so processes that outlive the session (tmux server, a
+3. Set `state: "released"`, move the journal to `history/`, release the flock.
+4. Unset the scoped variables in the systemd user environment (§6), also when a slot failed.
+   The guard does this **first**, before step 1, while its session still holds the lease, so a
+   guard killed half-way leaves no variable behind (recover then restores the slots); the other
+   callers (recover, `aptus-session stop`, `aptus-lease release`) do it after step 3. The unset
+   is value-checked, so a repeat is a no-op.
+5. Run every target's reload hook again, so processes that outlive the session (tmux server, a
    running Zen) see Noctalia's paint again.
-4. Unset the scoped variables in the systemd user environment (§6).
-5. Set `state: "released"`, move the journal to `history/`, release the flock.
 6. Failed slots stay in the journal with `state: "releasing"`; recovery retries them at the next
    login and `aptus doctor` reports them.
+
+A release that raises (the lease lock busy for 10 s, a full disk) is tried four times, 2 s
+apart, by the guard; after that it reports `failed` and recover retries at the next login.
+`aptus-lease release` is the manual escape hatch (and uninstall's `release-lease`): it releases
+whatever lease is held, also a live session's, which then goes on scope-only.
+`aptus-lease update` acts only for the session that holds the lease.
 
 The guard also releases **during** a session: when logind's record of this user changes and the
 preflight check now finds another open session (Umbriel logged in on another VT), it releases,
@@ -301,9 +311,11 @@ Hyprland (started by the greeter via start-hyprland)
      1. recover                        (in-process: aptus.lease.ops.recover)
      2. render                         → ~/.local/state/aptus/theme/gen-<n>/, current, resolved.json
      3. systemd-run --user --unit=aptus-guard  aptus-guard <hyprland-pid> <signature>
-        (no running guard → no lease: scope-only)
+        then wait ≤ 5 s for guard.state `ok` (written once the guard watches);
+        no guard watching → no lease: scope-only
      4. take                           → preflight, journal + slots (under the lease flock)
-     5. systemctl --user import-environment …   (lease only)
+     5. systemctl --user import-environment …   (lease only; unset again when the guard
+        released in between)
      5b. scope mirrors, Own files, reload hooks of the generation (also scope-only)
      6. systemd-run --user --unit=aptus-clipd  --property=BindsTo=aptus-guard.service …
         systemd-run --user --unit=aptus-sunset --property=BindsTo=aptus-guard.service hyprsunset …

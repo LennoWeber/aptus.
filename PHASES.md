@@ -1351,3 +1351,55 @@ phases 4 and 6 are in (above).
   installed. Emacs is, but Noctalia's output (`~/.config/doom/themes/noctalia-theme.el`) does
   not exist, so its template is not enabled; the doctor would name it if it were. Every
   community template in the catalogue read in phase 1 is covered (checked against the manifest).
+
+### Review of phase 7 (fresh subagent, diff `f356b72..e643563`; fixed in "phase 7: review fixes")
+
+12 findings, none critical. The first reviewer died on the usage limit and was started again.
+
+**Fixed.**
+1. A failed slot skipped the environment unset, so Umbriel could get `QT_QPA_PLATFORMTHEME`.
+   - `after_release` now unsets before it runs the hooks, also when slots failed.
+   - The guard unsets **first**, while its session still holds the lease, so a guard killed
+     half-way leaves no variable behind.
+   - 02 §5.6 has the new order.
+2. A release that raised killed the guard for the rest of the session. The causes were the lease
+   lock busy for 10 s, a full disk, or the theme lock. `give_back` now tries 4 times, 2 s apart,
+   then reports `failed`.
+3. A reused generation forgot its failed targets. The next session start then failed the whole
+   take on the missing output.
+   - Each generation now has `failed.json`, which `current()` loads.
+   - `slot_specs` leaves out a target whose output is missing.
+   - `apply` re-applies an unchanged generation that this session's lease does not carry yet.
+4. `is-active` (Type=exec) proved only that `execve` succeeded. Now:
+   - the guard writes `ok` once its pidfd is open;
+   - `aptus-session` removes the old `guard.state` and waits up to 5 s for `guard.ready`;
+   - `aptus-lease take` checks the same.
+5. The guard could use up a change in logind's record while nothing was held yet, or while
+   `loginctl` failed. Now only a conclusive check (lease held, sessions listed) uses it up.
+6. An environment import that landed after the guard released is unset again, and the session
+   goes on scope-only (`environment_step`).
+7. A failing recover, or any exception in `start`, could leave Hyprland without a shell. Now
+   `recover_step` catches everything, and `main` writes `session.json` and starts the
+   supervisor whatever happened.
+8. Lease mode now means `held` (`ops.holds`); a half-released lease is the guard's to finish.
+   The doctor's message for one with a live owner names the guard and `aptus-lease release`,
+   not recover.
+9. The guard's bake retry takes the theme lock without waiting (`LockBusy`) and skips that tick.
+10. INI anchors now count repeated headers. The random round trip now includes repeated
+    headers (400 files, byte-identical).
+11. `load` accepts target ids only as `[a-z0-9-]` path components. The build-directory write
+    pattern (private 0700 directory, one atomic rename) is written down in 08 §4.
+12. `aptus-lease update` acts only for the session that holds the lease. `release` stays the
+    manual escape hatch (and uninstall's `release-lease`), documented in 02 §5.6.
+
+**Checked.** 16 new tests, one or more per finding:
+- guard: 6;
+- session: 4;
+- theme: 3;
+- lease: 2, and the INI round trip now has repeated headers;
+- doctor: 1.
+
+`tests/run` is green: 335 unit tests, 167 QML tests, and qmllint with 0 warnings on 122 files.
+All 16 e2e tests pass again in the nested Hyprland.
+
+**Rejected.** None.

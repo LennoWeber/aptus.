@@ -488,3 +488,24 @@ def test_status(p, test_home, hypr) -> None:
     assert (s.state, s.owner_alive, s.generation, s.slots, s.failed) == (State.HELD, True, 4, 7, [])
     assert s.owner.hyprland_pid == hypr.pid
     assert SlotStatus.HELD
+
+
+# --- the phase-7 review fixes ------------------------------------------------------------------
+
+def test_holds_only_while_held(p, test_home, hypr) -> None:
+    setup_world(p, test_home)
+    assert not ops.holds(p, hypr.signature)
+    take(p, hypr)
+    assert ops.holds(p, hypr.signature) and not ops.holds(p, "other")
+    j = journal.load(p)
+    j.state = State.RELEASING
+    journal.save(p, j)
+    assert not ops.holds(p, hypr.signature)                  # half released: not lease mode
+    assert ops.held_by(p, hypr.signature, hypr.pid)          # but still this session's to finish
+
+
+def test_lease_cli_update_only_for_the_holder(p, test_home, hypr, monkeypatch, capsys) -> None:
+    from aptus.lease import cli
+    monkeypatch.setenv("HYPRLAND_INSTANCE_SIGNATURE", "someone-else")
+    assert cli.main(["update"]) == 1
+    assert "does not hold the lease" in capsys.readouterr().err

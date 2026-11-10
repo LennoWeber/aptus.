@@ -1,9 +1,9 @@
 """aptus-guard <hyprland-pid> <signature> (02 §7): a transient user service outside Hyprland's
 process tree, started by aptus-session *before* the lease is taken (no lease without a guard).
 Waits on Hyprland's pidfd (readable when Hyprland exits) or SIGTERM from the user manager
-(logout, shutdown, `aptus-session stop`), then releases the lease if this session owns it, runs
-the release hooks, unsets the variables the session imported and exits 0; units bound to it
-(BindsTo) stop with it. While waiting it also
+(logout, shutdown, `aptus-session stop`), then unsets the variables the session imported,
+releases the lease if this session owns it (retried when it raises), runs the release hooks and
+exits 0; units bound to it (BindsTo) stop with it. While waiting it also
 - polls logind's record of this user (/run/systemd/users/<uid>, 1 s): when another graphical
   session opens while the lease is held (Umbriel logged in on another VT), it releases at once
   and the session continues scope-only (02 §7 exit matrix);
@@ -209,8 +209,8 @@ def _stop_pipe() -> int:
 
 
 def run(paths: Paths, pid: int, signature: str) -> int:
-    """Watch Hyprland `pid`; on exit or SIGTERM: release_if_ours, the release hooks
-    (hooks.run_reloads), unset_environment, guard.state, return 0 (1 when the release failed).
+    """Watch Hyprland `pid`; on exit or SIGTERM: give_back (environment, release
+    with retries, hooks), guard.state, return 0 (1 when the release failed).
     On another session opening: the same release, guard.state scope-only, and keep watching."""
     stop = _stop_pipe()
     try:
