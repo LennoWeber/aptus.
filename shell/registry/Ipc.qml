@@ -21,7 +21,19 @@ Scope {
                     windows: Hypr.windows.length, submap: Hypr.submap },
             wallpaper: { monitors: Hypr.monitors.map(m => ({ name: m.name, path: Wallpaper.pathFor(m.name) })),
                          images: Wallpaper.images.length },
-            session: { locked: Session.locked, canLock: Session.canLock }
+            session: { locked: Session.locked, canLock: Session.canLock },
+            // S3: levels, the notification server and history (counts only: no bodies, 07 §11),
+            // media, privacy and the bar's strips (the e2e tests assert on them)
+            audio: { available: Audio.available, testDouble: Audio.testDouble, volume: Audio.volume, muted: Audio.muted,
+                     micMuted: Audio.micMuted },
+            brightness: { available: Brightness.available, hasBacklight: Brightness.hasBacklight,
+                          brightness: Brightness.brightness, device: Brightness.device, kbdLevel: Brightness.kbdLevel,
+                          kbdMax: Brightness.kbdMax },
+            notifications: { available: Notifications.available, serverActive: Notifications.serverActive,
+                             history: Notifications.history.length, unread: Notifications.unread, held: Notifications.held },
+            media: { players: Media.players.length, active: Media.active ? Media.active.dbusName : "" },
+            privacy: { mic: Privacy.mic.length, camera: Privacy.camera.length, screencast: Privacy.screencast },
+            bar: { strips: Hypr.monitors.reduce((o, m) => { o[m.name] = Hypr.stripFor(m.name).pills.map(p => p.id); return o; }, {}) }
         };
     }
     // The answer of a service's IPC functions until its stage fills it (07 §7: never an empty answer).
