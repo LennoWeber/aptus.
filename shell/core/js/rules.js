@@ -31,8 +31,8 @@ var PASSIVE_KINDS = ["osd", "toast", "event"]
 // Defaults for global.limits (SurfaceManager passes the token values: toast.staleMs,
 // event.maxAgeMs, notch.pinnedCardTimeoutMs).
 var DEFAULT_LIMITS = { toastStale: 30000, eventMaxAge: 4000, pinnedCardTimeout: 8000 }
-// TODO(S3): close a pinned card after limits.pinnedCardTimeout without the pointer over it
-//   (notch.md §4); the card reports its hover, which rules.js does not know yet.
+// A pinned card closes after limits.pinnedCardTimeout without the pointer over it (notch.md §4):
+// the Notch knows the hover and closes it (notch.js dueEntries), rules.js keeps the limit.
 // What may still happen while locked: passive OSD only (07 §5).
 var LOCKED_ALLOWED_PASSIVE = ["osd"]
 
