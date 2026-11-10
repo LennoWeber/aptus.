@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import os
 import pwd
+import tempfile
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -75,10 +76,46 @@ class Paths:
     cache_bat: Path            # ~/.cache/aptus/bat
     cache_agenda_http: Path    # ~/.cache/aptus/agenda-http
 
+    # S2 isolation (02, 08)
+    templates: Path            # <repo>/theme/templates
+    targets: Path              # <repo>/theme/targets.toml
+    recover_unit_repo: Path    # <repo>/systemd/aptus-recover.service
+    recover_unit: Path         # ~/.config/systemd/user/aptus-recover.service (a link into the repo)
+    theme_own: Path            # theme/own.json: Own files aptus created (uninstall removes only those)
+    scope_kitty: Path          # scope/kitty (KITTY_CONFIG_DIRECTORY)
+    scope_yazi: Path           # scope/yazi (YAZI_CONFIG_HOME)
+    scope_starship: Path       # scope/starship.toml (STARSHIP_CONFIG)
+    bat_source: Path           # ~/.cache/aptus/bat-src (themes/aptus.tmTheme, built into cache_bat)
+    icons: Path                # ~/.local/share/icons (aptus-icons-{dark,light} live here)
+    fonts: Path                # ~/.local/share/fonts (never written; doctor check 7)
+    user_themes: Path          # ~/.local/share/themes (doctor check 7: no adw-gtk3*)
+    qt6ct_conf: Path           # ~/.config/qt6ct/qt6ct.conf (Own, inert outside Hyprland)
+    qt6ct_colors: Path         # ~/.config/qt6ct/colors/aptus.conf
+    baseline: Path             # install/baseline.json (02 §10 check 8, written by install.sh)
+    doctor_stamp: Path         # doctor-check: the time of the last isolation check (check 2), the doctor's only write
+    bake_queue: Path           # <runtime>/bake-queue.json (bakes waiting for their app to close)
+    test_bin: Path             # $HOME/.aptus-test/bin: the only place tools come from under APTUS_TEST
+    noctalia_config: Path      # ~/.config/noctalia (*.toml overlays; read-only)
+    noctalia_settings: Path    # ~/.local/state/noctalia/settings.toml (read-only; never written, I-1)
+    umbriel_config: Path       # ~/.config/umbriel (read-only; never written, I-1)
+    sysroot: Path              # "/" (system files aptus only reads); $HOME/.aptus-test/root in tests
+    greetd_config: Path        # <sysroot>/etc/greetd/config.toml (read-only)
+    papirus: Path              # <sysroot>/usr/share/icons/Papirus (read-only; aptus-icons link into it)
+    system_themes: Path        # <sysroot>/usr/share/themes (doctor check 7, read-only)
+    logind_user: Path          # <sysroot>/run/systemd/users/<uid>: logind's record of this user (guard)
+    theme_lock: Path           # theme/lock: flock around render, scope and Own writes
+    theme_resolved: Path       # theme/resolved.json: the current resolution, a stable file the shell watches
+    tmux_sockets: Path         # ${TMUX_TMPDIR:-/tmp}/tmux-<uid> ($HOME/.aptus-test/tmux-<uid> in tests)
+    nvim_sockets: Path         # the directory of nvim.* server sockets: <runtime_home> (inside HOME in tests)
+
     def make_runtime(self) -> Path:
         """Create <runtime> (private, 0700) if needed and return it."""
         self.runtime.mkdir(parents=True, exist_ok=True, mode=0o700)
         return self.runtime
+
+
+class UnsafeHome(RuntimeError):
+    """APTUS_TEST=1 with a HOME that is not a temporary directory: a writer refuses to run."""
 
 
 ENV_TEST = "APTUS_TEST"
@@ -119,6 +156,12 @@ def resolve(env: Mapping[str, str] | None = None) -> Paths:
     theme = state / "theme"
     hypr_state = state / "hypr"
     hypr_config_dir = config_home / "hypr"
+    test_root = home / ".aptus-test"
+    install_state = state / "install"
+    tmux_tmp = Path(env.get("TMUX_TMPDIR") or "/tmp")
+    scope = state / "scope"
+    sysroot = test_root / "root" if test else Path("/")
+    systemd_user = config_home / "systemd" / "user"
     return Paths(
         test=test, home=home,
         config_home=config_home, state_home=state_home, cache_home=cache_home,
@@ -133,19 +176,41 @@ def resolve(env: Mapping[str, str] | None = None) -> Paths:
         lease_slots=lease / "slots", lease_conflicts=lease / "conflicts",
         lease_history=lease / "history",
         theme=theme, theme_current=theme / "current",
-        scope=state / "scope", hypr_state=hypr_state,
+        scope=scope, hypr_state=hypr_state,
         generated_lua=hypr_state / "generated.lua", binds_local=hypr_state / "binds.local.lua",
         agenda=state / "agenda.json", clipboard_db=state / "clipboard.db",
         hyprlock_conf=state / "hyprlock.conf", locked_marker=state / "locked",
-        install_state=state / "install", v1_backup=state_home / "aptus-v1-backup",
+        install_state=install_state, v1_backup=state_home / "aptus-v1-backup",
         local_bin=home / ".local" / "bin",
         hypr_config_dir=hypr_config_dir, hyprland_lua=hypr_config_dir / "hyprland.lua",
         hypr_aptus_link=hypr_config_dir / "aptus",
-        systemd_user=config_home / "systemd" / "user",
+        systemd_user=systemd_user,
         restart_flag=runtime / "restart", dev_flag=runtime / "dev",
         guard_state=runtime / "guard.state", clip_changed=runtime / "clip.changed",
         session_status=runtime / "session.json", intro_flag_prefix=runtime / "intro.",
         cache_bat=cache / "bat", cache_agenda_http=cache / "agenda-http",
+        templates=repo / "theme" / "templates", targets=repo / "theme" / "targets.toml",
+        recover_unit_repo=repo / "systemd" / "aptus-recover.service",
+        recover_unit=systemd_user / "aptus-recover.service",
+        theme_own=theme / "own.json",
+        scope_kitty=scope / "kitty", scope_yazi=scope / "yazi",
+        scope_starship=scope / "starship.toml",
+        bat_source=cache / "bat-src",
+        icons=data_home / "icons", fonts=data_home / "fonts", user_themes=data_home / "themes",
+        qt6ct_conf=config_home / "qt6ct" / "qt6ct.conf",
+        qt6ct_colors=config_home / "qt6ct" / "colors" / "aptus.conf",
+        baseline=install_state / "baseline.json", doctor_stamp=state / "doctor-check",
+        bake_queue=runtime / "bake-queue.json", test_bin=test_root / "bin",
+        noctalia_config=config_home / "noctalia",
+        noctalia_settings=state_home / "noctalia" / "settings.toml",
+        umbriel_config=config_home / "umbriel",
+        sysroot=sysroot, greetd_config=sysroot / "etc" / "greetd" / "config.toml",
+        papirus=sysroot / "usr" / "share" / "icons" / "Papirus",
+        system_themes=sysroot / "usr" / "share" / "themes",
+        logind_user=sysroot / "run" / "systemd" / "users" / str(os.getuid()),
+        theme_lock=theme / "lock", theme_resolved=theme / "resolved.json",
+        tmux_sockets=(test_root if test else tmux_tmp) / f"tmux-{os.getuid()}",
+        nvim_sockets=runtime_home,
     )
 
 
@@ -164,3 +229,34 @@ def get() -> Paths:
 def inside(path: Path, root: Path) -> bool:
     """Whether `path` (resolved, symlinks followed) is `root` or below it."""
     return Path(path).resolve().is_relative_to(Path(root).resolve())
+
+
+def require_safe_home(paths: Paths) -> None:
+    """Under APTUS_TEST=1 (in `paths` or in this process's environment) raise UnsafeHome unless
+    - HOME is a directory whose realpath lies below the realpath of the temporary directory,
+    - that temporary directory is not `/` and does not hold the passwd home,
+    - HOME neither is, holds nor lies inside the passwd home (a /tmp link to it is refused),
+    - every XDG base and aptus's state and cache dirs resolve inside HOME (no link out of it).
+    Outside tests a no-op. The lease lock, the theme lock and every invariants.writable call it,
+    so every writer of a leased slot, a scope mirror or an Own file goes through it."""
+    if not paths.test and os.environ.get(ENV_TEST) != "1":
+        return
+    home = os.path.realpath(paths.home)
+    tmp = os.path.realpath(tempfile.gettempdir())
+    real_home = os.path.realpath(pwd.getpwuid(os.getuid()).pw_dir)
+
+    def below(p: str, root: str) -> bool:
+        return p.startswith(root.rstrip(os.sep) + os.sep)
+
+    if not os.path.isdir(home):
+        raise UnsafeHome(f"APTUS_TEST=1 but HOME {paths.home} is not a directory")
+    if tmp == os.sep or real_home == tmp or below(real_home, tmp):
+        raise UnsafeHome(f"APTUS_TEST=1 but the temporary directory {tmp} holds the real home")
+    if not below(home, tmp):
+        raise UnsafeHome(f"APTUS_TEST=1 but HOME {paths.home} ({home}) is not below {tmp}")
+    if home == real_home or below(real_home, home) or below(home, real_home):
+        raise UnsafeHome(f"APTUS_TEST=1 but HOME {paths.home} is, holds or lies in the real home")
+    for d in (paths.config_home, paths.state_home, paths.cache_home, paths.data_home,
+              paths.runtime_home, paths.state, paths.cache):
+        if not below(os.path.realpath(d), home):
+            raise UnsafeHome(f"APTUS_TEST=1 but {d} resolves outside the temporary HOME")

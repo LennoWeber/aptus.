@@ -115,3 +115,123 @@ again) needs Lenno's hands and the S6 lock; it runs then.
 `fprintd-list lenno`: one Synaptics reader, **no finger enrolled**. `lock.fingerprint` stays off by
 default and hidden while nothing is enrolled. Enrolling (`fprintd-enroll`) is machine state that
 Umbriel would also see; it is Lenno's choice and not part of aptus. The probe runs in S6.
+
+## P-04 · recovery before the next compositor — **pre-check: the assumed order does not hold; fallback** (2026-11-09, read-only)
+
+The full probe needs a hard power-off with a held lease; Lenno runs it (steps below). A read-only
+pre-check on the current boot already tests the premise of 02 §7 ("finishes before the user
+manager reports ready"):
+
+| Event (this boot, monotonic) | Time |
+|---|---|
+| user manager starts its default transaction | 104.252 s |
+| `basic.target` reached | 104.2748 s |
+| `user@1000.service` active (READY=1 received by PID 1) | 104.2751 s |
+| `default.target` reached, "Startup finished in 192ms" | 104.2947 s |
+| greetd's next PAM module (`pam_kwallet5`) runs | 104.3059 s |
+
+The user manager (systemd 259) reports ready at **basic.target**. `Before=default.target` therefore
+does not hold greetd back. Ordering the unit before basic.target is not possible:
+- the dconf restore needs `dconf.service`, which has default dependencies (After=basic.target);
+- that order would deadlock until the timeout.
+
+(`dbus-broker.service` itself is `Before=basic.target`, so the bus would be available.)
+
+**Path:** the designed fallback. The unit starts with the user manager (`DefaultDependencies=no`)
+and races the session start. A late recovery affects only apps started in that window; dconf
+values reach running apps live. 02 §7, the exit matrix and the unit comment are updated.
+
+A possible improvement, Lenno's call (not built):
+- restore file and ini slots in a unit before basic.target (no D-Bus);
+- leave the dconf keys to a second, transient run after it.
+
+**Steps for Lenno** (after S2 is installed with `install.sh`; about five minutes):
+1. `systemctl --user is-enabled aptus-recover.service` prints `enabled`.
+2. Log into the Hyprland session. `aptus-lease status` shows `state: held`. Open a terminal so
+   the session is in normal use.
+3. Hard power-off: hold the power button for about 10 s. The guard cannot run.
+4. Power on and log into **Umbriel** at the greeter.
+5. In Umbriel, run:
+   ```sh
+   systemctl show "user@$(id -u).service" -p ActiveEnterTimestampMonotonic
+   journalctl --user -b -o short-monotonic --no-pager | grep -m2 -E "Reached target (basic|default).target"
+   journalctl --user -b -o short-monotonic --no-pager -u aptus-recover.service
+   pgrep -l -f umbriel | head -3
+   ```
+   For the compositor's pid from the last line, `awk '{printf "%.2f s\n", $22/100}'
+   /proc/<pid>/stat` gives its start time in seconds since boot. `systemd-analyze --user
+   critical-chain aptus-recover.service` gives the unit's own chain.
+6. `aptus-lease status` shows no journal, `ls ~/.local/state/aptus/lease/history/ | tail -1`
+   shows the new entry, and `aptus doctor isolation` passes.
+7. Pass if "Finished aptus-recover.service" is earlier than the compositor's start time. Otherwise
+   the fallback stands, and the margin tells whether the split above is worth building.
+
+## P-05 · a running GTK 3 app re-reads user CSS — **no; new windows only (fallback)** (2026-11-09, nested)
+
+The setup:
+- Nemo (GTK 3) ran in a nested Hyprland with a temporary HOME.
+- `gtk-3.0/gtk.css` contained `@import url("noctalia.css")`, and `noctalia.css` set a red window
+  background.
+
+Results:
+- Rewriting `noctalia.css` (atomic rename) to green: the running window stayed red for 5 s.
+- Closing the window and opening a new one: green.
+- No `gtk-theme` toggle was tried. 02 §5.5 makes `gtk-theme` record-only, so aptus never writes it.
+
+**Path:** the accepted fallback. GTK 3 colours apply to new windows. libadwaita/GTK 4 light/dark
+stays live through `color-scheme`. 02 §4 row 1 and the 08 reload table now say so.
+
+## P-06 · kitty with `KITTY_CONFIG_DIRECTORY` and a symlink mirror — **pass** (2026-11-09, nested)
+
+Kitty 0.49.2. The temporary HOME held:
+- `~/.config/kitty/kitty.conf` with `include themes/noctalia.conf`, and `themes/noctalia.conf`
+  with a red background;
+- a mirror whose `kitty.conf` is a symlink to the real one, and whose `themes/noctalia.conf` is a
+  real file with a green background.
+
+| Check | Result |
+|---|---|
+| `kitty +runpy` with `load_config`, `KITTY_CONFIG_DIRECTORY=<mirror>` | background `#00ff00`: the relative `include` resolves inside the mirror |
+| the same without the variable | `#ff0000` (the real config, as Umbriel sees it) |
+| a nested kitty started with the variable | shows the mirror's colours |
+| rewrite the mirror file, `SIGUSR1` to that kitty (this HOME only) | live change to the new colour |
+
+Kitty 0.49 has no `--debug-config` flag, so the check uses `kitty +runpy`.
+
+**Path:** the scope design (02 §4 row 6) as specified, with `SIGUSR1` as the reload.
+
+## P-07 · Ghostty reloads on `SIGUSR2` — **pass** (2026-11-09, nested)
+
+The setup:
+- Ghostty 1.3.1 in a nested Hyprland with a temporary HOME;
+- `config` set `theme = noctalia`, and `themes/noctalia` set a red background.
+
+Results:
+- Rewriting the theme to green: no change after 1 s, because Ghostty does not watch the file.
+- `SIGUSR2` to that Ghostty's pid (this HOME only): green within 0.5 s.
+
+**Path:** `signal:ghostty:SIGUSR2`, as designed (08 §7).
+
+## FileView and a swapped symlink — **not seen; watch a stable file** (2026-11-09, nested, S2)
+
+Quickshell 0.3.2 `FileView` with `watchChanges`:
+
+| Setup | Result |
+|---|---|
+| path `<dir>/current/resolved.json`; `current` is a symlink swapped atomically to gen-2, then gen-3 | `fileChanged` never fires |
+| a stable file replaced by an atomic write (rename) | fires every time (2 of 2) |
+
+**Path:** after each render, aptus-theme writes `state/theme/resolved.json`, a stable file
+replaced atomically. Tokens watches that file, not `current/…`. 07 §7 is updated with S2.
+
+## `builtin:hyprland`: `hyprctl eval` re-reads generated.lua — **pass** (2026-11-10, nested, S2)
+
+Nested Hyprland 0.57.1, temporary HOME, the aptus block loaded:
+
+| Check | Result |
+|---|---|
+| `hyprctl -j getoption general:col.active_border` | `{"gradient": "ff9acfae 0deg", "set": true}`: the key is `gradient` (gaps report `css`) |
+| `hyprctl eval 'hl.config({ general = { col = { active_border = "rgb(ff0000)" } } })'` | `ok`; `getoption` reports `ffff0000` at once |
+| `tests/e2e/test_s2.py::test_logout`: accent changed through `aptus msg theme accent`, Theme.qml runs `aptus-theme apply` | the hook's chunk (`dofile` of generated.lua, then `hl.config`) logs `reload hyprland: applied`; the border equals generated.lua's new accent; `configerrors` stays empty |
+
+**Path:** as designed (08 §7).

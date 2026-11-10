@@ -91,11 +91,23 @@ The result is one JSON object, `resolved.json`, written into every generation.
 
 `aptus-theme render` (Python, stdlib only):
 
-- **Input hash:** SHA-256 over `resolved.json`, the manifest, and every template file. Equal to the
-  current generation's hash → nothing to do (10 ms).
-- **Output:** `~/.local/state/aptus/theme/gen-<n>/` containing each target's rendered file(s) and
-  `resolved.json`; then the symlink `current` is swapped atomically to it. The last three
-  generations are kept.
+- **Input hash:** SHA-256 over the template context (without the generation number), the
+  inputs, the manifest, and every template file. Equal to the current generation's hash →
+  nothing to do (10 ms).
+- **Output:** `~/.local/state/aptus/theme/gen-<n>/` containing each target's rendered file(s)
+  (dconf targets: `<id>/dconf.json`, key → value), `resolved.json` and `failed.json` (target id →
+  why, so a reused generation still knows which targets have no output); then the symlink `current`
+  is swapped atomically to it and `theme/resolved.json` (a stable file the shell watches) is
+  rewritten. Every target except `never` is rendered whatever its `when` says (installing an
+  app needs no new generation). A target that fails keeps the previous generation's output.
+  The last three generations are kept. Render, apply and the guard's bake retry serialise on
+  `theme/lock` (flock, re-entrant per thread); the lease's own flock is always taken inside it,
+  never the other way round. The guard's bake retry takes the theme lock without waiting and
+  skips its tick while an apply holds it.
+- **Writes:** the files of a generation (and of a scope mirror or an icon theme) are written
+  into a private build directory (mode 0700, checked by `invariants.writable`) that becomes
+  visible only through one atomic rename; every other file goes through `atomic.py`. Target ids
+  are path components, so `load` accepts only lowercase letters, digits and `-`.
 - **Template language** (deliberately tiny, no logic): `{{ role }}` or `{{ role | filter }}`.
 
 | Filter | Output for `#9acfae` |
@@ -108,9 +120,14 @@ The result is one JSON object, `resolved.json`, written into every generation.
 | `argb(0.86)` | `#db9acfae` (Qt) |
 | `hsl` | `hsl(142, 37%, 71%)` |
 | `int` | `10145710` (decimal, for KDE/VS Code where needed) |
+| `csv` | `154,207,174` (KDE) |
+| `hue`, `saturation`, `lightness` | `142`, `37`, `71` (HSL parts, rounded half up) |
 
-Plus `{{ mode }}` (`dark`/`light`), `{{ accent.name }}`, `{{ papirus.folder }}`, `{{ font.ui }}`,
-`{{ font.mono }}`. An unknown role or filter is a render error for that target only.
+Plus `{{ mode }}` (`dark`/`light`), `dark.<role>` / `light.<role>` (both palettes), `ansi0`…`ansi15`,
+`{{ accent.name }}`, `{{ papirus.folder }}`, `{{ gnome.accent }}`, `{{ font.ui }}`, `{{ font.mono }}`,
+`font.<uiApp|documentApp|monoApp>[.family|.size]`, `cursor.theme`, `cursor.size`, `frame.edge`,
+`window.gap`, `glass` and `reduce_motion` (Lua booleans), `generation`, `dir.*`. An unknown role
+or filter is a render error for that target only.
 
 ## 5. The target manifest
 
@@ -135,13 +152,18 @@ noctalia  = ["kitty"]
 template  = "kitty/theme.conf"
 out       = "kitty/noctalia.conf"
 mechanism = "scope"
-scope     = { mirror = "~/.config/kitty", into = "scope/kitty", replace = "themes/noctalia.conf" }
+files     = [{ template = "kitty/theme.conf", out = "kitty/noctalia.conf", at = "themes/noctalia.conf" }]
+scope     = { into = "kitty", mirror = "{config}/kitty" }   # scope/kitty: symlinks, except `at`
 reload    = "signal:kitty:SIGUSR1"
 ```
 
+The full field list is the header of `theme/targets.toml` (`files` with `name`/`slot`/`dest`/`at`,
+`kind`, `sections`, `dconf`, `requires`, `present`, `[inert]`). Slot names must differ within a
+target (the slot id is `<id>.<name>`); `load` refuses a manifest where they do not.
+
 `reload` kinds: `none`, `signal:<comm>:<SIG>` (only processes whose environment carries this
 Hyprland's `HYPRLAND_INSTANCE_SIGNATURE`), `exec:<command>`, `builtin:<name>` (Python functions for
-the cases below).
+the cases below), `bake:<process>:<command>`.
 
 Targets, by id (rows of [02-isolation.md](02-isolation.md) §4): `gtk3`, `gtk4`, `dconf`, `kde`,
 `qt6ct`, `kitty`, `ghostty`, `foot`, `alacritty`, `btop`, `cava`, `fuzzel`, `tmux`, `starship`,
@@ -151,18 +173,26 @@ Targets, by id (rows of [02-isolation.md](02-isolation.md) §4): `gtk3`, `gtk4`,
 
 ## 6. Apply
 
-`aptus-theme apply` = render, then, under the lease flock:
+`aptus-theme apply` = render, then, under `theme/lock`:
 
-1. **Lease targets:** `aptus-lease update <ids>` writes each rendered file into its slot (or each
-   dconf key / INI section) and updates `after` hashes. In scope-only mode this step is skipped.
+1. **Lease targets:** the lease's update (in-process, `aptus.lease.ops.update`, under the lease
+   flock) writes each rendered file into its slot (or each dconf key / INI section) and updates
+   `after` hashes, only while this session holds the lease. In scope-only mode this step is
+   skipped and the report lists the targets that stay Noctalia's.
 2. **Scope targets:** rebuild the mirror directories (`scope/kitty`, `scope/yazi`) and generated
    files (`scope/starship.toml`), atomically.
 3. **Own targets:** `aptus-icons-{dark,light}` (only on accent change), `~/.config/qt6ct/`,
    `~/.local/state/aptus/hypr/generated.lua`, `~/.local/state/aptus/hyprlock.conf`,
    `~/.cache/aptus/bat`.
-4. **Reload hooks** (§7), in parallel, each with a 3 s timeout.
+4. **Reload hooks** (§7), in parallel, each with a 3 s timeout. A bake whose app runs is written
+   to `<runtime>/bake-queue.json`; the guard retries it every 30 s.
 5. Report: a JSON summary on stdout (`applied`, `next-start`, `failed` per target); the shell
    shows a toast only for failures.
+
+An unchanged input hash reports `unchanged` and does nothing else, unless this session's lease
+does not carry that generation yet (an earlier apply of it failed or was cut off): then the
+generation is applied again. Lease mode means the journal is `held` by this session; a lease
+half released (`releasing`) is the guard's to finish.
 
 Triggered by: session start (render + take), any change of mode/accent/glass/contrast (debounced
 250 ms, after the shell's own crossfade ends), `auto` transitions, and `aptus theme apply`.
@@ -171,7 +201,7 @@ Triggered by: session start (render + take), any change of mode/accent/glass/con
 
 | Target | Hook | Effect |
 |---|---|---|
-| GTK 3 / 4 | none (probe P-05 decides whether a `gtk-theme` nudge is safe; by default none, because `gtk-theme` is never written) | new windows; libadwaita light/dark is live through `color-scheme` |
+| GTK 3 / 4 | none (probe P-05: a running GTK 3 app does not re-read user CSS, and `gtk-theme` is never written) | new windows; libadwaita light/dark is live through `color-scheme` |
 | dconf keys | written by the lease | live via GSettings and the settings portal |
 | KDE / Qt (kdeglobals) | `dbus-send --session --type=signal /KGlobalSettings org.kde.KGlobalSettings.notifyChange int32:0 int32:0` | running KDE apps repaint |
 | qt6ct | none | next app start |
@@ -185,7 +215,7 @@ Triggered by: session start (render + take), any change of mode/accent/glass/con
 | Zen | none | next start (userChrome loads once) |
 | Pywalfox | `pywalfox update` if installed | live web content |
 | Vesktop | none (watches CSS) | live |
-| Hyprland | `hyprctl eval` with `general.col.active_border`, `inactive_border`, `misc.background_color`, `decoration.shadow.color`, `group` colours | live |
+| Hyprland | `hyprctl eval` of a Lua chunk that `dofile`s `generated.lua` and sets `general.col.active_border`, `inactive_border`, `gaps_out`, `decoration.shadow.color`, `misc.background_color` (`builtin:hyprland`; verified nested) | live |
 | hyprlock, Thunderbird, Claude Code, Gemini, VS Code, Steam, Brave, hyprtoolkit | none | next start |
 | Spotify, LibreOffice (bake, opt-in) | `spicetify apply` / registry merge, only when the app is not running; otherwise queued until it exits (checked every 30 s, given up at session end) | next start |
 
@@ -199,8 +229,13 @@ switch back to Noctalia's paint.
 `Inherits=Papirus-Dark,hicolor` (resp. `Papirus-Light`), and only `places/{16,22,24,32,48,64}`
 directories whose `folder*.svg` entries are symlinks to the Papirus folder colour of the accent
 (`folder-teal.svg` → `folder.svg`, and the same for `folder-documents`, `-download`, …). Regenerated
-on accent change (≈ 400 symlinks, 50 ms). `icon-theme` (leased dconf key) selects it. Papirus
-itself is never modified.
+on accent change (≈ 400 symlinks, 50 ms), built in `aptus-icons-<mode>.new` and renamed over the
+old one (via `.old`). `icon-theme` (leased dconf key) selects it. Papirus itself is never
+modified.
+
+Every Own file outside aptus's state and cache directories is recorded in `theme/own.json`
+(`{"v": 1, "created": [paths]}`) **before** it is created, so uninstall (02 §11) knows what is
+aptus's even after a crash; a file that existed before aptus is never claimed.
 
 ### Qt without KDE (qt6ct)
 `~/.config/qt6ct/qt6ct.conf`: `style=Fusion`, `color_scheme_path=~/.config/qt6ct/colors/aptus.conf`,

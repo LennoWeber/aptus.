@@ -709,3 +709,697 @@ holds; `StandardAnimation`, `StandardColorAnimation`, `SnappySpring`; `Motion.ca
 **Checked:** `tests/run`: pytest 97, qmltestrunner 159, lint 121 files 0 warnings; `pytest
 tests/e2e`: 12/12. A nested run (shell start, overview open and Esc, theme toggle): screenshots
 right, shell log without warnings (only the portal's app-id note of the nested session).
+
+---
+
+## S2 · Isolation
+
+### Phase 1 · plan (2026-11-09)
+
+**Goal** (11 §2 row S2, brief `.claude/briefs/s2.md`). `aptus-lease` (take | update | release |
+recover | status), `aptus-guard`, `aptus-recover.service`, the renderer with every target of 02 §4
+and its reload hook (`aptus-theme render | apply | targets`, `theme/targets.toml`,
+`theme/templates/<target>/…`), `aptus doctor isolation` (all eight checks of 02 §10), the `Lease`
+service (read-only) and `Theme`'s render requests, `aptus-session start` with recover → render →
+preflight → take → env import → guard, install/uninstall of the recovery unit and the check-8
+baseline. Probes P-04 (steps for Lenno), P-05, P-06, P-07 (nested). D-03 untracking: list and
+commands for the main session only.
+
+**Facts found while reading** (read-only; `~/.config/umbriel` and `~/.local/state/noctalia` never
+opened):
+- Noctalia is 5.4.1 (native). Its built-in templates are listed in
+  `/usr/share/noctalia/assets/templates/builtin.toml` (`gtk3`, `gtk4`, `kcolorscheme`, `qt`,
+  `kitty`, `ghostty`, `foot`, `alacritty`, `btop`, `cava`, `hyprland`, compositors, `umbriel`, …);
+  community templates come from the `noctalia-dev/community-templates` catalogue (`zen-browser`,
+  `pywalfox`, `thunderbird`, `discord`, `claude-code`, `antigravity`, `vscode`, `steam`, `brave`,
+  `hyprtoolkit`, `papirus-icons`, `spicetify`, `libreoffice`, `fuzzel`, `thunar`, `tmux`,
+  `starship`, `fastfetch`, `neovim`, `lazyvim`, `yazi`, `bat`, …). Noctalia's docs: the enabled ids
+  are `[theme.templates] builtin_ids` / `community_ids` (with `enable_builtin_templates`,
+  `enable_community_templates`) and `[theme.templates.user.<id>]`, read from
+  `~/.config/noctalia/*.toml` with `~/.local/state/noctalia/settings.toml` as the final overlay.
+  `~/.config/noctalia` is empty here, so the coverage check (runtime code, read-only) reads the
+  file 02 §4 names; tests use fixtures.
+- The `thunar` community template writes a GTK 3 extension with literal colours
+  (`gtk-3.0/noctalia-extensions/thunar.thunar.css`), imported from Noctalia's `noctalia.css`: not
+  in 02 §4; it becomes target `thunar` (lease, only if present) so Thunar does not keep Noctalia's
+  colours.
+- LibreOffice's artifact is `~/.local/state/noctalia/libreoffice-theme-staging/Theme_Colors.xcu`,
+  inside Noctalia's state, which I-1 forbids: the `libreoffice` bake cannot exist; it stays
+  Noctalia's whatever `isolation.bakeTargets` says (doctor and the targets list say why).
+- `hyprland.lock` in `$XDG_RUNTIME_DIR/hypr/<sig>/` holds Hyprland's pid; `XDG_SESSION_ID` is
+  inherited by `aptus-session`; a session left on another VT is logind state `online`, not
+  `active`.
+- Leased files reached through a stow link into `~/dotfiles`: `hypr/hyprtoolkit.conf` (tracked),
+  `nvim/lua/matugen.lua` (tracked), `nvim/colors/noctalia.lua`, `btop/themes/noctalia.theme`
+  (untracked). The kitty theme (scoped, tracked) and fastfetch's stale copy are tracked too.
+
+**Decisions where the spec is silent** (each written into the spec in the phase that builds it):
+1. **Test safety.** Under `APTUS_TEST=1` every tool with an effect outside the process (`dconf`,
+   `systemctl`, `systemd-run`, `loginctl`, `dbus-send`, `tmux`, `nvim`, `pywalfox`, `spicetify`,
+   `bat`) is looked up only in `$HOME/.aptus-test/bin` (fakes that record their calls); without a
+   fake the step is skipped and logged. `aptus-lease`, `aptus-guard` and `aptus-theme` refuse to
+   run when `APTUS_TEST=1` and HOME is not a directory below the system temp dir (or is the
+   passwd home): `paths.require_safe_home`. Signals go only to processes whose environment carries
+   this session's signature (and, under test, this HOME).
+2. **Preflight** (02 §5.3): "another active graphical session" = a logind session of this user
+   with class `user`, type `wayland`/`x11`/`mir`, state `active` or `online`, id ≠ this session's
+   `XDG_SESSION_ID`. A `noctalia` process of this user (02 §8) also means scope-only.
+3. **Environment import only while the lease is held**: in scope-only mode another session may be
+   using the user manager, so nothing is imported (02 §6).
+4. **Journal.** Step 5 records each slot's `before` and its *planned* `after` (status `pending`);
+   step 7 marks them `held`. An update records the old hash as `after_prev` before writing. So a
+   crash at any point leaves enough to recognise aptus's own paint. Release per slot: equal to
+   `before` → nothing to write; else (own paint or a conflict, saved under `conflicts/`) restore
+   `before` and verify; a failed slot keeps the journal in `releasing`.
+5. **ini-sections** (kdeglobals): blocks = preamble + `[header]` sections (verbatim text); a
+   section matches the globs by its header name (`Colors:Header][Inactive` matches `Colors:*`);
+   `before` stores each matching section with the name of the non-matching block before it
+   (anchor). Write and restore remove the matching sections and insert the new ones after their
+   anchors (unknown anchor: end of file); everything else stays byte-identical, also a missing
+   final newline.
+6. **dconf**: the fixed key set of 02 §5.5; `gtk-theme` is recorded, never written.
+7. **Template language** (08 §4) with the roles of `resolve` (+ `ansi0`…`ansi15`, `mode`,
+   `accent.name`, `papirus.folder`, `gnome.accent`, `font.*`, `cursor.*`). aptus's templates keep
+   the structure of Noctalia's (same variable names, includes, sections), so the wiring keeps
+   working; colours come from a fixed Noctalia-role → aptus-role table (written into 08 §4).
+8. **Generations**: `gen-<n>/` holds every output, `resolved.json` and `inputs.json` (the
+   wallpaper inputs the shell passed, reused by the session-start render). The shell watches
+   `current/resolved.json` (07 §7 said `shell.json`; one file, renamed in the spec).
+9. **Coverage**: enabled ids (built-in, community, `user:<id>`) against the targets' `noctalia`
+   lists; ids whose output only another compositor reads (`umbriel`, `niri`, `sway`, `labwc`,
+   `mango`, `scroll`) are inert in Hyprland (an `[inert]` table in `targets.toml`); a user template
+   is also covered when its output path is a target's slot.
+10. **Golden files**: full outputs for Ember/jade and Linen/jade, plus a hash manifest of every
+    target for 2 palettes × 6 accents (07 §13).
+11. **Doctor rules** made exact: check 2 accepts a slot changed after the release time (Noctalia
+    wrote it in Umbriel) and fails a restored slot that differs without being touched since; a
+    changed dconf value is a warning. Check 7 compares `~/.local/share/fonts` with the install
+    baseline and fails on any of aptus's own font files. Check 8: a changed file whose mtime lies
+    inside a recorded lease period fails; outside every lease period it is Lenno's change in
+    Umbriel.
+12. **Recovery unit**: `DefaultDependencies=no`, `Before=default.target`, plus
+    `After=dbus.socket` (dconf writes need the bus), `ExecStart=%h/.local/bin/aptus-lease recover`,
+    installed as a link into the repo and enabled with `systemctl --user enable`.
+13. **Guard**: `aptus-guard <hyprland-pid> <signature>`; pidfd + SIGTERM through a self-pipe;
+    releases only a lease owned by that pid and signature; a 30 s tick retries queued bakes
+    (spicetify, only when opted in); writes `guard.state` (`ok`, `scope-only`, `failed`).
+    `aptus-session stop` (logout path) stops the guard unit, which releases.
+14. **Lease service**: journal, `guard.state` and `session.json` read-only; `notice` (the notch's
+    one-time message: "Another session is open — some apps keep Noctalia's colours.", "Noctalia
+    is running — some apps keep Noctalia's colours.", "Some apps could not be themed — they keep
+    Noctalia's colours."), `warning` for the bar, `statusLine` for settings (settings.md §7).
+15. **Theme service**: after a resolution change (mode, accent, glass, contrast, ground alpha) and
+    `frame.edge`/`motion.reduce`, debounced 250 ms after the crossfade, runs `aptus-theme apply
+    --inputs <json>` with the resolved mode and the wallpaper inputs; exposes `lastApply`,
+    `failed`.
+
+**Files** (new unless noted):
+
+| Area | Files |
+|---|---|
+| launchers | `bin/aptus-lease`, `bin/aptus-guard`, `bin/aptus-theme`; `bin/aptus` unchanged (dispatch is in `cli.py`) |
+| lease | `lib/aptus/lease/{__init__,journal,slots,recover,preflight,system,guard,cli}.py`, `lib/aptus/lease/kinds/{__init__,file,ini,dconf}.py` |
+| theme | `lib/aptus/theme/{__init__,palette,resolve,sun,inputs,targets,noctalia,render,scope,own,hooks,apply,cli}.py` |
+| doctor | `lib/aptus/doctor/isolation.py`; `doctor/__init__.py` (wiring) |
+| changed | `paths.py` (new paths, `require_safe_home`), `session.py` (start/stop), `cli.py` (`theme`, `lease`), `install/__init__.py` (leased slots in `check_action`, unit link + enable, baseline, uninstall of 02 §11) |
+| data | `theme/targets.toml`, `theme/templates/<target>/…` (36 rows + thunar), `systemd/aptus-recover.service` |
+| shell | `shell/services/Lease.qml`, `shell/services/lease.js`, `shell/services/Theme.qml`, `shell/core/Tokens.qml` (the TODO(S2) spot only) |
+| tests | `tests/unit/test_{lease_kinds,lease_journal,lease,exit_matrix,guard,preflight,theme_resolve,theme_render,theme_apply,hooks,coverage,doctor_isolation,session_s2,install_s2}.py`, `tests/unit/slotfix.py` (fixtures from the real slot files), `tests/golden/`, `tests/qml/tst_lease.qml`, `tests/e2e/test_s2.py` |
+| spec | 02 (§4 thunar and libreoffice rows, §5.3, §5.5, §6, §7 unit, §10 rules), 07 (§7, §13), 08 (§4, §5 manifest schema, §7), probes.md (P-04…P-07) |
+
+**Risks.** (a) A template that changes the wiring's variable names would break an app in Hyprland:
+templates are derived from Noctalia's own and checked in the nested session (GTK 3, kitty,
+Ghostty). (b) FileView may not notice a swapped `current` symlink: probed in phase 5; fallback:
+watch a stable file written by rename. (c) Python and JS colour maths must be byte-identical: a
+test resolves every combination in both. (d) Exact restore of kdeglobals: tests over the real
+file. (e) The guard must outlive Hyprland and never act on a foreign lease: tested with a real
+child process named `Hyprland` and a real pidfd. (f) Time: 37 targets; the template translation is
+mechanical and may go to a helper (sonnet, lower).
+
+**Checks (end of S2).** `tests/run` green; exit-matrix tests (logout, SIGKILL, power-off, crash
+mid-take, crash mid-release, user manager stop) end with every slot hash equal to the baseline;
+scope-only with a fake Umbriel session; the refusal on a real HOME; each doctor check passes and
+fails once; golden files; nested: `aptus-session start` takes the lease in the temporary HOME,
+kitty/Ghostty/a GTK 3 app show aptus paint, `hyprctl configerrors` empty, killing the nested
+Hyprland restores every slot.
+
+### Phase 2 · structures (2026-11-09)
+
+**Done.** Data structures only, no behaviour:
+- `lease/journal.py` (`State`, `SlotStatus`, `Owner`, `SlotRecord`, `Journal`: 02 §5.2),
+  `lease/slots.py` (`SlotSpec`: what the renderer hands the lease), `lease/ops.py` (the reports of
+  take, update, release, status; added to the plan so the CLI and the session share them),
+  `lease/kinds/` (`Snapshot`; ini `Block`/`Section`), `lease/system.py` (`ToolResult`, `Proc`),
+  `lease/preflight.py` (`LoginSession`, `Preflight`), `lease/guard.py` (`GuardState`).
+- `theme/inputs.py` (`Inputs`), `theme/targets.py` (`Mechanism`, `FileOut`, `ScopeSpec`, `Target`,
+  `Manifest`, `Coverage`), `theme/noctalia.py` (`Enabled`), `theme/render.py` (`TemplateError`,
+  `Generation`), `theme/hooks.py` (`Hook`, `HookResult`), `theme/apply.py` (`Report`).
+- `doctor/isolation.py` (`Baseline`), `session.py` (`StartReport.notice`, `.generation`, `.guard`).
+- `paths.py`: 23 new paths (templates, manifest, recovery unit, scope dirs, icons/fonts/themes,
+  qt6ct, baseline, doctor stamp, bake queue, the test tool dir, the read-only Noctalia/Umbriel/
+  greetd paths, tmux sockets) filled in `resolve()` (constructor arguments only, so every caller
+  keeps working), `UnsafeHome`.
+- `theme/targets.toml`: the full manifest, 36 entries (rows 1–37 of 02 §4 without Umbriel's
+  row 32) plus the `[inert]` table; `systemd/aptus-recover.service`.
+- `Lease.qml`: `state`, `journal`, `guard`, `mode`, `reasons`, `failedSlots`, `notice`, `warning`,
+  `statusLine`. `Theme.qml`: `failed`, `generation`, `_pendingInputs`.
+
+**Checked.** Every module imports; the manifest parses (36 targets, rows 1–37 except 32); paths
+resolve in a test HOME (greetd and tmux paths inside it); `tests/run` green (97 unit, 159 QML),
+qmllint 0 warnings.
+
+### Review of phase 2 (fresh subagent, phase-2 diff only)
+
+14 findings and 3 test-safety notes. The fixes went into the phase-3 commit, because phase 3 had
+started on the same files.
+
+**Fixed.**
+1. Noctalia's post-hooks copy the paint elsewhere for fastfetch (merged into `config.jsonc`),
+   Antigravity/Gemini (merged into `config.json`) and Brave (installed into
+   `~/.local/share/noctalia` and Brave's preferences). The leased theme file alone paints
+   nothing, and Brave's real target is Noctalia's own data. Checked against the fetched
+   templates. On this machine `config.jsonc` has comments, so Noctalia's own merge fails, and it
+   does not include the theme. All three are now `never` with a note. 02 §4 is updated in
+   phase 7.
+2. Vesktop: all six Noctalia outputs (midnight, material, system24; native and Flatpak).
+3. Yazi: Noctalia writes `flavors/noctalia.yazi/{flavor.toml,tmtheme.xml}`, wired by `[flavor]`
+   in `theme.toml`. The scope mirror now replaces the two flavor files and adds a `theme.toml`
+   only when there is none (`missing_only`). `ScopeSpec.replace` is gone; each `FileOut` has an
+   `at` path inside the mirror.
+4. `FileOut.name` gives the slot id `<target>.<name>` (default `artifact`). A `*` slot appends
+   `.<sha256(path)[:8]>`, so ids stay stable and safe as file names.
+5. `SlotSpec.create`. A missing artifact is created only when its directory exists, so release
+   deletes exactly what aptus created and never a directory. With `present`, a missing artifact
+   is skipped.
+6. `Target.requires` (dconf key → target): `icon-theme` is only recorded when `icons` was not
+   applied, so GTK never falls back to hicolor.
+7. `SlotRecord.reload`: release and recover do not depend on a manifest changed since the take.
+8. `before` records `link` (readlink) for file and ini slots, and `mode` for ini.
+9. Own destinations use `{config}`/`{state}`/`{cache}`/`{data}` placeholders (XDG bases, the same
+   as `paths.py`). The unit uses `ConditionPathExists=%S/aptus/lease/journal.json`.
+10. Partly: a `SlotKind` enum; `Status.state: State | None`, `Status.owner: Owner | None`;
+    `Manifest` is not frozen.
+12. `Coverage.kept` for Noctalia ids that a `never` target keeps on purpose.
+13. The doctor stamp moved to `state/doctor-check` (not `lease/`), documented as the doctor's
+    only write.
+14. `recover_unit` and `scope_*` are derived from `systemd_user` and `scope`.
+- Test safety: a `nvim_sockets` path (`runtime_home`, inside HOME in tests); the bat note says
+  `--target` is `cache_bat` and never bat's shared cache. The Own-destination allowlist is a
+  phase-6 invariant.
+
+**Rejected.**
+- 10, the rest. `apply.Report.mode` stays a string: `session` imports the theme package, so
+  sharing `session.Mode` would be circular. Hook kinds and result states stay strings checked
+  against a constant tuple, as `install.KINDS` does. Each layer encodes "record only" in its own
+  way: TOML has no null (`""`), the spec has `value=None`, the journal has `write=False`. Each is
+  the natural form for its layer. The `-1` sentinels stay, to match `resolve.js` (parity).
+- 11. The spec updates (02 §4/§5.2, 07 §7, 08 §5) come with phase 7, when the structures are
+  final, in one consistent edit. They are listed in the phase-1 plan.
+
+### Phase 3 · signatures (2026-11-09)
+
+**Done.** Signatures, docstrings and constants. Every body is `raise NotImplementedError`, or an
+empty QML body marked "phase 7":
+- lease: `system` (`TOOLS`, `tool`, `run`, `boot_id`, `comm`, `environ`, `processes`,
+  `session_processes`, `signal_session`).
+- lease kinds: one interface for all three kinds (`read`, `digest`, `before_digest`, `planned`,
+  `write`, `restore`, `current`) plus `module` and `sha256`. ini adds `split`, `matches`,
+  `extract`, `splice`, `sections_sha256`. dconf adds `KEYS`, `RECORD_ONLY`, `check_key`,
+  `read_key`, `write_key`, `reset_key`.
+- lease journal and ops: journal `load`/`save`/`archive`/`last_released`/`to_dict`/`from_dict`;
+  ops `lock` (re-entrant within one process), `owner`, `take`, `update`, `release`, `status`,
+  `held_by`, `save_conflict`.
+- lease preflight, recover, guard and CLI:
+  - preflight: `sessions`, `others`, `noctalia`, `check`, and the three notice texts.
+  - recover: `socket_accepts`, `owner_alive`, `recover`.
+  - guard: `write_state`, `pidfd`, `wait`, `release_if_ours`, `unset_environment`, `run`,
+    `main`, `UNSET`.
+  - `lease/cli.py`.
+- theme: `palette` (port of colour.js), `resolve` (`ROLES`, `resolve`, `accent_for`,
+  `ground_alpha`), `sun`, `inputs` (`setting`, `from_settings`, `from_json`, `to_dict`), and
+  `targets` (`load`, `parse_target`, `expand`, `active`, `slots`, `coverage`).
+- theme, continued: `noctalia` (`sources`, `merge`, `enabled`), `render` (`FILTERS`,
+  `PLACEHOLDER`, `context`, `apply_filter`, `render_text`, `input_hash`, `current`, `render`,
+  `prune`), `scope` (`mirror`, `marked`, `swap`), `own` (`write_files`, `icons`, `bat`, `record`)
+  and `hooks` (`parse`, `run_all`, the four builtins, `bake`, `retry_queued`).
+- theme apply and CLI: `apply` (`slot_specs`, `lease_mode`, `apply`, `report_json`) and
+  `theme/cli.py`.
+- elsewhere:
+  - `paths.require_safe_home`.
+  - `session`: `IMPORT_VARS`, `recover_step`, `render_step`, `lease_step`, `theme_step`,
+    `import_environment`, `start_guard`, `stop_guard`.
+  - `install`: `leased_paths`, `systemctl_user`, `WANTS_LINK`.
+  - `doctor/isolation`: the eight `check_*`, `lease_periods`, `fingerprint`, `watched_files`,
+    and the baseline functions.
+  - Launchers `bin/aptus-{lease,guard,theme}`.
+  - `shell/services/lease.js` (`parseGuard`, `failedSlots`, `summarize`); `Lease.refresh()`;
+    `Theme.requestApply()`, `_inputs()`, `_applied()`.
+- Not done: test skeletons. The tests are written with the implementation in phase 7. Extending
+  `install.KINDS` waits for phase 7 too: an S1 test pins the tuple, and a kind without handling
+  would pass `check_action`.
+
+**Checked.** Every module of `lib/aptus` imports. `tests/run` is green (97 unit tests, the QML
+tests) and qmllint reports 0 warnings.
+
+### Review of phase 3 (fresh subagent, phase-3 diff only)
+
+13 findings; the first reviewer died on the usage limit and was started again on the same diff.
+The fixes went into the phase-4 commit (signatures and docstrings changed, bodies still
+placeholders).
+
+**Fixed.**
+1. Import cycle ops ↔ recover. `recover()` moved into `ops`; `lease/recover.py` became
+   `lease/liveness.py` with only `socket_accepts` and `owner_alive` (no import of ops).
+2. Reloads without the manifest. `ReleaseReport.reloads` (target id → reload string) and
+   `hooks.run_reloads(paths, reloads, signature)`; `run_all` delegates to it. The guard, recover
+   and release reload from the journal's `SlotRecord.reload` alone.
+3. Install interface for 02 §11. The four kinds are named now with their one path each:
+   `enable-unit`, `disable-unit`, `baseline` (only when no baseline exists: a re-install never
+   re-records, that would hide an aptus write), `release-lease`, and the order. The tuple itself
+   grows in phase 7 with its handling, because an S1 test pins it and a kind without handling
+   would pass `check_action`.
+4. `scope/kitty` and `scope/yazi` as real directories. `install.plan` drops them (TODO);
+   `scope.swap` documents the contract for directory and file targets (`starship.toml`) and
+   moves an old real file aside.
+5. Inputs of `slot_specs`. `Generation.inputs`; render writes the dconf values into
+   `<gen>/<id>/dconf.json`; the bake opt-in comes from `inputs.bake_targets`.
+6. `theme_step` duplicated apply. `apply.apply_generation(paths, manifest, gen, signature)` is
+   shared by the session (after take) and `apply`; `lease_mode` is gone (`ops.held_by`).
+7. Take after an incomplete recover. `take` raises `LeaseError` when a journal is still there
+   after recover (live owner, failed slots, unparseable), so Noctalia's only `before` record is
+   never overwritten; a leftover `released` journal is archived; `recover` lets `JournalError`
+   through and `aptus-lease recover` exits 1 for it; a lock timeout raises `LeaseError`.
+8. Locking. A theme lock of its own (`state/theme/lock`, `render.lock`) covers render, scope and
+   Own; the lease flock is taken only inside ops, so `bat cache --build` never delays a release.
+9. Guard. `release_if_ours` accepts every non-`released` state of the same owner;
+   `unset_environment` runs only after our own release and unsets only variables that still hold
+   aptus's value; `HYPRCURSOR_SIZE` is in `UNSET`.
+10. The file kind never creates directories: a missing parent skips the slot.
+11. Smaller items: one wording for who writes slots (the lease package, in-process; `aptus-lease`
+    is its CLI); `render_step` falls back to `render.current`; `state/doctor-check`; "seven
+    functions"; `read` records `link` and `mode`; `ini.planned` equals `digest` after a write;
+    the vscode files have distinct `out`s (`vscode/code.json`, `codium.json`,
+    `antigravity.json`); guard imports at the top.
+12. Safety:
+    - Preflight runs inside `ops.take` under the flock, so a manual `aptus-lease take` with
+      Umbriel open takes nothing.
+    - `targets.expand` raises `ManifestError` for a slot, dest or `at` outside HOME or inside
+      Umbriel's config, Noctalia's state or `/etc`.
+    - The kinds check `invariants.writable` on the resolved write path (phase 6).
+    - `require_safe_home` compares realpaths.
+13. One enforcement point each:
+    - `require_safe_home` runs in `ops.lock` and `render.lock`, which every in-process caller
+      (guard, theme, session) passes.
+    - `own.write_files` refuses an existing dest that is not in own.json.
+    - The guard starts before take: no guard, no lease.
+    - `paths.sysroot` (`/`, or `$HOME/.aptus-test/root` under test) for `exists:` rules,
+      Papirus and the system theme dirs.
+    - The spec gap (Umbriel logging in on another VT mid-session) is closed by the guard: it
+      polls `/run/systemd/users/<uid>` (`paths.logind_user`) once a second, releases at once when
+      another graphical session appears and writes `scope-only` into guard.state; the shell's
+      Lease service shows the notice. A window of about one second remains (open item).
+
+**Deferred.** The spec updates (02 §4/§5/§7/§11, 07 §3/§7, 08 §5/§6) are made in phase 7 with the
+implementation, as planned.
+
+### Phase 4 · TODO markers (2026-11-09)
+
+**Done.** A `# TODO(S2): …` line (or block) in every placeholder, naming the steps, the order and
+the error cases:
+- lease: `system`, `journal`, the three kinds, `ops`, `liveness`, `preflight`, `guard`, `cli`.
+- theme: `palette` (port of colour.js), `resolve`, `sun`, `inputs`, `targets`, `noctalia`,
+  `render`, `scope`, `own`, `hooks`, `apply`, `cli`.
+- `doctor/isolation.py` (the eight checks and the baseline), `session.py` (the new start order:
+  recover, render, guard, take, apply, import; `write_status`, `stop`), `paths.require_safe_home`.
+- Integration spots: `install` (`KINDS`, `check_action`, `plan`, `plan_uninstall`, `apply`,
+  `leased_paths`, `systemctl_user`), `cli.py` (theme/lease dispatch), `doctor/__init__`
+  (isolation group), `Tokens.qml` (the `TODO(S2)` watch, now on `state/theme/resolved.json`),
+  `Lease.qml`, `Theme.qml`, `lease.js`.
+- Template fix: two fold markers removed from `templates/yazi/flavor.toml` (they would render as
+  stray `{{`).
+
+**Checked.** A script walks every function of `lib/aptus`: each one that raises
+`NotImplementedError` carries a `TODO(S2)` (192 markers, 174 placeholders). Every module imports.
+`tests/run` green (97 unit, 159 QML), qmllint 0 warnings.
+
+### Phase 5 · probe (2026-11-09, thrown away)
+
+**Done.** The risky parts were tried with throwaway code: drafts of the pure cores (palette,
+resolve, sun, render, ini, journal, ops, release, guard, invariants) and probe scripts, all kept
+outside the repo as the reference for phase 7. Every app probe ran in a nested Hyprland with a
+temporary HOME. The probe results are in design/probes.md.
+
+**Checked.**
+- Parity: the drafted `palette`, `resolve` and `sun` against `colour.js`, `resolve.js` and
+  `sun.js`, the JS run under node with the QML pragmas stripped.
+  - resolve: 7,808 input combinations (mode × accent incl. wallpaper × contrast × glass ×
+    wallpaper hue, chroma and lightness × current accent), **0 differences**.
+  - sun: 138 cases (4 locations and none, 24 days, and the DST days at 00:30, 02:30 and 23:59),
+    **0 differences**.
+- Templates: all 36 rendered with the drafted render core for dark and light × the six accents
+  (432 renders). No placeholder error. Every JSON and TOML output parses, and every Lua output
+  compiles (`luajit -b`).
+- ini-sections: a read-only copy of the real `kdeglobals` and 3,000 random files, checking
+  identity, take→restore round trip, planned = digest, and foreign edits surviving a restore.
+  The real file passed. The random files found two design faults (fixed in the draft, now
+  2,993/3,000; the 7 left are a probe artefact, `[General]` at EOF without a newline):
+  1. `planned != digest`: splice places sections by their anchors, so the file order can differ
+     from the rendered order, and a section that lacked a final newline gets one. **Phase 7:**
+     `sections_sha256` hashes the sections sorted by name, each ending in one newline.
+  2. Round trip: a file without a final newline gets one when a section is appended after its
+     last block, and restore cannot tell. **Phase 7:** `before` records `eof_newline`; restore
+     drops the added newline when the file again ends in a non-leased block.
+- dconf: every key of the target exists in the installed `org.gnome.desktop.interface` schema.
+  Every `gnome` accent is in the `accent-color` enum. Every `papirus` folder colour has
+  `folder-<colour>.svg` in Papirus.
+- logind: `/run/systemd/users/1000` (`SESSIONS=3 2`) was last replaced at login. logind rewrites
+  it by rename. **Phase 7:** the guard compares `(st_ino, st_mtime_ns)`, not the mtime alone, and
+  on a change asks `loginctl` (preflight.sessions).
+- P-04 (read-only pre-check): the user manager reports ready at basic.target, not at
+  default.target. The recovery unit therefore races the session start, and it cannot move before
+  basic.target (the dconf restore would deadlock). The designed fallback applies: 02 §7, the exit
+  matrix row and the unit comment are updated, and Lenno's steps are in probes.md.
+- P-05 (no: new windows only, fallback), P-06 (pass), P-07 (pass), FileView (a swapped symlink is
+  not seen; Tokens watches `state/theme/resolved.json`). 02 §4 row 1 and the 08 reload table now
+  carry the P-05 result.
+- Not probed: yazi with `YAZI_CONFIG_HOME` and a mirror. A miss only means yazi keeps Noctalia's
+  flavor inside aptus, which is no leak; e2e checks the mirror layout.
+
+**Shapes phase 7:**
+- `render` rounds HSL with `floor(x + 0.5)` (the draft used Python's banker's `round`).
+- The two ini fixes and the guard's inode check above.
+
+### Phase 6 · invariants (2026-11-09)
+
+**Done.** Checks only. The placeholders keep their bodies after the checks, and no TODO was
+removed.
+- New `lease/invariants.py`. Each check raises `InvariantError("isolation invariant: …")`:
+  - `transition(old, new)`: the journal state machine of 02 §5.3–§5.7 (`TRANSITIONS`).
+  - `never_paths()`: Umbriel's config, Noctalia's state and config, the repo, the fonts dir, XDG
+    autostart, user GTK themes, and `/etc` (also below `sysroot`).
+  - `writable(paths, target, kind=lease|scope|own|state)`. The realpath, with every link
+    followed, must be below HOME and outside every never-path. Then by kind:
+    - lease: not inside aptus's own dirs;
+    - scope: below `scope/`;
+    - own: aptus's state or cache, the two qt6ct files, or `aptus-icons-{dark,light}`;
+    - state: aptus's state, cache or runtime.
+  - `check_spec`/`check_specs`:
+    - the id is `<target>.<name>` and unique;
+    - the fields fit the kind;
+    - dconf keys come from the fixed set, and `gtk-theme` is never given a value;
+    - the slot is writable.
+  - `check_journal`:
+    - version 1;
+    - an owner unless released, and `released_at` exactly when released;
+    - unique ids, and slot statuses that fit the state;
+    - no record-only file or ini slot;
+    - dconf keys from the set, and a written `gtk-theme` refused;
+    - every file or ini slot writable.
+  - `check_scope_name`: one plain path component.
+  - `check_unset`: the guard unsets only aptus's variables.
+- Implemented now, because they are themselves checks:
+  - `dconf.check_key`.
+  - `paths.require_safe_home`. Under `APTUS_TEST=1` HOME must be an existing directory whose
+    realpath lies below the realpath of the temporary directory. It must not be, hold or lie
+    inside the passwd home. The last rule keeps `TMPDIR=$HOME` from making the real home
+    "temporary".
+- Calls at the top of the placeholders:
+  - `file`/`ini` `write` and `restore` → `writable(lease)`;
+  - `journal.save` → `check_journal`;
+  - `ops.lock` and `render.lock` → `require_safe_home`;
+  - `ops.take`/`update` → `check_specs`;
+  - `render.render` → `writable(state)`;
+  - `scope.swap` → `check_scope_name` and `writable(scope)`;
+  - `own.icons` → `writable(own)`;
+  - `system.signal_session` and `hooks.builtin_hyprland` → `hypr.check_allowed`.
+  - The guard's unset and ops' state changes name `check_unset` and `transition` in their TODOs
+    (the values exist only once the body runs).
+- Tests: `tests/unit/test_s2_invariants.py`, 80 cases, each check with passing and failing
+  inputs. They include:
+  - a symlink out of the temporary HOME, and one into Umbriel's config;
+  - a stow-style directory link inside HOME, which is allowed;
+  - the real home, a `/tmp` link to it, a missing dir, `/usr`, and `TMPDIR` inside the real home;
+  - `ops.lock` and `render.lock` refusing the real home before they touch a file.
+
+  An autouse fixture blocks `dconf`, `gsettings`, `loginctl`, `kitty`, `ghostty`, `tmux`, `nvim`
+  and `bat` on `PATH`, on top of conftest's net.
+
+**Checked.**
+- Read-only: every non-glob slot of the manifest, resolved against the real HOME with realpath
+  only (nothing opened), passes `writable(lease)`. That is 28 slots, 0 refused. Four resolve
+  through stow links into `~/dotfiles` (btop, hyprtoolkit, nvim colors, matugen), which is
+  inside HOME, so D-03 matters for them. The Steam slot resolves into `~/.local/share/Steam`.
+- `tests/run` green: 177 unit (97 + 80), 159 QML. qmllint 0 warnings. Every module imports, and
+  every placeholder still has its TODO.
+
+
+### Review of phase 4 (fresh subagent, diff `2897e39..53a6125`; fixed in phase 7)
+
+18 findings; the first reviewer died on the usage limit and was started again. Every placeholder
+had its TODO and no behaviour had slipped in. The fixes are part of the phase-7 implementation.
+
+**Fixed.**
+1. Scope rebuild of the same generation deleted the live mirror: builds go to a unique
+   `.<into>.<n>.<pid>` name, `swap` removes the old target only when it differs from the new one
+   and is a build, and a real file or directory at `scope/<into>` is moved aside first.
+2. `JournalError` and errors before `taking` escaped `take` and `start`: take converts them into
+   `LeaseError`/`TakeReport.error`, `lease_step` catches everything and goes scope-only with the
+   failure notice; `start` never raises.
+3. The theme lock contradicted itself in four places: one model now, `render.lock` re-entrant
+   within a process (like `ops.lock`); `render`, `apply_generation` and `apply` each take it;
+   `ops.update` runs inside it (lock order: theme, then lease; the guard takes only the lease).
+4. `update` order: `after_prev = after; after = planned; save; write; after_prev = None; save`.
+5. Guard: its own session id comes from the journal's owner (the transient unit has no
+   `XDG_SESSION_ID`); `sessions()` failing keeps the lease and logs; the post-wait steps are
+   written out (release, reloads, unset, state, exit code).
+6. `aptus-session stop` and `aptus-lease release` run the reloads and unset the environment after
+   a release that acted, like the guard.
+7. `aptus-lease take` refuses unless `aptus-guard.service` is active and loads the manifest.
+8. `invariants.py` was committed in phase 6 with fixed signatures; writes check the realpath.
+10. ini digest of "missing" and of "no leased sections" are the same value, so a restore of a
+    file aptus created that KDE has since written to verifies.
+11. Release saves `released` before archiving, reloads include conflict slots, `.before` data is
+    passed only for file slots, and `release(expect=(signature, pid))` checks ownership under the
+    flock (guard and stop).
+12. `file.restore` verifies the `.before` copy against `before.sha256` before writing.
+13. `run_one`/`bake` take `(target id, reload)` from the journal; `shlex` for commands; an
+    unreachable Hyprland is next-start.
+14. Session: the guard starts whatever the render result; no generation → no apply; the
+    manifest is loaded once in `start`; recover passes the session's signature for reloads.
+15. `rec.write = kind != dconf or spec.value is not None`; update never writes a record-only key.
+16. `aptus-icons-*` dirs are recorded in own.json (before writing), rebuilt via rename-aside.
+18. The small items: `paths` passed everywhere, `ops.lock` creates `lease/`, `leased_paths`
+    lists every candidate, the preamble naming is documented, the doctor catches
+    `JournalError`, `check_umbriel` reads bytes, `_pendingInputs`, the render steps complete.
+
+**Rejected.**
+- 9, partly: the spec updates are part of phase 7 as planned (done there). The wording "only
+  aptus-lease writes a leased slot" is read as "only the lease package (whose CLI is
+  `aptus-lease`)": session, theme and guard call it in-process. This is reported to the main
+  session as a question for Lenno; CLAUDE.md is not this stage's file.
+- 17, partly: `TMPDIR` is still honoured (tests may use another temp root), because phase 6
+  already refuses any HOME that is, holds or lies inside the passwd home, which closes the hole.
+
+
+### Review of phase 6 (fresh subagent, diff `49d04f9..f356b72`; fixed in phase 7)
+
+11 findings. The phase rules were kept.
+
+**Fixed.**
+1. `writable(state)` refused the runtime dir, which is outside HOME in a normal session
+   (`/run/user/<uid>/aptus`, for guard.state and the bake queue). State writes are now checked
+   against aptus's state, cache and runtime dirs only. A test builds non-test paths.
+2. `check_journal` checked every slot's path on every save, so one slot whose path changed (a
+   re-stowed directory) would have stopped the whole release. Paths are now checked only while
+   taking or held; during a release each slot is checked when it is restored, and only that slot
+   fails.
+3. Nothing protected the `before` record. Now:
+   - `check_journal` requires a well-formed `before` for every slot not yet restored;
+   - `journal.save` loads the journal on disk and calls `check_save`: a legal transition, no slot
+     dropped, no `before` changed until released;
+   - `archive` accepts only a released journal with every slot restored.
+   Refusing to overwrite `slots/<id>.before` was rejected, see below.
+4. `transition` now has its choke point in `journal.save`, through `check_save`.
+5. Writers that skipped checks:
+   - `restore` of file and ini, `update` (`check_specs`), the dconf functions (`check_key`) were
+     already checked in phase 7;
+   - added `writable(state)` for the journal, history, conflicts and `.before` copies;
+   - `writable(own)` per Own dest, `writable(scope)` for the build;
+   - `check_update`: an update writes a slot with the kind, path, key and sections it was taken
+     with.
+6. `require_safe_home` bypasses are closed:
+   - (a) a temporary dir that is `/` or holds the passwd home is refused;
+   - (b) every XDG base and aptus's state and cache dirs must resolve inside HOME;
+   - (c) `APTUS_TEST=1` in the process environment counts even when a `Paths` says
+     `test=False`;
+   - `writable` re-checks it on every call.
+7. `never_paths` gained these entries:
+   - `~/dotfiles/umbriel` and `~/dotfiles/.git`, `~/.config/dconf`;
+   - the user unit dir, `environment.d`, `hyprland.lua` and `hypr/hyprlock.conf`;
+   - the Papirus dirs below `~/.local/share/icons`, and `color-schemes/noctalia.colors`;
+   - under test, the whole sysroot and `$HOME/.aptus-test`.
+8. The final link component:
+   - the kinds write the realpath recorded at take, with `no_link=True`. A write path that has
+     since become a symlink fails, so its link is never replaced by a file;
+   - `scope_entry()` checks `scope/<into>` without following the link that `swap` replaces.
+9. Ids follow `<target>.<name>` in the journal too, which also keeps them safe as filenames.
+   Paths must be absolute, and no two slots may resolve to the same file (specs and journal).
+10. Tests now cover:
+    - the call sites firing (file write outside HOME and through a new link, `journal.save` as
+      the choke point, `archive`, dconf keys never reaching the tool, signals refusing the real
+      signature);
+    - each failing journal case with a `match`;
+    - the TMPDIR and XDG-link bypasses.
+
+**Rejected.**
+- 3(d), refusing to overwrite an existing `slots/<id>.before`:
+  - take writes the copies only after recover, under the flock, and only when no journal exists,
+    so no journal can reference an old copy;
+  - an old copy is debris from a take that crashed before its journal was written;
+  - refusing to overwrite it would block every later take for good.
+- 11, the unreachable `RELEASED → TAKING` transition: harmless, kept for clarity.
+
+### Phase 7 · implementation (2026-11-09/10)
+
+**Done.** Every placeholder has its body, every `TODO(S2)` is gone, and the review fixes of
+phases 4 and 6 are in (above).
+- **Lease** (`lib/aptus/lease/`): the kinds `file`, `ini-sections` and `dconf`; the journal;
+  take, update, release and recover under the flock, with preflight inside take after recover.
+  `bin/aptus-lease take | update | release | recover | status`; take refuses unless the guard
+  runs.
+- **Guard** (`bin/aptus-guard`, `lease/guard.py`):
+  - a pidfd on Hyprland, plus a self-pipe for SIGTERM, SIGINT and SIGHUP;
+  - logind's user record checked every second: another session opens → release, `scope-only`
+    with the notch message in `guard.state`, keep watching;
+  - the bake queue retried every 30 s;
+  - after the wait: release if this session owns the lease, the reload hooks, the environment
+    unset (value-checked), `guard.state`.
+- **Theme** (`lib/aptus/theme/`, `bin/aptus-theme render | apply | targets`):
+  - the parts: inputs, Noctalia's enabled templates (read only), and the manifest (36 targets,
+    `[inert]`);
+  - render: generations with the input hash, `theme/lock`, `resolved.json`, `dconf.json`; scope
+    builds the kitty and yazi mirrors and the starship block;
+  - own: `own.json` recorded first, the icons, bat, qt6ct, generated.lua and hyprlock;
+  - hooks: signal, exec, builtin and bake, in parallel with 3 s each; then apply;
+  - a template for every target that is not `never`, and golden output for dark-jade and
+    light-sky-high-glass.
+- **Session** (`session.py`):
+  - start runs recover → render → guard → take → environment import (lease only) → the
+    generation's scope, Own and hooks;
+  - `session.json` carries mode, reasons, notice, generation and guard;
+  - stop stops the guard, or releases directly when no guard runs.
+- **Doctor**: `aptus doctor isolation` with the eight checks of 02 §10, the doctor stamp, and
+  the check-8 baseline.
+- **Install**:
+  - `systemd/aptus-recover.service`;
+  - the kinds `enable-unit`, `disable-unit`, `baseline` and `release-lease`, and the approval
+    group `recover`;
+  - `check_action` refuses leased slots;
+  - uninstall moves the scope mirrors and the Own files into `install/uninstalled-<date>/`.
+- **Shell**:
+  - `Lease` (read only; `lease.js` summarize);
+  - `Theme`'s render requests: debounced 250 ms after the crossfade, one at a time, with a
+    queue;
+  - `Tokens` watches `theme/resolved.json` (marked spot only).
+
+  Shared commits: `c54f7e6` (shell.qml binds `Tokens.ownRenderBusy` to `Theme.busy`) and
+  `875c19e` (Ipc: a `lease` summary in `aptus msg shell state`).
+- **Tests**:
+  - `tests/unit/test_s2_{lease,guard,session,crash,doctor,theme,golden,invariants}.py`, with
+    `s2_fakes.py`;
+  - `tests/qml/tst_lease.qml`;
+  - `tests/e2e/test_s2.py`, which uses its own fixtures and imports `Nested` without changing
+    it.
+- **Spec**: 02 §4–§7, §9, §11; 07 §1, §7, §9, §13; 08 §4–§8; probes.md (`builtin:hyprland`).
+- **Found by the nested run with copies of the real slot files:** the two zen-chrome files
+  shared the slot name `artifact`. The duplicate slot id made every take fail on this laptop.
+  The manifest now names them, and `load` refuses a target whose slots share a name (with a
+  test).
+
+**Checked.**
+- `tests/run` is green:
+  - 319 unit tests, 222 of them S2's:
+    - invariants 98, theme 64, lease 28, doctor 12, session 8, guard 7, golden 3, crash 2;
+  - 167 QML tests (tst_lease 6);
+  - qmllint: 122 files, 0 warnings.
+- e2e: 16 passed, S1's 12 and S2's 4, in a nested Hyprland with a temporary HOME.
+  - The slot fixtures are copies of the 22 real lease and bake slots (read only; never
+    `~/.config/umbriel`, `~/.config/noctalia` or `~/.local/state/noctalia`).
+  - The dconf fake starts from the real values (`dconf read`).
+  - Each test asserts an empty `hyprctl -i <nested> configerrors`.
+  - The tests and what they show:
+    - logout through `aptus msg session logout`: the guard's pidfd releases, and every slot
+      hash and dconf value is back;
+    - `SIGKILL` to the nested Hyprland (pid checked: comm, HOME, not the real one): the guard
+      releases;
+    - power-off (guard and Hyprland `SIGKILL`ed, journal `held`), then the next login on the
+      same HOME: recover, take again, logout, every hash back;
+    - Umbriel open: scope-only, the shell's `Lease` shows `scope-only` with the notch message,
+      no slot touched, Own targets themed.
+  - The accent change through the shell reached Hyprland: the border equals generated.lua's
+    accent, and the hook logged `applied`.
+  - Screenshots: looked at all three, and they show the frame and the wallpaper.
+- Unit round trip (real guard, fakes):
+  - the endings: logout, Hyprland crash, power-off then the next login, power-off then the
+    recover unit, Umbriel already open, Umbriel logging in mid-session, no guard, crash
+    mid-take and mid-release (a child `SIGKILL`s itself on the second slot write or restore);
+  - each compares every slot with the baseline;
+  - `aptus-lease`, `aptus-theme`, `aptus-guard` and `aptus-session` refuse the real HOME and a
+    `/tmp` link to it (exit 3, no log file).
+- Coverage: every built-in template of the installed Noctalia 5.4.1 is covered, kept, inert or
+  reported (test). Three are reported: `emacs`, `helix` and `wezterm`. Helix and WezTerm are not
+  installed. Emacs is, but Noctalia's output (`~/.config/doom/themes/noctalia-theme.el`) does
+  not exist, so its template is not enabled; the doctor would name it if it were. Every
+  community template in the catalogue read in phase 1 is covered (checked against the manifest).
+
+### Review of phase 7 (fresh subagent, diff `f356b72..e643563`; fixed in "phase 7: review fixes")
+
+12 findings, none critical. The first reviewer died on the usage limit and was started again.
+
+**Fixed.**
+1. A failed slot skipped the environment unset, so Umbriel could get `QT_QPA_PLATFORMTHEME`.
+   - `after_release` now unsets before it runs the hooks, also when slots failed.
+   - The guard unsets **first**, while its session still holds the lease, so a guard killed
+     half-way leaves no variable behind.
+   - 02 §5.6 has the new order.
+2. A release that raised killed the guard for the rest of the session. The causes were the lease
+   lock busy for 10 s, a full disk, or the theme lock. `give_back` now tries 4 times, 2 s apart,
+   then reports `failed`.
+3. A reused generation forgot its failed targets. The next session start then failed the whole
+   take on the missing output.
+   - Each generation now has `failed.json`, which `current()` loads.
+   - `slot_specs` leaves out a target whose output is missing.
+   - `apply` re-applies an unchanged generation that this session's lease does not carry yet.
+4. `is-active` (Type=exec) proved only that `execve` succeeded. Now:
+   - the guard writes `ok` once its pidfd is open;
+   - `aptus-session` removes the old `guard.state` and waits up to 5 s for `guard.ready`;
+   - `aptus-lease take` checks the same.
+5. The guard could use up a change in logind's record while nothing was held yet, or while
+   `loginctl` failed. Now only a conclusive check (lease held, sessions listed) uses it up.
+6. An environment import that landed after the guard released is unset again, and the session
+   goes on scope-only (`environment_step`).
+7. A failing recover, or any exception in `start`, could leave Hyprland without a shell. Now
+   `recover_step` catches everything, and `main` writes `session.json` and starts the
+   supervisor whatever happened.
+8. Lease mode now means `held` (`ops.holds`); a half-released lease is the guard's to finish.
+   The doctor's message for one with a live owner names the guard and `aptus-lease release`,
+   not recover.
+9. The guard's bake retry takes the theme lock without waiting (`LockBusy`) and skips that tick.
+10. INI anchors now count repeated headers. The random round trip now includes repeated
+    headers (400 files, byte-identical).
+11. `load` accepts target ids only as `[a-z0-9-]` path components. The build-directory write
+    pattern (private 0700 directory, one atomic rename) is written down in 08 §4.
+12. `aptus-lease update` acts only for the session that holds the lease. `release` stays the
+    manual escape hatch (and uninstall's `release-lease`), documented in 02 §5.6.
+
+**Checked.** 16 new tests, one or more per finding:
+- guard: 6;
+- session: 4;
+- theme: 3;
+- lease: 2, and the INI round trip now has repeated headers;
+- doctor: 1.
+
+`tests/run` is green: 335 unit tests, 167 QML tests, and qmllint with 0 warnings on 122 files.
+All 16 e2e tests pass again in the nested Hyprland.
+
+**Rejected.** None.

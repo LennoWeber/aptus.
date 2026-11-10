@@ -17,7 +17,7 @@ class Check:
 
 
 def run(which: Sequence[str], paths: Paths) -> list[Check]:
-    """Run the named groups ("config", "deps"; "isolation" arrives with S2), all by default."""
+    """Run the named groups ("isolation", "config", "deps"), all by default."""
     from . import config, deps
     checks: list[Check] = []
     for group in list(which) or ["isolation", "config", "deps"]:
@@ -26,7 +26,8 @@ def run(which: Sequence[str], paths: Paths) -> list[Check]:
         elif group == "deps":
             checks += deps.check()
         elif group == "isolation":
-            checks.append(Check("isolation", True, "arrives with S2", warn=True))
+            from . import isolation
+            checks += isolation.check(paths)
         else:
             checks.append(Check(group, False, "unknown check group (isolation, config, deps)"))
     return checks

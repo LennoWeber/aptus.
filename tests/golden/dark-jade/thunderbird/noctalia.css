@@ -1,0 +1,161 @@
+/* Noctalia palette for Thunderbird.
+ *
+ * Rendered by the Noctalia template engine into
+ *   $XDG_CACHE_HOME/noctalia/thunderbird/noctalia.css
+ * and imported from the profile's userChrome.css by apply.sh.
+ *
+ * Thunderbird's chrome is themed through its layout variables (see
+ * chrome://messenger/skin/layout.css): background 0..4 build the pane
+ * hierarchy, color 0..3 the text, border 0..2 the separators. Overriding
+ * those reaches toolbars, folder pane, message list, message header and
+ * cards at once. These live in userChrome, not userContent, so message
+ * bodies keep their own colors.
+ */
+
+:root {
+  --layout-background-0: #191613 !important;
+  --layout-background-1: #191613 !important;
+  --layout-background-2: #231f1b !important;
+  --layout-background-3: #2c2722 !important;
+  --layout-background-4: #322e29 !important;
+
+  --layout-color-0: #efe6d4 !important;
+  --layout-color-1: #efe6d4 !important;
+  --layout-color-2: #d3c8b3 !important;
+  --layout-color-3: #7f756a !important;
+
+  /* M3 separates regions by tonal surface, not by hairlines, so the
+   * structural borders go transparent. Interactive borders and card
+   * outlines stay on --layout-border-2 / --tree-card-border. */
+  --layout-border-0: transparent !important;
+  --layout-border-1: transparent !important;
+  --layout-border-2: #332d27 !important;
+  --chrome-content-separator-color: transparent !important;
+  --tabs-tabbar-border-size: 0 !important;
+  --toolbarseparator-color: transparent !important;
+
+  --color-accent-primary: #9acfae !important;
+  --toolbarbutton-icon-fill-attention: #9acfae !important;
+
+  /* Selected folder / message rows. */
+  --selected-item-color: #2c2f28 !important;
+  --selected-item-text-color: #efe6d4 !important;
+  --sidebar-highlight-background-color: #2c2f28 !important;
+  --sidebar-highlight-text-color: #efe6d4 !important;
+
+  /* Message cards sit one tonal step above the page, like M3 cards. */
+  --tree-card-background: #191613 !important;
+  --tree-card-border: #332d27 !important;
+}
+
+/* --- Material 3 shape -------------------------------------------------- */
+
+/* Thunderbird defaults to a 3px radius on buttons, inputs, list rows and
+ * cards. M3 uses pills for buttons and inputs and 12dp for cards/panels, so
+ * overriding the radius variables lifts the whole chrome to the M3 shape
+ * scale. Buttons also become filled tonal (secondary container). */
+:root {
+  --button-border-radius: 20px !important;
+  --border-radius-medium: 12px !important;
+  --border-radius-large: 16px !important;
+  --input-search-border-radius: 9999px !important;
+  --listbox-border-radius: 12px !important;
+  --panel-border-radius: 12px !important;
+
+  --button-background-color: #2b2723 !important;
+  --button-text-color: #efe6d4 !important;
+  --button-border-color: transparent !important;
+
+  --focus-outline-color: #9acfae !important;
+
+  /* Filled search field and navigation rail surface. */
+  --search-bar-background: #2c2722 !important;
+  --search-bar-focus-background: #322e29 !important;
+  --search-bar-border-color: transparent !important;
+  --spaces-bg-color: #191613 !important;
+}
+
+/* Navigation rail: circular active indicator behind the icon (M3). */
+.spaces-toolbar-button {
+  border-radius: 9999px !important;
+}
+
+/* --- Firefox Nova inspired chrome ------------------------------------- */
+
+/* Floating tab pills: uniform radius, a gap between tabs, a soft gradient on
+ * the active tab, no accent line underneath. */
+#tabs-toolbar {
+  --tabs-toolbar-background-color: transparent !important;
+  --tabs-toolbar-box-shadow: none !important;
+  padding-inline: 6px !important;
+}
+
+.tabmail-tab {
+  border-radius: 8px !important;
+  margin-inline-end: 4px !important;
+  margin-block: 4px !important;
+}
+
+.tabmail-tab .tab-background {
+  border-radius: 8px !important;
+}
+
+.tabmail-tab .tab-background[selected] {
+  background-color: #322e29 !important;
+  background-image: linear-gradient(
+    135deg,
+    color-mix(in srgb, #2c2f28 40%, #322e29),
+    #2c2722
+  ) !important;
+  box-shadow: 0 1px 4px -2px rgba(0, 0, 0, 0.45) !important;
+}
+
+.tabmail-tab:hover .tab-background:not([selected]) {
+  background-color: #2c2722 !important;
+}
+
+.tab-line {
+  display: none !important;
+}
+
+/* Framed content: the three panes become rounded cards on a dimmer frame,
+ * like Nova's inset web content. The tone steps are widened on purpose so the
+ * framing also reads in dark mode. */
+body#paneLayout {
+  gap: 8px !important;
+  padding: 8px !important;
+  background-color: #12100e !important;
+}
+
+#paneLayout #folderPane {
+  background-color: #191613 !important;
+  border-radius: 12px !important;
+  overflow: hidden !important;
+  box-shadow: 0 0 0 1px #332d27 !important;
+}
+
+#paneLayout :is(#threadPane, #messagePane) {
+  background-color: #231f1b !important;
+  border-radius: 12px !important;
+  overflow: hidden !important;
+  box-shadow: 0 0 0 1px #332d27 !important;
+}
+
+/* --- Slim chrome ------------------------------------------------------- */
+
+/* The classic menu bar is pure chrome on a tiling setup; it stays reachable
+ * through the Alt key and the app menu. */
+#toolbar-menubar {
+  display: none !important;
+}
+
+:root {
+  --tab-min-height: 28px !important;
+  --unified-toolbar-minimal-height: 26px !important;
+  --list-item-min-height: 22px !important;
+  --tree-row-padding: 2px !important;
+}
+
+#unifiedToolbar {
+  padding-block: 2px !important;
+}

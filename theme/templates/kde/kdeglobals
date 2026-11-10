@@ -1,0 +1,139 @@
+[ColorEffects:Disabled]
+Color={{ sunken | csv }}
+ColorAmount=0
+ColorEffect=0
+ContrastAmount=0.65
+ContrastEffect=1
+IntensityAmount=0.1
+IntensityEffect=2
+
+[ColorEffects:Inactive]
+ChangeSelectionColor=true
+Color={{ raised | csv }}
+ColorAmount=0.025
+ColorEffect=2
+ContrastAmount=0.1
+ContrastEffect=2
+Enable=false
+IntensityAmount=0
+IntensityEffect=0
+
+[Colors:Button]
+BackgroundAlternate={{ ground | csv }}
+BackgroundNormal={{ raisedHot | csv }}
+DecorationFocus={{ accent | csv }}
+DecorationHover={{ accent | csv }}
+ForegroundActive={{ accent | csv }}
+ForegroundInactive={{ inkSec | csv }}
+ForegroundLink={{ accent | csv }}
+ForegroundNegative={{ crit | csv }}
+ForegroundNeutral={{ accent | csv }}
+ForegroundNormal={{ inkMain | csv }}
+ForegroundPositive={{ accent | csv }}
+ForegroundVisited={{ inkMain | csv }}
+
+[Colors:Complementary]
+BackgroundAlternate={{ ground | csv }}
+BackgroundNormal={{ ground | csv }}
+DecorationFocus={{ accent | csv }}
+DecorationHover={{ accent | csv }}
+ForegroundActive={{ accent | csv }}
+ForegroundInactive={{ inkSec | csv }}
+ForegroundLink={{ accent | csv }}
+ForegroundNegative={{ crit | csv }}
+ForegroundNeutral={{ accent | csv }}
+ForegroundNormal={{ inkMain | csv }}
+ForegroundPositive={{ accent | csv }}
+ForegroundVisited={{ inkMain | csv }}
+
+[Colors:Header]
+BackgroundAlternate={{ ground | csv }}
+BackgroundNormal={{ raised | csv }}
+DecorationFocus={{ accent | csv }}
+DecorationHover={{ accent | csv }}
+ForegroundActive={{ accent | csv }}
+ForegroundInactive={{ inkSec | csv }}
+ForegroundLink={{ accent | csv }}
+ForegroundNegative={{ crit | csv }}
+ForegroundNeutral={{ accent | csv }}
+ForegroundNormal={{ inkMain | csv }}
+ForegroundPositive={{ accent | csv }}
+ForegroundVisited={{ inkMain | csv }}
+
+[Colors:Header][Inactive]
+BackgroundAlternate={{ raised | csv }}
+BackgroundNormal={{ ground | csv }}
+DecorationFocus={{ accent | csv }}
+DecorationHover={{ accent | csv }}
+ForegroundActive={{ accent | csv }}
+ForegroundInactive={{ inkSec | csv }}
+ForegroundLink={{ accent | csv }}
+ForegroundNegative={{ crit | csv }}
+ForegroundNeutral={{ accent | csv }}
+ForegroundNormal={{ inkMain | csv }}
+ForegroundPositive={{ accent | csv }}
+ForegroundVisited={{ inkMain | csv }}
+
+[Colors:Selection]
+BackgroundAlternate={{ ground | csv }}
+BackgroundNormal={{ accent | csv }}
+DecorationFocus={{ accent | csv }}
+DecorationHover={{ accent | csv }}
+ForegroundActive={{ onAccent | csv }}
+ForegroundInactive={{ inkSec | csv }}
+ForegroundLink={{ accent | csv }}
+ForegroundNegative={{ raisedHot | csv }}
+ForegroundNeutral={{ accentWash | csv }}
+ForegroundNormal={{ onAccent | csv }}
+ForegroundPositive={{ accentWash | csv }}
+ForegroundVisited={{ inkMain | csv }}
+
+[Colors:Tooltip]
+BackgroundAlternate={{ ground | csv }}
+BackgroundNormal={{ raised | csv }}
+DecorationFocus={{ accent | csv }}
+DecorationHover={{ accent | csv }}
+ForegroundActive={{ accent | csv }}
+ForegroundInactive={{ inkSec | csv }}
+ForegroundLink={{ accent | csv }}
+ForegroundNegative={{ crit | csv }}
+ForegroundNeutral={{ accent | csv }}
+ForegroundNormal={{ inkMain | csv }}
+ForegroundPositive={{ accent | csv }}
+ForegroundVisited={{ inkMain | csv }}
+
+[Colors:View]
+BackgroundAlternate={{ raised | csv }}
+BackgroundNormal={{ ground | csv }}
+DecorationFocus={{ inkMain | csv }}
+DecorationHover={{ onAccent | csv }}
+ForegroundActive={{ accent | csv }}
+ForegroundInactive={{ inkSec | csv }}
+ForegroundLink={{ accent | csv }}
+ForegroundNegative={{ crit | csv }}
+ForegroundNeutral={{ accent | csv }}
+ForegroundNormal={{ inkMain | csv }}
+ForegroundPositive={{ accent | csv }}
+ForegroundVisited={{ inkMain | csv }}
+
+[Colors:Window]
+BackgroundAlternate={{ accentWash | csv }}
+BackgroundNormal={{ raised | csv }}
+DecorationFocus={{ accent | csv }}
+DecorationHover={{ accent | csv }}
+ForegroundActive={{ accent | csv }}
+ForegroundInactive={{ inkSec | csv }}
+ForegroundLink={{ accent | csv }}
+ForegroundNegative={{ crit | csv }}
+ForegroundNeutral={{ accent | csv }}
+ForegroundNormal={{ inkMain | csv }}
+ForegroundPositive={{ accent | csv }}
+ForegroundVisited={{ inkMain | csv }}
+
+[WM]
+activeBackground={{ accentWash | csv }}
+activeBlend={{ inkMain | csv }}
+activeForeground={{ inkMain | csv }}
+inactiveBackground={{ ground | csv }}
+inactiveBlend={{ inkSec | csv }}
+inactiveForeground={{ inkSec | csv }}

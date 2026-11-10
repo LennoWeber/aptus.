@@ -1,0 +1,22 @@
+[colors-dark]
+foreground={{ inkMain | hexnoh }}
+background={{ ground | hexnoh }}
+regular0={{ ansi0 | hexnoh }}
+regular1={{ ansi1 | hexnoh }}
+regular2={{ ansi2 | hexnoh }}
+regular3={{ ansi3 | hexnoh }}
+regular4={{ ansi4 | hexnoh }}
+regular5={{ ansi5 | hexnoh }}
+regular6={{ ansi6 | hexnoh }}
+regular7={{ ansi7 | hexnoh }}
+bright0={{ ansi8 | hexnoh }}
+bright1={{ ansi9 | hexnoh }}
+bright2={{ ansi10 | hexnoh }}
+bright3={{ ansi11 | hexnoh }}
+bright4={{ ansi12 | hexnoh }}
+bright5={{ ansi13 | hexnoh }}
+bright6={{ ansi14 | hexnoh }}
+bright7={{ ansi15 | hexnoh }}
+selection-foreground={{ selectionFg | hexnoh }}
+selection-background={{ selectionBg | hexnoh }}
+cursor={{ onAccent | hexnoh }} {{ accent | hexnoh }}

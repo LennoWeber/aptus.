@@ -21,7 +21,9 @@ Scope {
                     windows: Hypr.windows.length, submap: Hypr.submap },
             wallpaper: { monitors: Hypr.monitors.map(m => ({ name: m.name, path: Wallpaper.pathFor(m.name) })),
                          images: Wallpaper.images.length },
-            session: { locked: Session.locked, canLock: Session.canLock }
+            session: { locked: Session.locked, canLock: Session.canLock },
+            lease: { state: Lease.state, guard: Lease.guard, mode: Lease.mode, notice: Lease.notice,
+                     warning: Lease.warning }
         };
     }
     // The answer of a service's IPC functions until its stage fills it (07 §7: never an empty answer).
