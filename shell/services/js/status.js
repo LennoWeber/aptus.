@@ -20,24 +20,52 @@ var EVENT_GLYPHS = { headphones: "headphones", bluetooth: "bluetooth_connected",
     wifiOff: "wifi_off" }
 
 // "mic" | "camera" | "" for one node.
-function privacyKind(node) { throw new Error("not implemented") }
+function privacyKind(node) {
+    if (!node) return ""
+    if (node.mediaClass === MIC_CLASS && node.isStream) return "mic"
+    if (CAMERA_CLASSES.indexOf(node.mediaClass) >= 0) return node.isStream || node.linked ? "camera" : ""
+    return ""
+}
 // The privacy summary of every node.
 function privacy(nodes) {
     invariant(Array.isArray(nodes), "nodes is not a list")
-    throw new Error("not implemented")
+    var mic = [], camera = []
+    for (var i = 0; i < nodes.length; i++) {
+        var k = privacyKind(nodes[i]), app = String(nodes[i].app || "")
+        if (k === "mic" && mic.indexOf(app) < 0) mic.push(app)
+        else if (k === "camera" && camera.indexOf(app) < 0) camera.push(app)
+    }
+    return { mic: mic, camera: camera }
 }
 // The active VPN's name from `nmcli -t -f NAME,TYPE connection show --active` ("" none;
 // types vpn and wireguard).
 function vpnFrom(text) {
     invariant(typeof text === "string", "nmcli output is not a string")
-    throw new Error("not implemented")
+    var lines = String(text || "").split("\n")
+    for (var i = 0; i < lines.length; i++) {
+        var line = lines[i]
+        // nmcli -t escapes ':' in values as '\:'
+        var m = /^((?:[^:\\]|\\.)*):(.*)$/.exec(line)
+        if (!m) continue
+        var type = m[2].trim()
+        if (type === "vpn" || type === "wireguard") return m[1].replace(/\\(.)/g, "$1")
+    }
+    return ""
 }
 // "Headphones connected · 70 %": a Bluetooth device's name and battery (-1 unknown); its bluez
 // icon name picks the glyph (audio-headset / audio-headphones → headphones).
-function btConnectedEvent(name, icon, battery) { throw new Error("not implemented") }
+function btConnectedEvent(name, icon, battery) {
+    var headphones = /audio-head(set|phones)/.test(String(icon || ""))
+    var text = String(name || "Device") + " connected" + (battery >= 0 ? " · " + Math.round(battery) + " %" : "")
+    return { text: text, glyph: headphones ? EVENT_GLYPHS.headphones : EVENT_GLYPHS.bluetooth }
+}
 // "Charging" (plugged in while discharging) and "Wi-Fi off".
-function chargingEvent() { throw new Error("not implemented") }
-function wifiOffEvent() { throw new Error("not implemented") }
+function chargingEvent() {
+    return { text: "Charging", glyph: EVENT_GLYPHS.charging }
+}
+function wifiOffEvent() {
+    return { text: "Wi-Fi off", glyph: EVENT_GLYPHS.wifiOff }
+}
 
 // Invariants (phase 6): they throw "status invariant: …".
 function invariant(cond, message) { if (!cond) throw new Error("status invariant: " + message) }

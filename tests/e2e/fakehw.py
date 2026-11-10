@@ -7,13 +7,46 @@ A sysfs-like tree (`class/backlight/<dev>/{brightness,max_brightness,actual_brig
 """
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
 from pathlib import Path
+
 
 def brightnessctl_script() -> str:
     """The fake `brightnessctl` (a shell script): understands `-d <device> set <n>` (and `-m`/`info`
     for a read), writes only below $APTUS_SYSFS and refuses to run without it."""
-    raise NotImplementedError
+    return r'''#!/bin/sh
+# Fake brightnessctl for the aptus e2e tests: writes only below $APTUS_SYSFS (never /sys).
+case "${APTUS_SYSFS:-}" in
+    ""|/sys|/sys/*) echo "fake brightnessctl: no test sysfs" >&2; exit 2 ;;
+esac
+dev="" value="" read=0
+while [ $# -gt 0 ]; do
+    case "$1" in
+        -d) dev="$2"; shift 2 ;;
+        -q|-m) shift ;;
+        set) value="$2"; shift 2 ;;
+        info|get) read=1; shift ;;
+        *) shift ;;
+    esac
+done
+dir=""
+for d in "$APTUS_SYSFS/class/backlight/$dev" "$APTUS_SYSFS/class/leds/$dev"; do
+    [ -n "$dev" ] && [ -d "$d" ] && dir="$d"
+done
+[ -n "$dir" ] || { echo "fake brightnessctl: no device $dev" >&2; exit 1; }
+max=$(cat "$dir/max_brightness")
+if [ -n "$value" ]; then
+    case "$value" in *[!0-9]*) echo "fake brightnessctl: only absolute values" >&2; exit 1 ;; esac
+    [ "$value" -gt "$max" ] && value="$max"
+    printf '%s\n' "$value" > "$dir/brightness"
+    [ -f "$dir/actual_brightness" ] && printf '%s\n' "$value" > "$dir/actual_brightness"
+    printf '%s %s\n' "$dev" "$value" >> "$APTUS_SYSFS/brightnessctl.log"
+fi
+[ "$read" = 1 ] && printf '%s,%s,%s,%s%%,%s\n' "$dev" "class" "$(cat "$dir/brightness")" \
+    "$(( $(cat "$dir/brightness") * 100 / max ))" "$max"
+exit 0
+'''
 
 
 @dataclass
@@ -28,13 +61,36 @@ class FakeHardware:
     kbd_max: int = 2
     kbd_now: int = 0
 
+    @property
+    def sysfs(self) -> Path:
+        return self.root / "sysfs"
+
     def build(self) -> dict[str, str]:
         """Write the tree and the fake tool; return the environment additions for the session
         (APTUS_SYSFS and a PATH with the fake bin first)."""
-        raise NotImplementedError
+        bl = self.sysfs / "class" / "backlight" / self.backlight
+        led = self.sysfs / "class" / "leds" / self.kbd
+        for d in (bl, led):
+            d.mkdir(parents=True, exist_ok=True)
+        (bl / "max_brightness").write_text(f"{self.backlight_max}\n")
+        (bl / "brightness").write_text(f"{self.backlight_now}\n")
+        (bl / "actual_brightness").write_text(f"{self.backlight_now}\n")
+        (led / "max_brightness").write_text(f"{self.kbd_max}\n")
+        (led / "brightness").write_text(f"{self.kbd_now}\n")
+        bin_dir = self.root / "bin"
+        bin_dir.mkdir(parents=True, exist_ok=True)
+        tool = bin_dir / "brightnessctl"
+        tool.write_text(brightnessctl_script())
+        tool.chmod(0o755)
+        return {"APTUS_SYSFS": str(self.sysfs), "PATH": f"{bin_dir}:{os.environ.get('PATH', '/usr/bin')}"}
 
     def backlight_value(self) -> int:
-        raise NotImplementedError
+        return int((self.sysfs / "class" / "backlight" / self.backlight / "brightness").read_text())
 
     def kbd_value(self) -> int:
-        raise NotImplementedError
+        return int((self.sysfs / "class" / "leds" / self.kbd / "brightness").read_text())
+
+    def writes(self) -> list[str]:
+        """The fake tool's log: one "<device> <value>" line per write."""
+        log = self.sysfs / "brightnessctl.log"
+        return log.read_text().splitlines() if log.exists() else []

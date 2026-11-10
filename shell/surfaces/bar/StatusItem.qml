@@ -1,6 +1,6 @@
+pragma ComponentBehavior: Bound
 // One status item (surfaces/bar.md §6): a 16 px glyph (with the charging bolt or the VPN key),
 // optional text, a tooltip; opens 0 → w and then fades its glyph in (M-04).
-pragma ComponentBehavior: Bound
 import QtQuick
 import qs.core
 import qs.components
@@ -13,8 +13,7 @@ Item {
     // The item is wanted (M-04: width opens, then the glyph fades in; reverse to leave).
     property bool shown: true
 
-    // TODO(phase): the MouseArea's containsMouse.
-    readonly property bool hovered: false
+    readonly property bool hovered: mouse.containsMouse
 
     signal clicked()
     signal middleClicked()
@@ -29,13 +28,110 @@ Item {
     property real _lastNudge: 0
 
     // One nudge (M-36), unless one ran within nudge.minInterval.
-    function nudge(): void { throw new Error("not implemented"); }
-
-    // TODO(phase): Glyph (ink by item.ink; bolt overlay; extra glyph; percentage text), Tooltip
-    //   item.tooltip, width animated with M-04 by `shown`; MouseArea → the signals.
+    function nudge(): void {
+        const now = Date.now();
+        if (Motion.reduced || (_lastNudge > 0 && now - _lastNudge < Motion.catalogueValue("nudge.minInterval"))) return;
+        _lastNudge = now;
+        nudgeAnim.restart();
+    }
 
     // Found by the probe (phase 5):
     // The item's width with its label (the cluster's collapse measures it before hiding labels).
-    // TODO(phase): the content row's implicitWidth.
-    readonly property real _fullWidth: 0
+    readonly property real _fullWidth: content.implicitWidth
+    implicitWidth: _fullWidth * _open
+    implicitHeight: Tokens.surfaces.bar.statusPillHeight
+    clip: _open < 1
+
+    states: State {
+        name: "shown"
+        when: root.shown
+        PropertyChanges { root._open: 1; root._glyph: 1 }
+    }
+    transitions: [
+        Transition {
+            to: "shown"
+            SequentialAnimation {
+                StandardAnimation { target: root; property: "_open"; duration: Motion.ms("small", false) }
+                StandardAnimation { target: root; property: "_glyph"; duration: Motion.ms("fade", false) }
+            }
+        },
+        Transition {
+            from: "shown"
+            SequentialAnimation {
+                StandardAnimation { target: root; property: "_glyph"; duration: Motion.ms("fade", true) }
+                StandardAnimation { target: root; property: "_open"; duration: Motion.ms("small", true) }
+            }
+        }
+    ]
+
+    Row {
+        id: content
+        anchors.verticalCenter: parent.verticalCenter
+        spacing: Tokens.s1
+        opacity: root._glyph
+        scale: root._nudge
+
+        Item {
+            width: Tokens.surfaces.bar.statusIconSize
+            height: width
+            anchors.verticalCenter: parent.verticalCenter
+            Glyph {
+                anchors.centerIn: parent
+                name: root.item.glyph || ""
+                size: Tokens.surfaces.bar.statusIconSize
+                colour: ComponentShared.ink(root.item.ink || "main")
+                active: root.hovered
+            }
+            Glyph {
+                visible: (root.item.overlay || "") !== ""
+                anchors.right: parent.right
+                anchors.bottom: parent.bottom
+                anchors.margins: -Tokens.s1
+                name: root.item.overlay || ""
+                size: Tokens.surfaces.bar.statusIconSize / 2
+                on: true
+                colour: ComponentShared.ink(root.item.ink || "main")
+            }
+        }
+        Glyph {
+            visible: (root.item.extra || "") !== ""
+            anchors.verticalCenter: parent.verticalCenter
+            name: root.item.extra || ""
+            size: Tokens.surfaces.bar.statusIconSize * 3 / 4
+            colour: ComponentShared.ink("sec")
+        }
+        Label {
+            visible: text !== ""
+            anchors.verticalCenter: parent.verticalCenter
+            type: "bar"
+            tabular: true
+            ink: root.item.ink === "main" ? "sec" : (root.item.ink || "sec")
+            text: root.item.text || ""
+        }
+    }
+
+    MouseArea {
+        id: mouse
+        anchors.fill: parent
+        hoverEnabled: true
+        acceptedButtons: Qt.LeftButton | Qt.MiddleButton | Qt.RightButton
+        onClicked: e => {
+            if (e.button === Qt.MiddleButton) root.middleClicked();
+            else if (e.button === Qt.RightButton) root.rightClicked(e.x, e.y);
+            else root.clicked();
+        }
+        onWheel: w => {
+            if (w.angleDelta.y !== 0) root.wheelStep(w.angleDelta.y > 0 ? 1 : -1);
+        }
+    }
+    Tooltip {
+        target: root
+        text: root.item.tooltip || ""
+        active: root.hovered
+    }
+    SequentialAnimation {
+        id: nudgeAnim
+        StandardAnimation { target: root; property: "_nudge"; to: Motion.catalogueValue("nudge.scale"); duration: Motion.catalogueValue("nudge.duration") / 2 }
+        StandardAnimation { target: root; property: "_nudge"; to: 1; duration: Motion.catalogueValue("nudge.duration") / 2 }
+    }
 }

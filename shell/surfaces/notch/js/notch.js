@@ -26,13 +26,35 @@
 function viewOf(state, hoverCard, isActive) {
     invariant(state && R.legalNotch(state.notch), "illegal notch state " + (state && state.notch))
     invariant(!state.passiveTop || TOP_KINDS.indexOf(state.passiveTop.kind) >= 0, "illegal passive top " + (state.passiveTop && state.passiveTop.kind))
-    throw new Error("not implemented")
+    var n = state.notch
+    if (n && n !== "rest" && R.isInteractiveMode(n))
+        return { kind: "mode", key: "mode:" + n, entry: null, activity: "", mode: n }
+    var t = state.passiveTop || { kind: "rest", entry: null }
+    if (t.kind === "osd" || t.kind === "toast" || t.kind === "event") {
+        var e = t.entry
+        var kind = t.kind === "toast" && e && e.payload && e.payload.card ? "result" : t.kind
+        var v = { kind: kind, key: "", entry: e, activity: "", mode: "" }
+        v.key = keyOf(v)
+        return v
+    }
+    if (t.kind === "card") return { kind: "card", key: "card:" + t.entry, entry: null, activity: t.entry, mode: "" }
+    if (t.kind === "hidden") return { kind: "hidden", key: "", entry: null, activity: "", mode: "" }
+    if (n && n !== "rest" && !R.isCard(n))     // a passive mode (the Keys peek)
+        return { kind: "mode", key: "mode:" + n, entry: null, activity: "", mode: n }
+    return { kind: "rest", key: "", entry: null, activity: "", mode: "" }
 }
 // The identity of a view: two views with the same key are one layer updated in place.
 function keyOf(view) {
     invariant(view && VIEW_KINDS.indexOf(view.kind) >= 0, "illegal view kind " + (view && view.kind))
     invariant(ENTRY_KINDS.indexOf(view.kind) < 0 || !!view.entry, "a " + view.kind + " view without its entry")
-    throw new Error("not implemented")
+    switch (view.kind) {
+    case "toast": case "result": case "event":
+        return view.kind + ":" + (view.entry.key || "#" + view.entry.id)
+    case "osd": return "osd"
+    case "card": return "card:" + view.activity
+    case "mode": return "mode:" + view.mode
+    default: return ""
+    }
 }
 // The layers after the view changed: { layers, serial } (the old current layer leaves, a new one
 // enters; the same key keeps the layer; "rest"/"hidden" leave everything).
@@ -40,27 +62,64 @@ function nextLayers(layers, view, serial) {
     checkLayers(layers)
     invariant(layers.every(function (l) { return l.uid <= serial }), "serial " + serial + " behind a layer uid")
     checkView(view)
-    // TODO(phase): checkNext(view, serial, result).
-    throw new Error("not implemented")
+    var before = serial
+    var key = keyOf(view)
+    var out = []
+    var kept = false
+    for (var i = 0; i < layers.length; i++) {
+        var l = layers[i]
+        if (!l.leaving && key !== "" && l.key === key) {
+            out.push({ uid: l.uid, kind: view.kind, key: key, entryId: view.entry ? view.entry.id : 0,
+                       activity: view.activity, mode: view.mode, leaving: false })
+            kept = true
+        } else if (!l.leaving) {
+            out.push({ uid: l.uid, kind: l.kind, key: l.key, entryId: l.entryId, activity: l.activity, mode: l.mode, leaving: true })
+        } else out.push(l)
+    }
+    if (!kept && key !== "") {
+        serial++
+        out.push({ uid: serial, kind: view.kind, key: key, entryId: view.entry ? view.entry.id : 0,
+                   activity: view.activity, mode: view.mode, leaving: false })
+    }
+    var result = { layers: out, serial: serial }
+    checkNext(view, before, result)
+    return result
 }
 // The layers without the one that finished leaving.
 function dropLayer(layers, uid) {
     checkLayers(layers)
     invariant(layers.every(function (l) { return l.uid !== uid || l.leaving }), "layer " + uid + " is current")
-    throw new Error("not implemented")
+    return layers.filter(function (l) { return l.uid !== uid })
 }
 // The compact slots (notch.md §4): per slot the live candidate with the highest priority; when
 // the centre group would exceed maxWidth, the lower-priority slot gives way.
 function assignSlots(candidates, clockWidth, gap, maxWidth) {
     checkCandidates(candidates)
     invariant(clockWidth >= 0 && gap >= 0 && maxWidth > 0, "slot geometry " + [clockWidth, gap, maxWidth])
-    // TODO(phase): checkSlots(result, candidates).
-    throw new Error("not implemented")
+    var best = { left: null, right: null }
+    for (var i = 0; i < candidates.length; i++) {
+        var c = candidates[i], s = c.slot === "left" ? "left" : "right"
+        if (!best[s] || c.priority > best[s].priority) best[s] = c
+    }
+    var width = clockWidth + (best.left ? gap + best.left.width : 0) + (best.right ? gap + best.right.width : 0)
+    if (width > maxWidth && best.left && best.right) {
+        if (best.left.priority >= best.right.priority) best.right = null
+        else best.left = null
+    }
+    var waiting = []
+    for (var j = 0; j < candidates.length; j++)
+        if (candidates[j] !== best.left && candidates[j] !== best.right) waiting.push(candidates[j].id)
+    var slots = { left: best.left ? best.left.id : "", right: best.right ? best.right.id : "", waiting: waiting }
+    checkSlots(slots, candidates)
+    return slots
 }
 // The toast bulge height (notch.md §6: 72 / 104 / 132 by actions and image).
 function toastHeight(payload, heights) {
     invariant(Array.isArray(heights) && heights.length === 3 && heights[0] > 0 && heights[0] <= heights[1] && heights[1] <= heights[2], "toast heights " + heights)
-    throw new Error("not implemented")
+    var acts = payload && ((payload.actions && payload.actions.length > 0) || payload.reply)
+    if (acts && payload.image) return heights[2]
+    if (acts) return heights[1]
+    return heights[0]
 }
 // The bulge size { width, height } of a view kind (notch.md §5–§8): toast 420 × toastHeight, OSD
 // 300 × 44, event the content width clamped to 260–360 × 36, card and result 420 × the card's
@@ -70,7 +129,17 @@ function bulgeSize(kind, payload, measured, tokens) {
     invariant(VIEW_KINDS.indexOf(kind) >= 0, "illegal view kind " + kind)
     invariant(tokens && tokens.toast && tokens.osd && tokens.event && tokens.card, "surface tokens missing")
     invariant(tokens.event.minWidth <= tokens.event.maxWidth, "event width range " + tokens.event.minWidth + ".." + tokens.event.maxWidth)
-    throw new Error("not implemented")
+    var m = measured || {}
+    switch (kind) {
+    case "toast": return { width: tokens.toast.width, height: toastHeight(payload, tokens.toast.heights) }
+    case "osd": return { width: tokens.osd.width, height: tokens.osd.height }
+    case "event": return { width: Math.max(tokens.event.minWidth, Math.min(tokens.event.maxWidth, m.width || 0)), height: tokens.event.height }
+    case "card": case "result":
+        return { width: tokens.card.width,
+                 height: (m.height || 0) + (m.pager ? tokens.card.pagerDotSize + tokens.card.padding : 0) }
+    case "mode": return { width: m.width || 0, height: m.height || 0 }
+    default: return { width: 0, height: 0 }
+    }
 }
 // The passive timers (notch.md §6–§8, rules.js limits): which entries are due now and when the
 // next one is. passive: the monitor's entries; shown: the id of the entry on screen (0 none);
@@ -82,36 +151,54 @@ function dueEntries(passive, shown, eventShownAt, pinnedSince, now, timing) {
     checkPassive(passive)
     invariant(passive.length === 0 || (timing.osdMs > 0 && timing.eventMs > 0), "passive timing " + timing.osdMs + "/" + timing.eventMs)
     invariant(pinnedSince <= 0 || timing.pinnedMs > 0, "pinned timing " + timing.pinnedMs)
-    throw new Error("not implemented")
+    var due = [], next = 0, card = false
+    function deadline(at) {
+        if (at <= now) return true
+        if (next === 0 || at < next) next = at
+        return false
+    }
+    for (var i = 0; i < passive.length; i++) {
+        var e = passive[i]
+        if (e.kind === "osd" && deadline(e.born + timing.osdMs)) due.push(e.id)
+        else if (e.kind === "event" && e.id === shown && eventShownAt > 0 && deadline(eventShownAt + timing.eventMs)) due.push(e.id)
+    }
+    if (pinnedSince > 0 && deadline(pinnedSince + timing.pinnedMs)) card = true
+    return { due: due, card: card, next: next }
 }
 // Countdowns (notch.md §6: pause on hover and while covered, resume with ≥ resumeMin left).
 function countdownStart(total, now) {
     invariant(total >= 0, "negative countdown " + total)
-    throw new Error("not implemented")
+    return { total: total, remaining: total, running: total > 0, since: now }
 }
 function countdownPause(c, now) {
     checkCountdown(c)
-    throw new Error("not implemented")
+    if (!c.running) return c
+    return { total: c.total, remaining: c.remaining - (now - c.since), running: false, since: now }
 }
 function countdownResume(c, now, resumeMin) {
     checkCountdown(c)
     invariant(resumeMin >= 0, "negative resume minimum " + resumeMin)
-    throw new Error("not implemented")
+    if (c.running || c.total <= 0) return c
+    return { total: c.total, remaining: Math.max(c.remaining, resumeMin), running: true, since: now }
 }
 function countdownLeft(c, now) {
     checkCountdown(c)
-    throw new Error("not implemented")
+    if (c.total <= 0) return Infinity
+    return c.running ? c.remaining - (now - c.since) : c.remaining
 }
 // The pager's next activity from `current` among the live ids (Tab, ←/→).
 function pagerStep(ids, current, delta) {
     invariant(unique(ids), "pager ids twice: " + ids)
     invariant(delta === 1 || delta === -1, "pager delta " + delta)
-    throw new Error("not implemented")
+    if (ids.length === 0) return ""
+    var i = ids.indexOf(current)
+    if (i < 0) return ids[0]
+    return ids[((i + delta) % ids.length + ids.length) % ids.length]
 }
 // The rest clock's tooltip "Saturday, 7 November · week 45" (core/js/format.js dateLong, isoWeek).
 function longDate(date) {
     invariant(date instanceof Date && !isNaN(date.getTime()), "not a date: " + date)
-    throw new Error("not implemented")
+    return F.dateLong(date) + " · week " + F.isoWeek(date)
 }
 
 // Invariants (phase 6): states the presenter must never reach. They throw "notch invariant: …";

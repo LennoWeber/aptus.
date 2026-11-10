@@ -160,15 +160,16 @@ TestCase {
         compare(N.parse(N.serialise([b, a]), 3000, 100, 7, [2]).map(x => x.id), [2, N.ARCHIVE_ID - 1])
     }
     function test_damaged_state_file_keeps_the_rest() {
-        // an unknown hold reason is cleared, a broken record and a repeated id are dropped: the
-        // other records survive (a throw would empty the history and the next save the file)
+        // an unknown hold reason is cleared, an unknown urgency is normal, a repeated id is dropped:
+        // the other records survive (a throw would empty the history and the next save the file)
         const ok = '{"id":1,"appName":"Mail","summary":"a","urgency":1,"time":2000'
         const text = '{"version":1,"history":[' + ok + ',"held":"asleep"},' + ok + '},'
                      + '{"id":2,"appName":"Mail","summary":"b","urgency":7,"time":1000},'
                      + '{"id":3,"appName":"Mail","summary":"c","urgency":0,"time":1500,"held":"constructor"}]}'
         const back = N.parse(text, 3000, 100, 7)
-        compare(back.map(x => x.summary), ["a", "c"])
-        compare(back.map(x => x.held), ["", ""])
+        compare(back.map(x => x.summary), ["a", "c", "b"])
+        compare(back.map(x => x.held), ["", "", ""])
+        compare(back[2].urgency, 1)
     }
     function test_fallback_app_and_glyph() {
         const r = N.makeRecord({ id: 3 }, 0)

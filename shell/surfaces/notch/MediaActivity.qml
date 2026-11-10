@@ -1,6 +1,8 @@
 // The media activity: still cover in the left slot, the media card (notch.md §4–§5).
 // Owner: S3. Live while the active player plays, or paused for less than 10 minutes.
 import QtQuick
+import qs.core
+import qs.services
 import qs.components
 
 Activity {
@@ -8,29 +10,33 @@ Activity {
 
     activity: "media"
     slot: "left"
-
     // The active MprisPlayer (Media.active), or null.
-    // TODO(phase): Media.active.
-    readonly property var player: null
+    readonly property var player: Media.active
     // Paused (priority mediaPaused, cover at 40 % under ink.faint).
-    // TODO(phase): the player is not playing (Media.pausedSince > 0).
-    readonly property bool paused: false
-
-    // Middle click: play/pause (notch.md §4).
-    function middleClick(): void { throw new Error("not implemented"); }
-    // The right-click menu's own row: Hide until it changes (the Notch adds Open in Today).
-    function menuTriggered(row: var): void { throw new Error("not implemented"); }
-
-    // TODO(phase): live while the player plays, or paused for less than compactPausedHideMs, and
-    //   not Media.hidden; priority media / mediaPaused; a Timer for the paused hide.
-    // TODO(phase): compact MediaCompact, card MediaCard; menu [Hide until it changes] →
-    //   Media.hideUntilChanged.
-
-    // Found by the probe (phase 5):
+    readonly property bool paused: player !== null && !player.isPlaying
     // The paused cover hides compactPausedHideMs after the pause (one timer, no polling).
     property bool _pausedLong: false
-    // TODO(phase): Media.pausedSince.
-    readonly property real _pausedSince: 0
-    // TODO(phase): a single-shot Timer at the rest of compactPausedHideMs → _pausedLong.
-    property Timer _timer: null
+
+    live: player !== null && !Media.hidden && !(paused && _pausedLong)
+    priority: Tokens.surfaces.notch.activityPriorities[paused ? "mediaPaused" : "media"]
+    compact: Component { MediaCompact {} }
+    card: Component { MediaCard {} }
+    menu: [{ id: "hide", label: "Hide until it changes", glyph: "visibility_off" }]
+
+    // Middle click: play/pause (notch.md §4).
+    function middleClick(): void { Media.toggle(); }
+    // The right-click menu's own row: Hide until it changes (the Notch adds Open in Today).
+    function menuTriggered(row: var): void { if (row && row.id === "hide") Media.hideUntilChanged(); }
+
+    readonly property real _pausedSince: Media.pausedSince
+    on_PausedSinceChanged: {
+        _pausedLong = false;
+        if (_pausedSince > 0) {
+            _timer.interval = Math.max(0, _pausedSince + Tokens.surfaces.notch.compactPausedHideMs - Date.now());
+            _timer.restart();
+        } else _timer.stop();
+    }
+    property Timer _timer: Timer {
+        onTriggered: root._pausedLong = true
+    }
 }

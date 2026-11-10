@@ -1,8 +1,9 @@
-// An event (surfaces/notch.md §7): glyph + one line, bulge 260–360 × 36, shown 1.6 s.
 pragma ComponentBehavior: Bound
+// An event (surfaces/notch.md §7): glyph + one line, bulge 260–360 × 36, shown 1.6 s.
 import QtQuick
 import qs.core
 import qs.components
+import "js/notch.js" as NJ
 
 Item {
     id: root
@@ -11,14 +12,27 @@ Item {
     property var payload: ({})
 
     // 260–360 × 36, from the text's width.
-    // TODO(phase): notch.js bulgeSize("event", …): the row's width clamped 260–360 × 36.
-    readonly property real bulgeWidth: 0
-    readonly property real bulgeHeight: 0
-
-    // TODO(phase): glyph + one line of text (body).
-
-    // Found by the probe (phase 5):
+    readonly property var _size: NJ.bulgeSize("event", payload, { width: row.implicitWidth + 2 * Tokens.padToast }, Tokens.surfaces)
     // 260–360 × 36, from the text's width.
-    // TODO(phase): notch.js bulgeSize("event", payload, { width: the row's implicitWidth + 2 × padToast }).
-    readonly property var _size: ({ width: 0, height: 0 })
+    readonly property real bulgeWidth: _size.width
+    readonly property real bulgeHeight: _size.height
+
+    Row {
+        id: row
+        anchors.centerIn: parent
+        spacing: Tokens.s4
+        Glyph {
+            anchors.verticalCenter: parent.verticalCenter
+            visible: name !== ""
+            name: root.payload.glyph || ""
+            size: Tokens.glyphRow
+        }
+        Label {
+            anchors.verticalCenter: parent.verticalCenter
+            type: "body"
+            elide: Text.ElideRight
+            width: Math.min(implicitWidth, Tokens.surfaces.event.maxWidth - 2 * Tokens.padToast - Tokens.glyphRow - row.spacing)
+            text: root.payload.text || ""
+        }
+    }
 }

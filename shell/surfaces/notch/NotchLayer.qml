@@ -1,7 +1,7 @@
+pragma ComponentBehavior: Bound
 // One content layer inside the notch's bulge (surfaces/notch.md §10): when the notch changes from
 // one content to another the geometry retargets its spring while the old layer fades out over
 // 110 ms and the new one fades in from 60 ms. Holds a toast, OSD, event, card or mode.
-pragma ComponentBehavior: Bound
 import QtQuick
 import qs.core
 
@@ -26,23 +26,75 @@ Item {
     property bool pinned: false
 
     // The size the content wants for the bulge.
-    // TODO(phase): the content's bulgeWidth/bulgeHeight (notch.js bulgeSize).
-    readonly property real bulgeWidth: 0
-    readonly property real bulgeHeight: 0
+    readonly property real bulgeWidth: content && content.bulgeWidth !== undefined ? content.bulgeWidth : 0
+    readonly property real bulgeHeight: content && content.bulgeHeight !== undefined ? content.bulgeHeight : 0
     // The fade-out has finished (the Notch removes the layer).
-    // TODO(phase): faded out completely after leaving (morphOutMs) → Notch._layerGone.
-    readonly property bool gone: false
+    readonly property bool gone: !shown && _fade <= 0
     // The loaded content item.
-    // TODO(phase): the Loader's item.
-    readonly property Item content: null
+    readonly property var content: loader.item
 
-    // TODO(phase): a Loader by record.kind: Toast (payload, entrance = !plain), Osd, EventLine,
-    //   ActivityCard (activities, current = record.activity, pinned), result and mode: `component`
-    //   (args, monitorName; a mode's active false while leaving).
-    // TODO(phase): opacity in after morphInDelayMs (content rise 8), out in morphOutMs; `plain`
-    //   swaps in place without the rise (replaces_id, M-06 not replayed).
-
-    // Found by the probe (phase 5):
     // 0 → 1 fade (in after morphInDelayMs, out over morphOutMs) and the entrance rise.
     property real _fade: 0
+    states: State {
+        name: "in"
+        when: root.shown
+        PropertyChanges { root._fade: 1 }
+    }
+    transitions: [
+        Transition {
+            to: "in"
+            SequentialAnimation {
+                PauseAnimation { duration: root.plain || Motion.reduced ? 0 : Tokens.surfaces.notch.morphInDelayMs }
+                NumberAnimation { target: root; property: "_fade"; duration: Motion.ms("fade", false); easing.bezierCurve: Motion.enter }
+            }
+        },
+        Transition {
+            from: "in"
+            NumberAnimation { target: root; property: "_fade"; duration: Tokens.surfaces.notch.morphOutMs; easing.bezierCurve: Motion.exit }
+        }
+    ]
+    opacity: _fade
+    transform: Translate { y: root.plain || Motion.reduced || !root.shown ? 0 : Motion.contentRise * (1 - root._fade) }
+
+    Component {
+        id: toastComponent
+        Toast {
+            monitorName: root.monitorName
+            payload: root.payload
+            entrance: !root.plain
+        }
+    }
+    Component { id: osdComponent; Osd { payload: root.payload } }
+    Component { id: eventComponent; EventLine { payload: root.payload } }
+    Component {
+        id: cardComponent
+        ActivityCard {
+            monitorName: root.monitorName
+            activities: root.activities
+            current: root.record.activity || ""
+            pinned: root.pinned
+        }
+    }
+    Loader {
+        id: loader
+        anchors.fill: parent
+        sourceComponent: {
+            switch (root.record.kind) {
+            case "toast": return toastComponent;
+            case "osd": return osdComponent;
+            case "event": return eventComponent;
+            case "card": return cardComponent;
+            case "result": case "mode": return root.component;
+            default: return null;
+            }
+        }
+        onLoaded: {
+            const it = item as Item;
+            if (root.record.kind !== "result" && root.record.kind !== "mode") return;
+            if ("monitorName" in it) it.monitorName = root.monitorName;
+            if ("payload" in it) it.payload = Qt.binding(() => root.payload);
+            if ("args" in it) it.args = Qt.binding(() => root.args);
+            if ("active" in it) it.active = Qt.binding(() => root.shown);
+        }
+    }
 }

@@ -50,25 +50,78 @@ var KEEP_TAGS = ["b", "i", "a"]
 function makeRecord(src, now) {
     invariant(src && typeof src === "object", "no source")
     invariant(isFinite(now), "no time")
-    throw new Error("not implemented")
+    var actions = [], hasDefault = false
+    var list = src.actions || []
+    for (var i = 0; i < list.length; i++) {
+        var a = list[i]
+        if (!a) continue
+        var id = String(a.id === undefined ? "" : a.id)
+        if (id === "default") { hasDefault = true; continue }
+        if (id === "inline-reply") continue
+        actions.push({ id: id, text: String(a.text || id) })
+    }
+    var u = Number(src.urgency)
+    return {
+        id: Number(src.id) || 0,
+        appName: String(src.appName || "") || FALLBACK_APP,
+        appIcon: String(src.appIcon || ""),
+        desktopEntry: String(src.desktopEntry || ""),
+        summary: String(src.summary || ""),
+        body: reduceMarkup(String(src.body || "")),
+        image: String(src.image || ""),
+        urgency: u === LOW || u === CRITICAL ? u : NORMAL,
+        actions: actions,
+        hasDefault: hasDefault,
+        resident: !!src.resident,
+        reply: !!src.hasInlineReply,
+        progress: progressOf(src.hints),
+        time: now,
+        read: false,
+        live: !!src.live,
+        held: ""
+    }
 }
 // The policy decision for a record (05 §8).
 function decide(record, ctx) {
     checkRecord(record)
     checkContext(ctx)
-    // TODO(phase): checkDecision(record, result): critical is never held, and keeps priority 2
-    //   also as progress (a progress the Progress service refuses falls back to a toast).
-    throw new Error("not implemented")
+    var d = _decide(record, ctx)
+    checkDecision(record, d)
+    return d
+}
+function _decide(record, ctx) {
+    var allow = isAllowlisted(record, ctx.allowlist)
+    if (record.urgency !== CRITICAL && isMuted(record, ctx.muted, ctx.now))
+        return { show: "today", priority: 0, reason: "muted" }
+    if (record.progress >= 0 && record.progress < 100)
+        return { show: "progress", priority: record.urgency === CRITICAL ? CRITICAL_PRIORITY : 0, reason: "" }
+    if (record.urgency === CRITICAL)
+        return { show: "toast", priority: CRITICAL_PRIORITY, reason: "" }
+    if (record.urgency === LOW) {
+        if (ctx.focus) return { show: "held", priority: 0, reason: "focus" }
+        return { show: "today", priority: 0, reason: "low" }
+    }
+    if (!allow && ctx.focus) return { show: "held", priority: 0, reason: "focus" }
+    if (!allow && ctx.dnd) return { show: "held", priority: 0, reason: "dnd" }
+    if (ctx.fullscreen && ctx.overFullscreen !== "all") return { show: "held", priority: 0, reason: "fullscreen" }
+    return { show: "toast", priority: 0, reason: "" }
 }
 // The app is on notifications.allowlist (by app name or desktop entry, case-insensitive).
 function isAllowlisted(record, allowlist) {
     invariant(!allowlist || Array.isArray(allowlist), "allowlist is not a list")
-    throw new Error("not implemented")
+    var list = allowlist || []
+    var a = _lower(record.appName), d = _lower(record.desktopEntry)
+    for (var i = 0; i < list.length; i++) {
+        var x = _lower(list[i])
+        if (x !== "" && (x === a || x === d)) return true
+    }
+    return false
 }
 // The app is muted at `now`.
 function isMuted(record, muted, now) {
     invariant(!muted || typeof muted === "object", "muted is not a map")
-    throw new Error("not implemented")
+    var until = muted ? muted[record.appName] : undefined
+    return until !== undefined && until > now
 }
 // Toast timeout in ms (notch.md §6; 0 = until dismissed). setting: notifications.timeout
 // ("auto" | seconds); timing: Tokens.surfaces.toast.
@@ -76,13 +129,25 @@ function toastTimeout(record, setting, timing) {
     checkRecord(record)
     checkTiming(timing)
     invariant(setting === "auto" || Number(setting) >= 0, "toast timeout setting " + setting)
-    throw new Error("not implemented")
+    if (record.urgency === CRITICAL) return 0
+    var extra = record.actions.length > 0 || record.reply ? timing.actionsExtraMs : 0
+    if (setting !== "auto" && Number(setting) > 0) return Number(setting) * 1000 + extra
+    var chars = (record.summary + plainText(record.body)).length
+    var t = Math.min(timing.maxTimeoutMs, Math.max(timing.minTimeoutMs, timing.baseTimeoutMs + timing.perCharMs * chars))
+    return t + extra
 }
 // The toast payload of a record.
 function toastPayload(record, timeout, maxActions) {
     checkRecord(record)
     invariant(timeout >= 0 && maxActions >= 0, "toast timeout " + timeout + ", max actions " + maxActions)
-    throw new Error("not implemented")
+    var icon = record.appIcon || record.desktopEntry
+    return {
+        nid: record.id, appName: record.appName, appIcon: icon, summary: record.summary,
+        body: record.body, image: record.image, critical: record.urgency === CRITICAL,
+        actions: record.actions.slice(0, maxActions), hasDefault: record.hasDefault,
+        resident: record.resident, reply: record.reply, timeout: timeout, time: record.time,
+        stack: null, opens: "", glyph: icon ? "" : FALLBACK_GLYPH
+    }
 }
 // The stack after an arrival: { stack, joins: bool } (joins: the arrival updates the stack toast
 // instead of posting its own).
@@ -90,87 +155,183 @@ function stackStep(stack, record, passiveId, monitor, now, windowMs) {
     checkRecord(record)
     if (stack) checkStack(stack)
     invariant(passiveId >= 0 && windowMs >= 0, "stack id " + passiveId + ", window " + windowMs)
-    throw new Error("not implemented")
+    var icon = record.appIcon || record.desktopEntry
+    if (stack && stack.passiveId > 0 && stack.monitor === monitor && now - stack.last <= windowMs) {
+        var icons = stack.icons.slice(), apps = stack.apps.slice()
+        if (apps.indexOf(record.appName) < 0) { apps.unshift(record.appName); icons.unshift(icon) }
+        return { stack: { passiveId: stack.passiveId, monitor: monitor, count: stack.count + 1,
+                          icons: icons.slice(0, 3), apps: apps, last: now }, joins: true }
+    }
+    return { stack: { passiveId: passiveId, monitor: monitor, count: 1, icons: [icon], apps: [record.appName],
+                      last: now }, joins: false }
 }
 // The payload of the stack toast with its newest record.
 function stackPayload(stack, newest, timeout) {
     checkStack(stack)
     invariant(stack.count >= 2 && stack.passiveId > 0, "a stack toast for " + stack.count + " notification(s)")
     checkRecord(newest)
-    throw new Error("not implemented")
+    var p = toastPayload(newest, timeout, 0)
+    p.nid = 0
+    p.summary = stack.count + " notifications"
+    p.body = newest.summary
+    p.image = ""
+    p.hasDefault = false
+    p.resident = false
+    p.reply = false
+    p.stack = { count: stack.count, icons: stack.icons.slice(), apps: stack.apps.slice() }
+    p.opens = "today"
+    return p
 }
 // The summary toast for `count` held notifications.
 function heldPayload(count, reason, timeout) {
     invariant(count >= 1, "held summary of " + count)
     invariant(isHoldReason(reason), "unknown hold reason " + reason)
-    throw new Error("not implemented")
+    var p = systemToast(count + (count === 1 ? " notification " : " notifications ") + (HELD_WHILE[reason] || ""),
+                        "", FALLBACK_GLYPH, false, timeout)
+    p.opens = "today"
+    return p
 }
 // A toast the shell raises itself (no notification behind it: battery, urgent workspace): a
 // toast payload with nid 0, the glyph instead of the app icon, no actions.
 function systemToast(title, body, glyph, critical, timeout) {
     invariant(typeof title === "string" && title !== "", "system toast without a title")
     invariant(critical || timeout > 0, "system toast without a timeout")
-    throw new Error("not implemented")
+    return { nid: 0, appName: "", appIcon: "", summary: String(title), body: String(body || ""), image: "",
+             critical: !!critical, actions: [], hasDefault: false, resident: false, reply: false,
+             timeout: critical ? 0 : timeout, time: 0, stack: null, opens: "", glyph: glyph || FALLBACK_GLYPH }
 }
 // Body markup reduced to <b>, <i> and <a href>; everything else escaped or dropped.
 function reduceMarkup(body) {
     invariant(typeof body === "string", "body is not a string")
-    throw new Error("not implemented")
+    var out = "", open = [], last = 0, m
+    var re = /<(\/?)([a-zA-Z][a-zA-Z0-9]*)([^<>]*)>/g
+    while ((m = re.exec(body)) !== null) {
+        out += _escape(body.substring(last, m.index)).replace(/\n/g, "<br>")
+        last = re.lastIndex
+        var closing = m[1] === "/", tag = m[2].toLowerCase()
+        if (tag === "br" && !closing) { out += "<br>"; continue }
+        if (KEEP_TAGS.indexOf(tag) < 0) continue
+        if (closing) {
+            var at = open.lastIndexOf(tag)
+            if (at < 0) continue
+            while (open.length > at) out += "</" + open.pop() + ">"
+            continue
+        }
+        if (tag === "a") {
+            var h = /href\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+))/i.exec(m[3])
+            var href = h ? (h[1] !== undefined ? h[1] : h[2] !== undefined ? h[2] : h[3]) : ""
+            if (!/^(https?:|mailto:)/i.test(href)) { open.push("span"); out += "<span>"; continue }
+            out += '<a href="' + href.replace(/&(?!amp;)/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;") + '">'
+        } else out += "<" + tag + ">"
+        open.push(tag)
+    }
+    out += _escape(body.substring(last)).replace(/\n/g, "<br>")
+    while (open.length) out += "</" + open.pop() + ">"
+    return out
 }
 // The visible text of reduced markup (for the timeout's character count).
 function plainText(markup) {
     invariant(typeof markup === "string", "markup is not a string")
-    throw new Error("not implemented")
+    return String(markup).replace(/<br>/g, "\n").replace(/<[^>]*>/g, "")
+        .replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, "&")
 }
 // The progress hint (`value` 0–100) or -1.
-function progressOf(hints) { throw new Error("not implemented") }
+function progressOf(hints) {
+    if (!hints || hints.value === undefined || hints.value === null) return -1
+    var v = Number(hints.value)
+    if (!isFinite(v)) return -1
+    return Math.max(0, Math.min(100, Math.round(v)))
+}
 // History operations (new arrays; history newest first).
 function addToHistory(history, record, max, days, now) {
     checkHistory(history)
     checkRecord(record)
     invariant(max >= 1 && days >= 1, "history limits " + max + "/" + days)
-    // TODO(phase): checkHistory(result).
-    throw new Error("not implemented")
+    var out = [record]
+    for (var i = 0; i < history.length; i++) if (history[i].id !== record.id) out.push(history[i])
+    return trimHistory(out, max, days, now)
 }
 function trimHistory(history, max, days, now) {
     checkHistory(history)
     invariant(max >= 1 && days >= 1, "history limits " + max + "/" + days)
-    throw new Error("not implemented")
+    var oldest = now - days * 86400000
+    var out = []
+    for (var i = 0; i < history.length && out.length < max; i++) if (history[i].time >= oldest) out.push(history[i])
+    return out
 }
 function markRead(history, id) {
     checkHistory(history)
-    throw new Error("not implemented")
+    return history.map(function (r) { return r.id === id && !r.read ? _with(r, true) : r })
 }
 function markAllRead(history) {
     checkHistory(history)
-    throw new Error("not implemented")
+    return history.map(function (r) { return r.read ? r : _with(r, true) })
 }
 function removeRecord(history, id) {
     checkHistory(history)
-    throw new Error("not implemented")
+    return history.filter(function (r) { return r.id !== id })
 }
 // { unread: int, allowlisted: bool } for the unread dot.
 function unreadInfo(history, allowlist) {
     checkHistory(history)
-    throw new Error("not implemented")
+    var n = 0, allow = false
+    for (var i = 0; i < history.length; i++) {
+        if (history[i].read) continue
+        n++
+        if (!allow && isAllowlisted(history[i], allowlist)) allow = true
+    }
+    return { unread: n, allowlisted: allow }
 }
 // Persistence: the state file's JSON text, and the history read back (records not live).
 // keep: the ids the server still tracks at load (after a reload with keepOnReload, which P-23
 // limits to APTUS_DEV runs); their records keep their id, every other one gets ARCHIVE_ID − index.
 function serialise(history) {
     checkHistory(history)
-    throw new Error("not implemented")
+    return JSON.stringify({ version: 1, history: history.map(function (r) {
+        var o = {}
+        for (var i = 0; i < FIELDS.length; i++) o[FIELDS[i]] = r[FIELDS[i]]
+        return o
+    }) }, null, 1)
 }
 function parse(text, now, max, days, keep) {
     invariant(typeof text === "string", "state text is not a string")
     invariant(max >= 1 && days >= 1, "history limits " + max + "/" + days)
     invariant(!keep || Array.isArray(keep), "kept ids are not a list")
-    // TODO(phase): the file is data: `held` clamped to a hold reason (else ""), a record failing
-    //   checkRecord or a second one with an id already read is dropped, never thrown (a throw
-    //   would leave the history empty and the next save would overwrite the file); ids re-keyed
-    //   except `keep`; checkHistory(result).
-    throw new Error("not implemented")
+    var data
+    try { data = JSON.parse(text) } catch (e) { return [] }
+    var list = data && Array.isArray(data.history) ? data.history : []
+    var out = [], seen = {}
+    for (var i = 0; i < list.length; i++) {
+        var r = list[i]
+        if (!r || typeof r.id !== "number" || typeof r.time !== "number" || seen[r.id]) continue
+        seen[r.id] = true
+        var c = makeRecord({ id: r.id, appName: r.appName, appIcon: r.appIcon, desktopEntry: r.desktopEntry,
+                             summary: r.summary, body: "", image: r.image, urgency: r.urgency, actions: [] }, r.time)
+        c.body = reduceMarkup(String(r.body || ""))      // reduced when stored; again for safety
+        c.read = !!r.read
+        c.held = isHoldReason(r.held) ? r.held : ""
+        c.progress = -1
+        out.push(c)
+    }
+    out.sort(function (a, b) { return b.time - a.time })
+    var kept = keep || [], valid = []
+    for (var j = 0; j < out.length; j++) {
+        if (kept.indexOf(out[j].id) < 0) out[j].id = ARCHIVE_ID - j      // server ids restart with the shell
+        try { checkRecord(out[j]) } catch (e) { continue }               // file data: dropped, never thrown
+        valid.push(out[j])
+    }
+    var result = trimHistory(valid, max, days, now)
+    checkHistory(result)
+    return result
 }
+
+function _lower(s) { return String(s || "").toLowerCase() }
+function _escape(text) {
+    return text.replace(/&(?!(?:[a-zA-Z]+|#[0-9]+|#x[0-9a-fA-F]+);)/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+}
+function _with(r, read) { var c = {}; for (var k in r) c[k] = r[k]; c.read = read; return c }
+var FIELDS = ["id", "appName", "appIcon", "desktopEntry", "summary", "body", "image", "urgency", "actions",
+              "hasDefault", "resident", "reply", "progress", "time", "read", "held"]
 
 // Invariants (phase 6): what the policy and the history must never hold. They throw
 // "notifications invariant: …".

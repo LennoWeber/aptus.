@@ -27,43 +27,85 @@ var GLYPHS = { muted: "volume_off", mic: "mic", micOff: "mic_off", bright: "ligh
 // The battery's status glyph (bar.md §6: warn ≤ 15 %, crit ≤ 7 %, bolt while charging).
 function batteryGlyph(percent, charging, warnAt, critAt) {
     invariant(critAt > 0 && critAt < warnAt && warnAt <= 100, "battery thresholds " + critAt + "/" + warnAt)
-    throw new Error("not implemented")
+    var p = Math.max(0, Math.min(100, Number(percent) || 0))
+    var i = p >= 97 ? BATTERY.length - 1 : Math.min(BATTERY.length - 2, Math.floor(p / (100 / (BATTERY.length - 1))))
+    var ink = charging ? "main" : p <= critAt ? "crit" : p <= warnAt ? "warn" : "main"
+    return { glyph: BATTERY[i], ink: ink, overlay: charging ? GLYPHS.bolt : "" }
 }
 // The volume glyph by level (0..1.5) or muted.
-function volumeGlyph(level, muted) { throw new Error("not implemented") }
+function volumeGlyph(level, muted) {
+    if (muted) return { glyph: GLYPHS.muted, ink: "crit", overlay: "" }
+    var l = Number(level) || 0
+    return { glyph: l <= 0 ? VOLUME[0] : l < 0.5 ? VOLUME[1] : VOLUME[2], ink: "main", overlay: "" }
+}
 // The network's status glyph: Wi-Fi strength (4 steps), lan, or wifi_off (faint) offline.
-function networkGlyph(kind, online, strength) { throw new Error("not implemented") }
+function networkGlyph(kind, online, strength) {
+    if (!online || kind === "none") return { glyph: GLYPHS.wifiOff, ink: "faint", overlay: "" }
+    if (kind === "ethernet") return { glyph: GLYPHS.lan, ink: "main", overlay: "" }
+    var s = Math.max(0, Math.min(100, Number(strength) || 0))
+    return { glyph: WIFI[Math.min(WIFI.length - 1, Math.floor(s / 25))], ink: "main", overlay: "" }
+}
 // The brightness glyph by level (0..1).
-function brightnessGlyph(level) { throw new Error("not implemented") }
+function brightnessGlyph(level) {
+    return { glyph: (Number(level) || 0) < 0.3 ? GLYPHS.brightLow : GLYPHS.bright, ink: "main", overlay: "" }
+}
 // One key step on a percent scale: the next multiple of `stepPercent` in `direction`, clamped.
 function step(percent, direction, stepPercent, min, max) {
     invariant(direction === 1 || direction === -1, "step direction " + direction)
     invariant(stepPercent > 0 && min < max, "step " + stepPercent + " in " + min + ".." + max)
-    throw new Error("not implemented")
+    var p = Math.round(Number(percent) * 1000) / 1000
+    var s = Math.max(1, stepPercent)
+    var next = direction > 0 ? (Math.floor(p / s + 1e-6) + 1) * s : (Math.ceil(p / s - 1e-6) - 1) * s
+    return Math.max(min, Math.min(max, next))
 }
 // OSD payloads (notch.md §8). A level is the hardware's: clamped into 0..max (NaN is 0), never
 // refused (another app can set the sink above the maximum).
 // max: osd.volumeMax, or osd.volumeBoostMax with audio.allowBoost.
 function volumeOsd(level, muted, max, device) {
     invariant(max >= 1, "volume maximum " + max)
-    // TODO(phase): checkOsd(result), as for every OSD payload below; the level clamped.
-    throw new Error("not implemented")
+    var g = volumeGlyph(level, muted)
+    var v = _clamp(Math.round((Number(level) || 0) * 100), 0, max)
+    var p = { kind: "volume", glyph: g.glyph, ink: g.ink, level: muted ? 0 : v, max: max,
+              dots: -1, steps: 0, value: muted ? "Muted" : String(v), device: device || "" }
+    checkOsd(p)
+    return p
 }
-function micOsd(muted, device) { throw new Error("not implemented") }
-function brightnessOsd(level) { throw new Error("not implemented") }
+function micOsd(muted, device) {
+    return { kind: "mic", glyph: muted ? GLYPHS.micOff : GLYPHS.mic, ink: muted ? "crit" : "main", level: -1,
+             max: 0, dots: -1, steps: 0, value: muted ? "Muted" : "On", device: device || "" }
+}
+function brightnessOsd(level) {
+    var v = _clamp(Math.round((Number(level) || 0) * 100), 0, 100)
+    var p = { kind: "brightness", glyph: brightnessGlyph(level).glyph, ink: "main", level: v, max: 100,
+              dots: -1, steps: 0, value: String(v), device: "" }
+    checkOsd(p)
+    return p
+}
 function kbdOsd(level, max) {
     invariant(max >= 1, "keyboard light maximum " + max)
-    throw new Error("not implemented")
+    var p = { kind: "kbd", glyph: GLYPHS.kbd, ink: "main", level: -1, max: 0,
+              dots: _clamp(Math.round(Number(level) || 0), 0, max), steps: max + 1, value: "", device: "" }
+    checkOsd(p)
+    return p
 }
-function capsOsd(on) { throw new Error("not implemented") }
-function layoutOsd(name) { throw new Error("not implemented") }
+function capsOsd(on) {
+    return { kind: "caps", glyph: GLYPHS.caps, ink: "main", level: -1, max: 0, dots: -1, steps: 0,
+             value: on ? "Caps Lock on" : "Caps Lock off", device: "" }
+}
+function layoutOsd(name) {
+    return { kind: "layout", glyph: GLYPHS.layout, ink: "main", level: -1, max: 0, dots: -1, steps: 0,
+             value: String(name || ""), device: "" }
+}
 // The OSD kinds the Deck has a slider for (volume, mic, brightness): while the Deck is open on
 // the monitor its slider moves instead and no OSD is posted (notch.md §8). One place for the rule;
 // Audio._osd and Brightness._osd ask it.
 function deckReplaces(kind) {
     invariant(OSD_KINDS.indexOf(kind) >= 0, "unknown OSD kind " + kind)
-    throw new Error("not implemented")
+    return kind === "volume" || kind === "mic" || kind === "brightness"
 }
+
+// A number into lo..hi.
+function _clamp(x, lo, hi) { return Math.max(lo, Math.min(hi, x)) }
 
 // Invariants (phase 6): they throw "levels invariant: …" (thresholds, steps and OSD kinds come
 // from tokens and the services, not from the hardware: a level is clamped, never refused).
