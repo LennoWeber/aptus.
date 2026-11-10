@@ -15,6 +15,8 @@ Item {
     property string disabledReason: ""
     // Show the focus ring (set by the surface after keyboard navigation).
     property bool keyboardFocus: false
+    // A round button (the media card's 36 px play/pause, notch.md §5): radius half the height.
+    property bool round: false
     signal clicked()
 
     readonly property bool _disabled: disabledReason !== ""
@@ -59,7 +61,7 @@ Item {
 
         Rectangle {
             anchors.fill: parent
-            radius: Tokens.button.radius
+            radius: root.round ? height / 2 : Tokens.button.radius
             color: root._fill
 
             Behavior on color {
@@ -97,7 +99,7 @@ Item {
     }
     FocusRing {
         target: root
-        targetRadius: Tokens.button.radius
+        targetRadius: root.round ? root.height / 2 : Tokens.button.radius
         shown: root.keyboardFocus
     }
     Tooltip {
