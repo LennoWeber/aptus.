@@ -203,6 +203,20 @@ def test_coverage(p, manifest) -> None:
     assert cov.uncovered == ["mystery"]
 
 
+NOCTALIA_BUILTIN = Path("/usr/share/noctalia/assets/templates/builtin.toml")
+UNCOVERED = ["emacs", "helix", "wezterm"]     # reported by coverage; not installed here
+
+
+@pytest.mark.skipif(not NOCTALIA_BUILTIN.is_file(), reason="Noctalia is not installed")
+def test_every_installed_noctalia_template_is_covered_or_reported(manifest) -> None:
+    """Every built-in template of the installed Noctalia (a read-only system file) is covered,
+    kept, inert or in the reported list: a new Noctalia template shows up here."""
+    import tomllib
+    ids = sorted(tomllib.loads(NOCTALIA_BUILTIN.read_text())["catalog"])
+    cov = targets.coverage(manifest, noctalia.Enabled(builtin=ids), {})
+    assert cov.uncovered == UNCOVERED
+
+
 # --- the template language --------------------------------------------------------------------
 
 @pytest.mark.parametrize("filt, arg, out", [
