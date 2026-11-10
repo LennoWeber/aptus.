@@ -1083,3 +1083,47 @@ no Keyboard service), 07 §6 (Brightness: `APTUS_SYSFS`, re-read after own write
 bar.md §8 (`activespecialv2`; camera = a Video/Source with an active PipeWire link).
 
 Checked after the fixes: `tests/lint.sh` 146 files, 0 warnings.
+
+### Phase 5 · probe (2026-11-09/10)
+
+**What was done.** The whole stage was implemented once on the throwaway branch `s3-probe`
+(3fc86e6, kept as the reference for phase 7): the JS logic, all eleven services, every bar and
+notch component, the Frame change, the MonitorShell and `shell.qml` wiring, the fake MPRIS player.
+It ran in the nested session (one 931×1002 output plus a headless 1920×1080 one), driven over
+`hyprctl -i`, `notify-send`/`gdbus` inside the session, the fake player and `grim`.
+
+**How it was checked.** qmllint 0 warnings on the probe; a JS smoke test; screenshots of rest,
+toast with actions, critical toast and OSD over a fullscreen window, event, compact media cover,
+a 1080p bar with title, pill icons and date; `pw-dump` (read only) for PipeWire clients; per-thread
+`/proc` counters for the idle budget; P-17 and P-20 (design/probes.md).
+
+**Result.** Works end to end: notifications on the nested bus become toasts (markup, buttons,
+stack, held, critical without timeout, sender close), keys step the test double and show the OSD
+(the real volume is untouched), `media-toggle` reaches the fake player (`Pause` logged), "Nothing to
+play" without a player, the strip, title, tray and status cluster draw, the date hides below
+1280 px. No PipeWire client from the test shell. P-17 pass (axes at 60 fps), P-20 pass (no doctor
+check needed).
+
+**Budgets measured (07 §12, nested, two outputs):** CPU 0.20 % over 60 s at rest; main thread
+1.5 wakeups/s (all threads 5–12/s, render and Wayland threads included); RSS 268–269 MB, over the
+260 MB budget. The baseline against the phase-4 stubs was interrupted by a reboot; phase 7 measures
+it to see what S3 adds.
+
+**Gaps found, by phase** (filled in phase 7 from the probe code; none changes the design):
+
+| Phase | Gap | Resolution |
+|---|---|---|
+| 2 | Notch: `_widths` (compact widths for `assignSlots`), `_pinnedSince`, `_currentLayer`/`_currentContent`, `_bulgeW`/`_bulgeH`/`_cove`, `_barNow`, a `ListModel` of layers (a Repeater over a JS array recreates its delegates) | added |
+| 2 | services: Hypr `_workspaceEvents` + one coalescing rebuild timer + an Instantiator on `lastIpcObjectChanged`; Media `trackKey`; Brightness `_queue` (one brightnessctl at a time, newest value wins), `_scanned`; Network/Bt `_started` (no event for the state at start); Audio `_b` (the backend item, untyped); Bt `_bt`/`_adapter` (qmllint has no Bluetooth types) | added |
+| 2 | bar: WorkspacePill `fullWidth`/`numberWidth` (the strip's collapse measures every pill at every level), WorkspaceStrip `_trailTo`/`_trailIsLeft` (M-02 trailing edge) | added |
+| 3 | Notch `_noteWidth`, `_pickCurrent`, `_entry(id)`; ActivityCard `_step`; Notifications `_setToast`, `_closeToast`, `_drop`, `_monitorOf`, `_alive` (a toast entry can vanish through `rules.expire`) | added |
+| 4 | `_slots` ↔ slot width formed a binding loop | width notes deferred with `Qt.callLater` |
+| 4 | layer delegates anchored to a parent that is null while they are removed | x from the bulge width |
+| 4 | Frame's whole-frame opacity took the notch body away under a fullscreen window (content floated without a body) | the frame fades out while a bodies-only copy fades in; the notch's bulge casts a shadow while hidden (no shared change) |
+| 4 | a toast with buttons overflowed with two body lines | one body line when buttons show (the 104/132 heights fit one) |
+| 4 | the critical warning glyph hid behind the fallback bell | shown for every critical notification (`nid` ≠ 0); system toasts keep their own glyph |
+| 4 | surfaces lacked `import qs.services`; Network's `_wifi` property clashed with `_wifiChanged`; `Process.onExited` arrow parameters fail qmllint | import added; `_wifiDevice`; `onRunningChanged` |
+| 4 | the media card's play/pause is an IconButton; notch.md §5 wants the 36 px round primary button | phase 7: a primary round button of `card.mediaPrimaryButtonSize` |
+| 4 | image-data images (`image://qsimage`) cannot be copied to the cache | the toast shows the live image; the history keeps no image for them (today.md §6 note in phase 7) |
+| 4 | tray submenus come from a nested `QsMenuOpener` read when the menu opens; DBusMenu may load children lazily | phase 7: checked with a real tray item; else the row opens the item's own menu |
+| — | not probed yet: Caps Lock bind, a real tray item, output removal with surfaces open, the hot edge push, brightness on the fake sysfs (needs the nested.py change) | phase 7 |
