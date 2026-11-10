@@ -247,8 +247,8 @@ row       = 18
 noctalia  = ["zen-browser"]
 mechanism = "lease"
 files     = [
-  { template = "zen-chrome/zen-userChrome.css", out = "zen-chrome/zen-userChrome.css", slot = "~/.cache/noctalia/zen-browser/zen-userChrome.css" },
-  { template = "zen-chrome/zen-userContent.css", out = "zen-chrome/zen-userContent.css", slot = "~/.cache/noctalia/zen-browser/zen-userContent.css" },
+  { template = "zen-chrome/zen-userChrome.css", out = "zen-chrome/zen-userChrome.css", name = "userChrome", slot = "~/.cache/noctalia/zen-browser/zen-userChrome.css" },
+  { template = "zen-chrome/zen-userContent.css", out = "zen-chrome/zen-userContent.css", name = "userContent", slot = "~/.cache/noctalia/zen-browser/zen-userContent.css" },
 ]
 when      = "exists:~/.cache/noctalia/zen-browser"
 reload    = "none"

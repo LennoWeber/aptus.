@@ -120,6 +120,8 @@ def test_real_manifest_loads(manifest) -> None:
     ('[[target]]\nid = "a"\nmechanism = "lease"\nkind = "ini-sections"\ntemplate = "a/t"\nout = "a/t"\nslot = "~/x"\n', "without sections"),
     ('[[target]]\nid = "a"\nmechanism = "bake"\ntemplate = "a/t"\nout = "a/t"\nslot = "~/x"\n', "bake:"),
     ('[[target]]\nid = "a"\nmechanism = "never"\nwhen = "sometimes"\n', "when"),
+    ('[[target]]\nid = "a"\nmechanism = "lease"\nfiles = [{ template = "a/t", out = "a/t", slot = "~/x" }, '
+     '{ template = "a/t", out = "a/u", slot = "~/y" }]\n', "share a name"),
 ])
 def test_bad_manifest_refused(tmp_path, text, why) -> None:
     with pytest.raises(ManifestError, match=why):

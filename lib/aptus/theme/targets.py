@@ -137,6 +137,9 @@ def _check_target(t: Target, templates: Path, ids: set[str]) -> None:
             raise ManifestError(f"{t.id}: template {f.template} does not exist")
         if os.path.isabs(f.out) or ".." in Path(f.out).parts:
             raise ManifestError(f"{t.id}: out {f.out!r} must stay inside the generation")
+    names = [f.name for f in t.files if f.slot]
+    if len(set(names)) < len(names):
+        raise ManifestError(f"{t.id}: two slots share a name: give each file its own `name`")
     for key, needed in t.requires:
         if needed not in ids or key not in dict(t.dconf):
             raise ManifestError(f"{t.id}: requires {key} = {needed} names no key or target")
