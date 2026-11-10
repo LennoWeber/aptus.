@@ -237,10 +237,15 @@ def stop(paths: Paths) -> int:
 
 
 def main(argv: Sequence[str]) -> int:
+    p = get()
+    try:                                  # before the logs: under test they go to $HOME
+        require_safe_home(p)
+    except UnsafeHome as e:
+        print(f"aptus-session: {e}", file=sys.stderr)
+        return 3
     log = setup("session")
     setup("lease", "aptus-session")
     setup("theme", "aptus-session")
-    p = get()
     if list(argv) == ["stop"]:
         return stop(p)
     if list(argv) != ["start"]:

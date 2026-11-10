@@ -206,18 +206,22 @@ def run(paths: Paths, pid: int, signature: str) -> int:
 def main(argv: Sequence[str]) -> int:
     """aptus-guard <hyprland-pid> <signature>; refuses an unsafe HOME and the real session's
     signature under test."""
-    logger = log.setup("guard")
-    log.setup("lease", "aptus-guard")
-    log.setup("theme", "aptus-guard")
     args = list(argv)
     if len(args) != 2 or not args[0].isdigit() or not args[1]:
         print("usage: aptus-guard <hyprland-pid> <signature>", file=sys.stderr)
         return 2
     paths = paths_mod.get()
-    try:
+    try:                                  # before the logs: under test they go to $HOME
         paths_mod.require_safe_home(paths)
+    except paths_mod.UnsafeHome as e:
+        print(f"aptus-guard: refusing: {e}", file=sys.stderr)
+        return 3
+    logger = log.setup("guard")
+    log.setup("lease", "aptus-guard")
+    log.setup("theme", "aptus-guard")
+    try:
         hypr.check_allowed(args[1])
-    except (paths_mod.UnsafeHome, hypr.HyprError) as e:
+    except hypr.HyprError as e:
         logger.error("refusing: %s", e)
         return 3
     try:

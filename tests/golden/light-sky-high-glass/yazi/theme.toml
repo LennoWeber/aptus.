@@ -1,0 +1,5 @@
+# aptus: used only when ~/.config/yazi has no theme.toml; selects the flavor whose files aptus
+# paints in this mirror (YAZI_CONFIG_HOME, Hyprland only).
+[flavor]
+dark = "noctalia"
+light = "noctalia"

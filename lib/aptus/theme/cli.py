@@ -96,15 +96,15 @@ def cmd_targets(paths: Paths, as_json: bool) -> int:
 
 
 def main(argv: Sequence[str]) -> int:
-    logger = log.setup("theme")
-    log.setup("lease", "aptus-theme")
     args = parser().parse_args(list(argv))
     paths = paths_mod.get()
-    try:
+    try:                                  # before the logs: under test they go to $HOME
         paths_mod.require_safe_home(paths)
     except UnsafeHome as e:
         print(f"aptus-theme: {e}", file=sys.stderr)
         return 3
+    logger = log.setup("theme")
+    log.setup("lease", "aptus-theme")
     try:
         if args.command == "targets":
             return cmd_targets(paths, args.json)

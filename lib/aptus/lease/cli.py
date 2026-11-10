@@ -132,15 +132,15 @@ def cmd_status(paths: Paths, as_json: bool) -> int:
 
 
 def main(argv: Sequence[str]) -> int:
-    logger = log.setup("lease")
-    log.setup("theme", "aptus-lease")
     args = parser().parse_args(list(argv))
     paths = paths_mod.get()
-    try:
+    try:                                  # before the logs: under test they go to $HOME
         paths_mod.require_safe_home(paths)
     except paths_mod.UnsafeHome as e:
         print(f"aptus-lease: {e}", file=sys.stderr)
         return 3
+    logger = log.setup("lease")
+    log.setup("theme", "aptus-lease")
     try:
         if args.command == "take":
             return cmd_take(paths)
