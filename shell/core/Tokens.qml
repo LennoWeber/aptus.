@@ -12,10 +12,37 @@ import "js/sun.js" as Sun
 Singleton {
     id: root
 
-    // TODO(S2): watch Paths.state + "/theme/resolved.json" (FileView, watchChanges; a stable file
-    //   written by rename after each render: a swapped `current` symlink is not noticed, phase-5
-    //   probe) and apply() its parsed content: equal resolutions are a no-op, so the shell's own
-    //   renders do not crossfade twice (07 §7).
+    // A render outside the shell (aptus-theme apply from a terminal) shows here: theme/resolved.json
+    // is a stable file replaced by rename after each render (a swapped `current` symlink is not
+    // noticed, phase-5 probe). Only changes count, not the first load, and none while the shell's
+    // own render is pending (set by the Theme service): the file then holds an older request.
+    // Equal resolutions are a no-op, so the shell's own renders do not crossfade twice (07 §7).
+    property bool ownRenderBusy: false
+    property bool _resolvedSeen: false
+    function _external(text: string): void {
+        const first = !_resolvedSeen;
+        _resolvedSeen = true;
+        if (first || ownRenderBusy) return;
+        let r = null;
+        try { r = JSON.parse(text); } catch (e) { Log.warn("tokens", "resolved.json: " + e); return; }
+        if (_r && _canon(_r) === _canon(r)) return;
+        apply(r);
+    }
+    // JSON with sorted keys: Python and resolve.js may order keys differently.
+    function _canon(v: var): string {
+        if (Array.isArray(v)) return "[" + v.map(x => _canon(x)).join(",") + "]";
+        if (v !== null && typeof v === "object")
+            return "{" + Object.keys(v).sort().map(k => JSON.stringify(k) + ":" + _canon(v[k])).join(",") + "}";
+        return JSON.stringify(v);
+    }
+    FileView {
+        path: Paths.state + "/theme/resolved.json"
+        watchChanges: true
+        printErrors: false
+        onFileChanged: reload()
+        onLoaded: root._external(text())
+        onLoadFailed: root._resolvedSeen = true
+    }
 
     // The parsed theme/tokens.json.
     property var raw: ({})
