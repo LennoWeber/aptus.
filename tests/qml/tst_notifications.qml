@@ -107,6 +107,22 @@ TestCase {
         compare(record(7).image, "");
     }
 
+    // Found by the e2e test: Quickshell hands an image-path hint that is no file:// URL (a plain
+    // path or an icon name) as image://icon/<hint>; a plain absolute path is still a file to copy.
+    function test_a_plain_image_path_hint_is_copied() {
+        notifications._arrive(live(9, { image: "image://icon//tmp/sender/plain.png" }));
+        compare(notifications._copyJobs.length, 1);
+        compare(notifications._copyJobs[0].source, "/tmp/sender/plain.png");
+        finish(notifications._copyJobs[0], "ok\n5 6\n" + notifications._copyJobs[0].dst + "\n");
+        verify(record(9).image.indexOf(paths.notifCache + "/9-") === 0);
+        // an icon name and image-data are no file
+        notifications._arrive(live(12, { image: "image://icon/dialog-information" }));
+        notifications._arrive(live(13, { image: "image://qsimage/13/0" }));
+        compare(notifications._copyJobs.length, 0);
+        compare(record(12).image, "");
+        compare(record(13).image, "");
+    }
+
     function test_a_replace_reuses_the_copy() {
         notifications._arrive(live(8, { image: "/tmp/sender/a.png" }));
         const first = notifications._copyJobs[0];

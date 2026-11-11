@@ -194,10 +194,13 @@ function heldReason(counts) {
     }
     return best || "dnd"
 }
-// The local path of a notification's image ("" for none, image-data (image://), a relative path or
-// a file:// URL that does not decode: a sender's malformed escape is no image, never a throw).
+// The local path of a notification's image ("" for none, image-data (image://), an icon name, a
+// relative path or a file:// URL that does not decode: a sender's malformed escape is no image,
+// never a throw). Found by the e2e test: Quickshell hands an image-path hint that is no file:// URL
+// as image://icon/<hint>, so a plain absolute path arrives as image://icon//path.
 function imagePath(image) {
     var src = String(image || "")
+    if (src.indexOf("image://icon/") === 0) src = src.substring(13)
     if (src === "" || src.indexOf("image://") === 0) return ""
     var path = src
     if (src.indexOf("file://") === 0) {
