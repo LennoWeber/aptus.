@@ -104,7 +104,7 @@ ever needed, is imported only with a namespace (`import QtQuick.Controls as QQC`
 | 5 | recover (`aptus.lease.ops.recover`, in-process) | 50 | log, continue |
 | 55 | render (skipped when the input hash is unchanged: the resolve context, inputs, manifest, templates) | 300 (cold) / 10 | keep the last good generation |
 | 60–360 | `systemd-run` the guard (then `is-active`) | 60 | no lease: scope-only, the notch says the guard failed |
-| ≤ 420 | take (preflight: other sessions, Noctalia running) | 150 | scope-only mode |
+| ≤ 420 | the Own targets a leased key requires (`aptus-icons-*`, built only for a new generation: 08 §6), then take (preflight: other sessions, Noctalia running) | 150 | a missing Own target: its key is recorded, not written; take fails: scope-only mode |
 | ≤ 510 | `systemctl --user import-environment …` (lease only) | 30 | log |
 | ≤ 540 | scope mirrors, Own files and reload hooks of the generation; later stages: the guard's bound units | 60 | log, per target |
 | ≤ 600 | `exec aptus-supervise` → `qs -p shell` | — | — |
