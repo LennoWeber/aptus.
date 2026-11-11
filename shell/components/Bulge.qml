@@ -17,6 +17,10 @@ Shape {
     property real innerRadius: 0
     // The bulges to cut in.
     property list<BulgeSpec> bulges
+    // Or the bulges already normalised by the caller (bulge.js normalise, the shown ones; only
+    // those with a shadow for bodiesOnly), so several Bulges share one normalise per change;
+    // null: normalise `bulges` here.
+    property var shape: null
     // Draw only the bulge bodies (shadow source) instead of the frame band.
     property bool bodiesOnly: false
     property color colour
@@ -38,8 +42,9 @@ Shape {
         }
         return out;
     }
-    readonly property string _path: bodiesOnly ? B.bodiesPath(frameWidth, edge, barHeight, _specs)
-                                               : B.framePath(frameWidth, frameHeight, edge, barHeight, innerRadius, _specs)
+    readonly property var _shape: shape || B.normalise(_specs, frameWidth, edge)
+    readonly property string _path: bodiesOnly ? B.bodiesPathOf(frameWidth, edge, barHeight, _shape)
+                                               : B.framePathOf(frameWidth, frameHeight, edge, barHeight, innerRadius, _shape)
 
     ShapePath {
         fillColor: root.colour
