@@ -1,6 +1,6 @@
 """Everything the lease, the guard and the theme hooks do outside their own files: external tools
-(dconf, systemctl, systemd-run, loginctl, dbus-send, tmux, nvim, pywalfox, spicetify, bat) and
-signals to processes.
+(dconf, systemctl, systemd-run, loginctl, dbus-send, tmux, nvim, pywalfox, spicetify, bat, and
+`gsettings get` for reduced motion) and signals to processes.
 
 Under APTUS_TEST=1 a tool comes only from $HOME/.aptus-test/bin (a fake that records its calls);
 without a fake the call is skipped and reported as skipped, never run for real. Signals go only to
@@ -39,7 +39,7 @@ class Proc:
 
 # Every external tool the lease, the guard and the hooks may run (a fake under test).
 TOOLS = ("dconf", "systemctl", "systemd-run", "loginctl", "dbus-send", "tmux", "nvim",
-         "pywalfox", "spicetify", "bat")
+         "pywalfox", "spicetify", "bat", "gsettings")
 TIMEOUT = 3.0                  # seconds, for every tool call (08 §6 hook timeout)
 
 _log = logging.getLogger("aptus.lease.system")

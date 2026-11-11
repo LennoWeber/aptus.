@@ -15,6 +15,7 @@ from aptus import paths as paths_mod
 from aptus.lease import guard, journal, ops
 from aptus.lease.journal import SlotKind
 from aptus.lease.slots import SlotSpec
+from aptus.theme import hooks
 
 
 @pytest.fixture
@@ -73,12 +74,13 @@ def test_unset_only_aptus_values(p) -> None:
     assert guard.unset_environment(p) == []
 
 
-def take(p, hypr) -> None:
+def take(p, hypr, reload: str = "none") -> None:
     fakes.one_session(p.home)
     f = p.config_home / "gtk-3.0/noctalia.css"
     f.parent.mkdir(parents=True)
     f.write_text("noctalia\n")
-    spec = SlotSpec(id="gtk3.artifact", kind=SlotKind.FILE, target="gtk3", path=f, content=b"aptus\n")
+    spec = SlotSpec(id="gtk3.artifact", kind=SlotKind.FILE, target="gtk3", path=f, content=b"aptus\n",
+                    reload=reload)
     assert ops.take(p, hypr.env, [spec], ops.owner(p, hypr.env), 1).held
 
 
@@ -149,6 +151,29 @@ def test_give_back_unsets_first_and_retries_a_release_that_raised(p, hypr, monke
     assert guard.give_back(p, hypr.pid, hypr.signature) == guard.GuardState.RELEASED
     assert calls[0] == {"XCURSOR_SIZE": "24"}            # unset before the first attempt
     assert len(calls) == 2 and journal.load(p) is None
+
+
+def test_a_failure_after_the_release_still_runs_the_hooks(p, hypr, monkeypatch) -> None:
+    """Wave-2 review 6: a step after ops.release that raises (here the environment unset) does not
+    retry the release, which would find no journal and skip the hooks: the release ran once and
+    its hooks ran with the journal's reloads."""
+    take(p, hypr, reload="builtin:tmux")
+    aptus_env(p)
+    monkeypatch.setattr(guard, "BACKOFF", 0)
+    real_unset, real_release = guard.unset_environment, guard.release_if_ours
+    unsets, releases, reloads = [], [], []
+
+    def unset(paths):
+        unsets.append(1)
+        if len(unsets) == 2:                              # the one after the release
+            raise OSError("systemctl hung up")
+        return real_unset(paths)
+    monkeypatch.setattr(guard, "unset_environment", unset)
+    monkeypatch.setattr(guard, "release_if_ours", lambda *a: releases.append(1) or real_release(*a))
+    monkeypatch.setattr(hooks, "run_reloads", lambda paths, r, sig: reloads.append(dict(r)) or [])
+    assert guard.give_back(p, hypr.pid, hypr.signature) == guard.GuardState.RELEASED
+    assert len(releases) == 1 and journal.load(p) is None
+    assert reloads == [{"gtk3": "builtin:tmux"}]
 
 
 def test_give_back_gives_up_after_its_retries(p, hypr, monkeypatch) -> None:

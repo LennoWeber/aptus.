@@ -6,9 +6,7 @@ point checks `paths.require_safe_home` (through `lock`).
 """
 from __future__ import annotations
 
-import fcntl
 import logging
-import os
 import time
 from collections.abc import Iterator, Mapping, Sequence
 from contextlib import contextmanager
@@ -17,7 +15,7 @@ from pathlib import Path
 
 from .. import atomic, hypr
 from ..paths import Paths, require_safe_home
-from . import invariants, journal, kinds, liveness, preflight, system
+from . import invariants, journal, kinds, liveness, locks, preflight, system
 from .journal import Journal, JournalError, Owner, SlotKind, SlotRecord, SlotStatus, State
 from .preflight import Preflight
 from .slots import SlotSpec
@@ -41,6 +39,7 @@ class TakeReport:
 class UpdateReport:
     generation: int = 0
     written: list[str] = field(default_factory=list)
+    unchanged: list[str] = field(default_factory=list)   # carried this paint already: not written
     failed: dict[str, str] = field(default_factory=dict)  # slot id → why
 
 
@@ -68,42 +67,28 @@ class Status:
 LOCK_TIMEOUT = 10.0            # seconds to wait for the flock before giving up (LeaseError)
 
 _log = logging.getLogger("aptus.lease")
-_held: dict[str, list[int]] = {}       # lock path → [fd, depth]: re-entrant within one process
 
 
 @contextmanager
 def lock(paths: Paths, timeout: float = LOCK_TIMEOUT) -> Iterator[None]:
-    """flock(lease/lock), re-entrant within one process (take calls recover); LeaseError after
-    `timeout`. Checks require_safe_home first. Only lease operations run under it: rendering,
-    scope and Own files use the theme lock, so a slow `bat cache --build` never delays a release."""
+    """flock(lease/lock) through locks.exclusive, re-entrant within one thread (take calls
+    recover); LeaseError after `timeout`. Checks require_safe_home first. Only lease operations
+    run under it: rendering, scope and Own files use the theme lock, so a slow `bat cache
+    --build` never delays a release."""
     require_safe_home(paths)
-    key = str(paths.lease_lock)
-    if key in _held:
-        _held[key][1] += 1
-        try:
-            yield
-        finally:
-            _held[key][1] -= 1
-        return
     paths.lease.mkdir(mode=0o700, parents=True, exist_ok=True)
-    fd = os.open(paths.lease_lock, os.O_RDWR | os.O_CREAT | os.O_CLOEXEC, 0o600)
-    end = time.monotonic() + timeout
-    while True:
-        try:
-            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-            break
-        except BlockingIOError:
-            if time.monotonic() > end:
-                os.close(fd)
-                raise LeaseError(f"the lease lock is busy (waited {timeout:.0f} s)") from None
-            time.sleep(0.05)
-    _held[key] = [fd, 1]
-    try:
+    with locks.exclusive(paths.lease_lock, timeout,
+                         lambda: LeaseError(f"the lease lock is busy (waited {timeout:.0f} s)")):
         yield
-    finally:
-        del _held[key]
-        fcntl.flock(fd, fcntl.LOCK_UN)
-        os.close(fd)
+
+
+def signature(env: Mapping[str, str] | None = None) -> str:
+    """This session's HYPRLAND_INSTANCE_SIGNATURE (of `env`, default this process) as
+    hypr.signature checks it; "" when it is missing or refused under test (no lease then)."""
+    try:
+        return hypr.signature(env)
+    except hypr.HyprError:
+        return ""
 
 
 def owner(paths: Paths, env: Mapping[str, str]) -> Owner:
@@ -216,10 +201,32 @@ def take(paths: Paths, env: Mapping[str, str], specs: Sequence[SlotSpec], who: O
     return report
 
 
+def _digest(paths: Paths, mod, rec: SlotRecord) -> dict | None:
+    """mod.digest, None when the slot cannot be read."""
+    try:
+        return mod.digest(paths, rec)
+    except Exception:  # noqa: BLE001 - an unreadable slot is just not known
+        return None
+
+
+def _settle(paths: Paths, mod, rec: SlotRecord) -> None:
+    """After a failed write: `after` is the paint the slot carries now (writes are atomic, so
+    mostly the previous one) and after_prev is cleared, so release never mistakes a later paint
+    for a conflict. When the slot cannot be read both stay: release accepts either."""
+    now = _digest(paths, mod, rec)
+    if now is None:
+        return
+    if now != rec.after and rec.after_prev is not None:   # the write did not land
+        rec.after = rec.after_prev
+    rec.after_prev = None
+
+
 def update(paths: Paths, specs: Sequence[SlotSpec], generation: int) -> UpdateReport:
     """02 §5.4: write the specs of slots this lease holds; `before` is never touched, `after_prev`
-    keeps the previous paint until the new one is in place. A slot not in the journal is
-    ignored (it is taken at the next session start). LeaseError when no lease is held."""
+    keeps the previous paint until the new one is in place. A slot that carries the planned paint
+    already is not written (`unchanged`); a slot not in the journal is ignored (it is taken at the
+    next session start). A spec that does not match its slot (invariants.check_update) and a
+    write that fails are failures of that slot only. LeaseError when no lease is held."""
     invariants.check_specs(paths, specs)
     report = UpdateReport(generation=generation)
     with lock(paths):
@@ -234,9 +241,17 @@ def update(paths: Paths, specs: Sequence[SlotSpec], generation: int) -> UpdateRe
             if rec is None or rec.status != SlotStatus.HELD or not rec.write or \
                     (spec.kind == SlotKind.DCONF and spec.value is None):
                 continue
-            invariants.check_update(spec, rec)
+            try:
+                invariants.check_update(spec, rec)
+            except invariants.InvariantError as e:
+                report.failed[spec.id] = f"InvariantError: {e}"
+                continue
             mod = kinds.module(rec.kind)
-            rec.after_prev, rec.after = rec.after, mod.planned(spec)
+            want = mod.planned(spec)
+            if want == rec.after and rec.after_prev is None and _digest(paths, mod, rec) == want:
+                report.unchanged.append(spec.id)
+                continue
+            rec.after_prev, rec.after = rec.after, want
             journal.save(paths, j)
             try:
                 rec.after = mod.write(paths, rec, spec)
@@ -244,9 +259,11 @@ def update(paths: Paths, specs: Sequence[SlotSpec], generation: int) -> UpdateRe
                 report.written.append(spec.id)
             except Exception as e:
                 report.failed[spec.id] = f"{type(e).__name__}: {e}"
+                _settle(paths, mod, rec)
             journal.save(paths, j)
-        j.theme_generation = generation
-        journal.save(paths, j)
+        if j.theme_generation != generation:
+            j.theme_generation = generation
+            journal.save(paths, j)
     return report
 
 

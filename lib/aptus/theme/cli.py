@@ -11,8 +11,9 @@ import json
 import sys
 from collections.abc import Sequence
 
-from .. import hypr, log
+from .. import log
 from .. import paths as paths_mod
+from ..lease import ops
 from ..paths import Paths, UnsafeHome
 from . import inputs as inputs_mod
 from . import noctalia, render, targets
@@ -36,13 +37,6 @@ def _inputs(paths: Paths, inputs_json: str | None) -> inputs_mod.Inputs:
     return inputs_mod.from_json(inputs_json) if inputs_json else inputs_mod.from_settings(paths)
 
 
-def _signature() -> str:
-    try:
-        return hypr.signature()
-    except hypr.HyprError:
-        return ""
-
-
 def cmd_render(paths: Paths, inputs_json: str | None) -> int:
     gen = render.render(paths, _inputs(paths, inputs_json), targets.load(paths.targets, paths.templates))
     print(f"gen-{gen.n}" + (" (unchanged)" if gen.reused else ""))
@@ -54,7 +48,7 @@ def cmd_render(paths: Paths, inputs_json: str | None) -> int:
 def cmd_apply(paths: Paths, inputs_json: str | None) -> int:
     """Exit 1 only when the render itself failed (bad inputs, tokens or manifest)."""
     from . import apply
-    report = apply.apply(paths, _inputs(paths, inputs_json), _signature())
+    report = apply.apply(paths, _inputs(paths, inputs_json), ops.signature())
     print(apply.report_json(report))
     return 0
 

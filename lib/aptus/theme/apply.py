@@ -25,7 +25,7 @@ class Report:
     generation: int = 0
     mode: str = "scope-only"                                  # "lease" when this session holds the lease
     unchanged: bool = False                                   # same input hash, nothing applied
-    applied: list[str] = field(default_factory=list)          # target ids live now
+    applied: list[str] = field(default_factory=list)          # target ids live now (or already carrying it)
     next_start: list[str] = field(default_factory=list)       # written, the app shows it at its next start
     queued: list[str] = field(default_factory=list)           # bakes waiting for their app to close
     failed: dict[str, str] = field(default_factory=dict)      # target id → why
@@ -40,6 +40,12 @@ def _bake_on(gen: Generation, t: Target) -> bool:
     return gen.inputs is not None and t.id in gen.inputs.bake_targets
 
 
+def _in_place(paths: Paths, t: Target) -> bool:
+    """A target a dconf key `requires` is applied: its `when` holds and, for an Own target, its
+    output exists (own.in_place), so `icon-theme` never names an icon theme that is not there."""
+    return targets.active(paths, t) and (t.mechanism != Mechanism.OWN or own.in_place(paths, t))
+
+
 def _dconf_specs(paths: Paths, manifest: Manifest, gen: Generation, t: Target) -> list[SlotSpec]:
     values = json.loads((gen.path / t.id / render.DCONF_JSON).read_text(encoding="utf-8"))
     by_id = {x.id: x for x in manifest.targets}
@@ -48,7 +54,7 @@ def _dconf_specs(paths: Paths, manifest: Manifest, gen: Generation, t: Target) -
     for key, _ in t.dconf:
         value = values.get(key)
         need = requires.get(key)
-        if need is not None and not targets.active(paths, by_id[need]):
+        if need is not None and not _in_place(paths, by_id[need]):
             value = None
         specs.append(SlotSpec(id=f"{t.id}.{key}", kind=SlotKind.DCONF, target=t.id,
                               reload=t.reload, key=KEY_DIR + key, value=value))
@@ -76,7 +82,8 @@ def slot_specs(paths: Paths, manifest: Manifest, gen: Generation,
     """The SlotSpecs of every active lease target, and of the bake targets named in
     gen.inputs.bake_targets (or only `ids`): file and ini-sections slots with their rendered bytes,
     dconf keys with the values rendered into <gen>/<id>/dconf.json (record-only keys, and keys
-    whose `requires` target is not active, with None). A target that failed to render is left out."""
+    whose `requires` target is not in place, with None). A target that failed to render is left
+    out."""
     specs: list[SlotSpec] = []
     for t in manifest.targets:
         wanted = t.mechanism == Mechanism.LEASE or (t.mechanism == Mechanism.BAKE and _bake_on(gen, t))
@@ -109,17 +116,22 @@ def _classify(report: Report, gen: Generation, lease: bool, paths: Paths,
 
 
 def _update_lease(paths: Paths, manifest: Manifest, gen: Generation, leased: list[Target],
-                  report: Report) -> dict[str, str]:
-    """ops.update for the leased targets; returns target id → reload of those written."""
+                  report: Report, taken: Sequence[str] | None) -> dict[str, str]:
+    """ops.update for the leased targets; returns target id → reload of those written. With
+    `taken` (the slots the take just wrote with this generation) nothing is updated: those slots
+    count as written, so their hooks run (02 §5.3 step 8)."""
     specs = slot_specs(paths, manifest, gen, [t.id for t in leased])
     by_target: dict[str, list[str]] = {t.id: [] for t in leased}
     for s in specs:
         by_target[s.target].append(s.id)
-    try:
-        up = ops.update(paths, specs, gen.n)
-    except ops.LeaseError as e:
-        report.failed.update({t.id: f"lease: {e}" for t in leased})
-        return {}
+    if taken is not None:
+        up = ops.UpdateReport(generation=gen.n, written=[s.id for s in specs if s.id in taken])
+    else:
+        try:
+            up = ops.update(paths, specs, gen.n)
+        except ops.LeaseError as e:
+            report.failed.update({t.id: f"lease: {e}" for t in leased})
+            return {}
     changed = {}
     for t in leased:
         ids = by_target[t.id]
@@ -128,10 +140,12 @@ def _update_lease(paths: Paths, manifest: Manifest, gen: Generation, leased: lis
             report.not_installed.append(t.id)
         elif bad:
             report.failed[t.id] = "; ".join(f"{i}: {why}" for i, why in sorted(bad.items()))
-        elif not any(i in up.written for i in ids):
-            report.next_start.append(t.id)          # taken at the next session start
-        else:
+        elif any(i in up.written for i in ids):
             changed[t.id] = t.reload
+        elif all(i in up.unchanged for i in ids):
+            report.applied.append(t.id)             # carries this paint already: no write, no hook
+        else:
+            report.next_start.append(t.id)          # taken at the next session start
     return changed
 
 
@@ -152,11 +166,13 @@ def _record_hooks(report: Report, manifest: Manifest, changed: dict[str, str],
             (report.applied if live else report.next_start).append(tid)
 
 
-def apply_generation(paths: Paths, manifest: Manifest, gen: Generation, signature: str) -> Report:
+def apply_generation(paths: Paths, manifest: Manifest, gen: Generation, signature: str,
+                     taken: Sequence[str] | None = None) -> Report:
     """08 §6 steps 1–5 for a rendered generation: the lease targets through ops.update when this
     session holds the lease (ops.held_by), else they stay Noctalia's; under the theme lock the
     scope targets and the Own targets; then the reload hooks of what changed; the report.
-    aptus-session uses it at start (after take), apply after each render."""
+    aptus-session uses it at start, right after the take of this generation (`taken`: the slot
+    ids it wrote, which are not written again), apply after each render."""
     lease = bool(signature) and ops.holds(paths, signature)
     report = Report(generation=gen.n, mode="lease" if lease else "scope-only")
     changed: dict[str, str] = {}
@@ -174,10 +190,25 @@ def apply_generation(paths: Paths, manifest: Manifest, gen: Generation, signatur
                     report.failed[t.id] = f"{type(e).__name__}: {e}"
                     _log.warning("%s %s failed: %s", what, t.id, report.failed[t.id])
         if leased:
-            changed.update(_update_lease(paths, manifest, gen, leased, report))
+            changed.update(_update_lease(paths, manifest, gen, leased, report, taken))
         results = hooks.run_reloads(paths, changed, signature)
     _record_hooks(report, manifest, changed, results)
     return report
+
+
+def apply_required(paths: Paths, manifest: Manifest, gen: Generation) -> None:
+    """Before a take: the Own targets a leased dconf key `requires` (the icon themes), so the take
+    can select them at once instead of only recording the key; apply_generation applies them again
+    afterwards (a no-op then) and reports a failure."""
+    by_id = {t.id: t for t in manifest.targets}
+    for need in sorted({tid for t in manifest.targets for _, tid in t.requires}):
+        t = by_id[need]
+        if t.mechanism != Mechanism.OWN or t.id in gen.failed or not targets.active(paths, t):
+            continue
+        try:
+            own.apply(paths, t, gen)
+        except Exception as e:  # noqa: BLE001 - the key is then only recorded
+            _log.warning("own %s failed before the take: %s: %s", t.id, type(e).__name__, e)
 
 
 def apply(paths: Paths, inputs: Inputs, signature: str, manifest: Manifest | None = None) -> Report:

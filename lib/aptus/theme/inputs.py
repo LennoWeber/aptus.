@@ -71,10 +71,19 @@ def _read_json(path: Path) -> dict[str, Any]:
     return raw if isinstance(raw, dict) and "v" in raw else {}
 
 
+def system_reduced_motion(paths: Paths) -> bool:
+    """org.gnome.desktop.interface enable-animations is false (`gsettings get`, as the shell's
+    Motion reads it); False when it cannot be read."""
+    from ..lease import system
+    r = system.run(paths, ["gsettings", "get", "org.gnome.desktop.interface", "enable-animations"])
+    return not r.skipped and r.code == 0 and r.stdout.strip() == "false"
+
+
 def from_settings(paths: Paths, now: datetime | None = None) -> Inputs:
     """The inputs at session start: settings.json (mode with `auto` resolved by sun.py, accent,
-    contrast, glass, frame.edge, motion.reduce, isolation.bakeTargets) and the wallpaper inputs of
-    the current generation's inputs.json (the shell's last values; −1 without one)."""
+    contrast, glass, frame.edge, motion.reduce with `auto` resolved as the shell's Motion.reduced
+    does, isolation.bakeTargets) and the wallpaper inputs of the current generation's inputs.json
+    (the shell's last values; −1 without one)."""
     from . import render, sun
     schema = json.loads(paths.schema.read_text(encoding="utf-8"))
     settings = _read_json(paths.settings)
@@ -84,6 +93,7 @@ def from_settings(paths: Paths, now: datetime | None = None) -> Inputs:
     mode_setting = get("appearance.mode")
     mode = sun.mode_at(now or datetime.now(), get("weather.location")) \
         if mode_setting == "auto" else mode_setting
+    reduce = get("motion.reduce")
     last = render.current(paths)
     prev = last.inputs if last is not None and last.inputs is not None else None
     return Inputs(mode=mode, accent=get("appearance.accent"), contrast=get("appearance.contrast"),
@@ -92,7 +102,8 @@ def from_settings(paths: Paths, now: datetime | None = None) -> Inputs:
                   wallpaper_chroma=prev.wallpaper_chroma if prev else -1,
                   wallpaper_lightness=prev.wallpaper_lightness if prev else -1,
                   current_accent=last.resolved.get("accentName", "jade") if last else "jade",
-                  frame_edge=int(get("frame.edge")), reduce_motion=get("motion.reduce") == "on",
+                  frame_edge=int(get("frame.edge")),
+                  reduce_motion=reduce == "on" or (reduce == "auto" and system_reduced_motion(paths)),
                   bake_targets=tuple(get("isolation.bakeTargets")))
 
 

@@ -1,8 +1,9 @@
 """Run-time invariants of the isolation work (02 §1 I-1…I-4), checked by every writer.
 
 Each check raises InvariantError ("isolation invariant: …"). Nothing catches it to carry on: a
-violation stops the operation (or, in a release, that one slot) before it changes anything. The
-checks are cheap (realpath and string tests), so they run on every write, not just in tests.
+violation stops the operation (or, in a release or an update, that one slot) before it changes
+anything. The checks are cheap (realpath and string tests), so they run on every write, not just
+in tests.
 """
 from __future__ import annotations
 

@@ -8,8 +8,10 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import shlex
 import signal as signals
+import stat
 from collections.abc import Mapping
 from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import TimeoutError as FutureTimeout
@@ -148,14 +150,45 @@ def _tmux_conf(paths: Paths) -> Path | None:
     return None
 
 
+def tmux_sockets(paths: Paths) -> list[Path] | None:
+    """The tmux server sockets in paths.tmux_sockets that are this user's: the directory must be
+    a real directory (not a symlink) owned by this uid that nobody else may enter (mode & 0o077
+    == 0, tmux's own rule, which `-S` skips), each entry a socket owned by this uid and not a
+    symlink. [] when the directory does not exist; None when it fails that check (another uid
+    may have made it: no client is pointed at it)."""
+    d = paths.tmux_sockets
+    try:
+        st = os.lstat(d)
+    except FileNotFoundError:
+        return []
+    except OSError:
+        return None
+    uid = os.getuid()
+    if not stat.S_ISDIR(st.st_mode) or st.st_uid != uid or st.st_mode & 0o077:
+        return None
+    found = []
+    for p in sorted(d.iterdir()):
+        try:
+            e = os.lstat(p)
+        except OSError:
+            continue
+        if stat.S_ISSOCK(e.st_mode) and e.st_uid == uid:
+            found.append(p)
+    return found
+
+
 def builtin_tmux(paths: Paths, target_id: str, signature: str) -> HookResult:
-    """`tmux -S <socket> source-file <tmux.conf>` for every server socket in paths.tmux_sockets
-    (a tmux server outlives the session, so this also runs after release)."""
+    """`tmux -S <socket> source-file <tmux.conf>` for every server socket of tmux_sockets (a tmux
+    server outlives the session, so this also runs after release); "next-start" when the socket
+    directory is not this user's private one."""
     conf = _tmux_conf(paths)
     if conf is None:
         return HookResult(target_id, "next-start", "no tmux.conf")
-    sockets = sorted(p for p in paths.tmux_sockets.glob("*") if p.is_socket()) \
-        if paths.tmux_sockets.is_dir() else []
+    sockets = tmux_sockets(paths)
+    if sockets is None:
+        _log.warning("%s is not a private directory of this user: tmux not reloaded",
+                     paths.tmux_sockets)
+        return HookResult(target_id, "next-start", f"{paths.tmux_sockets} is not private")
     return _many(target_id, [system.run(paths, ["tmux", "-S", str(s), "source-file", str(conf)])
                              for s in sockets], "tmux server")
 

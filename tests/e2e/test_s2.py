@@ -20,7 +20,9 @@ import pwd
 import re
 import shutil
 import signal
+import subprocess
 import sys
+import time
 from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
@@ -39,7 +41,7 @@ from aptus import paths as paths_mod  # noqa: E402
 from aptus.lease import journal, preflight  # noqa: E402
 from aptus.lease.journal import State  # noqa: E402
 from aptus.lease.kinds import dconf as dconf_kind  # noqa: E402
-from aptus.theme import targets  # noqa: E402
+from aptus.theme import render, targets  # noqa: E402
 
 REAL_HOME = Path(pwd.getpwuid(os.getuid()).pw_dir)
 MAX_COPY = 2 << 20                     # bytes; a bigger slot file is left out of the fixtures
@@ -241,6 +243,36 @@ def test_logout(world: World) -> None:
     w.wait_released()
     assert_given_back(w, before)
     assert w.guard_state() == "released"
+
+
+def test_an_outside_render_is_not_answered(world: World) -> None:
+    """Wave-2 review 3: `aptus-theme apply` from a terminal repaints the apps and the shell (through
+    resolved.json); the shell does not answer it with an apply of Config's values."""
+    w = world
+    before = w.snapshot()
+    assert_leased(w, w.start(), before)
+    w.nested.start_shell(timeout=30)
+    tokens = w.nested.state()["services"]["tokens"]
+    other = "rose" if tokens["accent"] == "sky" else "sky"
+    env = dict(os.environ, HOME=str(w.home), APTUS_TEST="1", HYPRLAND_INSTANCE_SIGNATURE=w.nested.signature,
+               APTUS_REAL_HYPRLAND_SIGNATURE=real_signature())
+    inputs = {"mode": tokens["mode"], "accent": other, "contrast": "normal", "glass": False}
+    r = subprocess.run([sys.executable, "-I", str(REPO / "bin/aptus-theme"), "apply", "--inputs",
+                        json.dumps(inputs)], env=env, capture_output=True, text=True, timeout=60)
+    assert r.returncode == 0, r.stderr
+    outside = json.loads(r.stdout)
+    assert outside["mode"] == "lease" and not outside["failed"], outside
+    w.nested.wait_for(lambda: w.nested.state()["services"]["tokens"]["accent"] == other, timeout=10)
+    time.sleep(3)                       # the shell's 250 ms debounce, crossfade and apply fit in this
+    current = render.current(w.paths)
+    assert current is not None and current.n == outside["generation"]
+    assert current.inputs is not None and current.inputs.accent == other
+    assert journal.load(w.paths).theme_generation == outside["generation"]
+    w.shot("s2-outside-render")
+    w.nested.msg("session", "logout")
+    w.nested.wait_for(lambda: w.nested.proc.poll() is not None, timeout=20)
+    w.wait_released()
+    assert_given_back(w, before)
 
 
 def test_sigkill_to_hyprland(world: World) -> None:

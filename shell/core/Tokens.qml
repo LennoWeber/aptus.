@@ -18,6 +18,9 @@ Singleton {
     // own render is pending (set by the Theme service): the file then holds an older request.
     // Equal resolutions are a no-op, so the shell's own renders do not crossfade twice (07 §7).
     property bool ownRenderBusy: false
+    // True while such an outside resolution is being applied: the changes it causes are not the
+    // shell's own, so the Theme service asks for no apply of them (the apps carry that render).
+    property bool applyingExternal: false
     property bool _resolvedSeen: false
     function _external(text: string): void {
         const first = !_resolvedSeen;
@@ -26,7 +29,8 @@ Singleton {
         let r = null;
         try { r = JSON.parse(text); } catch (e) { Log.warn("tokens", "resolved.json: " + e); return; }
         if (_r && _canon(_r) === _canon(r)) return;
-        apply(r);
+        applyingExternal = true;
+        try { apply(r); } finally { applyingExternal = false; }
     }
     // JSON with sorted keys: Python and resolve.js may order keys differently.
     function _canon(v: var): string {

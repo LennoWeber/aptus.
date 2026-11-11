@@ -81,6 +81,7 @@ Singleton {
             return;
         }
         _queued = false;
+        _done = {};
         _pendingInputs = JSON.stringify(_inputs());
         applying = true;
         proc.command = [Paths.bin + "/aptus-theme", "apply", "--inputs", _pendingInputs];
@@ -110,25 +111,37 @@ Singleton {
     Connections {
         target: proc
         function onExited(exitCode: int): void { root._join("exit", exitCode); }
+        // A program that cannot start (missing, not executable) only turns `running` off: no exit
+        // and no end of stdout (Quickshell 0.3.2, probed). A run that started has exited first.
+        function onRunningChanged(): void {
+            if (!proc.running && root.applying && !("exit" in root._done)) root._finish("", "aptus-theme could not be started", -1);
+        }
     }
     // stdout's end and the exit arrive in either order: the run is done when both are in.
     property var _done: ({})
     function _join(what: string, code: int): void {
         _done[what] = code;
         if (!("out" in _done) || !("exit" in _done)) return;
-        const exitCode = _done.exit;
+        _finish(out.text, err.text, _done.exit);
+    }
+    function _finish(stdout: string, stderr: string, exitCode: int): void {
         _done = {};
         applying = false;
-        _applied(out.text, err.text, exitCode);
+        _applied(stdout, stderr, exitCode);
         if (_queued) _run();
     }
-    // What changes the apps' paint: the resolution, and the settings that shape Own files and bakes.
+    // What changes the apps' paint: the resolution (not one an outside render brought: the apps
+    // carry it already, and an apply now would send Config's values back), and the settings that
+    // shape Own files and bakes.
+    function _resolutionChanged(): void {
+        if (!Tokens.applyingExternal) requestApply();
+    }
     Connections {
         target: Tokens
-        function onModeChanged(): void { root.requestApply(); }
-        function onAccentNameChanged(): void { root.requestApply(); }
-        function onGlassChanged(): void { root.requestApply(); }
-        function onHighContrastChanged(): void { root.requestApply(); }
+        function onModeChanged(): void { root._resolutionChanged(); }
+        function onAccentNameChanged(): void { root._resolutionChanged(); }
+        function onGlassChanged(): void { root._resolutionChanged(); }
+        function onHighContrastChanged(): void { root._resolutionChanged(); }
     }
     Connections {
         target: Config

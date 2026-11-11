@@ -178,6 +178,63 @@ def test_crash_mid_update_is_still_aptus_paint(p, test_home, hypr) -> None:
     assert not rel.conflicts and baseline(p, files) == base
 
 
+def test_failed_updates_are_no_conflict_at_release(p, test_home, hypr, monkeypatch) -> None:
+    """Wave-2 review 1: two updates whose writes fail leave the slot with the paint of the take;
+    release restores it without reporting a conflict."""
+    files = setup_world(p, test_home)
+    base = baseline(p, files)
+    take(p, hypr)
+    from aptus.lease.kinds import file as file_kind
+    real_write = file_kind.write
+
+    def boom(paths, rec, spec):
+        raise OSError("disk full")
+    monkeypatch.setattr(file_kind, "write", boom)
+    for n, text in ((2, b"gen 2\n"), (3, b"gen 3\n")):
+        u = ops.update(p, [SlotSpec(id="gtk3.artifact", kind=SlotKind.FILE, target="gtk3",
+                                    path=files["gtk"], content=text)], n)
+        assert "disk full" in u.failed["gtk3.artifact"]
+    rec = journal.slot(journal.load(p), "gtk3.artifact")
+    assert rec.after == {"sha256": hashlib.sha256(b"@define-color accent_color #00ff00;\n").hexdigest()}
+    assert rec.after_prev is None
+    monkeypatch.setattr(file_kind, "write", real_write)
+    rel = ops.release(p)
+    assert not rel.conflicts and not rel.failed and baseline(p, files) == base
+
+
+def test_update_skips_a_slot_that_carries_the_paint(p, test_home, hypr, monkeypatch) -> None:
+    """Wave-2 review 7: an update with the paint the slot already carries writes nothing."""
+    setup_world(p, test_home)
+    take(p, hypr)
+    from aptus.lease.kinds import file as file_kind
+
+    def boom(paths, rec, spec):
+        raise AssertionError(f"{rec.id} written again")
+    for mod in (file_kind, ini, dconf):
+        monkeypatch.setattr(mod, "write", boom)
+    saved = p.lease_journal.stat().st_mtime_ns
+    u = ops.update(p, specs(p), 1)
+    assert not u.written and not u.failed
+    assert sorted(u.unchanged) == ["btop.artifact", "dconf.accent-color", "dconf.color-scheme",
+                                   "ghostty.artifact", "gtk3.artifact", "kde.colors"]
+    assert p.lease_journal.stat().st_mtime_ns == saved
+
+
+def test_update_with_a_mismatched_spec_fails_only_that_slot(p, test_home, hypr) -> None:
+    """Wave-2 review 8: a spec that does not match its journal slot is that slot's failure; the
+    other slots are written."""
+    files = setup_world(p, test_home)
+    take(p, hypr)
+    bad = SlotSpec(id="ghostty.artifact", kind=SlotKind.FILE, target="ghostty",
+                   path=p.config_home / "ghostty/themes/other", content=b"x\n")
+    good = SlotSpec(id="gtk3.artifact", kind=SlotKind.FILE, target="gtk3", path=files["gtk"],
+                    content=b"gen 2\n")
+    u = ops.update(p, [bad, good], 2)
+    assert "changes its kind, path" in u.failed["ghostty.artifact"]
+    assert u.written == ["gtk3.artifact"] and files["gtk"].read_bytes() == b"gen 2\n"
+    assert journal.load(p).theme_generation == 2
+
+
 def test_conflict_is_saved_and_before_restored(p, test_home, hypr) -> None:
     files = setup_world(p, test_home)
     base = baseline(p, files)
@@ -386,6 +443,30 @@ def test_history_keeps_ten(p) -> None:
     assert len(list(p.lease_history.glob("*.json"))) == journal.HISTORY_KEEP
 
 
+def test_lease_and_theme_lock_share_one_flock_helper(p) -> None:
+    """Wave-2 review 9: ops.lock and render.lock are locks.exclusive, re-entrant per thread:
+    while one thread holds the lease lock another one waits (it used to re-enter it)."""
+    import threading
+
+    from aptus.lease import locks
+    from aptus.theme import render
+    seen = []
+
+    def other() -> None:
+        try:
+            with ops.lock(p, timeout=0.2):
+                seen.append("got it")
+        except ops.LeaseError as e:
+            seen.append(str(e))
+    with ops.lock(p), render.lock(p):
+        assert {k[0] for k in locks._held} == {str(p.lease_lock), str(p.theme_lock)}
+        th = threading.Thread(target=other)
+        th.start()
+        th.join()
+    assert "busy" in seen[0]
+    assert not locks._held
+
+
 def test_lock_is_reentrant_and_times_out(p) -> None:
     with ops.lock(p):
         with ops.lock(p):
@@ -509,3 +590,13 @@ def test_lease_cli_update_only_for_the_holder(p, test_home, hypr, monkeypatch, c
     monkeypatch.setenv("HYPRLAND_INSTANCE_SIGNATURE", "someone-else")
     assert cli.main(["update"]) == 1
     assert "does not hold the lease" in capsys.readouterr().err
+
+
+def test_lease_cli_take_needs_a_running_guard(p, test_home, hypr, monkeypatch, capsys) -> None:
+    """Wave-2 review 9: the check is guard.active (the unit is active), not a copy of it."""
+    from aptus.lease import cli
+    fakes.systemctl(test_home)
+    monkeypatch.setenv("HYPRLAND_INSTANCE_SIGNATURE", hypr.signature)
+    assert cli.main(["take"]) == 1
+    assert "aptus-guard is not running" in capsys.readouterr().err
+    assert journal.load(p) is None

@@ -15,7 +15,7 @@
 #              the one-file shorthand. Paths: `~`, {config} {state} {cache} {data} (XDG bases).
 #   sections   ini-sections: header globs
 #   dconf      dconf: key (in /org/gnome/desktop/interface/) → value template; "" = record only
-#   requires   dconf: key → target id; the key is only recorded when that target is not applied
+#   requires   dconf: key → target id; the key is only recorded while that target's output is not in place
 #   scope      scope: { into, mirror } (with files' `at`) or { into, source, begin, end }
 #   own        own: a builtin step besides writing `files` (icons | bat)
 #   when       always | exists:<path> | which:<command>   (false → skipped, "Not installed")

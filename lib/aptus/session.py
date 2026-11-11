@@ -118,27 +118,31 @@ def start_guard(paths: Paths, env: Mapping[str, str]) -> bool:
 
 
 def lease_step(paths: Paths, env: Mapping[str, str], manifest: Manifest, gen: Generation,
-               report: StartReport) -> None:
-    """Step 4: ops.take with the generation's slot specs (preflight inside); sets report.mode,
-    reasons and notice. Any failure leaves the session scope-only with NOTICE_FAILED."""
+               report: StartReport) -> list[str] | None:
+    """Step 4: the Own targets a leased key requires (apply.apply_required), then ops.take with
+    the generation's slot specs (preflight inside); sets report.mode, reasons and notice and
+    returns the slot ids taken (None when not held). Any failure leaves the session scope-only
+    with NOTICE_FAILED."""
     try:
+        apply.apply_required(paths, manifest, gen)
         taken = ops.take(paths, env, apply.slot_specs(paths, manifest, gen), ops.owner(paths, env),
                          gen.n)
     except (ops.LeaseError, InvariantError, JournalError, OSError, ValueError) as e:
         report.reasons.append("the lease failed")
         report.warnings.append(f"take: {e}")
         report.notice = preflight.NOTICE_FAILED
-        return
+        return None
     if taken.held:
         report.mode = Mode.LEASE
-        return
+        return taken.slots
     if taken.preflight is not None and not taken.preflight.ok:
         report.reasons += taken.preflight.reasons
         report.notice = taken.preflight.notice
-        return
+        return None
     report.reasons.append("the lease failed")
     report.warnings.append(f"take: {taken.error}")
     report.notice = preflight.NOTICE_FAILED
+    return None
 
 
 def import_environment(paths: Paths, env: Mapping[str, str]) -> bool:
@@ -158,7 +162,7 @@ def environment_step(paths: Paths, env: Mapping[str, str], report: StartReport) 
     the session goes on scope-only."""
     if not import_environment(paths, env):
         report.warnings.append("systemctl --user import-environment failed")
-    if not ops.holds(paths, _signature(env)):
+    if not ops.holds(paths, ops.signature(env)):
         guard.unset_environment(paths)
         report.mode = Mode.SCOPE_ONLY
         report.reasons.append("the guard released the lease")
@@ -171,18 +175,11 @@ def stop_guard(paths: Paths) -> bool:
     return not r.skipped and r.code == 0
 
 
-def _signature(env: Mapping[str, str]) -> str:
-    try:
-        return hypr.signature(env)
-    except hypr.HyprError:
-        return ""
-
-
 def start(paths: Paths, env: Mapping[str, str]) -> StartReport:
     """Steps 1–6 of 07 §3 / 02 §7 up to the exec: recover, render, the guard, take (with
     preflight), the environment import (lease only), then the scope and Own targets and hooks of
-    the generation (apply.apply_generation, also scope-only). Never raises: each failure becomes a
-    warning and, where it matters, scope-only mode."""
+    the generation (apply.apply_generation, also scope-only; the slots just taken are not written
+    again). Never raises: each failure becomes a warning and, where it matters, scope-only mode."""
     report = StartReport()
     try:
         require_safe_home(paths)
@@ -200,15 +197,16 @@ def start(paths: Paths, env: Mapping[str, str]) -> StartReport:
         report.reasons.append("no theme generation")
         return report
     report.generation = gen.n
+    taken = None
     if not report.guard:
         report.reasons.append("the guard did not start")
         report.notice = preflight.NOTICE_FAILED
     else:
-        lease_step(paths, env, manifest, gen, report)
+        taken = lease_step(paths, env, manifest, gen, report)
     if report.mode is Mode.LEASE:
         environment_step(paths, env, report)
     try:
-        applied = apply.apply_generation(paths, manifest, gen, _signature(env))
+        applied = apply.apply_generation(paths, manifest, gen, ops.signature(env), taken=taken)
         report.warnings += [f"apply {tid}: {why}" for tid, why in sorted(applied.failed.items())]
     except Exception as e:  # noqa: BLE001
         report.warnings.append(f"apply: {type(e).__name__}: {e}")
@@ -244,7 +242,7 @@ def stop(paths: Paths) -> int:
     the hooks and the environment as the guard would. 0 unless that release failed."""
     if stop_guard(paths):
         return 0
-    sig = _signature(os.environ)
+    sig = ops.signature()
     try:
         j = journal.load(paths)
     except JournalError as e:
