@@ -59,9 +59,18 @@ Item {
     readonly property string _name: monitor ? monitor.name : ""
     // What the notch shows now (notch.js view): rest, hidden, toast, osd, event, card, result, mode.
     // Only SurfaceManager's state goes in (a hover card is its `card:` notch too): _sync writes
-    // the Notch's own fields while this binding notifies, so it must not read them.
-    readonly property var view: monitor ? NJ.viewOf({ notch: monitor.notch, passiveTop: monitor.passiveTop })
-                                        : ({ kind: "rest", key: "", entry: null, activity: "", mode: "" })
+    // the Notch's own fields while this binding notifies, so it must not read them. The one
+    // exception is _replyEntry (not written by _sync): while a toast's reply field is open, an
+    // OSD does not cover that toast (notch.md §6; the OSD entry still expires on time).
+    readonly property var view: {
+        if (!monitor) return { kind: "rest", key: "", entry: null, activity: "", mode: "" };
+        const v = NJ.viewOf({ notch: monitor.notch, passiveTop: monitor.passiveTop });
+        if (v.kind !== "osd" || _replyEntry === 0) return v;
+        const e = monitor.passive.find(x => x.id === _replyEntry);
+        return e ? NJ.viewOf({ notch: monitor.notch, passiveTop: { kind: "toast", entry: e } }) : v;
+    }
+    // Found in phase 7: the passive entry whose toast has its reply field open (0 none).
+    property int _replyEntry: 0
     // The layers on screen: the current one and those still fading out (notch.js layer records).
     property var _layers: []
     property int _layerSerial: 0
@@ -425,7 +434,11 @@ Item {
                 args: kind === "mode" && root.monitor ? root.monitor.notchArgs : ({})
                 activities: root._live
                 pinned: kind === "card" && root.monitor !== null && !!root.monitor.notchArgs.pinned
-                onGoneChanged: if (gone) { if (kind === "mode") root._modeLeft(mode); root._layerGone(uid); }
+                onGoneChanged: if (gone) {
+                    if (kind === "mode") root._modeLeft(mode);
+                    if (root._replyEntry === entryId) root._replyEntry = 0;
+                    root._layerGone(uid);
+                }
                 onShownChanged: root._pickCurrent()
                 onContentChanged: {
                     root._pickCurrent();
@@ -450,7 +463,11 @@ Item {
                         if (layer.kind === "mode") SurfaceManager.close(layer.mode, root._name);
                         else if (layer._e) root._dismissEntry(layer._e);
                     }
-                    function onReplyingChanged(): void { root._countdownTick(); }
+                    function onReplyingChanged(): void {
+                        if (layer.content.replying) root._replyEntry = layer.entryId;
+                        else if (root._replyEntry === layer.entryId) root._replyEntry = 0;
+                        root._countdownTick();
+                    }
                 }
             }
         }

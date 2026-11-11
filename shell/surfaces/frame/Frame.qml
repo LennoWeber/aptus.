@@ -34,15 +34,25 @@ Item {
     readonly property real edgeNow: Tokens.frameEdge * introProgress * (1 - hide)
     readonly property real barNow: Tokens.barHeight * introProgress * (1 - hide)
 
-    // (Each Bulge normalises its own bulges, as the S1 hand-off found: the frame and the shadow
-    // bodies take different sets, bodiesOnly drops those without a shadow, and with at most four
-    // bulges a second normalise costs nothing measurable; one shared shape would need a Bulge.qml
-    // change for no gain.)
+    // The open bulges normalised once per change (bulge.js), shared by the three Bulges and the
+    // shadow box: `shape` all shown bulges (the frame), `shadowShape` those casting a shadow.
+    readonly property var shape: BJ.normalise(_specs(false), width, edgeNow)
+    readonly property var shadowShape: BJ.normalise(_specs(true), width, edgeNow)
+    // The shown bulges as plain objects (reading every field keeps the bindings live).
+    function _specs(shadowOnly: bool): var {
+        const out = [];
+        for (let i = 0; i < bulges.length; i++) {
+            const b = bulges[i];
+            if (b && b.shown && (!shadowOnly || b.shadow))
+                out.push({ dock: b.dock, x: b.x, width: b.width, height: b.height, cove: b.cove, radius: b.radius });
+        }
+        return out;
+    }
     // The area the drawer shadow is blurred over: the shadow-casting bodies' bounding box plus
     // the blur radius (monitor-local, clamped to the monitor), empty when nothing casts one. The
     // blur's texture covers this box instead of the whole monitor (07 §12).
     readonly property rect shadowBox: {
-        const n = BJ.normalise(bodies._specs, width, edgeNow);
+        const n = shadowShape;
         const list = (n.full ? [n.full] : []).concat(n.bulges);
         if (list.length === 0) return Qt.rect(0, 0, 0, 0);
         let x0 = width, x1 = 0, deepest = 0;
@@ -69,7 +79,7 @@ Item {
         edge: root.edgeNow
         barHeight: root.barNow
         innerRadius: Tokens.frameInnerRadius
-        bulges: root.bulges
+        shape: root.shadowShape
         bodiesOnly: true
         colour: Tokens.shadow
     }
@@ -101,7 +111,7 @@ Item {
         edge: root.edgeNow
         barHeight: root.barNow
         innerRadius: Tokens.frameInnerRadius
-        bulges: root.bulges
+        shape: root.shadowShape
         bodiesOnly: true
         colour: Tokens.alpha(Tokens.ground, Tokens.groundAlpha)
     }
@@ -113,7 +123,7 @@ Item {
         edge: root.edgeNow
         barHeight: root.barNow
         innerRadius: Tokens.frameInnerRadius
-        bulges: root.bulges
+        shape: root.shape
         colour: Tokens.alpha(Tokens.ground, Tokens.groundAlpha)
         lineColour: Tokens.frameLine
         lineWidth: Tokens.frameLineWidth

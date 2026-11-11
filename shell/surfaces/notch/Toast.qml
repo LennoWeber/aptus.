@@ -18,10 +18,11 @@ Item {
     // Play the M-06 entrance (false for an in-place update: content crossfade only).
     property bool entrance: true
 
-    // The bulge size: 420 × 72 / 104 / 132 (notch.md §6), more while the reply field is open.
+    // The bulge size: 420 × 72 / 104 / 132 (notch.md §6); while the reply field is open it takes
+    // the button row's place and the toast grows by the difference.
     readonly property real bulgeWidth: Tokens.surfaces.toast.width
     readonly property real bulgeHeight: NJ.toastHeight(payload, Tokens.surfaces.toast.heights)
-        + (replying ? replyField.height + Tokens.s4 : 0)
+        + (replying ? Math.max(0, replyField.height - actions.height) : 0)
     readonly property bool hovered: hover.hovered
     // The inline reply field is open (takes the keyboard; the countdown stops).
     property bool replying: false
@@ -202,7 +203,7 @@ Item {
         visible: root.replying
         x: texts.x
         width: root.width - x - Tokens.padToast
-        y: NJ.toastHeight(root.payload, root._t.heights) - Tokens.padToast
+        y: actions.y
         placeholder: "Reply"
         glyph: "reply"
         onAccepted: {

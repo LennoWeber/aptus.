@@ -48,6 +48,8 @@ Singleton {
     property bool screencast: false
     // The active keyboard layout's name (`activelayout`; the layout OSD).
     property string layout: ""
+    // Found in phase 7: the last layout per keyboard name (_onLayout).
+    property var _layouts: ({})
     // Workspace id → name from Paths.workspacesState (applied with renameWorkspace).
     property var workspaceNames: ({})
 
@@ -198,13 +200,18 @@ Singleton {
     }
     // `screencast` ("state,owner"): screencast.
     function _onScreencast(data: string): void { screencast = H.splitEvent(data, 2)[0] === "1"; }
-    // `activelayout` ("keyboard,layout"): layout, and the layout OSD (levels.js layoutOsd) when
-    // the main keyboard's layout changed (not at start).
+    // `activelayout` ("keyboard,layout"): layout, and the layout OSD (levels.js layoutOsd) when a
+    // keyboard's own layout changed. Another keyboard becoming active (each has its layout; a
+    // virtual one such as wtype's) is no change, nor is Hyprland's "error" for an unnamed keymap.
     function _onLayout(data: string): void {
         const p = H.splitEvent(data, 2);
-        const changed = layout !== "" && layout !== p[1];
+        if (p[1] === "error") return;
+        const before = _layouts[p[0]];
+        const m = Object.assign({}, _layouts);
+        m[p[0]] = p[1];
+        _layouts = m;
         layout = p[1];
-        if (changed) SurfaceManager.post("osd", L.layoutOsd(p[1]), 0, "", "layout");
+        if (before !== undefined && before !== p[1]) SurfaceManager.post("osd", L.layoutOsd(p[1]), 0, "", "layout");
     }
     // Rebuild `windows` from the toplevels (after a toplevel refresh only).
     function _rebuildWindows(): void {

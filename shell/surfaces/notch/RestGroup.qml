@@ -80,8 +80,8 @@ Item {
         Label {
             visible: root.showDate
             anchors.verticalCenter: parent.verticalCenter
-            type: "bar"
-            ink: "sec"
+            type: "micro"
+            ink: "meta"
             text: root._date
         }
         Rectangle {

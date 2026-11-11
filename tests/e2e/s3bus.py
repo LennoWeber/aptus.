@@ -94,10 +94,12 @@ def name_owner(nested: Nested, name: str) -> str:
 class FakePlayer:
     """tests/e2e/fake_mpris.py on the nested bus; `calls()` reads what it was asked to do."""
 
-    def __init__(self, nested: Nested, name: str, playing: bool = False) -> None:
+    def __init__(self, nested: Nested, name: str, playing: bool = False, art: str = "") -> None:
+        """art: a file:// URL of the cover ("" for none)."""
         self.state = nested.root / f"mpris-{name}.log"
         self.state.write_text("")
         argv = ["/usr/bin/python3", "-I", str(HERE / "fake_mpris.py"), name, str(self.state)] + (["--playing"] if playing else [])
+        argv += [f"--art={art}"] if art else []
         self.proc = subprocess.Popen(argv, env=nested_env(nested), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         self.bus = f"org.mpris.MediaPlayer2.{name}"
         nested.wait_for(lambda: name_owner(nested, self.bus), 5)

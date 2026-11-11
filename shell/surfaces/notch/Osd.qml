@@ -64,7 +64,8 @@ Item {
                     width: Tokens.pagerDots.size
                     height: width
                     radius: width / 2
-                    color: index < (root.payload.dots || 0) ? Tokens.accent : Tokens.inkFaint
+                    // one dot per state (off, low, high); the current one in accent
+                    color: index === (root.payload.dots || 0) ? Tokens.accent : Tokens.inkFaint
                 }
             }
         }

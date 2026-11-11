@@ -1,14 +1,16 @@
 """S3 acceptance, notifications (notch.md §6, 05 §8) with notify-send on the nested session's
-private bus: arrival rules, timing, critical, replaces-id, stack, history; Ipc `notch toast`."""
+private bus: arrival rules, timing, critical, replaces-id, stack, history; Ipc `notch toast`;
+the inline reply field."""
 from __future__ import annotations
 
 import json
+import subprocess
 import time
 
 import pytest
 
 from nested import Nested
-from s3bus import Window, close_notification, gdbus, name_owner, notify, pointer, settle
+from s3bus import Window, bus_address, close_notification, gdbus, name_owner, notify, pointer, settle
 
 SENT: list[int] = []
 
@@ -157,3 +159,69 @@ def test_toast_ways_out(nested: Nested) -> None:
     mon = next(m for m in nested.hyprctl("monitors", as_json=True) if m["focused"])
     pointer(nested, "click", mon["x"] + mon["width"] // 2, mon["y"] + 32 + 36)
     nested.wait_for(lambda: toast_for(nested, nid) is None, 3)
+
+
+def test_toast_waits_while_spotlight_is_open(nested: Nested) -> None:
+    """notch.md §9, §12: under an interactive mode toasts queue; it shows when the mode closes."""
+    assert nested.msg("surface", "open", "spotlight") == "ok"
+    try:
+        nested.wait_for(lambda: active(nested)["notch"] == "spotlight", 3)
+        nid = send(nested, "Behind Spotlight", "", "-a", "TestApp")
+        nested.wait_for(lambda: toast_for(nested, nid), 5)            # queued, not dropped
+        settle(0.5)
+        assert active(nested)["passiveTop"]["kind"] != "toast"
+    finally:
+        nested.msg("surface", "close", "spotlight")
+    nested.wait_for(lambda: active(nested)["passiveTop"]["kind"] == "toast", 3)
+
+
+def reply_toast(nested: Nested, summary: str) -> int:
+    """A notification with the inline-reply action (notify-send has no option for it)."""
+    out = gdbus(nested, "--dest", "org.freedesktop.Notifications", "--object-path", "/org/freedesktop/Notifications",
+                "--method", "org.freedesktop.Notifications.Notify", "Chat", "0", "", summary, "reply please",
+                '["inline-reply", "Reply"]', "{}", "0")
+    nid = int(out.strip("(),u ").split()[-1].rstrip(","))
+    SENT.append(nid)
+    return nid
+
+
+def click_reply(nested: Nested) -> None:
+    """The toast's first action button (Reply): 48 px into the toast (padding, icon, gap), in the
+    action row 12 px above the 104 px toast's bottom."""
+    m = next(m for m in nested.hyprctl("monitors", as_json=True) if m["focused"])
+    # away first: a surface that grew under a resting pointer gets no enter until it moves
+    pointer(nested, "move", m["x"] + m["width"] // 2, m["y"] + m["height"] - 100)
+    pointer(nested, "click", m["x"] + m["width"] // 2 - 210 + 70, m["y"] + 32 + 78)
+
+
+def test_inline_reply_takes_the_keyboard_and_sends(nested: Nested) -> None:
+    """notch.md §6: Reply opens a field that takes the keyboard; Enter sends; Esc returns."""
+    mon = subprocess.Popen(["stdbuf", "-oL", "gdbus", "monitor", "--address", bus_address(nested),
+                            "--dest", "org.freedesktop.Notifications"], stdout=subprocess.PIPE, text=True)
+    try:
+        # Esc closes only the field: the toast stays
+        nid = reply_toast(nested, "Esc first")
+        nested.wait_for(lambda: toast_for(nested, nid), 5)
+        settle(0.6)
+        click_reply(nested)
+        settle(0.4)
+        nested.key("Escape")
+        settle(0.3)
+        assert toast_for(nested, nid) is not None
+        close_notification(nested, nid)
+        nested.wait_for(lambda: toast_for(nested, nid) is None, 3)
+        # typed text and Enter: NotificationReplied, and the toast goes
+        nid = reply_toast(nested, "Then send")
+        nested.wait_for(lambda: toast_for(nested, nid), 5)
+        settle(0.6)
+        click_reply(nested)
+        settle(0.4)
+        env = dict(__import__("os").environ, WAYLAND_DISPLAY=nested.wayland_display)
+        subprocess.run(["wtype", "on my way"], env=env, check=True, timeout=10)
+        nested.key("Return")
+        nested.wait_for(lambda: toast_for(nested, nid) is None, 3)
+    finally:
+        time.sleep(0.5)
+        mon.terminate()
+    out = mon.communicate(timeout=5)[0]
+    assert f"NotificationReplied (uint32 {nid}, 'on my way')" in out, out[-600:]

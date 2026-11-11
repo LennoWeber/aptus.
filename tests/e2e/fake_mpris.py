@@ -4,12 +4,12 @@ nested session's private bus, never on the real one).
 
 Run inside the nested session (`Nested.exec`), so DBUS_SESSION_BUS_ADDRESS is the private bus:
 
-    /usr/bin/python3 tests/e2e/fake_mpris.py <name> <state-file> [--playing] [--bare]
+    /usr/bin/python3 tests/e2e/fake_mpris.py <name> <state-file> [--playing] [--bare] [--art=<file URL>]
 
 It owns `org.mpris.MediaPlayer2.<name>`, implements `org.mpris.MediaPlayer2` and
 `org.mpris.MediaPlayer2.Player` (PlayPause, Play, Pause, Next, Previous, Seek, SetPosition and
 the properties Quickshell reads) and appends every method call to <state-file>, one line each,
-so the test can assert on what the shell did. `--bare` serves no metadata (notch.md §12). Uses
+so the test can assert on what the shell did. `--bare` serves no metadata (notch.md §12); `--art` a cover. Uses
 the system python3 with `gi` (GLib/Gio).
 """
 from __future__ import annotations
@@ -210,8 +210,9 @@ def main(argv: list[str]) -> int:
         print("fake_mpris: refusing to run outside the nested session's private bus", file=sys.stderr)
         return 3
     flags = set(argv[2:])
+    art = next((f.split("=", 1)[1] for f in flags if f.startswith("--art=")), "")
     state = PlayerState(name=argv[0], status="Playing" if "--playing" in flags else "Paused",
-                        bare="--bare" in flags, shuffle=False, loop_status="None")
+                        bare="--bare" in flags, shuffle=False, loop_status="None", art_url=art)
     Player(state, argv[1])
     from gi.repository import GLib
     GLib.MainLoop().run()

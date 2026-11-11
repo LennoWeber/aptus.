@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-from nested import Nested
+from nested import Nested, write_test_png
 from s3bus import (FakePlayer, Window, close_notification, distance, grab, mean, notify, notify_waiting, pointer,
                    settle, shell_pid)
 
@@ -143,8 +143,13 @@ def test_privacy_reports_nothing_under_test(nested: Nested) -> None:
     assert not (pids & mine)
 
 
-def test_screenshots(nested: Nested, player: FakePlayer) -> None:
-    """Rest, toast, OSD, event and card on a 1920×1080 headless output, for the visual review."""
+def test_screenshots(nested: Nested) -> None:
+    """Rest, toast, OSD, event and card on a 1920×1080 headless output, for the visual review
+    (a player with a cover, so the compact look and the card show it)."""
+    cover = nested.root / "cover.png"
+    write_test_png(cover, 300, 300)
+    player = FakePlayer(nested, "aptusshot", playing=True, art=cover.as_uri())
+    nested.wait_for(lambda: nested.state()["services"]["media"]["active"].endswith("aptusshot"), 5)
     name = "S3SHOT"
     nested.hyprctl("output", "create", "headless", name)
     nested.hyprctl("dispatch", 'hl.monitor({ output = "' + name + '", mode = "1920x1080@60", position = "4000x0", scale = 1 })')
@@ -155,30 +160,36 @@ def test_screenshots(nested: Nested, player: FakePlayer) -> None:
         out = shots(nested)
         env = dict(os.environ, WAYLAND_DISPLAY=nested.wayland_display)
 
-        def shot(tag: str) -> None:
+        def top() -> str:
+            return nested.state()["monitors"][name]["passiveTop"]["kind"]
+
+        def shot(tag: str, kind: str = "rest") -> None:
+            """After the notch of the screenshot output shows `kind` (and its morph settled)."""
+            nested.wait_for(lambda: top() == kind, 3)
             settle(0.8)
             subprocess.run(["grim", "-o", name, str(out / f"{tag}.png")], env=env, check=True, timeout=10)
 
         shot("rest")
         nid, waiting = notify_waiting(nested, "Lunch?", "Shall we go at <b>12:30</b>?", "-a", "Chat",
                                       "-A", "yes=Yes", "-A", "no=No")
-        shot("toast-actions")
+        shot("toast-actions", "toast")
         close_notification(nested, nid)
         waiting.terminate()
         nested.shortcut("vol-up")
-        shot("osd-volume")
+        shot("osd-volume", "osd")
         nested.shortcut("kbd-up")
-        shot("osd-kbd")
+        shot("osd-kbd", "osd")
+        nested.wait_for(lambda: top() == "rest", 3)
         nested.msg("notch", "event", "Headphones connected · 70 %", "headphones")
-        shot("event")
+        shot("event", "event")
         nested.wait_for(lambda: not any(e["kind"] == "event" for e in nested.state()["monitors"][name]["passive"]), 5)
         nested.msg("surface", "open", "card:media", '{"pinned": true}')
-        shot("card-media")
+        shot("card-media", "card")
         nested.msg("surface", "close", "card:media")
         assert nested.msg("theme", "mode", "light") == "ok"
         shot("rest-light")
         nid = notify(nested, "Build finished", "aptus · 2 warnings", "-a", "Terminal")
-        shot("toast-light")
+        shot("toast-light", "toast")
         close_notification(nested, nid)
         for tag in ("rest", "toast-actions", "osd-volume", "osd-kbd", "event", "card-media", "rest-light", "toast-light"):
             head = (out / f"{tag}.png").read_bytes()[16:24]
@@ -186,3 +197,4 @@ def test_screenshots(nested: Nested, player: FakePlayer) -> None:
     finally:
         nested.msg("theme", "mode", "dark")
         nested.hyprctl("output", "remove", name)
+        player.stop()

@@ -31,10 +31,13 @@ def rss_mb(pid: int) -> float:
 
 
 def test_idle_rss_cpu_and_wakeups(nested: Nested, record_property) -> None:
+    """07 §12 averages over minutes: a 60 s window holds exactly one clock minute roll (M-34,
+    about 70–90 main-thread switches), as every minute at rest does; a 30 s window held one
+    only half the time."""
     pid = shell_pid(nested)
     time.sleep(5)                                    # let the start settle
     t0, c0, w0 = time.monotonic(), cpu_ticks(pid), main_thread_switches(pid)
-    time.sleep(30)
+    time.sleep(60)
     t1, c1, w1 = time.monotonic(), cpu_ticks(pid), main_thread_switches(pid)
     cpu = (c1 - c0) / TICK / (t1 - t0) * 100
     wakeups = (w1 - w0) / (t1 - t0)

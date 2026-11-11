@@ -6,7 +6,7 @@
 //   { kind: "volume" | "mic" | "brightness" | "kbd" | "caps" | "layout",
 //     glyph: string, ink: "main" | "crit" (the glyph's ink),
 //     level: number | -1 (no level bar), max: number (100, or 150 with audio.allowBoost),
-//     dots: -1 | count of filled dots (keyboard light), steps: count of dots,
+//     dots: -1 | the current state's dot, 0 = off (keyboard light), steps: count of dots,
 //     value: string (the text after the level: "45", "Muted", "Caps Lock on"),
 //     device: string ("" or the device name shown for 1 s instead of the value; the poster
 //       sets it only on its first OSD after the device changed, and tracks that itself) }
