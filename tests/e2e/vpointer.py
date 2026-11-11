@@ -3,6 +3,8 @@
 
 Usage: vpointer.py <wayland-socket> click X Y [W H]    (absolute, in output pixels)
        vpointer.py <wayland-socket> rclick X Y [W H]   (the right button)
+       vpointer.py <wayland-socket> mclick X Y [W H]   (the middle button)
+       vpointer.py <wayland-socket> wheel X Y W H N    (N wheel notches: < 0 up, > 0 down)
        vpointer.py <wayland-socket> move X Y [W H]
 Only ever point it at a nested compositor's socket.
 """
@@ -79,8 +81,18 @@ def main():
     t = int(time.monotonic() * 1000) & 0xFFFFFFFF
     c.send(ptr, 1, struct.pack("<IIIII", t, x, y, w, h))  # motion_absolute
     c.send(ptr, 4, struct.pack("<I", t))                 # frame
-    if cmd in ("click", "rclick"):
-        btn = 0x110 if cmd == "click" else 0x111                 # BTN_LEFT / BTN_RIGHT
+    if cmd == "wheel":
+        notches = int(sys.argv[7]) if len(sys.argv) > 7 else 1
+        time.sleep(0.05)
+        for i in range(abs(notches)):
+            step = 1 if notches > 0 else -1
+            tt = t + 50 + 30 * i
+            c.send(ptr, 5, struct.pack("<I", 0))                              # axis_source(wheel)
+            c.send(ptr, 7, struct.pack("<IIii", tt, 0, step * 15 * 256, step))  # axis_discrete(vertical, 15.0, ±1)
+            c.send(ptr, 4, struct.pack("<I", tt))
+            time.sleep(0.03)
+    if cmd in ("click", "rclick", "mclick"):
+        btn = {"click": 0x110, "rclick": 0x111, "mclick": 0x112}[cmd]  # BTN_LEFT / BTN_RIGHT / BTN_MIDDLE
         time.sleep(0.05)
         c.send(ptr, 2, struct.pack("<III", t + 50, btn, 1))     # pressed
         c.send(ptr, 4, struct.pack("<I", t + 50))
