@@ -213,6 +213,14 @@ Singleton {
         layout = p[1];
         if (before !== undefined && before !== p[1]) SurfaceManager.post("osd", L.layoutOsd(p[1]), 0, "", "layout");
     }
+    // Wave-2 review: the keyboards' layouts at start (`hyprctl -j devices`, hypr.js
+    // layoutsFromDevices), so the first switch per keyboard after a start shows the OSD; the start
+    // itself shows none. A keyboard an `activelayout` event already named keeps that (newer) one.
+    function _loadLayouts(text: string): void {
+        const d = H.layoutsFromDevices(text);
+        _layouts = Object.assign({}, d.layouts, _layouts);
+        if (layout === "") layout = d.main;
+    }
     // Rebuild `windows` from the toplevels (after a toplevel refresh only).
     function _rebuildWindows(): void {
         windows = Hyprland.toplevels.values.map(t => _client(t)).filter(w => w.address !== "");
@@ -351,5 +359,13 @@ Singleton {
         onFileChanged: reload()
         onLoaded: root._loadNames(text())
     }
-    Component.onCompleted: _refresh(["monitors", "toplevels"])
+    Process {
+        id: devicesProc
+        command: ["hyprctl", "-j", "devices"]
+        stdout: StdioCollector { onStreamFinished: root._loadLayouts(text) }
+    }
+    Component.onCompleted: {
+        _refresh(["monitors", "toplevels"]);
+        devicesProc.running = true;
+    }
 }
