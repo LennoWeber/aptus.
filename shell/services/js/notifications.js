@@ -184,6 +184,27 @@ function stackPayload(stack, newest, timeout) {
     p.opens = "today"
     return p
 }
+// The summary's reason for held counts { reason: n } (wave-2 review): the reason that held most;
+// a tie goes to the first in HELD_WHILE's order (focus, dnd, fullscreen); "dnd" when none.
+function heldReason(counts) {
+    var best = "", n = 0
+    for (var r in HELD_WHILE) {
+        var c = counts && isHoldReason(r) ? Number(counts[r]) || 0 : 0
+        if (c > n) { best = r; n = c }
+    }
+    return best || "dnd"
+}
+// The local path of a notification's image ("" for none, image-data (image://), a relative path or
+// a file:// URL that does not decode: a sender's malformed escape is no image, never a throw).
+function imagePath(image) {
+    var src = String(image || "")
+    if (src === "" || src.indexOf("image://") === 0) return ""
+    var path = src
+    if (src.indexOf("file://") === 0) {
+        try { path = decodeURIComponent(src.substring(7)) } catch (e) { return "" }
+    }
+    return path.indexOf("/") === 0 ? path : ""
+}
 // The summary toast for `count` held notifications.
 function heldPayload(count, reason, timeout) {
     invariant(count >= 1, "held summary of " + count)

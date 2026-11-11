@@ -49,8 +49,15 @@ Singleton {
     property var _stackIds: []
     // The id of the next injected notification (counts down from -1; IPC `notch toast`).
     property int _injectSerial: -1
-    // The held summary's hold reason when it started (the toast's wording when it ends).
-    property string _heldReason: ""
+    // Wave-2 review: hold reason → how many notifications it held since the last summary (the
+    // summary is worded by the reason that held most, notifications.js heldReason; a reason that
+    // was on at the shell's start counts like any other).
+    property var _heldReasons: ({})
+    // Source path → the confirmed copy of a notification image { dst, stamp } (stamp: the source's
+    // "size mtime" when copied); a replace with an unchanged source reuses it.
+    property var _copies: ({})
+    // The image copies running (Processes of copyComponent; one per source at a time).
+    property var _copyJobs: []
 
     // Found by the probe (phase 5):
     // The history limits (settings notifications.historyMax, notifications.historyDays).
@@ -58,15 +65,10 @@ Singleton {
     readonly property int _days: Config.get("notifications.historyDays") || 7
 
     onHoldingChanged: {
-        if (holding !== "" && _heldReason === "") _heldReason = holding;
-        else if (holding === "") {
-            // Later, not here: `holding` changes while SurfaceManager applies a rules.js result
-            // (the monitor's fullscreen), and a post from inside that would be overwritten by the
-            // rest of the same apply (its passive list).
-            const reason = _heldReason;
-            if (held > 0) Qt.callLater(() => root._releaseHeld(reason));
-            _heldReason = "";
-        }
+        // Later, not here: `holding` changes while SurfaceManager applies a rules.js result (the
+        // monitor's fullscreen), and a post from inside that would be overwritten by the rest of
+        // the same apply (its passive list).
+        if (holding === "" && held > 0) Qt.callLater(() => { if (root.holding === "") root._releaseHeld(); });
     }
 
     // IPC `notch toast <json>` (test only, 07 §7): a fake notification through the real policy.
@@ -129,9 +131,20 @@ Singleton {
         _closeToast(id);
         _setHistory(N.removeRecord(history, id));
     }
+    // Wave-2 review: the cleared records' toasts (and the stack toast) close, their progress
+    // items go, and the held count ends (no summary of cleared notifications later).
     function clearAll(): void {
+        for (const id in _toasts) _closeToast(Number(id));
+        if (_stack && _alive(_stack.passiveId)) {
+            const p = _stack.passiveId;
+            SurfaceManager.dismiss(p, _monitorOf(p));
+            toastGone(p);
+        }
+        for (const it of Progress.items.slice()) if (it.source === "notification") Progress.remove(it.id);
         for (const id in _live) _live[id].dismiss();
         _live = {};
+        held = 0;
+        _heldReasons = {};
         _setHistory([]);
     }
     // The Notch tells that a toast's passive entry left the notch (timed out or dismissed).
@@ -180,7 +193,12 @@ Singleton {
         if (d.show !== "progress") Progress.remove("n:" + record.id);
         if (d.show === "held") {
             record.held = d.reason;
-            if (!history.some(x => x.id === record.id)) held++;
+            if (!history.some(x => x.id === record.id)) {
+                held++;
+                const c = Object.assign({}, _heldReasons);
+                c[d.reason] = (c[d.reason] || 0) + 1;
+                _heldReasons = c;
+            }
         }
         const old = history.find(x => x.id === record.id);
         if (old && old.read && d.show !== "toast") record.read = true;
@@ -227,31 +245,57 @@ Singleton {
         _setToast(record.id, SurfaceManager.post("toast", payload, priority, mon, "n:" + record.id));
     }
     // The hold ended: one summary toast for the held notifications, worded by why they were held.
-    function _releaseHeld(reason: string): void {
-        const n = held;
-        if (n <= 0) return;
+    function _releaseHeld(): void {
+        const n = held, reason = N.heldReason(_heldReasons);
         held = 0;
-        SurfaceManager.post("toast", N.heldPayload(n, reason || "dnd", Tokens.surfaces.toast.minTimeoutMs), 0, "", "held");
+        _heldReasons = {};
+        if (n <= 0) return;
+        SurfaceManager.post("toast", N.heldPayload(n, reason, Tokens.surfaces.toast.minTimeoutMs), 0, "", "held");
     }
     // Copy the record's image into Paths.notifCache (today.md §6: it survives the sender's temp
     // files and a restart); image-data (image://qsimage) lives only with the notification, so the
-    // history keeps no image for it. Returns the record's image for the history.
+    // history keeps no image for it. Returns the record's image for the history now: the confirmed
+    // copy of the same source, or "" until a copy is confirmed (_copied sets it then).
     function _cacheImage(record: var, live: var): string {
-        const src = String(record.image || "");
-        if (src === "" || src.indexOf("image://") === 0) return "";
-        const path = src.indexOf("file://") === 0 ? decodeURIComponent(src.substring(7)) : src;
-        if (path.indexOf("/") !== 0) return "";
+        // Wave-2 review: a malformed escape in a sender's file:// URL is no image (it threw).
+        const path = N.imagePath(record.image);
+        record.imageSource = path;                  // not stored (N.FIELDS): which copy belongs here
+        if (path === "") return "";
         if (_inCache(path)) return path;
         if (path.indexOf(Paths.notifCache + "/") === 0) return "";       // "…/notif/../x": not ours
-        const ext = (/\.(png|jpe?g|svg|webp|gif)$/i.exec(path) || [".png"])[0];
-        const dst = Paths.notifCache + "/" + Math.abs(record.id) + "-" + Date.now() + ext;
-        // Found in review: any session-bus client names the path, so only a regular file under
-        // IMAGE_MAX_BYTES is copied, and the copy may take a few seconds at most (no device, FIFO
-        // or huge file).
-        Quickshell.execDetached(["sh", "-c",
-            'mkdir -p "$1" && [ -f "$2" ] && [ "$(stat -L -c %s -- "$2")" -le "$4" ] && timeout 5 cp -f -- "$2" "$3"',
-            "sh", Paths.notifCache, path, dst, String(N.IMAGE_MAX_BYTES)]);
-        return dst;
+        const known = _copies[path];
+        if (!_copyJobs.some(j => j.source === path)) {
+            const ext = (/\.(png|jpe?g|svg|webp|gif)$/i.exec(path) || [".png"])[0];
+            const job = copyComponent.createObject(root, {
+                source: path, known: known ? known.dst : "", stamp: known ? known.stamp : "",
+                dst: Paths.notifCache + "/" + Math.abs(record.id) + "-" + Date.now() + ext
+            });
+            _copyJobs = _copyJobs.concat([job]);
+        }
+        return known ? known.dst : "";
+    }
+    // A copy job ended (its stdout: "ok", the stamp, the copy's path; nothing when it failed): the
+    // records of that source get the copy, or no image when it failed.
+    function _copied(job: var, text: string): void {
+        _copyJobs = _copyJobs.filter(j => j !== job);
+        const lines = String(text || "").split("\n");
+        const ok = lines[0] === "ok" && lines[2] !== "" && (lines[2] === job.dst || lines[2] === job.known);
+        const c = Object.assign({}, _copies);
+        if (ok) c[job.source] = { dst: lines[2], stamp: lines[1] }; else delete c[job.source];
+        _copies = c;
+        const image = ok ? lines[2] : "";
+        if (history.some(r => r.imageSource === job.source && r.image !== image))
+            _setHistory(history.map(r => r.imageSource === job.source && r.image !== image ? Object.assign({}, r, { image: image }) : r));
+        if (ok && !history.some(r => r.image === image)) _dropCopy(image);   // its records left meanwhile
+        job.destroy();
+    }
+    // Delete one of our copies (no record uses it any more) and forget it as a source's copy.
+    function _dropCopy(path: string): void {
+        if (!_inCache(path)) return;
+        Quickshell.execDetached(["rm", "-f", "--", path]);
+        let c = null;
+        for (const src in _copies) if (_copies[src].dst === path) { c = c || Object.assign({}, _copies); delete c[src]; }
+        if (c) _copies = c;
     }
     // Found in review: every history change goes through here. A record that leaves (trimmed,
     // removed, replaced) takes its live Notification along (dismissed: the sender learns it is
@@ -267,7 +311,7 @@ Singleton {
                 delete live[r.id];
                 n.dismiss();
             }
-            if (r.image && !used[r.image] && _inCache(r.image)) Quickshell.execDetached(["rm", "-f", "--", r.image]);
+            if (r.image && !used[r.image]) _dropCopy(r.image);
         }
         if (live) _live = live;
         history = h;
@@ -360,6 +404,28 @@ Singleton {
         }
     }
 
+    // One image copy (_cacheImage). An unchanged source whose copy is still there is reused (no
+    // copy); a source that vanished keeps the copy made of it; otherwise only a regular file of at
+    // most IMAGE_MAX_BYTES is copied, for a few seconds at most (any session-bus client names the
+    // path: no device, FIFO or huge file). Prints "ok", the stamp and the copy's path.
+    Component {
+        id: copyComponent
+        Process {
+            id: job
+            property string source
+            property string known
+            property string stamp
+            property string dst
+            command: ["sh", "-c",
+                'mkdir -p "$1" || exit 1; s=""; [ -f "$2" ] && s=$(stat -L -c "%s %Y" -- "$2"); '
+                + 'if [ -n "$3" ] && [ -f "$3" ] && { [ -z "$s" ] || [ "$s" = "$4" ]; }; then printf "ok\\n%s\\n%s\\n" "$4" "$3"; exit 0; fi; '
+                + '[ -n "$s" ] && [ "${s%% *}" -le "$6" ] && timeout 5 cp -f -- "$2" "$5" && printf "ok\\n%s\\n%s\\n" "$s" "$5" && exit 0; '
+                + 'rm -f -- "$5"; exit 1',
+                "sh", Paths.notifCache, source, known, stamp, dst, String(N.IMAGE_MAX_BYTES)]
+            running: true
+            stdout: StdioCollector { onStreamFinished: root._copied(job, text) }
+        }
+    }
     Timer { id: saveTimer; interval: 2000; onTriggered: stateView.setText(N.serialise(root.history) + "\n") }
     FileView {
         id: stateView
