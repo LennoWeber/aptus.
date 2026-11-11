@@ -169,6 +169,29 @@ TestCase {
         compare(heldSummary(), "4 notifications during Do not disturb");
         compare(notifications.held, 0);
     }
+    function test_a_held_notification_closed_by_its_sender_is_not_summarised() {
+        // the e2e pair fullscreen test → pinned card: a summary toast for a closed notification
+        // covered the card after the fullscreen window left
+        dndOn = true;
+        notifications._arrive(live(25, {}));
+        notifications._arrive(live(26, {}));
+        compare(notifications.held, 2);
+        notifications._senderClosed(25);
+        compare(notifications.held, 1);
+        notifications._senderClosed(26);
+        compare(notifications.held, 0);
+        dndOn = false;
+        wait(50);
+        compare(heldSummary(), "", "nothing left to summarise");
+        // one left: the summary counts only that one
+        dndOn = true;
+        notifications._arrive(live(27, {}));
+        notifications._arrive(live(28, {}));
+        notifications._senderClosed(27);
+        dndOn = false;
+        tryVerify(() => heldSummary() !== "");
+        compare(heldSummary(), "1 notification during Do not disturb");
+    }
     function test_held_summary_when_focus_was_on_at_start() {
         notifications.destroy();
         focusRunning = true;

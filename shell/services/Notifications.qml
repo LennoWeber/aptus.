@@ -20,8 +20,9 @@ Singleton {
     property int unread: 0
     // an unread one is from an allowlisted app
     property bool unreadAllowlisted: false
-    // held by DND, focus or a fullscreen window, for the summary toast
-    property int held: 0
+    // held by DND, focus or a fullscreen window, for the summary toast (those still in the
+    // history: one the sender closed meanwhile is not summarised)
+    readonly property int held: _heldIds.length
     // aptus owns org.freedesktop.Notifications: NotificationServer reports no ownership, so a
     // one-shot GetServerInformation call after start answers it (P-20).
     property bool serverActive: false
@@ -49,10 +50,10 @@ Singleton {
     property var _stackIds: []
     // The id of the next injected notification (counts down from -1; IPC `notch toast`).
     property int _injectSerial: -1
-    // Wave-2 review: hold reason → how many notifications it held since the last summary (the
-    // summary is worded by the reason that held most, notifications.js heldReason; a reason that
-    // was on at the shell's start counts like any other).
-    property var _heldReasons: ({})
+    // Wave-2 review: the records held since the last summary (ids; _setHistory keeps only those
+    // still in the history). The summary is worded by the reason that held most of them
+    // (notifications.js heldReason over their `held`), whatever was on at the shell's start.
+    property var _heldIds: []
     // Source path → the confirmed copy of a notification image { dst, stamp } (stamp: the source's
     // "size mtime" when copied); a replace with an unchanged source reuses it.
     property var _copies: ({})
@@ -143,8 +144,7 @@ Singleton {
         for (const it of Progress.items.slice()) if (it.source === "notification") Progress.remove(it.id);
         for (const id in _live) _live[id].dismiss();
         _live = {};
-        held = 0;
-        _heldReasons = {};
+        _heldIds = [];
         _setHistory([]);
     }
     // The Notch tells that a toast's passive entry left the notch (timed out or dismissed).
@@ -193,12 +193,7 @@ Singleton {
         if (d.show !== "progress") Progress.remove("n:" + record.id);
         if (d.show === "held") {
             record.held = d.reason;
-            if (!history.some(x => x.id === record.id)) {
-                held++;
-                const c = Object.assign({}, _heldReasons);
-                c[d.reason] = (c[d.reason] || 0) + 1;
-                _heldReasons = c;
-            }
+            if (!history.some(x => x.id === record.id)) _heldIds = _heldIds.concat([record.id]);
         }
         const old = history.find(x => x.id === record.id);
         if (old && old.read && d.show !== "toast") record.read = true;
@@ -246,9 +241,10 @@ Singleton {
     }
     // The hold ended: one summary toast for the held notifications, worded by why they were held.
     function _releaseHeld(): void {
-        const n = held, reason = N.heldReason(_heldReasons);
-        held = 0;
-        _heldReasons = {};
+        const counts = {};
+        for (const r of history) if (_heldIds.indexOf(r.id) >= 0 && r.held !== "") counts[r.held] = (counts[r.held] || 0) + 1;
+        const n = held, reason = N.heldReason(counts);
+        _heldIds = [];
         if (n <= 0) return;
         SurfaceManager.post("toast", N.heldPayload(n, reason, Tokens.surfaces.toast.minTimeoutMs), 0, "", "held");
     }
@@ -314,6 +310,7 @@ Singleton {
             if (r.image && !used[r.image]) _dropCopy(r.image);
         }
         if (live) _live = live;
+        if (_heldIds.some(id => !kept[id])) _heldIds = _heldIds.filter(id => kept[id]);
         history = h;
         _changed();
     }
