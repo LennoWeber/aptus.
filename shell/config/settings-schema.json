@@ -465,13 +465,13 @@
       "page": "bar",
       "section": "Clock",
       "label": "Show date",
-      "description": "Show the date before the time",
+      "description": "Show the date after the time",
       "keywords": [
         "clock",
         "date",
         "time"
       ],
-      "notes": "`Sat 7 Nov` before the time"
+      "notes": "`Sat 7 Nov` after the time"
     },
     "bar.tray.max": {
       "type": "int",
