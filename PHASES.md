@@ -1403,3 +1403,48 @@ phases 4 and 6 are in (above).
 All 16 e2e tests pass again in the nested Hyprland.
 
 **Rejected.** None.
+
+### Wave-2 review fixes (2026-11-11)
+
+The findings of `/code-review high` on the wave diff (items 1–10) and of the security review
+(item 11), each checked against the code first. Every fix has a test that failed before it
+and passes after it (each run against the old file once).
+
+| # | Item | Verdict | Fix · test |
+|---|---|---|---|
+| 1 | `ops.update` keeps the planned `after` of a failed write; after two failed updates release reports a false conflict | Real | After a failed write `_settle` reads the slot: `after` is the paint it carries (the previous one, writes are atomic), `after_prev` is cleared. · `test_failed_updates_are_no_conflict_at_release` |
+| 2 | dconf `icon-theme` is written when the `icons` target's `when` holds, not when the themes exist; a failed build leaves GTK without its icon theme | Real | A `requires` key is written only while its target's output exists (`own.in_place`: both `aptus-icons-*` with `index.theme`), else it is only recorded. The session applies the required Own targets before the take (`apply.apply_required`), so the first login still selects them. 08 §6 and the `targets.toml` header say so. · `test_slot_specs` (extended), `test_the_icon_theme_key_names_only_a_built_theme` |
+| 3 | An outside render applied by `Tokens._external` fires `requestApply`, so the apps get Config's colours back | Real (reproduced in the nested shell: gen 3 with Config's accent right after the outside gen 2) | `Tokens.applyingExternal` is true while `_external` applies; Theme asks for no apply then. · `tst_theme::test_an_outside_render_requests_no_apply`, e2e `test_an_outside_render_is_not_answered` |
+| 4 | `applying` is cleared only when stdout ended and the process exited; a program that cannot start leaves `applying`/`busy` true | Real. Probe (a `qs -p` scratch config, offscreen, Quickshell 0.3.2): a missing binary only emits `runningChanged` (running false), no `started`, no `exited`, no `streamFinished`; a normal run emits `exited` before `runningChanged` | `onRunningChanged`: running off without an exit ends the run as failed ("aptus-theme could not be started", never a stale stdout); `_run` clears `_done`. · `tst_theme::test_a_program_that_cannot_start_ends_the_run`, `…_either_order` |
+| 5 | `from_settings` reduces motion only for `on`, ignoring `auto` with GNOME animations off | Real | `auto` reads `gsettings get org.gnome.desktop.interface enable-animations` as `Motion.reduced` does (`gsettings` added to `system.TOOLS`; a fake under test). 08 §2 lists the input. · `test_inputs_reduce_motion_auto_follows_gnome` |
+| 6 | `give_back` retries the whole release when something after `ops.release` raises; the retry finds no journal and skips the hooks | Real | Only `release_if_ours` is retried; `after_release` runs once and never raises (each of its two steps is logged on failure, the next still runs). · `test_a_failure_after_the_release_still_runs_the_hooks` |
+| 7 | Every login writes every slot twice (take, then `apply_generation`'s update) and runs `bat cache --build` | Real | `ops.update` skips a slot that carries the planned paint (`unchanged`); `apply_generation(taken=…)` does not update the slots the take just wrote (their hooks still run, 02 §5.3 step 8); Own files that hold the rendered bytes are not rewritten; `bat cache --build` runs only when `themes.bin` is missing or older than its source (`own.bat_stale`, so a failed build is retried). A lease target whose slots all carry the paint is reported `applied`, with no hook. 02 §5.4 and 08 §6 updated. · `test_update_skips_a_slot_that_carries_the_paint`, `test_a_login_writes_each_slot_once`, `test_an_apply_writes_only_what_changed`, `test_own_bat_builds_only_a_changed_source` |
+| 8 | `check_update` raises `InvariantError` and aborts the update loop midway | Real | A spec that does not match its slot is that slot's failure (`failed[id]`); the other slots are written and the generation is recorded. The `invariants` docstring says so. · `test_update_with_a_mismatched_spec_fails_only_that_slot` |
+| 9 | Two flock managers with different re-entry keying, three `_signature()` copies, `_guard_active` repeating `guard.ready` | Real (duplication) | `lease/locks.exclusive` (re-entrant per thread) behind `ops.lock` and `render.lock`; `ops.signature(env)` replaces the three copies; `guard.active` is the unit check, `guard.ready` = state `ok` and `active`, `aptus-lease take` uses `active` (same refusal as before). · `test_lease_and_theme_lock_share_one_flock_helper` (the lease lock used to let a second thread in), `test_lease_cli_take_needs_a_running_guard`; the existing lock tests pass unchanged |
+| 10 | About 12 `wip` commits and `S2 shared:` commits instead of one commit per phase | Accepted deviation | No history rewrite (already merged into `v2`). The wip commits were asked for by brief rule 9: reboots wiped `/tmp` twice during the stage. This fix round has wip commits for the same reason. |
+| 11 | `builtin_tmux` runs `tmux -S` for every socket in `${TMUX_TMPDIR:-/tmp}/tmux-<uid>/` without tmux's own directory check | Hardening (no reportable vulnerability) | `hooks.tmux_sockets`: the directory must be a real directory (lstat, no symlink) owned by `getuid()` with `mode & 0o077 == 0`; each socket is owned by `getuid()` and not a symlink; otherwise nothing runs and the target is "next start". 08 §7 updated. · `test_hook_tmux_only_in_a_private_socket_dir` (symlinked directory, mode 0755, symlinked socket, another uid) |
+
+**Login path, measured.** `session.start` in a temporary HOME. It used the unit-test fakes for
+systemd-run, systemctl and loginctl, a shell `dconf` fake (about 1 ms a call, like the real
+one), the real `bat` (writing only into the temporary HOME) and the real Papirus through the
+test sysroot. There were six logins per tree; after the first, the generation is reused. The
+scratch script is `.scratch-s2/login_timing.py` in the S2 worktree (not committed).
+
+| | `bedcdf1` (before) | after |
+|---|---|---|
+| first login | 2070 ms (`apply_generation` 1001 ms) | 1785 ms (572 ms: bat build, icon themes) |
+| logins 2–6, median | 2232 ms (2117–2288) | 1328 ms (1237–1431) |
+| `apply_generation` at logins 2–6 | 898–937 ms | 75–78 ms |
+| journal saves per login | 43 | 16 |
+
+With the Python `dconf` fake of the unit tests (about 35 ms a call), the median of logins 2–5 went
+from 3584 ms (41 `dconf` calls) to 2336 ms (25). Logins 2–6 still spend about 750 ms in the take
+in this HOME. That time goes to the Python fakes (`loginctl`, `systemctl is-active`) and to the
+fsync of the journal after each slot (02 §5.3 step 6). Neither changed here. Real numbers need a
+real login.
+
+**Checked.**
+- `tests/run`: 347 unit tests (12 new), 172 QML tests (`tst_theme`: 3 new), qmllint with 0
+  warnings on 122 files.
+- `pytest tests/e2e`: 17/17 in the nested Hyprland (1 new).
+- Each new test fails against the file as it was before its fix.

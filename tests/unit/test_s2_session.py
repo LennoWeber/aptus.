@@ -361,3 +361,34 @@ def test_a_login_writes_each_slot_once(p, world, monkeypatch) -> None:
     assert len(fakes.calls(p.home, "bat")) == 1                   # built at the first login only
     assert session.stop(p) == 0
     assert snapshot() == before
+
+
+def test_an_apply_writes_only_what_changed(p, world, monkeypatch) -> None:
+    """Wave-2 review 7: an apply during the session writes only the slots whose paint changed;
+    a target that carries the paint already gets no write and no hook."""
+    from collections import Counter
+
+    from aptus.lease.kinds import file as file_kind
+    from aptus.lease.kinds import ini
+    from aptus.theme import hooks
+    h, snapshot = world
+    before = snapshot()
+    started(p, h)
+    writes: Counter = Counter()
+    for mod in (file_kind, ini, dconf):
+        real = mod.write
+        monkeypatch.setattr(mod, "write", lambda paths, rec, spec, real=real:
+                            writes.update([rec.id]) or real(paths, rec, spec))
+    reloads: list = []
+    real_reloads = hooks.run_reloads
+    monkeypatch.setattr(hooks, "run_reloads", lambda paths, r, sig:
+                        reloads.append(dict(r)) or real_reloads(paths, r, sig))
+    report = apply.apply(p, inputs.Inputs(mode="dark", accent="sky", contrast="normal", glass=False),
+                         h.signature)
+    assert report.mode == "lease" and report.generation == 2 and not report.failed, report
+    assert "dconf.accent-color" in writes and "gtk3.artifact" in writes
+    assert "cursor.cursor-theme" not in writes and "dconf.color-scheme" not in writes
+    assert "cursor" in report.applied and "cursor" not in reloads[0]
+    assert journal.load(p).theme_generation == 2
+    assert session.stop(p) == 0
+    assert snapshot() == before

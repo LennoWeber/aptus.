@@ -25,7 +25,7 @@ class Report:
     generation: int = 0
     mode: str = "scope-only"                                  # "lease" when this session holds the lease
     unchanged: bool = False                                   # same input hash, nothing applied
-    applied: list[str] = field(default_factory=list)          # target ids live now
+    applied: list[str] = field(default_factory=list)          # target ids live now (or already carrying it)
     next_start: list[str] = field(default_factory=list)       # written, the app shows it at its next start
     queued: list[str] = field(default_factory=list)           # bakes waiting for their app to close
     failed: dict[str, str] = field(default_factory=dict)      # target id → why
@@ -140,10 +140,12 @@ def _update_lease(paths: Paths, manifest: Manifest, gen: Generation, leased: lis
             report.not_installed.append(t.id)
         elif bad:
             report.failed[t.id] = "; ".join(f"{i}: {why}" for i, why in sorted(bad.items()))
-        elif not any(i in up.written for i in ids):
-            report.next_start.append(t.id)          # taken at the next session start
-        else:
+        elif any(i in up.written for i in ids):
             changed[t.id] = t.reload
+        elif all(i in up.unchanged for i in ids):
+            report.applied.append(t.id)             # carries this paint already: no write, no hook
+        else:
+            report.next_start.append(t.id)          # taken at the next session start
     return changed
 
 
