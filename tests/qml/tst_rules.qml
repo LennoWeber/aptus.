@@ -245,11 +245,14 @@ TestCase {
     }
     function test_pinned_card_yields_to_toast() {
         var r = o(fresh(), "card:focus", { pinned: true })
+        verify(r.monitors.A.keyboard)
         r = p(r, "toast", {}, 1, 1000)
         compare(r.monitors.A.passiveTop.kind, "toast")
         compare(r.monitors.A.notch, "card:focus")
+        verify(!r.monitors.A.keyboard)                  // covered: the keyboard stays with the app
         r = R.dismiss(r.monitors, r.global, "A", r.id, 2000)
         compare(r.monitors.A.passiveTop.kind, "card")
+        verify(r.monitors.A.keyboard)
     }
     function test_osd_suppressed_under_mode() {
         compare(kinds(p(o(fresh(), "spotlight"), "osd", {})), "refused:osd")

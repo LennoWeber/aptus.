@@ -135,9 +135,9 @@ function finish(c, now) {
             for (var i = 0; i < m.passive.length; i++) if (m.passive[i].kind === "toast") m.passive[i].waited = true
         m.passive = expire(m, now, g.limits).passive
         m.interactive = interactive(m)
+        m.passiveTop = arbitrate(m, now, opts)
         m.keyboard = keyboard(m)
         m.top = top(m)
-        m.passiveTop = arbitrate(m, now, opts)
         if (m.keyboard) keyboardAfter = true
     }
     // 07 §5: the window that had the keyboard before the shell took it (paste-back, focus replay)
@@ -293,7 +293,8 @@ function interactive(m) {
     return isInteractiveMode(m.notch) || m.deck || m.overview || m.capture !== null || m.menu !== null
 }
 // Whether the shell layer takes the keyboard: interactive, or a card opened by click.
-function keyboard(m) { return interactive(m) || pinnedCard(m) }
+// A pinned card only while it shows: under an OSD, toast or event the keyboard stays with the app.
+function keyboard(m) { return interactive(m) || (pinnedCard(m) && !!m.passiveTop && m.passiveTop.kind === "card") }
 // The surface Esc acts on first: "menu", a notch mode, "deck", "overview", "capture" or "".
 function top(m) {
     if (m.menu) return "menu"
