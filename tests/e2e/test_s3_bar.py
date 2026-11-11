@@ -15,7 +15,6 @@ from s3bus import (FakePlayer, Window, close_notification, distance, grab, mean,
                    settle, shell_pid)
 
 
-
 def shots(nested: Nested) -> Path:
     """Where the screenshots go: $APTUS_SHOTS (kept for the visual review), else the session's folder."""
     d = Path(os.environ.get("APTUS_SHOTS") or nested.root / "shots")
@@ -87,8 +86,8 @@ def test_hot_edge_reveal(nested: Nested, window: Window) -> None:
         pointer(nested, "move", m["x"] + m["width"] // 2, m["y"] + m["height"] // 2)
         settle(0.8)                                              # the bar has slid out (M-31)
         hidden = band()
+        start = time.monotonic()           # before the helper: it returns a while after the move
         pointer(nested, "move", m["x"] + m["width"] // 2, m["y"])
-        start = time.monotonic()
         nested.wait_for(lambda: distance(hidden, band()) > 8, 3)  # the bar slides back in
         assert time.monotonic() - start >= 0.38                  # not before the 400 ms push
         shown = band()
@@ -176,8 +175,14 @@ def test_screenshots(nested: Nested, player: FakePlayer) -> None:
         nested.msg("surface", "open", "card:media", '{"pinned": true}')
         shot("card-media")
         nested.msg("surface", "close", "card:media")
-        for tag in ("rest", "toast-actions", "osd-volume", "osd-kbd", "event", "card-media"):
+        assert nested.msg("theme", "mode", "light") == "ok"
+        shot("rest-light")
+        nid = notify(nested, "Build finished", "aptus · 2 warnings", "-a", "Terminal")
+        shot("toast-light")
+        close_notification(nested, nid)
+        for tag in ("rest", "toast-actions", "osd-volume", "osd-kbd", "event", "card-media", "rest-light", "toast-light"):
             head = (out / f"{tag}.png").read_bytes()[16:24]
             assert int.from_bytes(head[:4], "big") == 1920 and int.from_bytes(head[4:], "big") == 1080
     finally:
+        nested.msg("theme", "mode", "dark")
         nested.hyprctl("output", "remove", name)

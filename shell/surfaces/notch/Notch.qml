@@ -55,18 +55,21 @@ Item {
     readonly property bool wantsKeyboard: _currentContent !== null && _currentContent.replying === true
 
     // Found by the probe (phase 5):
-    // This monitor's name, and whether it is the active one (passive content and hover cards
-    // show there).
+    // This monitor's name.
     readonly property string _name: monitor ? monitor.name : ""
-    readonly property bool _isActive: monitor !== null && SurfaceManager.activeMonitor === _name
     // What the notch shows now (notch.js view): rest, hidden, toast, osd, event, card, result, mode.
-    readonly property var view: monitor ? NJ.viewOf({ notch: monitor.notch, passiveTop: monitor.passiveTop }, _hoverCard, _isActive)
+    // Only SurfaceManager's state goes in (a hover card is its `card:` notch too): _sync writes
+    // the Notch's own fields while this binding notifies, so it must not read them.
+    readonly property var view: monitor ? NJ.viewOf({ notch: monitor.notch, passiveTop: monitor.passiveTop })
                                         : ({ kind: "rest", key: "", entry: null, activity: "", mode: "" })
     // The layers on screen: the current one and those still fading out (notch.js layer records).
     property var _layers: []
     property int _layerSerial: 0
-    // The activity whose card is open by hover ("" none; a pinned card is monitor.notch).
-    property string _hoverCard: ""
+    // The activity whose card is open by hover ("" none): a `card:` notch without `pinned`.
+    // Derived, never stored: SurfaceManager applies notch and passive top one after the other,
+    // so `view` passes through "rest" while a card opens.
+    readonly property string _hoverCard: monitor && monitor.notch.indexOf("card:") === 0 && !monitor.notchArgs.pinned
+                                         ? monitor.notch.slice(5) : ""
     // The pointer is over the bulge (the source for the toast countdown pause, the pinned-card
     // timeout and the hover collapse; a content item's own `hovered` only drives its looks).
     property bool _bulgeHovered: false
@@ -118,7 +121,11 @@ Item {
     Behavior on _cove { NumberAnimation { duration: Motion.catalogueMs("toast.coveGrow", false) } }
 
     onViewChanged: _sync()
-    on_BulgeHoveredChanged: { _sync(); if (!_bulgeHovered && _hoverCard !== "") leaveTimer.restart(); else leaveTimer.stop(); }
+    on_BulgeHoveredChanged: _sync()
+    // The pointer is over the bulge or a compact slot: a hover card stays; it collapses
+    // activityHover.leave after the pointer left both.
+    readonly property bool _pointerIn: _bulgeHovered || leftSlot.hovered || rightSlot.hovered
+    on_PointerInChanged: if (!_pointerIn && _hoverCard !== "") leaveTimer.restart(); else leaveTimer.stop();
     Component.onCompleted: _sync()
     Connections {
         target: root.monitor
@@ -142,9 +149,10 @@ Item {
         else if (view.kind !== "event") { _eventId = 0; _eventShownAt = 0; }
         const pinned = monitor.notch.indexOf("card:") === 0 && !!monitor.notchArgs.pinned;
         _pinnedSince = pinned && !_bulgeHovered ? (_pinnedSince || Date.now()) : 0;
-        if (view.kind !== "card") _hoverCard = view.kind === "rest" ? "" : _hoverCard;
-        _countdownTick();
-        _expire();
+        // Later, not here: both may dismiss an entry, which changes the passive list `view` is
+        // still notifying about (a binding loop leaves `view` stale).
+        Qt.callLater(root._countdownTick);
+        Qt.callLater(root._expire);
     }
     // A layer finished fading out.
     function _layerGone(uid: int): void {
@@ -153,17 +161,13 @@ Item {
     }
     // Open an activity's card: by hover (transient, no keyboard) or by click (pinned).
     function _openCard(activity: string, pinned: bool): void {
-        if (!pinned) {
-            if (!Config.get("notch.hoverExpand") || monitor.notch !== "rest") return;
-            _hoverCard = activity;
-        } else _hoverCard = "";
+        // by hover only from rest or another hover card (the pager), never over a mode or a pinned card
+        if (!pinned && (!Config.get("notch.hoverExpand") || (monitor.notch !== "rest" && _hoverCard === ""))) return;
         SurfaceManager.open("card:" + activity, { pinned: pinned }, _name);
     }
     // Close the transient (hover) card.
     function _closeHoverCard(): void {
-        const id = _hoverCard;
-        _hoverCard = "";
-        if (id !== "" && monitor && monitor.notch === "card:" + id && !monitor.notchArgs.pinned) SurfaceManager.close("card:" + id, _name);
+        if (_hoverCard !== "") SurfaceManager.close("card:" + _hoverCard, _name);
     }
     // A passive entry is done (timeout, dismissal): SurfaceManager.dismiss and the toast's owner.
     function _dismissEntry(entry: var): void {
@@ -291,7 +295,7 @@ Item {
     Timer {
         id: leaveTimer
         interval: Motion.catalogueMs("activityHover.leave", false)
-        onTriggered: if (!root._bulgeHovered) root._closeHoverCard()
+        onTriggered: if (!root._pointerIn) root._closeHoverCard()
     }
 
     // One Activity per registered activity on this monitor.
@@ -350,7 +354,6 @@ Item {
             activity: root._slots.left !== "" ? root._activities[root._slots.left] || null : null
             onOpenWidthChanged: if (activity) Qt.callLater(root._noteWidth, activity.activity, openWidth)
             onHoverRested: if (activity) root._openCard(activity.activity, false)
-            onHoverLeft: leaveTimer.restart()
             onClicked: if (activity) root._openCard(activity.activity, true)
             onMiddleClicked: if (activity) activity.middleClick()
             onRightClicked: (x, y) => { const p = mapToItem(null, x, y); if (activity) root._activityMenu(activity.activity, p.x, p.y); }
@@ -370,7 +373,6 @@ Item {
             activity: root._slots.right !== "" ? root._activities[root._slots.right] || null : null
             onOpenWidthChanged: if (activity) Qt.callLater(root._noteWidth, activity.activity, openWidth)
             onHoverRested: if (activity) root._openCard(activity.activity, false)
-            onHoverLeft: leaveTimer.restart()
             onClicked: if (activity) root._openCard(activity.activity, true)
             onMiddleClicked: if (activity) activity.middleClick()
             onRightClicked: (x, y) => { const p = mapToItem(null, x, y); if (activity) root._activityMenu(activity.activity, p.x, p.y); }

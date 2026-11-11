@@ -13,44 +13,44 @@ TestCase {
     function state(notch, top) { return { notch: notch, passiveTop: top || { kind: "rest", entry: null } } }
 
     function test_view_of_states() {
-        compare(T.viewOf(state("rest"), "", true).kind, "rest")
-        const m = T.viewOf(state("spotlight", { kind: "osd", entry: { id: 1, payload: {} } }), "", true)
+        compare(T.viewOf(state("rest")).kind, "rest")
+        const m = T.viewOf(state("spotlight", { kind: "osd", entry: { id: 1, payload: {} } }))
         compare(m.kind, "mode")                                          // an interactive mode wins
         compare(m.key, "mode:spotlight")
-        const o = T.viewOf(state("rest", { kind: "osd", entry: { id: 3, payload: {} } }), "", true)
+        const o = T.viewOf(state("rest", { kind: "osd", entry: { id: 3, payload: {} } }))
         compare(o.kind, "osd")
         compare(o.key, "osd")
-        compare(T.viewOf(state("rest", { kind: "toast", entry: { id: 5, key: "n:12", payload: {} } }), "", true).key, "toast:n:12")
-        const r = T.viewOf(state("rest", { kind: "toast", entry: { id: 5, key: "n:12", payload: { card: "colour" } } }), "", true)
+        compare(T.viewOf(state("rest", { kind: "toast", entry: { id: 5, key: "n:12", payload: {} } })).key, "toast:n:12")
+        const r = T.viewOf(state("rest", { kind: "toast", entry: { id: 5, key: "n:12", payload: { card: "colour" } } }))
         compare(r.kind, "result")                                        // a toast with a card is a result card
         compare(r.key, "result:n:12")
-        compare(T.viewOf(state("rest", { kind: "event", entry: { id: 7, key: "", payload: {} } }), "", true).key, "event:#7")
-        const c = T.viewOf(state("card:media", { kind: "card", entry: "media" }), "", true)
+        compare(T.viewOf(state("rest", { kind: "event", entry: { id: 7, key: "", payload: {} } })).key, "event:#7")
+        const c = T.viewOf(state("card:media", { kind: "card", entry: "media" }))
         compare(c.kind, "card")
         compare(c.activity, "media")
-        compare(T.viewOf(state("rest", { kind: "hidden", entry: null }), "", true).kind, "hidden")
-        compare(T.viewOf(state("keysPeek"), "", true).mode, "keysPeek")      // the passive peek
-        compare(T.viewOf(state("keysPeek", { kind: "osd", entry: { id: 2, payload: {} } }), "", true).kind, "osd")
+        compare(T.viewOf(state("rest", { kind: "hidden", entry: null })).kind, "hidden")
+        compare(T.viewOf(state("keysPeek")).mode, "keysPeek")      // the passive peek
+        compare(T.viewOf(state("keysPeek", { kind: "osd", entry: { id: 2, payload: {} } })).kind, "osd")
     }
     function test_layers_crossfade_and_in_place() {
-        const osd = T.viewOf(state("rest", { kind: "osd", entry: { id: 1, payload: {} } }), "", true)
+        const osd = T.viewOf(state("rest", { kind: "osd", entry: { id: 1, payload: {} } }))
         let s = T.nextLayers([], osd, 0)
         compare(s.layers.length, 1)
         compare(s.serial, 1)
         verify(!s.layers[0].leaving)
         // another OSD (a new entry) is the same layer, updated in place
-        s = T.nextLayers(s.layers, T.viewOf(state("rest", { kind: "osd", entry: { id: 4, payload: {} } }), "", true), s.serial)
+        s = T.nextLayers(s.layers, T.viewOf(state("rest", { kind: "osd", entry: { id: 4, payload: {} } })), s.serial)
         compare(s.layers.length, 1)
         compare(s.layers[0].uid, 1)
         compare(s.layers[0].entryId, 4)
         compare(s.serial, 1)
         // a toast crossfades: the OSD leaves, the toast enters
-        s = T.nextLayers(s.layers, T.viewOf(state("rest", { kind: "toast", entry: { id: 5, key: "n:1", payload: {} } }), "", true), s.serial)
+        s = T.nextLayers(s.layers, T.viewOf(state("rest", { kind: "toast", entry: { id: 5, key: "n:1", payload: {} } })), s.serial)
         compare(s.layers.map(l => l.leaving), [true, false])
         compare(s.layers[1].uid, 2)
         compare(s.layers[1].kind, "toast")
         // rest: everything leaves
-        s = T.nextLayers(s.layers, T.viewOf(state("rest"), "", true), s.serial)
+        s = T.nextLayers(s.layers, T.viewOf(state("rest")), s.serial)
         verify(s.layers.every(l => l.leaving))
         compare(T.dropLayer(s.layers, 1).map(l => l.uid), [2])
     }
@@ -141,8 +141,8 @@ TestCase {
     function test_invariants_reject_broken_state() {
         const osd = { uid: 1, kind: "osd", key: "osd", entryId: 1, activity: "", mode: "", leaving: false }
         const toast = { uid: 2, kind: "toast", key: "toast:n:1", entryId: 2, activity: "", mode: "", leaving: false }
-        verify(refuses(() => T.viewOf({ notch: "bogus", passiveTop: null }, "", true)))
-        verify(refuses(() => T.viewOf({ notch: "rest", passiveTop: { kind: "weird", entry: null } }, "", true)))
+        verify(refuses(() => T.viewOf({ notch: "bogus", passiveTop: null })))
+        verify(refuses(() => T.viewOf({ notch: "rest", passiveTop: { kind: "weird", entry: null } })))
         verify(refuses(() => T.keyOf({ kind: "toast", entry: null })))
         // layers: never two current ones, a uid once, no rest layer, the serial ahead of every uid
         verify(accepts(() => T.checkLayers([osd, { uid: 2, kind: "toast", key: "toast:n:1", leaving: true }])))

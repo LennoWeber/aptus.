@@ -20,10 +20,10 @@
 // A slot assignment (notch.md §4): { left: activity id | "", right: activity id | "",
 //   waiting: [id] } from candidates [{ id, slot, priority, width }].
 
-// The view for a monitor state (MonitorState fields as a plain object). hoverCard: the activity
-// whose card is open by hover ("" none); interactive notch modes and pinned cards come from
-// state.notch. A toast whose payload has `card` is a result card (kind "result").
-function viewOf(state, hoverCard, isActive) {
+// The view for a monitor state (MonitorState fields as a plain object): interactive notch modes
+// come from state.notch, cards (hover and pinned) from its passive top. A toast whose payload has
+// `card` is a result card (kind "result").
+function viewOf(state) {
     invariant(state && R.legalNotch(state.notch), "illegal notch state " + (state && state.notch))
     invariant(!state.passiveTop || TOP_KINDS.indexOf(state.passiveTop.kind) >= 0, "illegal passive top " + (state.passiveTop && state.passiveTop.kind))
     var n = state.notch
