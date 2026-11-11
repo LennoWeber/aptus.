@@ -2160,3 +2160,60 @@ MediaActivity `_armPaused`; MediaCard `_readPosition`; `bar.js wheelSteps`, `WHE
 **Shared commits of the review fixes:** 4621544 rules.js (keyboard under a covered card), 6dff347
 tokens.json (one body line, status glyph sizes), 6300ab8 Menu.qml (row icons), 59d4cfd notch.md
 (one body line, one title line).
+
+### Wave-2 review (S3), 2026-11-11
+
+The findings of `/code-review high db4d5fc..18a1af8` for S3 (items 1–10, the 07 note), the three
+items the main session's full e2e run on `18a1af8` found (A–C), and the e2e cases phase 7's review
+left open (finding 31). Each item was checked against the code first. Every fix has a test that
+failed against the file as it was before the fix and passes after it.
+
+| # | Item | Verdict | Fix · test |
+|---|---|---|---|
+| 1 | Osd shows the device name only from `onPayloadChanged`, which would not run for the first payload | Mechanism wrong: a change handler does run for a binding's first value at creation (checked on Qt 6.11, `tst_osd` loads the Osd as NotchLayer does). Related defect real: the label read `payload.device`, so the next press (no device) showed the value at once, and an OSD of another kind kept the flag | The Osd keeps the name and its kind for `osd.deviceNameMs`; another kind ends it. · `tst_osd` (3) |
+| 2 | The strip's Repeater gets a fresh array on every rebuild, so all pills are recreated and the urgent nudge never runs | Real | A `ListModel` synced by workspace id (`bar.js syncIds`: remove, move, insert in place); each pill has `required property int wsId` and looks its record up, so updates reach the existing pill and the nudge fires on the urgent edge. Shared commit `cb4bb3c`: `qs.services` doubles (Hypr, Apps) in the QML mock. · `tst_workspacestrip::test_sync_ids_in_place`, `…_pills_survive_a_rebuild_and_nudge_on_the_urgent_edge` |
+| 3 | `_layouts` empty at start: the first layout switch per keyboard shows no OSD | Real | `hyprctl -j devices` once at start (`hypr.js layoutsFromDevices`: every keyboard's `active_keymap`, the main keyboard's as `layout`); values from events win; no OSD at start. · `tst_hyprlayouts` (3), e2e `test_layout_osd_on_the_first_switch_after_the_start` |
+| 4 | `decodeURIComponent` on a sender's `file://` URL throws out of `_receive` | Real | `notifications.js imagePath`: a URL that does not decode is no image; the notification arrives and stays live. Found by the full e2e run (`test_s3_zlog`): the toast still handed that URL to its Image, which logged a warning; the toast now shows from the live notification only image-data, icons and local files (`liveImage`). · `tst_notifications::test_a_malformed_image_url_is_no_image`, `tst_notifylogic::test_image_path_and_live_image`, e2e (the bad URL in `test_image_is_copied_once_for_its_replaces`, then `test_shell_log_has_no_warnings`) |
+| 5 | `clearAll()` leaves toasts, Progress items and `held` | Real (all three) | `clearAll` closes the cleared records' toasts and the stack toast, removes their Progress items, dismisses the live objects and empties the held list. · `tst_notifications::test_clear_all_closes_toasts_progress_and_held` |
+| 6 | The record gets the copy's path whether the copy worked or not; every replace copies again | Real | One copy job per source (a `Process`) prints "ok", the source's size and mtime and the copy; the record gets the image only then (no image when it fails); a replace with an unchanged source reuses the copy; a copy no record uses any more is deleted. Found by the e2e test on the way: Quickshell hands an `image-path` hint that is not a `file://` URL as `image://icon/<hint>`, so a plain path was never copied; `imagePath` takes the path out of it. · `tst_notifications::test_the_image_is_set_once_its_copy_is_confirmed`, `…_a_replace_reuses_the_copy`, `…_a_plain_image_path_hint_is_copied`, e2e `test_image_is_copied_once_for_its_replaces` (five replaces, one file) |
+| 7 | The held reason is set once (focus → dnd keeps "focus") and never at a start with DND or Focus on | In part: the start case works (the handler runs for the first value, as in 1; `…_held_summary_when_focus_was_on_at_start` guards it). Focus → dnd: real | Each held record carries its reason; the summary names the reason that held most (`notifications.js heldReason`, ties: focus, dnd, fullscreen). · `tst_notifications::test_held_summary_follows_what_held_most` |
+| 8 | `cancellable` matches "cancel" in any case, `cancel()` invokes exactly "cancel" | Real | Progress keeps the sender's own identifier (`cancelAction`) and invokes it. · `tst_notifications::test_progress_cancel_invokes_the_senders_own_action` |
+| 9 | Brightness takes the first backlight (`ls \| head -n1`) | Rejected (main session; phase-7 review #30): since Linux 6.1 one backlight per panel, this machine has `intel_backlight` only | none |
+| 10 | Literals: WorkspacePill `"transparent"`, MediaCard `interval: 1000` | Pill: real. MediaCard: stays (phase-7 review #25: a poll period, not a design duration) | The pill uses `Tokens.alpha(Tokens.accent, 0)`. · `tests/unit/test_s3_literals.py` (no colour literal in bar, notch or frame) |
+| 07 | `Brightness` missing from 07 §3 step 3 | Real | Shared commit `86a0f6f`: step 3 lists it, with its reason (the backlight scan runs at start, so the first brightness key finds the device). · none (text) |
+| A | `test_pinned_card_ways_out` fails after `test_fullscreen_leave_and_critical_above` | Shell wrong: `held` counted a held notification its sender had closed, so leaving fullscreen posted a stale "held" summary. That toast covered the next test's pinned card, which then has no keyboard (rules.js `keyboard`, by design), so Esc went to the window | `held` follows the history (`_heldIds`: a record that leaves the history leaves the count). The fullscreen test asserts no summary after leaving and ends drained; the pinned-card test starts drained. New: a pinned card while a toast arrives, then Esc (nothing closes while the toast is on top; Esc closes the card once it is gone). · `tst_notifications::test_a_held_notification_closed_by_its_sender_is_not_summarised`, e2e `test_held_then_closed_by_its_sender_is_not_summarised`, `test_pinned_card_under_a_toast_then_escape` |
+| B | `test_hover_card_opens_and_collapses` fails | A consequence of A (the stale toast) | Passes in the full run below. |
+| C | `WARN quickshell.service.sni.item: Unable to create pixmap for tray icon` | The fake item's fault: in `NeedsAttention` it had neither an attention icon nor a pixmap | `fake_sni.py` gives `IconPixmap`, `AttentionIconName` and `AttentionIconPixmap` (no whitelist). · `test_s3_zlog.py::test_shell_log_has_no_warnings` |
+
+**E2e cases of phase 7's finding 31**, all run in the nested Hyprland:
+`test_progress_activity_from_a_value_hint`, `test_urgent_toast_and_its_repeat` (an X11 kitty
+rings its bell: Hyprland reports a Wayland kitty's or foot's bell in the nested session not as
+`urgent`), `test_layout_osd_on_the_first_switch_after_the_start`, `test_battery_toasts` (the Power
+service reads a battery double under `APTUS_TEST`, `fakehw.py battery`, never UPower),
+`test_countdown_restarts_on_replace_and_stack_join`, the burst test now asserts count and apps,
+`test_fixed_workspaces_split_one_to_five_and_six_to_ten` (a headless output named eDP-1),
+`test_toast_close_button_middle_click_and_menu`, `test_tray_overflow`,
+`test_wheel_on_the_strip_steps_through_used_workspaces`. Quiet bar (M-31b) stays with S8.
+Helpers: `s3bus.py` (`wheel`, `setting` with `shell reloadConfig`, `passive`, `drained`,
+`Window.to_workspace`, `BellWindow`), `fakehw.py battery`. Shared commits: `db3dddc` Ipc.qml
+(progress items and the stack in `shell state`), `5253666` vpointer.py (middle button, wheel),
+`b638c75` tests/e2e/hyprland.lua (layouts `de,us`: setting them at runtime emits `activelayout`,
+which would fill the layouts before the test).
+
+**Seen on the way, not fixed here** (S1's Config, outside this review): Config does not notice a
+`settings.json` created after the shell started, nor any later write to it (probe in the nested
+session: a plain write, a modify and an atomic replace all went unseen; apparently `FileView`
+sets no watch on a file missing at start). The e2e helper `setting` therefore calls
+`shell reloadConfig`. A hand-made `settings.json` on a fresh install needs a shell restart or
+`aptus msg shell reloadConfig`.
+
+**Checked.**
+- `tests/run`: 348 unit tests (1 new: `test_s3_literals`), 281 QML tests (18 new: `tst_osd` 3,
+  `tst_workspacestrip` 2, `tst_notifications` 9, `tst_hyprlayouts` 3, `tst_notifylogic` 1), qmllint
+  147 files, 0 warnings.
+- `pytest tests/e2e`: 62/62 in the nested Hyprland (12 new; A's two tests, B's hover card and C's
+  log check pass). The first full run had 61/62: `test_shell_log_has_no_warnings` caught the
+  toast's warning for the malformed URL (fixed in 4).
+- Each fix has at least one test that failed against the file as it was before the fix; the others
+  guard what already worked (`tst_osd` for a later device change and another kind, the start case
+  of 7).
