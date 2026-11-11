@@ -13,10 +13,9 @@ Item {
 
     // The Hyprland monitor name.
     property string monitorName: ""
-    // The toast payload (notifications.js).
+    // The toast payload (notifications.js). A new payload while the toast shows (a replace, a
+    // stack join) crossfades the content in place; M-06 is not replayed (notch.md §6 rule 3).
     property var payload: ({})
-    // Play the M-06 entrance (false for an in-place update: content crossfade only).
-    property bool entrance: true
 
     // The bulge size: 420 × 72 / 104 / 132 (notch.md §6); while the reply field is open it takes
     // the button row's place and the toast grows by the difference.
@@ -58,10 +57,24 @@ Item {
     // The toast's tokens, the stack record (null for a single toast) and the buttons (the
     // actions, plus Reply when the sender allows it).
     readonly property var _t: Tokens.surfaces.toast
-    readonly property var _stack: payload.stack || null
-    readonly property var _actions: (payload.actions || []).concat(payload.reply ? [{ id: "__reply", text: "Reply" }] : [])
+    // Found in review: the payload on screen (follows `payload` through the in-place crossfade)
+    // and the crossfade's content opacity.
+    property var _p: ({})
+    property real _swap: 1
+    property bool _ready: false
+    onPayloadChanged: {
+        if (!_ready) return;
+        if (Motion.reduced) _p = payload;
+        else swapAnim.restart();
+    }
+    readonly property var _stack: _p.stack || null
+    readonly property var _actions: (_p.actions || []).concat(_p.reply ? [{ id: "__reply", text: "Reply" }] : [])
 
-    Component.onCompleted: if (entrance && !Motion.reduced) entranceAnim.start()
+    Component.onCompleted: {
+        _p = payload;
+        _ready = true;
+        if (!Motion.reduced) entranceAnim.start();
+    }
 
     HoverHandler { id: hover }
     MouseArea {
@@ -81,20 +94,20 @@ Item {
         width: root._t.iconSize
         height: width
         scale: (Motion.reduced ? 1 : Motion.catalogueValue("toast.iconScaleFrom")) + (1 - (Motion.reduced ? 1 : Motion.catalogueValue("toast.iconScaleFrom"))) * root._icon
-        opacity: root._icon
+        opacity: root._icon * root._swap
         AppIcon {
             anchors.fill: parent
-            visible: !root._stack && !root.payload.glyph
+            visible: !root._stack && !root._p.glyph
             size: parent.width
-            icon: root.payload.appIcon || ""
-            name: root.payload.appName || ""
+            icon: root._p.appIcon || ""
+            name: root._p.appName || ""
         }
         Glyph {
             anchors.centerIn: parent
-            visible: !root._stack && !!root.payload.glyph
-            name: root.payload.glyph || ""
+            visible: !root._stack && !!root._p.glyph
+            name: root._p.glyph || ""
             size: Tokens.glyphToast
-            colour: root.payload.critical ? Tokens.crit : Tokens.inkMain
+            colour: root._p.critical ? Tokens.crit : Tokens.inkMain
         }
         Repeater {
             model: root._stack ? root._stack.icons : []
@@ -115,12 +128,13 @@ Item {
         y: Tokens.padToast - Tokens.s1
         width: root.width - x - Tokens.padToast - (image.visible ? image.width + Tokens.gapToastIcon : 0)
         spacing: Tokens.s1
+        opacity: root._swap
         Label {
             width: parent.width - closeButton.width
             type: "micro"
             ink: "meta"
             elide: Text.ElideRight
-            text: [root.payload.appName || "", root.payload.time ? F.ago(root.payload.time, Date.now()) : ""].filter(s => s !== "").join(" · ")
+            text: [root._p.appName || "", root._p.time ? F.ago(root._p.time, Date.now()) : ""].filter(s => s !== "").join(" · ")
         }
         Row {
             width: parent.width
@@ -128,7 +142,7 @@ Item {
             opacity: root._title
             transform: Translate { y: Motion.catalogueValue("toast.textRise") * (1 - root._title) }
             Glyph {
-                visible: !!root.payload.critical && (root.payload.nid || 0) !== 0
+                visible: !!root._p.critical && (root._p.nid || 0) !== 0
                 anchors.verticalCenter: parent.verticalCenter
                 name: "warning"
                 size: Tokens.glyphRow
@@ -138,7 +152,7 @@ Item {
                 width: parent.width - x
                 type: "bodyStrong"
                 elide: Text.ElideRight
-                text: root.payload.summary || ""
+                text: root._p.summary || ""
             }
         }
         Label {
@@ -153,19 +167,20 @@ Item {
             // with a button row only one line fits the 104 / 132 heights
             maximumLineCount: root._actions.length > 0 ? 1 : root._t.bodyMaxLines
             elide: Text.ElideRight
-            text: root.payload.body || ""
+            text: root._p.body || ""
             onLinkActivated: link => Qt.openUrlExternally(link)
         }
     }
     Thumb {
         id: image
-        visible: String(root.payload.image || "") !== ""
+        visible: String(root._p.image || "") !== ""
         x: root.width - Tokens.padToast - width
         y: Tokens.padToast
         width: root._t.imageSize
         height: width
         radius: root._t.imageRadius
-        source: root.payload.image || ""
+        opacity: root._swap
+        source: root._p.image || ""
     }
     IconButton {
         id: closeButton
@@ -182,8 +197,9 @@ Item {
     Row {
         id: actions
         visible: root._actions.length > 0 && !root.replying
+        opacity: root._swap
         x: texts.x
-        y: NJ.toastHeight(root.payload, root._t.heights) - Tokens.padToast - height
+        y: NJ.toastHeight(root._p, root._t.heights) - Tokens.padToast - height
         spacing: Tokens.s2
         Repeater {
             model: root._actions
@@ -212,6 +228,13 @@ Item {
             if (t.trim() !== "") root.replied(t);
         }
         Keys.onEscapePressed: root.closeReply()
+    }
+    // The in-place crossfade: the old content out over morphOutMs, then the new one in (`fade`).
+    SequentialAnimation {
+        id: swapAnim
+        StandardAnimation { target: root; property: "_swap"; to: 0; duration: Tokens.surfaces.notch.morphOutMs }
+        ScriptAction { script: root._p = root.payload }
+        StandardAnimation { target: root; property: "_swap"; to: 1; duration: Motion.ms("fade", false) }
     }
     SequentialAnimation {
         id: entranceAnim

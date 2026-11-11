@@ -10,11 +10,10 @@ Item {
 
     // The layer record (notch.js): { uid, kind, key, entryId, activity, mode, leaving }.
     property var record: ({})
-    // False once a newer layer replaced this one: it fades out, then the Notch drops it.
+    // False once a newer layer replaced this one: it fades out, then the Notch drops it. (An
+    // in-place update, a replace or a stack join, keeps the layer: the Toast crossfades its own
+    // content.)
     property bool shown: true
-    // A plain crossfade (an in-place update such as replaces_id, or reduced motion): no entrance
-    // choreography of the content.
-    property bool plain: false
     // What the content needs (set by the Notch): the monitor, the passive entry's payload (updated
     // in place: stack, replaces_id, OSD value), the Component of a mode or result card, the mode's
     // args, the live activities and whether the card is pinned (ActivityCard).
@@ -44,7 +43,7 @@ Item {
         Transition {
             to: "in"
             SequentialAnimation {
-                PauseAnimation { duration: root.plain || Motion.reduced ? 0 : Tokens.surfaces.notch.morphInDelayMs }
+                PauseAnimation { duration: Motion.reduced ? 0 : Tokens.surfaces.notch.morphInDelayMs }
                 NumberAnimation { target: root; property: "_fade"; duration: Motion.ms("fade", false); easing.bezierCurve: Motion.enter }
             }
         },
@@ -54,14 +53,13 @@ Item {
         }
     ]
     opacity: _fade
-    transform: Translate { y: root.plain || Motion.reduced || !root.shown ? 0 : Motion.contentRise * (1 - root._fade) }
+    transform: Translate { y: Motion.reduced || !root.shown ? 0 : Motion.contentRise * (1 - root._fade) }
 
     Component {
         id: toastComponent
         Toast {
             monitorName: root.monitorName
             payload: root.payload
-            entrance: !root.plain
         }
     }
     Component { id: osdComponent; Osd { payload: root.payload } }

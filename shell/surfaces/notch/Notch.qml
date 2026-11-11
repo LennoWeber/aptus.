@@ -83,6 +83,9 @@ Item {
     property bool _bulgeHovered: false
     // Toast countdowns by passive entry id (notch.js countdown records).
     property var _countdowns: ({})
+    // Found in review: the payload each countdown was started for (passive entry id → payload):
+    // a replace or a stack join updates the entry in place and restarts its countdown (notch.md §6).
+    property var _countdownPayloads: ({})
     // The event entry shown now and since when (ms): it leaves surfaces.event.ms after it first
     // showed. (The OSD collapses osd.collapseAfter after its entry's `born`, which every post with
     // its key resets, so it needs no field here.)
@@ -98,9 +101,10 @@ Item {
         return out;
     }
     // The compact slots after arbitration (notch.js slot assignment): none while an interactive
-    // mode is open; under `hide` only recording (notch.md §2, §9).
+    // mode, Overview or Capture is open; under `hide` only recording (notch.md §2, §9).
     readonly property var _slots: {
-        if (view.kind === "mode") return { left: "", right: "", waiting: [] };
+        if (view.kind === "mode" || (monitor && (monitor.overview || monitor.capture !== null)))
+            return { left: "", right: "", waiting: [] };
         const cands = _live.filter(a => hide < 0.5 || a.activity === "recording")
                            .map(a => ({ id: a.activity, slot: a.slot, priority: a.priority, width: _widths[a.activity] || 0 }));
         return NJ.assignSlots(cands, rest.implicitWidth, Tokens.gapBarItem, Tokens.surfaces.notch.centreGroupMaxWidth);
@@ -130,6 +134,9 @@ Item {
 
     onViewChanged: _sync()
     on_BulgeHoveredChanged: _sync()
+    // Found in review: a pinned card is what shows (not covered by an OSD, toast or event): only
+    // then the outside catcher and the whole-monitor mask are up (rules.js keyboard agrees).
+    readonly property bool _pinnedShown: view.kind === "card" && monitor !== null && !!monitor.notchArgs.pinned
     // The pointer is over the bulge or a compact slot: a hover card stays; it collapses
     // activityHover.leave after the pointer left both.
     readonly property bool _pointerIn: _bulgeHovered || leftSlot.hovered || rightSlot.hovered
@@ -137,7 +144,9 @@ Item {
     Component.onCompleted: _sync()
     Connections {
         target: root.monitor
-        function onPassiveChanged(): void { root._expire(); }
+        // Later, not here: the passive list is written in the middle of a SurfaceManager apply
+        // (before notch and passiveTop), and a dismissal from inside it would be overwritten.
+        function onPassiveChanged(): void { Qt.callLater(root._expire); }
     }
 
     // The view changed: update the layers (notch.js nextLayers) and the timers of what shows.
@@ -170,7 +179,9 @@ Item {
     // Open an activity's card: by hover (transient, no keyboard) or by click (pinned).
     function _openCard(activity: string, pinned: bool): void {
         // by hover only from rest or another hover card (the pager), never over a mode or a pinned card
-        if (!pinned && (!Config.get("notch.hoverExpand") || (monitor.notch !== "rest" && _hoverCard === ""))) return;
+        // by hover only on the active monitor (05 §7; a click makes its monitor the active one)
+        if (!pinned && (!Config.get("notch.hoverExpand") || (monitor.notch !== "rest" && _hoverCard === "")
+                        || SurfaceManager.activeMonitor !== _name)) return;
         SurfaceManager.open("card:" + activity, { pinned: pinned }, _name);
     }
     // Close the transient (hover) card.
@@ -240,12 +251,20 @@ Item {
     }
     // The toast countdown of the shown toast: run, pause (hover, covered), expire.
     function _countdownTick(): void {
+        if (!monitor) return;
         const now = Date.now();
         const shown = (view.kind === "toast" || view.kind === "result") && view.entry ? view.entry : null;
-        const c = Object.assign({}, _countdowns);
-        for (const id in c) if (!shown || Number(id) !== shown.id) c[id] = NJ.countdownPause(c[id], now);
+        // countdowns of entries that left (closed through Notifications, not _dismissEntry) go
+        const c = {}, cp = {};
+        for (const id in _countdowns) {
+            if (!monitor.passive.some(e => e.id === Number(id))) continue;
+            c[id] = !shown || Number(id) !== shown.id ? NJ.countdownPause(_countdowns[id], now) : _countdowns[id];
+            cp[id] = _countdownPayloads[id];
+        }
         let left = Infinity;
         if (shown) {
+            if (c[shown.id] && cp[shown.id] !== shown.payload) delete c[shown.id];     // updated in place
+            cp[shown.id] = shown.payload;
             let cd = c[shown.id] || NJ.countdownStart(shown.payload ? Number(shown.payload.timeout) || 0 : 0, now);
             const held = _bulgeHovered || wantsKeyboard;
             cd = held ? NJ.countdownPause(cd, now) : NJ.countdownResume(cd, now, Tokens.surfaces.toast.resumeMinMs);
@@ -253,6 +272,7 @@ Item {
             left = held ? Infinity : NJ.countdownLeft(cd, now);
         }
         _countdowns = c;
+        _countdownPayloads = cp;
         if (shown && left <= 0) { _dismissEntry(shown); return; }
         if (left !== Infinity) { toastTimer.interval = Math.max(1, left); toastTimer.restart(); }
         else toastTimer.stop();
@@ -277,6 +297,7 @@ Item {
     // focus to the window under the pointer (Hypr.windowAt, focusWindow).
     function _outsideClicked(x: real, y: real): void {
         if (monitor.notch.indexOf("card:") === 0) SurfaceManager.close(monitor.notch, _name);
+        if (y < _barNow) return;                     // the bar takes the press itself
         const w = Hypr.windowAt(_name, x, y);
         if (w) Hypr.focusWindow(w.address);
     }
@@ -329,38 +350,51 @@ Item {
         }
     }
 
-    // The outside catcher while a card is pinned.
+    // The outside catcher while a pinned card shows. A press on the bar band closes the card and
+    // goes on to the bar below (not accepted); elsewhere focus replays to the window (05 §3).
     MouseArea {
         anchors.fill: parent
-        enabled: root.monitor !== null && root.monitor.notch.indexOf("card:") === 0 && !!root.monitor.notchArgs.pinned
+        enabled: root._pinnedShown
         acceptedButtons: Qt.AllButtons
-        onPressed: m => root._outsideClicked(m.x, m.y)
+        onPressed: m => {
+            root._outsideClicked(m.x, m.y);
+            if (m.y < root._barNow) m.accepted = false;
+        }
     }
 
     // The input area (mask).
     Item {
         id: maskArea
-        readonly property bool _all: root.monitor !== null && root.monitor.notch.indexOf("card:") === 0 && !!root.monitor.notchArgs.pinned
-        x: _all ? 0 : Math.min(root.hide > 0.5 ? root.width : centre.x, (root.width - root._bulgeW) / 2)
-        width: _all ? root.width : Math.max(root.hide > 0.5 ? 0 : centre.x + centre.width, (root.width + root._bulgeW) / 2) - x
+        readonly property bool _all: root._pinnedShown
+        // the centre group takes input unless it left with the bar (under `hide` only a slot that
+        // stays, i.e. recording, keeps it)
+        readonly property bool _centre: root.hide <= 0.5 || root._slots.left !== "" || root._slots.right !== ""
+        x: _all ? 0 : Math.min(_centre ? centre.x : root.width, (root.width - root._bulgeW) / 2)
+        width: _all ? root.width : Math.max(_centre ? centre.x + centre.width : 0, (root.width + root._bulgeW) / 2) - x
         y: 0
-        height: _all ? root.height : root._barNow + root._bulgeH
+        height: _all ? root.height : Math.max(root._barNow + root._bulgeH, _centre && root.hide > 0.5 ? centre.y + centre.height : 0)
     }
 
-    // The centre group: compact slots and the rest clock.
+    // The centre group: compact slots and the rest clock. Each part slides out and fades with the
+    // bar under a fullscreen window (M-31), except a slot showing recording (notch.md §2).
+    // TODO(S9): where the recording compact sits when a bulge (OSD, critical toast) shows above
+    // a fullscreen window.
     Row {
         id: centre
         anchors.horizontalCenter: parent.horizontalCenter
-        y: (Tokens.barHeight - height) / 2 - Tokens.barHeight * root.hide - Tokens.barHeight * (1 - root.introProgress)
+        y: (Tokens.barHeight - height) / 2 - Tokens.barHeight * (1 - root.introProgress)
         height: Tokens.barHeight
         spacing: Tokens.gapBarItem
-        opacity: root.introProgress * (1 - root.hide)
+        opacity: root.introProgress
         CompactSlot {
             id: leftSlot
+            readonly property real _leave: activity && activity.activity === "recording" ? 0 : root.hide
+            opacity: 1 - _leave
+            transform: Translate { y: -Tokens.barHeight * leftSlot._leave }
             side: "left"
             monitorName: root._name
             activity: root._slots.left !== "" ? root._activities[root._slots.left] || null : null
-            onOpenWidthChanged: if (activity) Qt.callLater(root._noteWidth, activity.activity, openWidth)
+            onOpenWidthChanged: if (activity) root._noteWidth(activity.activity, openWidth)
             onHoverRested: if (activity) root._openCard(activity.activity, false)
             onClicked: if (activity) root._openCard(activity.activity, true)
             onMiddleClicked: if (activity) activity.middleClick()
@@ -368,6 +402,8 @@ Item {
         }
         RestGroup {
             id: rest
+            opacity: 1 - root.hide
+            transform: Translate { y: -Tokens.barHeight * root.hide }
             monitorName: root._name
             showDate: !!Config.get("bar.clock.showDate") && !root.narrow && !root.quiet
             unread: Notifications.unread > 0
@@ -376,22 +412,35 @@ Item {
         }
         CompactSlot {
             id: rightSlot
+            readonly property real _leave: activity && activity.activity === "recording" ? 0 : root.hide
+            opacity: 1 - _leave
+            transform: Translate { y: -Tokens.barHeight * rightSlot._leave }
             side: "right"
             monitorName: root._name
             activity: root._slots.right !== "" ? root._activities[root._slots.right] || null : null
-            onOpenWidthChanged: if (activity) Qt.callLater(root._noteWidth, activity.activity, openWidth)
+            onOpenWidthChanged: if (activity) root._noteWidth(activity.activity, openWidth)
             onHoverRested: if (activity) root._openCard(activity.activity, false)
             onClicked: if (activity) root._openCard(activity.activity, true)
             onMiddleClicked: if (activity) activity.middleClick()
             onRightClicked: (x, y) => { const p = mapToItem(null, x, y); if (activity) root._activityMenu(activity.activity, p.x, p.y); }
         }
     }
-    // A compact slot reports its activity's width (into _widths).
+    // A compact slot reports its activity's width (into _widths, later: _slots reads _widths, and
+    // a slot's width follows _slots). Found in review: both slots can report in one turn, and
+    // Qt.callLater keeps only the last arguments of one function, so the reports are collected.
+    property var _pendingWidths: ({})
     function _noteWidth(id: string, w: real): void {
-        if (w <= 0 || _widths[id] === w) return;
-        const m = Object.assign({}, _widths);
-        m[id] = w;
-        _widths = m;
+        if (w <= 0) return;
+        const p = Object.assign({}, _pendingWidths);
+        p[id] = w;
+        _pendingWidths = p;
+        Qt.callLater(root._flushWidths);
+    }
+    function _flushWidths(): void {
+        let m = null;
+        for (const id in _pendingWidths) if (_widths[id] !== _pendingWidths[id]) { m = m || Object.assign({}, _widths); m[id] = _pendingWidths[id]; }
+        _pendingWidths = {};
+        if (m) _widths = m;
     }
 
     // The bulge's content: one NotchLayer per layer record.
@@ -422,7 +471,6 @@ Item {
                 height: bulgeHeight > 0 ? bulgeHeight : root._bulgeH
                 record: ({ uid: uid, kind: kind, key: key, entryId: entryId, activity: activity, mode: mode, leaving: leaving })
                 shown: !leaving
-                plain: false
                 monitorName: root._name
                 readonly property var _e: root._entry(entryId)
                 property var _lastPayload: ({})
