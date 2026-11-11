@@ -34,6 +34,24 @@ def test_state_json(nested: Nested) -> None:
     assert "hypr" in st["services"] and "tokens" in st["services"]
 
 
+def test_outside_write_after_a_missing_file(nested: Nested) -> None:
+    # The test HOME starts without settings.json: Config writes the empty file and watches it, so
+    # an outside write (atomic or in place) is seen without `shell reloadConfig` (07 §8).
+    path = nested.paths.settings
+    nested.wait_for(path.exists, 5)
+    assert json.loads(path.read_text()) == {"v": 2}
+
+    def accent() -> str:
+        return nested.state()["services"]["tokens"]["accent"]
+
+    tmp = path.with_name(path.name + ".e2e-tmp")
+    tmp.write_text(json.dumps({"v": 2, "appearance.accent": "sky"}) + "\n")
+    tmp.replace(path)
+    nested.wait_for(lambda: accent() == "sky", 5)
+    path.write_text(json.dumps({"v": 2}) + "\n")
+    nested.wait_for(lambda: accent() == "jade", 5)
+
+
 def test_surface_open_back(nested: Nested) -> None:
     assert nested.msg("surface", "open", "spotlight") == "ok"
     st = nested.state()

@@ -1,7 +1,8 @@
 import QtQuick
 // Test double of Quickshell.Io FileView: reads `path` through a file XHR (needs
 // QML_XHR_ALLOW_FILE_READ=1) when created and when `path` changes; writes stay in memory
-// (`written` counts them), so a test never touches the disk.
+// (`written` counts them, each emits `saved`), so a test never touches the disk; once written,
+// a reload reads the written text (the file now exists).
 QtObject {
     id: root
 
@@ -15,15 +16,18 @@ QtObject {
     signal loaded()
     signal loadFailed(int error)
     signal fileChanged()
+    signal saved()
+    signal saveFailed(int error)
 
     property string _text: ""
     property bool _ready: false
 
     function text(): string { return _text; }
-    function setText(text: string): void { _text = text; written++; }
+    function setText(text: string): void { _text = text; written++; saved(); }
     function reload(): void { _load(); }
     function _load(): void {
         if (path === "") return;
+        if (written > 0) { loaded(); return; }
         const x = new XMLHttpRequest();
         x.open("GET", "file://" + path, false);
         try { x.send(); } catch (e) { loadFailed(FileViewError.FileNotFound); return; }

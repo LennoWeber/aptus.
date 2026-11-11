@@ -2217,3 +2217,45 @@ sets no watch on a file missing at start). The e2e helper `setting` therefore ca
 - Each fix has at least one test that failed against the file as it was before the fix; the others
   guard what already worked (`tst_osd` for a later device change and another kind, the start case
   of 7).
+
+---
+
+## Wave 2 · merge, review, simplify (main session, 2026-11-11)
+
+### Merges
+- S2 merged (`1bedebe`), its wave-2 review fixes (`b78f532`) merged as `b22861b`, plus `db4d5fc`
+  (07 §3: the required Own targets before the take).
+- S3 merged as `18a1af8`. Conflicts: PHASES.md and design/probes.md (both stages appended: S2's
+  part first, then S3's), shell/registry/Ipc.qml (the lease summary and S3's service summaries
+  both kept). Its wave-2 review fixes (`70b2dcd`, e2e cases `a51c112`) merged as `ebe794e`.
+- The `S3 shared:` commits were read one by one at the merge; all accepted (each is the smallest
+  change its reason needs; `hl.get_devices` and the `caps_lock`/`main` fields of the Caps Lock bind
+  exist in `/usr/share/hypr/stubs/hl.meta.lua`).
+
+### Reviews
+- `/code-review high` on S2 (`41ed037..1bedebe`): 10 findings, plus 1 from the security review;
+  fixed in S2's "Wave-2 review fixes" above.
+- `/code-review high` on S3 (`db4d5fc..18a1af8`): 10 findings; 8 fixed in S3's "Wave-2 review"
+  above. Rejected by the main session: the backlight choice (S3 phase-7 #30: one backlight per
+  panel since Linux 6.1, this machine has only `intel_backlight`) and MediaCard's `interval: 1000`
+  (S3 phase-7 #25: a poll period, not a design duration).
+
+### Config misses a settings.json made after the start (found by the S3 review agent)
+- **Reproduced** in a nested session: with no settings.json at start, none of an atomic replace,
+  a second atomic replace or an in-place write was seen (the accent never changed); with the file
+  present at start all three were seen. Quickshell's FileView watches only a file that existed
+  when it loaded.
+- **Fix:** Config writes the empty file (`{"v": 2}`) when it is missing and loads it again once
+  saved (`onSaved`), which sets the watch. The FileView test double emits `saved` and reads its
+  own written text on reload. 07 §8 says so.
+- **Tests:** e2e `test_s1.py::test_outside_write_after_a_missing_file` (fails without the fix:
+  timeout; passes with it); `tst_configsingleton::test_missing_file_is_written_empty`.
+
+### e2e on merged v2, and its flakiness
+- Final state: `tests/run` 348 unit, 282 QML, qmllint 0 on 147 files; e2e 63/63 (idle
+  1.33 wakeups/s, cpu 0.07 %, rss 254 MB). Screenshots of the final run: `tests/e2e/shots/`.
+- Two full runs (19:50, 20:40) failed 3–6 tests with timeouts while the laptop ran on battery at
+  19 % (keys, tray, urgent, wheel); every failing file passed alone, and the same tree passed
+  62/62 twice once on mains. One later full run measured 5.57 idle wakeups/s once (1.20–1.48 alone,
+  1.33 on the rerun). Open: the e2e waits (mostly 2–3 s) are tight under a slow CPU; worth a
+  common timeout factor in `nested.py` if it happens again.

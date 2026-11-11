@@ -123,6 +123,8 @@ Singleton {
     // The text the shell wrote last (null before the first write): the file watch also reports
     // the shell's own writes, which need no reload.
     property var _written: null
+    // settings.json was missing at load, so the file has no watch yet (settingsView.onLoadFailed).
+    property bool _unwatched: false
 
     // key → a copy of its default, for reset()/resetPage().
     function _defaultsOf(keys: var): var {
@@ -178,7 +180,12 @@ Singleton {
         onLoadFailed: error => {
             if (error !== FileViewError.FileNotFound) root.fileError = FileViewError.toString(error);
             root._loadFile("");
+            // FileView watches only a file that existed when it loaded: a settings.json made later
+            // (by hand, by a test) would never be seen. Write the empty file ({"v": 2}, no values)
+            // and load it once it is saved, which sets the watch.
+            if (error === FileViewError.FileNotFound) { root._unwatched = true; Qt.callLater(root._save); }
         }
+        onSaved: if (root._unwatched) { root._unwatched = false; reload(); }
     }
     FileView {
         id: backupView

@@ -17,6 +17,14 @@ TestCase {
         invalid.clear();
     }
 
+    // A missing settings.json is written once, empty, and loaded again so it gets its watch
+    // (the e2e test_s1 test_outside_write_after_a_missing_file covers the watch itself).
+    function test_missing_file_is_written_empty() {
+        tryVerify(() => !Config._unwatched, 2000);
+        verify(Config._written !== null);
+        compare(JSON.parse(Config._written).v, 2);
+    }
+
     function test_defaults_loaded() {
         verify(Config.loaded);
         compare(Config.get("focus.default"), 50);

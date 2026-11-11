@@ -316,7 +316,7 @@ Quickshell `GlobalShortcut { appid: "aptus"; name: … }`; Hyprland binds `hl.ds
 
 | File | Owner (writer) | Format | Written |
 |---|---|---|---|
-| `~/.config/aptus/settings.json` | Config | JSON | debounced 300 ms, atomic |
+| `~/.config/aptus/settings.json` | Config | JSON | debounced 300 ms, atomic; written empty (`{"v": 2}`) at start when missing, because a file watch needs the file |
 | `~/.config/aptus/calendars.json` | settings window | JSON, 0600 | on save, atomic |
 | `~/.local/state/aptus/lease/…` | aptus-lease | see [02](02-isolation.md) §5 | under flock |
 | `~/.local/state/aptus/theme/gen-<n>/`, `current` →, `resolved.json`, `own.json` | aptus-theme | rendered files; the resolved palette; the Own files aptus created | atomic dir + symlink swap under `theme/lock`; last 3 generations kept |

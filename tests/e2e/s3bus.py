@@ -171,7 +171,7 @@ def wheel(nested: Nested, x: int, y: int, notches: int) -> None:
 
 def setting(nested: Nested, key: str, value: object = None) -> None:
     """Set one key in the nested HOME's settings.json (None resets it), then `shell reloadConfig`
-    (Config's watch misses a file created after the start)."""
+    so the value is in before this returns (the file watch alone would take a moment)."""
     path = nested.paths.settings
     path.parent.mkdir(parents=True, exist_ok=True)
     data = json.loads(path.read_text()) if path.exists() else {}
