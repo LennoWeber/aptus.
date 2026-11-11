@@ -3,6 +3,7 @@ pragma Singleton
 // Owner: S3 (battery), S5 (profiles).
 import QtQuick
 import Quickshell
+import Quickshell.Io
 import Quickshell.Services.UPower
 import qs.core
 import "js/notifications.js" as N
@@ -14,12 +15,19 @@ Singleton {
     // profiles this machine offers ("power-saver", "balanced", "performance")
     property var profiles: []
 
-    // UPower's display device (read only).
-    readonly property var _dev: UPower.displayDevice
-    readonly property bool hasBattery: !!_dev && _dev.isLaptopBattery && _dev.isPresent
+    // Wave-2 review (the battery toasts' e2e test): under APTUS_TEST the battery is a double, read
+    // from the test's file ($APTUS_SYSFS/aptus-test-battery.json, tests/e2e/fakehw.py: { present,
+    // percentage, charging, onBattery }), never the laptop's UPower (a real low battery would toast
+    // in a test). No file: no battery, on AC.
+    readonly property bool testDouble: Paths.test
+    property var _fake: ({})
+    // UPower's display device (read only; none under test).
+    readonly property var _dev: testDouble ? null : UPower.displayDevice
+    readonly property bool hasBattery: testDouble ? _fake.present === true : !!_dev && _dev.isLaptopBattery && _dev.isPresent
     // 0..100 (UPower gives 0..1)
-    readonly property real percentage: _dev ? _dev.percentage * 100 : 0
-    readonly property bool charging: !!_dev && (_dev.state === UPowerDeviceState.Charging || _dev.state === UPowerDeviceState.PendingCharge)
+    readonly property real percentage: testDouble ? Number(_fake.percentage) || 0 : _dev ? _dev.percentage * 100 : 0
+    readonly property bool charging: testDouble ? _fake.charging === true
+        : !!_dev && (_dev.state === UPowerDeviceState.Charging || _dev.state === UPowerDeviceState.PendingCharge)
     // s
     readonly property int timeToEmpty: _dev ? Math.round(_dev.timeToEmpty) : 0
     // s
@@ -30,7 +38,7 @@ Singleton {
     // The service works (S3: battery; also on a desktop without a battery).
     readonly property bool available: true
     // On AC (charging, or full on the charger).
-    readonly property bool pluggedIn: !UPower.onBattery
+    readonly property bool pluggedIn: testDouble ? _fake.onBattery !== true : !UPower.onBattery
     onPercentageChanged: _checkBattery()
     onPluggedInChanged: _pluggedChanged()
 
@@ -64,5 +72,20 @@ Singleton {
         if (_critToast) { SurfaceManager.dismiss(_critToast); _critToast = 0; }
         _warned = false;
         if (charging || percentage < 100) SurfaceManager.post("event", S.chargingEvent());
+    }
+
+    FileView {
+        path: {
+            const dir = String(Quickshell.env("APTUS_SYSFS") || "").replace(/\/+$/, "");
+            return root.testDouble && dir !== "" ? dir + "/aptus-test-battery.json" : "";
+        }
+        watchChanges: true
+        printErrors: false
+        onFileChanged: reload()
+        onLoaded: {
+            let d = null;
+            try { d = JSON.parse(text()); } catch (e) { return; }     // a write in progress: the next change reads it whole
+            root._fake = d && typeof d === "object" ? d : {};
+        }
     }
 }

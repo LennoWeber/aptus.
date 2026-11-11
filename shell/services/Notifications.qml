@@ -45,6 +45,8 @@ Singleton {
     property var _toasts: ({})
     // The stack toast being built (notifications.js stack record) or null.
     property var _stack: null
+    // The stack for `shell state` (the e2e tests): null or { count, apps } (app names, no bodies).
+    readonly property var stackInfo: _stack ? ({ count: _stack.count, apps: _stack.apps }) : null
     // Found in review: the record ids in the stack toast (a replace of one updates the stack's
     // newest line instead of joining again).
     property var _stackIds: []
