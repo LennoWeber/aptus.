@@ -11,8 +11,8 @@ from pathlib import Path
 import pytest
 
 from nested import Nested, write_test_png
-from s3bus import (FakePlayer, Window, close_notification, distance, grab, mean, notify, notify_waiting, pointer,
-                   settle, shell_pid)
+from s3bus import (FakePlayer, FakeTray, Window, close_notification, distance, grab, mean, notify, notify_waiting,
+                   pointer, settle, shell_pid)
 
 
 def shots(nested: Nested) -> Path:
@@ -126,6 +126,47 @@ def test_hover_card_opens_and_collapses(nested: Nested, player: FakePlayer) -> N
     assert not state_of(nested)["keyboard"]                      # a hover card never takes the keyboard
     pointer(nested, "move", cx, m["y"] + m["height"] - 100)
     nested.wait_for(lambda: state_of(nested)["notch"] == "rest", 2)
+
+
+def changed_columns(a: bytes, b: bytes, width: int) -> list[int]:
+    """The x of every column where two RGB grabs of the same width differ."""
+    rows = len(a) // (3 * width)
+    return [x for x in range(width)
+            if any(a[(y * width + x) * 3:(y * width + x) * 3 + 3] != b[(y * width + x) * 3:(y * width + x) * 3 + 3]
+                   for y in range(rows))]
+
+
+def test_tray_item_menu_and_attention(nested: Nested) -> None:
+    """bar.md §5: an item appears left of the status cluster; click activates; right click shows
+    its DBusMenu as an aptus menu (keyboard: Down, Return triggers the first row); NeedsAttention
+    adds the warn dot."""
+    m = mon(nested)
+    right = lambda: grab(nested, m["x"] + m["width"] // 2, m["y"], m["width"] // 2, 32)
+    before = right()
+    tray = FakeTray(nested)
+    try:
+        settle(1.0)
+        cols = changed_columns(before, right(), m["width"] // 2)
+        cols = [c for c in cols if c > m["width"] // 4]               # the right zone, not the clock
+        assert cols, "no tray item appeared"
+        x = m["x"] + m["width"] // 2 + (min(cols) + max(cols)) // 2
+        pointer(nested, "move", x, m["y"] + 300)
+        pointer(nested, "click", x, m["y"] + 16)
+        nested.wait_for(lambda: any(c.startswith("Activate") for c in tray.calls()), 3)
+        pointer(nested, "rclick", x, m["y"] + 16)
+        nested.wait_for(lambda: (state_of(nested)["menu"] or {}).get("owner") == "tray:aptus-test-tray", 3)
+        settle(0.3)
+        nested.key("Down")
+        nested.key("Return")
+        nested.wait_for(lambda: "Event 1 clicked" in tray.calls(), 3)        # "Open", through DBusMenu
+        nested.wait_for(lambda: state_of(nested)["menu"] is None, 3)
+        pointer(nested, "move", x, m["y"] + 300)
+        settle(0.8)                                                        # no tooltip left over
+        calm = grab(nested, x - 12, m["y"], 24, 32)
+        tray.toggle()
+        nested.wait_for(lambda: grab(nested, x - 12, m["y"], 24, 32) != calm, 3)   # the attention dot
+    finally:
+        tray.stop()
 
 
 def test_privacy_reports_nothing_under_test(nested: Nested) -> None:

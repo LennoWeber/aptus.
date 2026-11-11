@@ -3,7 +3,6 @@ pragma Singleton
 // Owner: S3 (class → icon lookup for the bar), S4 (entries, launch, running apps).
 import QtQuick
 import Quickshell
-import qs.core
 
 Singleton {
     id: root

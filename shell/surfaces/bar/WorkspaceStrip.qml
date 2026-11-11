@@ -13,6 +13,9 @@ Item {
 
     // The Hyprland monitor name of this bar.
     property string monitorName: ""
+    // Found in phase 7: a menu is open on this monitor (no tooltip over it; under the menu's
+    // catcher the hover state is not updated).
+    readonly property bool _menuOpen: { const m = SurfaceManager.monitorState(monitorName); return !!m && m.menu !== null; }
     // This monitor's strip (hypr.js strip record: pills and scratch).
     property var strip: ({ pills: [], scratch: null })
     // bar.workspaces.icons.
@@ -173,6 +176,7 @@ Item {
                         required property var modelData
                         required property int index
                         workspace: modelData
+                        menuOpen: root._menuOpen
                         showIcons: root.showIcons && (root.collapse === 0 || (root.collapse === 1 && modelData.active))
                         // M-01: pill i starts i × workspaceStaggerMs into the intro
                         readonly property real _total: Math.max(1, Motion.ms("intro", false))
@@ -197,6 +201,7 @@ Item {
             visible: !!root.strip.scratch
             anchors.verticalCenter: parent.verticalCenter
             scratch: true
+            menuOpen: root._menuOpen
             workspace: root.strip.scratch || ({})
             onClicked: Hypr.toggleScratch()
         }

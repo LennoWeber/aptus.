@@ -16,6 +16,8 @@ Item {
     property bool scratch: false
     // Draw the app icons (bar.workspaces.icons and the strip's collapse level).
     property bool showIcons: true
+    // Found in phase 7: a menu is open on this monitor (the strip knows; no tooltip over it).
+    property bool menuOpen: false
     // M-01: this pill's share of the intro (0 → 1, staggered by the strip).
     property real appear: 1
 
@@ -140,7 +142,7 @@ Item {
         target: root
         text: root.scratch ? "Scratch · " + (root.workspace.windows || 0) + " windows"
             : B.workspaceTooltip(root.workspace, root._apps.map(a => Apps.nameFor(a)))
-        active: root.hovered
+        active: root.hovered && !root.menuOpen
     }
     SequentialAnimation {
         id: nudgeAnim

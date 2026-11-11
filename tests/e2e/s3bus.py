@@ -8,6 +8,7 @@ test HOME); it must differ from the address of the bus the tests run on.
 from __future__ import annotations
 
 import os
+import signal
 import subprocess
 import time
 from pathlib import Path
@@ -106,6 +107,31 @@ class FakePlayer:
 
     def calls(self) -> list[str]:
         return self.state.read_text().splitlines()
+
+    def stop(self) -> None:
+        self.proc.terminate()
+        try:
+            self.proc.wait(5)
+        except subprocess.TimeoutExpired:
+            self.proc.kill()
+
+
+class FakeTray:
+    """tests/e2e/fake_sni.py on the nested bus: one tray item with a DBusMenu; `calls()` reads
+    what it got (Activate, menu events), `toggle()` flips NeedsAttention."""
+
+    def __init__(self, nested: Nested) -> None:
+        self.state = nested.root / "sni.log"
+        self.state.write_text("")
+        self.proc = subprocess.Popen(["/usr/bin/python3", "-I", str(HERE / "fake_sni.py"), str(self.state)],
+                                     env=nested_env(nested), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        nested.wait_for(lambda: "registered" in self.calls(), 5)
+
+    def calls(self) -> list[str]:
+        return self.state.read_text().splitlines()
+
+    def toggle(self) -> None:
+        self.proc.send_signal(signal.SIGUSR1)
 
     def stop(self) -> None:
         self.proc.terminate()

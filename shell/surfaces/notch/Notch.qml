@@ -2,7 +2,6 @@ pragma ComponentBehavior: Bound
 // The notch: clock at rest, compact activities, toasts, OSD, events, cards; hosts the notch modes from NotchModes (surfaces/notch.md).
 // Owner: S3.
 import QtQuick
-import Quickshell
 import qs.core
 import qs.services
 import qs.components

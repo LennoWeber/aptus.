@@ -3,7 +3,6 @@ pragma Singleton
 // Owner: S3.
 import QtQuick
 import Quickshell
-import qs.core
 import "js/notifications.js" as N
 
 Singleton {

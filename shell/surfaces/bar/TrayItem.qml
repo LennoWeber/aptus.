@@ -6,7 +6,6 @@ import QtQuick
 import Quickshell
 import Quickshell.Services.SystemTray
 import qs.core
-import qs.services
 import qs.components
 
 Item {
@@ -18,10 +17,17 @@ Item {
     property string monitorName: ""
 
     readonly property bool hovered: mouse.containsMouse
+    // Found in phase 7: a menu is open on this monitor (no tooltip over it; under the menu's
+    // catcher the hover state is not updated).
+    readonly property bool _menuOpen: { const m = SurfaceManager.monitorState(monitorName); return !!m && m.menu !== null; }
+    // Found in phase 7: the submenu openers of the menu shown last (destroyed at the next open).
+    property var _subOpeners: []
 
     // The item's DBusMenu as an aptus menu below the icon (QsMenuOpener rows → Menu model).
     function openMenu(): void {
         if (!item || !item.hasMenu) return;
+        for (const o of _subOpeners) o.destroy();
+        _subOpeners = [];
         const p = root.mapToItem(null, 0, height);
         SurfaceManager.openMenu(monitorName, {
             anchorX: p.x, anchorY: p.y + Tokens.s2, model: _rows(opener.children.values), owner: "tray:" + item.id,
@@ -39,6 +45,7 @@ Item {
                           checked: e.buttonType !== QsMenuButtonType.None && e.checkState === Qt.Checked };
             if (e.hasChildren) {
                 const sub = subOpener.createObject(root, { menu: e }) as QsMenuOpener;
+                if (sub) _subOpeners.push(sub);
                 row.submenu = sub ? _rows(sub.children.values) : [];
             }
             rows.push(row);
@@ -97,6 +104,6 @@ Item {
     Tooltip {
         target: root
         text: root.item ? (root.item.tooltipTitle || root.item.title || root.item.id) : ""
-        active: root.hovered
+        active: root.hovered && !root._menuOpen
     }
 }
