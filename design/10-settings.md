@@ -40,7 +40,7 @@ The chosen images themselves are state (`wallpaper.json`), not settings.
 | `bar.workspaces.show` | enum | `used` | `used`, `fixed` | |
 | `bar.workspaces.icons` | bool | `true` | | app icons in pills |
 | `bar.title.show` | bool | `true` | | active window title |
-| `bar.clock.showDate` | bool | `true` | | `Sat 7 Nov` before the time |
+| `bar.clock.showDate` | bool | `true` | | `Sat 7 Nov` after the time |
 | `bar.tray.max` | int | `3` | 0–6 | 0 = everything in the overflow |
 | `bar.tray.hidden` | list<string> | `[]` | tray item ids | |
 | `bar.tray.order` | list<string> | `[]` | tray item ids | the order shown (dragged in Settings); items not listed follow in registration order |
