@@ -2,6 +2,7 @@
 """Minimal Wayland virtual pointer (zwlr_virtual_pointer_v1) over the raw wire protocol.
 
 Usage: vpointer.py <wayland-socket> click X Y [W H]    (absolute, in output pixels)
+       vpointer.py <wayland-socket> rclick X Y [W H]   (the right button)
        vpointer.py <wayland-socket> move X Y [W H]
 Only ever point it at a nested compositor's socket.
 """
@@ -78,12 +79,13 @@ def main():
     t = int(time.monotonic() * 1000) & 0xFFFFFFFF
     c.send(ptr, 1, struct.pack("<IIIII", t, x, y, w, h))  # motion_absolute
     c.send(ptr, 4, struct.pack("<I", t))                 # frame
-    if cmd == "click":
+    if cmd in ("click", "rclick"):
+        btn = 0x110 if cmd == "click" else 0x111                 # BTN_LEFT / BTN_RIGHT
         time.sleep(0.05)
-        c.send(ptr, 2, struct.pack("<III", t + 50, 0x110, 1))   # BTN_LEFT pressed
+        c.send(ptr, 2, struct.pack("<III", t + 50, btn, 1))     # pressed
         c.send(ptr, 4, struct.pack("<I", t + 50))
         time.sleep(0.03)
-        c.send(ptr, 2, struct.pack("<III", t + 80, 0x110, 0))   # released
+        c.send(ptr, 2, struct.pack("<III", t + 80, btn, 0))     # released
         c.send(ptr, 4, struct.pack("<I", t + 80))
     cb = c.new_id()
     c.send(1, 0, struct.pack("<I", cb))
