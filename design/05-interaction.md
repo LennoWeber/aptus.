@@ -46,7 +46,7 @@ Keyboard focus:
 
 | Surface | Keyboard |
 |---|---|
-| Bar, notch at rest, toasts, OSD, activity cards opened by hover | never takes the keyboard |
+| Bar, notch at rest, toasts, OSD, activity cards opened by hover | never takes the keyboard (a toast's open inline-reply field does, until it sends or Esc, [notch.md](surfaces/notch.md) §6) |
 | Spotlight, Switcher (once visible), Today, Deck, Overview, Session, Gallery, Jot, Keys, Polkit | exclusive while open (`WlrLayershell.keyboardFocus: Exclusive`), released on close |
 | Menus | exclusive while open |
 | Lock | session lock (compositor-enforced) |
@@ -180,7 +180,7 @@ the key and its meaning stay as they are in today's `hyprland.lua`.
 | `XF86MonBrightnessUp` / `Down` | brightness ±5 % (`Shift`: ±1 %), OSD; never below 1 % |
 | `XF86KbdBrightnessUp` / `Down` / `XF86KbdLightOnOff` | keyboard backlight, OSD |
 | `XF86AudioPlay` / `Pause` / `Next` / `Prev` | the active media player (see [surfaces/notch.md](surfaces/notch.md) §5) |
-| Caps Lock, layout change | OSD only |
+| Caps Lock, layout change | OSD only (Caps Lock through a non-consuming release bind, [09](09-hyprland.md) §7; the layout from `activelayout`) |
 
 All shell binds go through Hyprland's `global` dispatcher to Quickshell `GlobalShortcut`s
 (`aptus:<name>`), so a keypress never forks a process (probe P-01; fallback: `aptus msg …`).
