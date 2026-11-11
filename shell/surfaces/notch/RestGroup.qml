@@ -42,25 +42,34 @@ Item {
         minute.interval = (60 - now.getSeconds()) * 1000 - now.getMilliseconds() + 20;
         minute.restart();
     }
-    // The right-click menu (notch.md §3) and what its rows do.
+    // The right-click menu (notch.md §3): Do not disturb ▸ (1 hour, until tomorrow 08:00 as in
+    // deck.md, until I turn it off; Turn off while on), Start focus ▸ (25, 50, 90 min), Open
+    // calendar settings; and what its rows do.
     function _menu(x: real, y: real): void {
         const p = root.mapToItem(null, x, y);
+        const dnd = [{ id: "dnd:1h", label: "For 1 hour" }, { id: "dnd:tomorrow", label: "Until tomorrow 08:00" },
+                     { id: "dnd:on", label: "Until I turn it off" }];
+        if (Dnd.on) dnd.push({ separator: true }, { id: "dnd:off", label: "Turn off" });
         SurfaceManager.openMenu(monitorName, {
             anchorX: p.x, anchorY: p.y, owner: "notch:rest",
             model: [
-                { id: "dnd", label: Dnd.on ? "Turn off Do not disturb" : "Turn on Do not disturb", glyph: "do_not_disturb_on" },
-                { id: "focus", label: "Start focus", glyph: "center_focus_strong", enabled: !Focus.running },
+                { id: "dnd", label: "Do not disturb", glyph: "do_not_disturb_on", submenu: dnd },
+                { id: "focus", label: "Start focus", glyph: "center_focus_strong", enabled: !Focus.running,
+                  submenu: [25, 50, 90].map(n => ({ id: "focus:" + n, label: n + " min" })) },
                 { separator: true },
-                { id: "calendar", label: "Open calendar", glyph: "calendar_month" }
+                { id: "calendar", label: "Open calendar settings", glyph: "calendar_month" }
             ],
             onTriggered: row => root._menuTriggered(row)
         });
     }
     function _menuTriggered(row: var): void {
-        const id = row ? row.id : "";
-        if (id === "dnd") Dnd.toggle();
-        else if (id === "focus") SurfaceManager.open("focusPicker", {}, monitorName);
-        else if (id === "calendar") SurfaceManager.open("today", { page: "calendar" }, monitorName);
+        const id = String(row && row.id || "");
+        if (id === "dnd:1h") Dnd.forSeconds(3600);
+        else if (id === "dnd:tomorrow") Dnd.untilTime("08:00");
+        else if (id === "dnd:on") Dnd.turnOn();
+        else if (id === "dnd:off") Dnd.turnOff();
+        else if (id.indexOf("focus:") === 0) Focus.start(Number(id.substring(6)), "");
+        else if (id === "calendar") SurfaceManager.open("settings", { page: "today" }, monitorName);   // "Today & calendar"
     }
 
     implicitWidth: row.implicitWidth
@@ -96,7 +105,7 @@ Item {
             color: root.unreadAllowlisted ? Tokens.accent : Tokens.inkSec
             scale: root.unread ? 1 : 0
             visible: scale > 0
-            Behavior on scale { NumberAnimation { duration: Tokens.surfaces.bar.unreadDotMs; easing.type: Easing.OutBack } }
+            Behavior on scale { enabled: !Motion.reduced; SnappySpring {} }       // M-35
         }
     }
     MouseArea {

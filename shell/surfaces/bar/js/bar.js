@@ -177,6 +177,20 @@ function pillMenu(record, monitors, monitor) {
 }
 // The title's width (bar.md §2, §9): what is left between the zones, at most titleMaxWidth (240
 // on a narrow monitor), 0 (hidden) below titleMinWidth. tokens: Tokens.surfaces.bar.
+// Wheel steps from a wheel event's angleDelta.y (bar.md §3, §4, §6; 05 §4). High-resolution
+// wheels, touchpads and TrackPoint scrolling send many small deltas: one step per WHEEL_UNIT (a
+// classic wheel notch), the rest carried to the next event and dropped when the direction turns.
+// → { steps: signed int (+ = up), carry }
+var WHEEL_UNIT = 120
+function wheelSteps(carry, delta) {
+    var c = isFinite(carry) ? Number(carry) : 0, d = isFinite(delta) ? Number(delta) : 0
+    if (c !== 0 && d !== 0 && (c > 0) !== (d > 0)) c = 0
+    c += d
+    var steps = c >= 0 ? Math.floor(c / WHEEL_UNIT) : -Math.floor(-c / WHEEL_UNIT)
+    var r = { steps: steps, carry: c - steps * WHEEL_UNIT }
+    invariant(Math.abs(r.carry) < WHEEL_UNIT && (r.steps === 0 || (r.steps > 0) === (d > 0)), "wheel steps " + r.steps + ", carry " + r.carry)
+    return r
+}
 function titleWidth(available, narrow, tokens) {
     checkBarTokens(tokens)
     var w = Math.min(available, narrow ? tokens.narrowTitleMaxWidth : tokens.titleMaxWidth)

@@ -44,19 +44,23 @@ Singleton {
     function _checkBattery(): void {
         if (!hasBattery || pluggedIn) return;
         const b = Tokens.surfaces.bar, p = Math.round(percentage);
-        if (p <= b.batteryCritPercent && _critToast === 0)
+        // Found in review: own keys (one key let the warn toast replace the crit one in place) and
+        // no warning after the crit toast (a start or resume at ≤ 7 %).
+        if (p <= b.batteryCritPercent && _critToast === 0) {
+            _warned = true;
             _critToast = SurfaceManager.post("toast", N.systemToast("Battery at " + p + " %", "Plug in now", "battery_alert", true, 0),
-                                             N.CRITICAL_PRIORITY, "", "battery");
-        else if (p <= b.batteryWarnPercent && !_warned) {
+                                             N.CRITICAL_PRIORITY, "", "battery-crit");
+        } else if (p <= b.batteryWarnPercent && !_warned) {
             _warned = true;
             SurfaceManager.post("toast", N.systemToast("Battery low · " + p + " %", "", "battery_alert", false,
-                                                       Tokens.surfaces.toast.maxTimeoutMs), 0, "", "battery");
+                                                       Tokens.surfaces.toast.maxTimeoutMs), 0, "", "battery-low");
         }
     }
     // The charger was plugged in or out: plugged in → the event "Charging" (notch.md §7) and the
-    // crit toast goes; a new discharge may warn again.
+    // crit toast goes; a new discharge may warn again, at once when it starts low.
     function _pluggedChanged(): void {
-        if (!pluggedIn || !hasBattery) return;
+        if (!hasBattery) return;
+        if (!pluggedIn) { _checkBattery(); return; }
         if (_critToast) { SurfaceManager.dismiss(_critToast); _critToast = 0; }
         _warned = false;
         if (charging || percentage < 100) SurfaceManager.post("event", S.chargingEvent());

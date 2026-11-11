@@ -34,6 +34,8 @@ Item {
     // M-36: the nudge's scale and when it last ran (ms; at most once per nudge.minInterval).
     property real _nudge: 1
     property real _lastNudge: 0
+    // Found in review: the wheel's carried delta (bar.js wheelSteps: small deltas add up).
+    property real _wheelCarry: 0
 
     // One nudge (M-36), unless one ran within nudge.minInterval.
     function nudge(): void {
@@ -68,6 +70,13 @@ Item {
         hovered: root.hovered
         pressed: mouse.pressed
     }
+    // used, not active: the `raised` fill (bar.md §3; the active pill sits on the strip's capsule)
+    Rectangle {
+        visible: !root.scratch && !root.workspace.active && (root.workspace.windows || 0) > 0
+        anchors.fill: parent
+        radius: root._bar.pillRadius
+        color: Tokens.raised
+    }
     Rectangle {
         visible: root.scratch && !!root.workspace.shown
         anchors.fill: parent
@@ -94,7 +103,7 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             type: "bar"
             tabular: true
-            ink: root.workspace.active ? "onAccent" : "sec"
+            ink: root.workspace.active ? "onAccent" : (root.workspace.windows || 0) > 0 ? "sec" : "faint"
             text: root.workspace.label || ""
         }
         Repeater {
@@ -112,7 +121,7 @@ Item {
             visible: root._more > 0
             anchors.verticalCenter: parent.verticalCenter
             type: "micro"
-            ink: root.workspace.active ? "onAccent" : "sec"
+            ink: root.workspace.active ? "onAccent" : "meta"
             text: "+" + Math.max(0, root._apps.length - root._bar.pillMaxIcons)
         }
     }
@@ -136,7 +145,11 @@ Item {
             else if (e.button === Qt.RightButton) root.rightClicked(e.x, e.y);
             else root.clicked();
         }
-        onWheel: w => { if (w.angleDelta.y !== 0) root.wheelStep(w.angleDelta.y > 0 ? -1 : 1); }
+        onWheel: w => {
+            const r = B.wheelSteps(root._wheelCarry, w.angleDelta.y);
+            root._wheelCarry = r.carry;
+            if (r.steps !== 0) root.wheelStep(r.steps > 0 ? -1 : 1);      // one per event: Hyprland's active workspace lags
+        }
     }
     Tooltip {
         target: root

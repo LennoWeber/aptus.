@@ -43,10 +43,12 @@ Item {
     // maps them to monitor coordinates).
     readonly property var pillRects: {
         const out = [];
-        void pillRow.width;
+        void pillRow.width; void pillBox.x; void content.y;
         for (let i = 0; i < pills.count; i++) {
             const p = pills.itemAt(i) as WorkspacePill;
-            if (p) out.push({ workspace: p.workspace.id, x: pillRow.x + p.x, y: pillRow.y + p.y, width: p.width, height: p.height });
+            // found in review: the pill box's own place in the strip counts too
+            if (p) out.push({ workspace: p.workspace.id, x: content.x + pillBox.x + pillRow.x + p.x,
+                              y: content.y + pillBox.y + pillRow.y + p.y, width: p.width, height: p.height });
         }
         return out;
     }
@@ -60,6 +62,8 @@ Item {
     // The trailing edge's target (set when trailTimer fires).
     property real _trailTo: 0
     property bool _trailIsLeft: false
+    // Found in review: the wheel's carried delta (bar.js wheelSteps: small deltas add up).
+    property real _wheelCarry: 0
 
     // A pill's actions (bar.md §3): go there; move the focused window there (stay); its menu at a
     // point in strip coordinates; the wheel steps to the previous / next used workspace.
@@ -137,7 +141,11 @@ Item {
     MouseArea {
         anchors.fill: parent
         onClicked: SurfaceManager.open("overview", {}, root.monitorName)
-        onWheel: w => { if (w.angleDelta.y !== 0) root._wheel(w.angleDelta.y > 0 ? -1 : 1); }
+        onWheel: w => {
+            const r = B.wheelSteps(root._wheelCarry, w.angleDelta.y);
+            root._wheelCarry = r.carry;
+            if (r.steps !== 0) root._wheel(r.steps > 0 ? -1 : 1);       // one per event: Hyprland's active workspace lags
+        }
     }
     Row {
         id: content
@@ -152,6 +160,7 @@ Item {
             onClicked: SurfaceManager.open("overview", {}, root.monitorName)
         }
         Item {
+            id: pillBox
             width: pillRow.implicitWidth
             height: Tokens.surfaces.bar.pillHeight
             anchors.verticalCenter: parent.verticalCenter
@@ -186,7 +195,7 @@ Item {
                             / Math.max(1, _total - (root.strip.pills.length - 1) * _stagger)))
                         onClicked: root._go(modelData)
                         onMiddleClicked: root._moveHere(modelData)
-                        onRightClicked: (x, y) => root._menu(modelData, pill.x + pillRow.x + x, y)
+                        onRightClicked: (x, y) => { const q = pill.mapToItem(root, x, y); root._menu(modelData, q.x, q.y); }
                         onWheelStep: d => root._wheel(d)
                         property bool _wasUrgent: false
                         onWorkspaceChanged: {

@@ -48,6 +48,9 @@ TestCase {
         compare(L.step(50, 1, 1, 0, 100), 51)        // fine step
         compare(L.step(100, 1, 5, 0, 150), 105)      // boost range
         compare(L.step(0.57 * 100, 1, 5, 0, 100), 60) // float input from a 0..1 level
+        compare(L.step(130, 1, 5, 0, 100), 130)       // found in review: up never lowers (a sink above max)
+        compare(L.step(130, -1, 5, 0, 100), 100)      // down from above max: to max
+        compare(L.step(0.5, -1, 5, 1, 100), 0.5)      // down never raises (below the minimum)
     }
     function test_osd_payloads() {
         const v = L.volumeOsd(0.45, false, 100, "")

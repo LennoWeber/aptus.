@@ -4,6 +4,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import qs.core
 import qs.components
+import "js/bar.js" as B
 
 Item {
     id: root
@@ -26,6 +27,8 @@ Item {
     // M-36: the nudge's scale and when it last ran (ms; the battery item at critical, 04 §M-36).
     property real _nudge: 1
     property real _lastNudge: 0
+    // Found in review: the wheel's carried delta (bar.js wheelSteps: small deltas add up).
+    property real _wheelCarry: 0
 
     // One nudge (M-36), unless one ran within nudge.minInterval.
     function nudge(): void {
@@ -88,7 +91,7 @@ Item {
                 anchors.bottom: parent.bottom
                 anchors.margins: -Tokens.s1
                 name: root.item.overlay || ""
-                size: Tokens.surfaces.bar.statusIconSize / 2
+                size: Tokens.surfaces.bar.statusOverlaySize
                 on: true
                 colour: ComponentShared.ink(root.item.ink || "main")
             }
@@ -97,7 +100,7 @@ Item {
             visible: (root.item.extra || "") !== ""
             anchors.verticalCenter: parent.verticalCenter
             name: root.item.extra || ""
-            size: Tokens.surfaces.bar.statusIconSize * 3 / 4
+            size: Tokens.surfaces.bar.statusExtraSize
             colour: ComponentShared.ink("sec")
         }
         Label {
@@ -121,7 +124,9 @@ Item {
             else root.clicked();
         }
         onWheel: w => {
-            if (w.angleDelta.y !== 0) root.wheelStep(w.angleDelta.y > 0 ? 1 : -1);
+            const r = B.wheelSteps(root._wheelCarry, w.angleDelta.y);
+            root._wheelCarry = r.carry;
+            for (let i = 0; i < Math.abs(r.steps); i++) root.wheelStep(r.steps > 0 ? 1 : -1);
         }
     }
     // The tooltip's text follows the item only while the pointer is on it: the Wi-Fi strength

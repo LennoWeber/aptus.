@@ -46,7 +46,7 @@ Singleton {
         if (!ready) return;
         const stepPct = fine ? 1 : (Config.get("audio.step") || 5);
         const next = L.step(volume * 100, direction, stepPct, 0, _maxPercent);
-        setVolume(next / 100);
+        if (Math.abs(next - volume * 100) > 1e-6) setVolume(next / 100);     // above the maximum: unchanged
         _osd("volume");
     }
     function toggleMute(): void { if (!ready) return; setMuted(!muted); _osd("volume"); }

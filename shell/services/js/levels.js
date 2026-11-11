@@ -49,14 +49,17 @@ function networkGlyph(kind, online, strength) {
 function brightnessGlyph(level) {
     return { glyph: (Number(level) || 0) < 0.3 ? GLYPHS.brightLow : GLYPHS.bright, ink: "main", overlay: "" }
 }
-// One key step on a percent scale: the next multiple of `stepPercent` in `direction`, clamped.
+// One key step on a percent scale: the next multiple of `stepPercent` in `direction`, clamped;
+// never against the direction (a level above max, e.g. a sink at 130 % with the boost off, stays
+// on up instead of dropping to max).
 function step(percent, direction, stepPercent, min, max) {
     invariant(direction === 1 || direction === -1, "step direction " + direction)
     invariant(stepPercent > 0 && min < max, "step " + stepPercent + " in " + min + ".." + max)
     var p = Math.round(Number(percent) * 1000) / 1000
     var s = Math.max(1, stepPercent)
     var next = direction > 0 ? (Math.floor(p / s + 1e-6) + 1) * s : (Math.ceil(p / s - 1e-6) - 1) * s
-    return Math.max(min, Math.min(max, next))
+    var r = Math.max(min, Math.min(max, next))
+    return (direction > 0 ? r < p : r > p) ? p : r
 }
 // OSD payloads (notch.md §8). A level is the hardware's: clamped into 0..max (NaN is 0), never
 // refused (another app can set the sink above the maximum).

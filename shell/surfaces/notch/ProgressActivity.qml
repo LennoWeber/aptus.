@@ -1,3 +1,4 @@
+pragma ComponentBehavior: Bound
 // Downloads, copies, exports from notification hints (notch.md §4–§5).
 // Owner: S3. Live while Progress has items; the compact look shows the first one.
 import QtQuick

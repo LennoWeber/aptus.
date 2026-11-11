@@ -21,8 +21,19 @@ Item {
     property bool pinned: false
     // The position while the pointer drags the progress bar (-1 = not dragging), seconds.
     property real _dragPosition: -1
-    // The player's position, re-read once a second while the card is shown and playing.
-    property real _position: player ? player.position : 0
+    // The player's position: read when the card shows, the player or the track changes, after a
+    // seek, and once a second while it plays (MPRIS sends no position updates).
+    property real _position: 0
+    function _readPosition(): void { _position = player ? player.position : 0; }
+    onPlayerChanged: _readPosition()
+    onVisibleChanged: if (visible) _readPosition()
+    Component.onCompleted: _readPosition()
+    Connections {
+        target: root.player
+        ignoreUnknownSignals: true
+        function onPostTrackChanged(): void { root._readPosition(); }
+        function onIsPlayingChanged(): void { root._readPosition(); }
+    }
 
     // Found by the probe (phase 5):
     // The card's tokens, the track length (0 when the player has none), the position shown (the
@@ -36,7 +47,7 @@ Item {
         interval: 1000
         repeat: true
         running: !!root.player && root.player.isPlaying && root.visible
-        onTriggered: root._position = root.player.position
+        onTriggered: root._readPosition()
     }
 
     Item {
@@ -70,14 +81,14 @@ Item {
         spacing: Tokens.s2
         Label {
             width: parent.width
-            type: "bodyStrong"
+            type: "title"
             elide: Text.ElideRight
             text: root.player ? (root.player.trackTitle || root.player.identity || "") : ""
         }
         Label {
             width: parent.width
             type: "body"
-            ink: "sec"
+            ink: "meta"
             elide: Text.ElideRight
             visible: text !== ""
             text: root.player ? [root.player.trackArtist, root.player.trackAlbum].filter(s => !!s).join(" · ") : ""
@@ -126,6 +137,7 @@ Item {
                     root._position = root._dragPosition;
                     root._dragPosition = -1;
                 }
+                onCanceled: root._dragPosition = -1
             }
         }
         Item {

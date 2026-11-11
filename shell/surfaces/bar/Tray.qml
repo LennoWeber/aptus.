@@ -34,7 +34,7 @@ Item {
         const p = overflowButton.mapToItem(null, x, y);
         SurfaceManager.openMenu(monitorName, {
             anchorX: p.x, anchorY: p.y, owner: "tray:overflow",
-            model: overflowItems.map(i => ({ id: i.id, label: i.tooltipTitle || i.title || i.id, item: i })),
+            model: overflowItems.map(i => ({ id: i.id, label: i.tooltipTitle || i.title || i.id, icon: String(i.icon || ""), item: i })),
             onTriggered: row => root._overflowTriggered(row)
         });
     }

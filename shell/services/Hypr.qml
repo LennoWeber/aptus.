@@ -216,6 +216,9 @@ Singleton {
     // Rebuild `windows` from the toplevels (after a toplevel refresh only).
     function _rebuildWindows(): void {
         windows = Hyprland.toplevels.values.map(t => _client(t)).filter(w => w.address !== "");
+        // Found in review: a closed window leaves the urgent list.
+        const open = urgent.filter(a => windows.some(w => w.address === a));
+        if (open.length !== urgent.length) urgent = open;
         _rebuildWorkspaces();
     }
     // Rebuild `workspaces` from Hyprland's workspaces, the windows and the focus order.
@@ -223,6 +226,13 @@ Singleton {
         const ws = Hyprland.workspaces.values.map(w => ({ id: w.id, name: w.name, monitor: w.monitor ? w.monitor.name : "" }));
         workspaces = H.workspaceRecords(ws, windows, monitors, focusedMonitor, _focusOrder, urgent, workspaceNames,
                                         Tokens.surfaces.bar.workspaceNameMaxChars);
+        // Found in review: a workspace may toast again once it was shown or has no urgent window.
+        let t = null;
+        for (const id in _urgentToasted) {
+            const w = workspaces.find(x => String(x.id) === id);
+            if (!w || w.active || !w.urgent) { t = t || Object.assign({}, _urgentToasted); delete t[id]; }
+        }
+        if (t) _urgentToasted = t;
     }
     // Read the workspace names file's text and apply the names.
     function _loadNames(text: string): void {

@@ -44,6 +44,9 @@ Singleton {
     property var _toasts: ({})
     // The stack toast being built (notifications.js stack record) or null.
     property var _stack: null
+    // Found in review: the record ids in the stack toast (a replace of one updates the stack's
+    // newest line instead of joining again).
+    property var _stackIds: []
     // The id of the next injected notification (counts down from -1; IPC `notch toast`).
     property int _injectSerial: -1
     // The held summary's hold reason when it started (the toast's wording when it ends).
@@ -116,22 +119,20 @@ Singleton {
     // Today (S4) and the toast: read state and removal.
     function markRead(id: int): void {
         const h = N.markRead(history, id);
-        if (h !== history) { history = h; _changed(); }
+        if (h !== history) _setHistory(h);
     }
-    function markAllRead(): void { history = N.markAllRead(history); _changed(); }
+    function markAllRead(): void { _setHistory(N.markAllRead(history)); }
     function remove(id: int): void {
         const live = _live[id];
         if (live) live.dismiss();
         _drop(id);
         _closeToast(id);
-        history = N.removeRecord(history, id);
-        _changed();
+        _setHistory(N.removeRecord(history, id));
     }
     function clearAll(): void {
         for (const id in _live) _live[id].dismiss();
         _live = {};
-        history = [];
-        _changed();
+        _setHistory([]);
     }
     // The Notch tells that a toast's passive entry left the notch (timed out or dismissed).
     function toastGone(passiveId: int): void {
@@ -139,7 +140,7 @@ Singleton {
         let hit = false;
         for (const k in t) if (t[k] === passiveId) { delete t[k]; hit = true; }
         if (hit) _toasts = t;
-        if (_stack && _stack.passiveId === passiveId) _stack = null;
+        if (_stack && _stack.passiveId === passiveId) { _stack = null; _stackIds = []; }
     }
 
     // A notification arrived from the server (a Quickshell Notification), or was replaced in place.
@@ -162,7 +163,7 @@ Singleton {
         _closeToast(id);
         Progress.remove("n:" + id);
         const h = N.removeRecord(history, id);
-        if (h.length !== history.length) { history = h; _changed(); }
+        if (h.length !== history.length) _setHistory(h);
     }
     // The policy context now (notifications.js decide): Dnd, Focus, the active monitor's fullscreen
     // and notch.overFullscreen, the allowlist, the muted apps.
@@ -184,8 +185,7 @@ Singleton {
         const old = history.find(x => x.id === record.id);
         if (old && old.read && d.show !== "toast") record.read = true;
         record.image = _cacheImage(record, live);
-        history = N.addToHistory(history, record, _max, _days, Date.now());
-        _changed();
+        _setHistory(N.addToHistory(history, record, _max, _days, Date.now()));
         if (d.show === "toast" || d.show === "progress") _toast(record, d.priority, live);
     }
     // Post or update the toast of a record (stack, replaces_id).
@@ -195,6 +195,10 @@ Singleton {
         const payload = N.toastPayload(record, timeout, t.maxActions);
         if (live && live.image) payload.image = live.image;     // the live image (image-data too)
         const mon = SurfaceManager.activeMonitor;
+        if (_stack && _stack.count >= 2 && _stackIds.indexOf(record.id) >= 0 && _alive(_stack.passiveId)) {
+            SurfaceManager.update(_stack.passiveId, N.stackPayload(_stack, record, timeout), _monitorOf(_stack.passiveId));
+            return;
+        }
         const existing = _toasts[record.id];
         if (existing && _alive(existing)) {
             SurfaceManager.update(existing, payload, _monitorOf(existing));
@@ -206,15 +210,17 @@ Singleton {
             const s = N.stackStep(stack, record, 0, mon, Date.now(), win);
             if (s.joins) {
                 _stack = s.stack;
-                const tt = Object.assign({}, _toasts);
-                for (const k in tt) if (tt[k] === s.stack.passiveId) delete tt[k];
+                const tt = Object.assign({}, _toasts), ids = _stackIds.concat([record.id]);
+                for (const k in tt) if (tt[k] === s.stack.passiveId) { delete tt[k]; if (ids.indexOf(Number(k)) < 0) ids.push(Number(k)); }
                 _toasts = tt;
+                _stackIds = ids;
                 SurfaceManager.update(s.stack.passiveId, N.stackPayload(s.stack, record, timeout), mon);
                 return;
             }
             const id = SurfaceManager.post("toast", payload, priority, mon, "n:" + record.id);
             s.stack.passiveId = id;
             _stack = s.stack;
+            _stackIds = [record.id];
             _setToast(record.id, id);
             return;
         }
@@ -235,11 +241,42 @@ Singleton {
         if (src === "" || src.indexOf("image://") === 0) return "";
         const path = src.indexOf("file://") === 0 ? decodeURIComponent(src.substring(7)) : src;
         if (path.indexOf("/") !== 0) return "";
-        if (path.indexOf(Paths.notifCache + "/") === 0) return path;
+        if (_inCache(path)) return path;
+        if (path.indexOf(Paths.notifCache + "/") === 0) return "";       // "…/notif/../x": not ours
         const ext = (/\.(png|jpe?g|svg|webp|gif)$/i.exec(path) || [".png"])[0];
         const dst = Paths.notifCache + "/" + Math.abs(record.id) + "-" + Date.now() + ext;
-        Quickshell.execDetached(["sh", "-c", 'mkdir -p "$1" && cp -f -- "$2" "$3"', "sh", Paths.notifCache, path, dst]);
+        // Found in review: any session-bus client names the path, so only a regular file under
+        // IMAGE_MAX_BYTES is copied, and the copy may take a few seconds at most (no device, FIFO
+        // or huge file).
+        Quickshell.execDetached(["sh", "-c",
+            'mkdir -p "$1" && [ -f "$2" ] && [ "$(stat -L -c %s -- "$2")" -le "$4" ] && timeout 5 cp -f -- "$2" "$3"',
+            "sh", Paths.notifCache, path, dst, String(N.IMAGE_MAX_BYTES)]);
         return dst;
+    }
+    // Found in review: every history change goes through here. A record that leaves (trimmed,
+    // removed, replaced) takes its live Notification along (dismissed: the sender learns it is
+    // gone) and its image copy (unless another record still uses it).
+    function _setHistory(h: var): void {
+        const kept = {}, used = {};
+        for (const r of h) { kept[r.id] = true; if (r.image) used[r.image] = true; }
+        let live = null;
+        for (const r of history) {
+            if (!kept[r.id] && _live[r.id] !== undefined) {
+                live = live || Object.assign({}, _live);
+                const n = live[r.id];
+                delete live[r.id];
+                n.dismiss();
+            }
+            if (r.image && !used[r.image] && _inCache(r.image)) Quickshell.execDetached(["rm", "-f", "--", r.image]);
+        }
+        if (live) _live = live;
+        history = h;
+        _changed();
+    }
+    // A file directly in Paths.notifCache (one of our copies; a sender's "…/notif/../x" is not).
+    function _inCache(path: string): bool {
+        const i = path.lastIndexOf("/");
+        return i > 0 && path.substring(0, i) === Paths.notifCache && path.length > i + 1 && path.charAt(i + 1) !== ".";
     }
     // The history changed: recount unread, write the state file (debounced).
     function _changed(): void {
@@ -262,14 +299,14 @@ Singleton {
         SurfaceManager.dismiss(p, _monitorOf(p));
         toastGone(p);
     }
-    // Forget a record (history trim, removeRecord): its toast and its image copy too.
+    // Forget a record's live Notification (the sender closed it, or it was dismissed): the record
+    // stays in the history without actions.
     function _drop(id: int): void {
         if (_live[id] === undefined) return;
         const live = Object.assign({}, _live);
         delete live[id];
         _live = live;
-        const h = history.map(r => r.id === id && r.live ? Object.assign({}, r, { live: false }) : r);
-        history = h;
+        history = history.map(r => r.id === id && r.live ? Object.assign({}, r, { live: false }) : r);
     }
     // The monitor holding a passive entry ("" none).
     function _monitorOf(passiveId: int): string {
@@ -341,6 +378,9 @@ Singleton {
             const u = N.unreadInfo(root.history, Config.get("notifications.allowlist") || []);
             root.unread = u.unread;
             root.unreadAllowlisted = u.allowlisted;
+            // image copies older than the history's days belong to no record any more
+            Quickshell.execDetached(["sh", "-c", '[ -d "$1" ] && find "$1" -maxdepth 1 -type f -mtime "+$2" -delete',
+                                     "sh", Paths.notifCache, String(root._days)]);
         }
     }
     // P-20: who owns org.freedesktop.Notifications on this session bus.

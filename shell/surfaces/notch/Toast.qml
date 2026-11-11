@@ -1,5 +1,5 @@
 pragma ComponentBehavior: Bound
-// A toast (surfaces/notch.md §6): app icon 24, app · time, close on hover, title, body ≤ 2 lines,
+// A toast (surfaces/notch.md §6): app icon 24, app · time, close on hover, title, body one line,
 // image 48, up to three quiet action buttons, the inline reply field; the stack toast and the held
 // summary are toasts too. Entrance M-06: icon 0.6 → 1, title then body rise 6 px, 40 ms apart.
 import QtQuick
@@ -150,7 +150,7 @@ Item {
             }
             Label {
                 width: parent.width - x
-                type: "bodyStrong"
+                type: "title"
                 elide: Text.ElideRight
                 text: root._p.summary || ""
             }
@@ -164,8 +164,8 @@ Item {
             ink: "sec"
             textFormat: Text.StyledText
             wrapMode: Text.Wrap
-            // with a button row only one line fits the 104 / 132 heights
-            maximumLineCount: root._actions.length > 0 ? 1 : root._t.bodyMaxLines
+            // the 72 / 104 / 132 heights hold one body line (notch.md §6); Today shows it whole
+            maximumLineCount: root._t.bodyMaxLines
             elide: Text.ElideRight
             text: root._p.body || ""
             onLinkActivated: link => Qt.openUrlExternally(link)

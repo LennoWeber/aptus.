@@ -133,6 +133,8 @@ TestCase {
         const read = N.markRead(h, 3)
         verify(read[1].read)
         verify(!h[1].read)                                                  // a new array, the old one kept
+        verify(N.markRead(read, 3) === read)                                // found in review: nothing to mark, same array
+        verify(N.markRead(read, 99) === read)
         compare(N.unreadInfo(read, []), { unread: 2, allowlisted: false })
         compare(N.unreadInfo(read, ["Mail"]).allowlisted, true)
         verify(N.markAllRead(h).every(x => x.read))

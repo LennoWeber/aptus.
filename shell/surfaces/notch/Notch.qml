@@ -232,7 +232,7 @@ Item {
         const id = row ? row.id : "";
         if (id === "mute") { Notifications.muteApp(entry.payload.appName); _toastDismissed(entry); }
         else if (id === "dnd") Dnd.turnOn();
-        else if (id === "settings") SurfaceManager.open("settings", { page: "notifications" }, _name);
+        else if (id === "settings") SurfaceManager.open("settings", { page: "notch" }, _name);   // notifications.* live there
     }
     // A compact activity's right-click menu (notch.md §4): the activity's own rows plus
     // "Open in Today", which the Notch handles; the others go to Activity.menuTriggered.

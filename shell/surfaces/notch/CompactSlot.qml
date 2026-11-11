@@ -20,9 +20,9 @@ Item {
     readonly property real openWidth: activity && loader.item ? (loader.item as Item).implicitWidth : 0
     readonly property bool hovered: mouse.containsMouse
 
-    // The pointer rested activityHover.rest ms on the slot / left it.
+    // The pointer rested activityHover.rest ms on the slot (leaving is the Notch's: it watches
+    // `hovered` of both slots and the bulge together).
     signal hoverRested()
-    signal hoverLeft()
     signal clicked()
     signal middleClicked()
     signal rightClicked(real x, real y)
@@ -67,8 +67,8 @@ Item {
         hoverEnabled: true
         acceptedButtons: Qt.LeftButton | Qt.MiddleButton | Qt.RightButton
         onContainsMouseChanged: {
-            if (containsMouse) { leaveTimer.stop(); restTimer.restart(); }
-            else { restTimer.stop(); root.hoverLeft(); }
+            if (containsMouse) restTimer.restart();
+            else restTimer.stop();
         }
         onClicked: m => {
             if (m.button === Qt.MiddleButton) root.middleClicked();
@@ -81,5 +81,4 @@ Item {
         interval: Motion.catalogueMs("activityHover.rest", false)
         onTriggered: root.hoverRested()
     }
-    Timer { id: leaveTimer }
 }

@@ -32,6 +32,12 @@ Item {
     property var _throttle: ({ changes: [], shownAt: 0 })
     // M-03 progress 0 → 1 of the current swap.
     property real _swap: 1
+    // Found in review: the icon leaving (M-03 crossfades the icon too) and its swap progress.
+    property string _oldIcon: ""
+    property string _oldAppName: ""
+    property real _iconSwap: 1
+    // Found in review: the wheel's carried delta (bar.js wheelSteps: small deltas add up).
+    property real _wheelCarry: 0
 
     // Found by the probe (phase 5):
     // The title and icon the label should show (the shown ones follow through the title throttle
@@ -54,6 +60,7 @@ Item {
     function _show(): void {
         if (_wantTitle === _title && _wantIcon === _icon) return;
         const iconChanged = _wantIcon !== _icon;
+        if (iconChanged) { _oldIcon = _icon; _oldAppName = _appName; }
         _oldTitle = _title;
         _title = _wantTitle;
         _icon = _wantIcon;
@@ -103,21 +110,38 @@ Item {
         id: content
         anchors.verticalCenter: parent.verticalCenter
         spacing: Tokens.s3
-        AppIcon {
+        // the app icon; on a change the old one fades out while the new one fades in from
+        // title.iconScaleFrom (M-03)
+        Item {
             id: icon
             visible: root._icon !== ""
             anchors.verticalCenter: parent.verticalCenter
-            size: Tokens.surfaces.bar.titleIconSize
-            icon: root._icon
-            name: root._appName
-            transformOrigin: Item.Center
-            NumberAnimation on scale {
+            width: Tokens.surfaces.bar.titleIconSize
+            height: width
+            AppIcon {
+                anchors.fill: parent
+                visible: root._iconSwap < 1 && root._oldIcon !== ""
+                size: parent.width
+                icon: root._oldIcon
+                name: root._oldAppName
+                opacity: 1 - root._iconSwap
+            }
+            AppIcon {
+                anchors.fill: parent
+                size: parent.width
+                icon: root._icon
+                name: root._appName
+                opacity: root._iconSwap
+                scale: (Motion.reduced ? 1 : Motion.catalogueValue("title.iconScaleFrom"))
+                       + (1 - (Motion.reduced ? 1 : Motion.catalogueValue("title.iconScaleFrom"))) * root._iconSwap
+            }
+            StandardAnimation {
                 id: iconSwap
-                running: false
-                from: Motion.reduced ? 1 : Motion.catalogueValue("title.iconScaleFrom")
+                target: root
+                property: "_iconSwap"
+                from: 0
                 to: 1
                 duration: Motion.ms("fade", false)
-                easing.type: Easing.OutCubic
             }
         }
         Item {
@@ -158,7 +182,7 @@ Item {
                     required property string modelData
                     name: modelData
                     size: Tokens.glyphBar
-                    colour: ComponentShared.ink("faint")
+                    colour: ComponentShared.ink("meta")
                 }
             }
         }
@@ -172,7 +196,11 @@ Item {
             if (e.button === Qt.MiddleButton) { if (root.window) Hypr.closeWindow(root.window.address); }
             else root._menu();
         }
-        onWheel: w => { if (w.angleDelta.y !== 0) Hypr.cycleFocus(w.angleDelta.y > 0 ? -1 : 1); }
+        onWheel: w => {
+            const r = B.wheelSteps(root._wheelCarry, w.angleDelta.y);
+            root._wheelCarry = r.carry;
+            if (r.steps !== 0) Hypr.cycleFocus(r.steps > 0 ? -1 : 1);      // one per event: the focus lags
+        }
     }
     Tooltip {
         target: root

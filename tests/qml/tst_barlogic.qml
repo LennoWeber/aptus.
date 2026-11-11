@@ -112,6 +112,18 @@ TestCase {
         return true
     }
 
+    // Found in review: one step per 120 of angleDelta, small deltas add up, a turn drops the rest.
+    function test_wheel_steps() {
+        compare(B.wheelSteps(0, 120), { steps: 1, carry: 0 })
+        compare(B.wheelSteps(0, -240), { steps: -2, carry: 0 })
+        let r = { steps: 0, carry: 0 }, total = 0
+        for (let i = 0; i < 16; i++) { r = B.wheelSteps(r.carry, 15); total += r.steps }
+        compare(total, 2)                                   // 16 × 15 = 240: two steps, not sixteen
+        compare(r.carry, 0)
+        r = B.wheelSteps(90, -30)                           // the direction turned: the 90 is dropped
+        compare(r, { steps: 0, carry: -30 })
+        compare(B.wheelSteps(NaN, 120).steps, 1)
+    }
     function test_invariants_reject_broken_state() {
         verify(refuses(() => B.statusItems(input({ settings: { batteryPercent: "sometimes", bluetooth: "connected" } }), false, t)))
         verify(refuses(() => B.statusItems(input({ settings: { batteryPercent: "auto", bluetooth: undefined } }), false, t)))

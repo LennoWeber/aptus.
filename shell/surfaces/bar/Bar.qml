@@ -23,7 +23,9 @@ Item {
     property real hide: 0
 
     // Quiet bar (M-31b, Focus.quietBar): title, tray, date and non-critical status collapse.
-    // TODO(S8): the hover reveal.
+    // TODO(S8): the hover reveal, together with M-31b's fade and collapse (`small`) of the title,
+    // the tray and the date (both ways: the reveal plays it back). Until S8 sets quietBar they
+    // only switch; the status items already leave with M-04.
     readonly property bool quiet: Focus.quietBar
     // A monitor narrower than surfaces.bar.narrowMonitorWidth (bar.md §9): date hidden, title
     // ≤ 240, tray ≤ 2.

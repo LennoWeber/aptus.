@@ -41,6 +41,8 @@ var FALLBACK_GLYPH = "notifications"
 // server id (≥ 1) and every injected one (−1 down), so a new notification never replaces an old
 // record.
 var ARCHIVE_ID = -1000000
+// The largest image file a notification may have copied into the cache (today.md §6), bytes.
+var IMAGE_MAX_BYTES = 8 * 1024 * 1024
 // The held summary's wording per hold reason (05 §8).
 var HELD_WHILE = { focus: "while you were focused", dnd: "during Do not disturb", fullscreen: "while in fullscreen" }
 // Tags the body keeps (notch.md §6: bold, italic, links).
@@ -261,6 +263,8 @@ function trimHistory(history, max, days, now) {
 }
 function markRead(history, id) {
     checkHistory(history)
+    // the same array when nothing changes (the caller then skips the save)
+    if (!history.some(function (r) { return r.id === id && !r.read })) return history
     return history.map(function (r) { return r.id === id && !r.read ? _with(r, true) : r })
 }
 function markAllRead(history) {
