@@ -24,6 +24,9 @@ ITEM_XML = """
     <property name="Title" type="s" access="read"/>
     <property name="Status" type="s" access="read"/>
     <property name="IconName" type="s" access="read"/>
+    <property name="IconPixmap" type="a(iiay)" access="read"/>
+    <property name="AttentionIconName" type="s" access="read"/>
+    <property name="AttentionIconPixmap" type="a(iiay)" access="read"/>
     <property name="Menu" type="o" access="read"/>
     <property name="ItemIsMenu" type="b" access="read"/>
     <property name="ToolTip" type="(sa(iiay)ss)" access="read"/>
@@ -80,6 +83,11 @@ MENU = {
 }
 
 
+def pixmap(argb: int, size: int = 22) -> tuple[int, int, bytes]:
+    """One SNI icon pixmap: a filled size × size ARGB32 square in network byte order."""
+    return (size, size, argb.to_bytes(4, "big") * (size * size))
+
+
 def main(argv: list[str]) -> int:
     if not argv:
         print(__doc__, file=sys.stderr)
@@ -113,6 +121,13 @@ def main(argv: list[str]) -> int:
             "Title": GLib.Variant("s", "Test tray"),
             "Status": GLib.Variant("s", state["status"]),
             "IconName": GLib.Variant("s", "dialog-information"),
+            # Like a real item, an attention icon and pixmaps as well (Quickshell draws NeedsAttention
+            # from the attention icon or a pixmap; without either it logs "Unable to create pixmap
+            # for tray icon"). The same icon for both states: the tray test sees only the shell's
+            # attention dot change.
+            "IconPixmap": GLib.Variant("a(iiay)", [pixmap(0xFF3C7DD9)]),
+            "AttentionIconName": GLib.Variant("s", "dialog-information"),
+            "AttentionIconPixmap": GLib.Variant("a(iiay)", [pixmap(0xFF3C7DD9)]),
             "Menu": GLib.Variant("o", "/MenuBar"),
             "ItemIsMenu": GLib.Variant("b", False),
             "ToolTip": GLib.Variant("(sa(iiay)ss)", ("", [], "Test tray", "")),

@@ -7,6 +7,7 @@ test HOME); it must differ from the address of the bus the tests run on.
 """
 from __future__ import annotations
 
+import json
 import os
 import signal
 import subprocess
@@ -160,6 +161,43 @@ def pointer(nested: Nested, cmd: str, x: int, y: int) -> None:
                     cmd, str(x), str(y), str(w), str(h)], check=True, timeout=10)
 
 
+def wheel(nested: Nested, x: int, y: int, notches: int) -> None:
+    """vpointer.py wheel at layout pixels: notches < 0 scroll up, > 0 down."""
+    w, h = layout(nested)
+    runtime = os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}")
+    subprocess.run(["python3", "-I", str(HERE / "vpointer.py"), os.path.join(runtime, nested.wayland_display),
+                    "wheel", str(x), str(y), str(w), str(h), str(notches)], check=True, timeout=10)
+
+
+def setting(nested: Nested, key: str, value: object = None) -> None:
+    """Set one key in the nested HOME's settings.json (None resets it), then `shell reloadConfig`
+    (Config's watch misses a file created after the start)."""
+    path = nested.paths.settings
+    path.parent.mkdir(parents=True, exist_ok=True)
+    data = json.loads(path.read_text()) if path.exists() else {}
+    data["v"] = 2
+    if value is None:
+        data.pop(key, None)
+    else:
+        data[key] = value
+    tmp = path.with_name(path.name + ".e2e-tmp")
+    tmp.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n")
+    os.replace(tmp, path)
+    assert nested.msg("shell", "reloadConfig") == "ok"
+
+
+def passive(nested: Nested) -> list[dict]:
+    """The active monitor's passive entries (toasts, OSDs, events)."""
+    st = nested.state()
+    return st["monitors"][st["global"]["activeMonitor"]]["passive"]
+
+
+def drained(nested: Nested, timeout: float = 12) -> None:
+    """Wait until no toast, OSD or event is left on the active monitor (a clean state for the next
+    test: an OSD fades 1.2 s after its last change, a toast after its timeout)."""
+    nested.wait_for(lambda: not passive(nested), timeout)
+
+
 def grab(nested: Nested, x: int, y: int, w: int, h: int) -> bytes:
     """RGB bytes of a layout region (grim -t ppm on the nested socket)."""
     env = dict(os.environ, WAYLAND_DISPLAY=nested.wayland_display)
@@ -207,3 +245,30 @@ class Window:
         self.focus()
         self.nested.hyprctl("dispatch", "hl.dsp.window.close()")
         self.nested.wait_for(lambda: self.client() is None, 5)
+
+    def to_workspace(self, workspace: str) -> None:
+        """Move it to another workspace without following it."""
+        self.nested.hyprctl("dispatch", f'hl.dsp.window.move({{ window = "class:^{self.cls}$", '
+                                        f'workspace = "{workspace}", follow = false }})')
+        self.nested.wait_for(lambda: str((self.client() or {}).get("workspace", {}).get("id")) == workspace, 5)
+
+
+class BellWindow(Window):
+    """An X11 kitty (XWayland) that rings its bell once per ring(): kitty sets the X11 urgency hint
+    of an unfocused window, which Hyprland reports as `urgent` (a Wayland kitty's or foot's bell
+    does not reach it in the nested session)."""
+
+    def __init__(self, nested: Nested, cls: str) -> None:
+        self.fifo = nested.root / f"{cls}.bell"
+        if not self.fifo.exists():
+            os.mkfifo(self.fifo)
+        self.nested, self.cls = nested, cls
+        nested.exec(f"kitty -o linux_display_server=x11 -o enable_audio_bell=no -o window_alert_on_bell=yes "
+                    f"-o confirm_os_window_close=0 --class {cls} "
+                    f"sh -c 'while :; do cat {self.fifo} >/dev/null; printf \"\\a\"; done'")
+        nested.wait_for(lambda: self.client(), 15)
+        time.sleep(0.5)                     # the shell inside reads the fifo
+
+    def ring(self) -> None:
+        with open(self.fifo, "w") as f:     # blocks until the reader is there; EOF rings once
+            f.write("ring\n")

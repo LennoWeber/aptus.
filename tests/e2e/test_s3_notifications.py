@@ -9,7 +9,7 @@ import time
 
 import pytest
 
-from nested import Nested
+from nested import Nested, write_test_png
 from s3bus import Window, bus_address, close_notification, gdbus, name_owner, notify, pointer, settle
 
 SENT: list[int] = []
@@ -30,6 +30,20 @@ def toast_for(nested: Nested, nid: int) -> dict | None:
 
 def history(nested: Nested) -> int:
     return nested.state()["services"]["notifications"]["history"]
+
+
+def svc(nested: Nested) -> dict:
+    return nested.state()["services"]["notifications"]
+
+
+def progress(nested: Nested) -> list[tuple[str, float]]:
+    return [(i["id"], i["fraction"]) for i in nested.state()["services"]["progress"]["items"]]
+
+
+def away(nested: Nested) -> None:
+    """The pointer off the notch (hovering a toast pauses its countdown)."""
+    m = next(m for m in nested.hyprctl("monitors", as_json=True) if m["focused"])
+    pointer(nested, "move", m["x"] + m["width"] // 2, m["y"] + m["height"] - 100)
 
 
 def send(nested: Nested, summary: str, body: str = "", *args: str) -> int:
@@ -119,6 +133,122 @@ def test_burst_becomes_one_stack_toast(nested: Nested) -> None:
     t = toasts(nested)
     assert len(t) == 1, t                              # the second and third joined the first one's toast
     assert t[0]["key"] == f"n:{ids[0]}"
+    # its count and apps, newest app first (notifications.js stackStep)
+    assert svc(nested)["stack"] == {"count": 3, "apps": ["App2", "App1", "App0"]}
+
+
+def test_countdown_restarts_on_replace_and_stack_join(nested: Nested) -> None:
+    """notch.md §6 rule 3: a replace or a stack join restarts the toast's countdown."""
+    away(nested)
+    nid = send(nested, "Countdown", "", "-a", "TestApp")          # 4 s + 9 × 40 ms = 4.36 s
+    nested.wait_for(lambda: toast_for(nested, nid), 5)
+    t0 = time.monotonic()
+    time.sleep(3.0)
+    notify(nested, "Countdown", "", "-a", "TestApp", "-r", str(nid))
+    time.sleep(max(0.0, 5.2 - (time.monotonic() - t0)))           # past the first deadline
+    assert toast_for(nested, nid) is not None, "the replace restarted the countdown"
+    nested.wait_for(lambda: toast_for(nested, nid) is None, 5)
+    # a stack: the third arrival (within notifications.stackWindow of the second) restarts it too
+    first = send(nested, "Stack one", "", "-a", "AppA")
+    nested.wait_for(lambda: toast_for(nested, first), 5)
+    send(nested, "Stack two", "", "-a", "AppB")
+    nested.wait_for(lambda: (svc(nested)["stack"] or {}).get("count") == 2, 3)
+    t0 = time.monotonic()
+    time.sleep(1.6)
+    send(nested, "Stack three", "", "-a", "AppC")
+    nested.wait_for(lambda: (svc(nested)["stack"] or {}).get("count") == 3, 3)
+    time.sleep(max(0.0, 5.2 - (time.monotonic() - t0)))           # past the second join's deadline
+    assert toast_for(nested, first) is not None, "the join restarted the countdown"
+    nested.wait_for(lambda: toast_for(nested, first) is None, 5)
+
+
+def test_progress_activity_from_a_value_hint(nested: Nested) -> None:
+    """notch.md §6 rule 4: a notification with a `value` hint is a progress activity, no toast;
+    at 100 it leaves the activity and toasts."""
+    nid = send(nested, "Download", "3 of 10 MB", "-a", "TestApp", "-h", "int:value:30")
+    nested.wait_for(lambda: progress(nested) == [(f"n:{nid}", 0.3)], 5)
+    settle(0.3)
+    assert toast_for(nested, nid) is None
+    notify(nested, "Download", "6 of 10 MB", "-a", "TestApp", "-r", str(nid), "-h", "int:value:60")
+    nested.wait_for(lambda: progress(nested) == [(f"n:{nid}", 0.6)], 5)
+    notify(nested, "Download", "done", "-a", "TestApp", "-r", str(nid), "-h", "int:value:100")
+    nested.wait_for(lambda: progress(nested) == [], 5)
+    nested.wait_for(lambda: toast_for(nested, nid), 5)
+
+
+def test_toast_close_button_middle_click_and_menu(nested: Nested) -> None:
+    """notch.md §6: ✕ (on hover) and a middle click dismiss; the right-click menu closes with Esc
+    and its first row mutes the app for an hour (its next notification goes to Today only)."""
+    m = next(m for m in nested.hyprctl("monitors", as_json=True) if m["focused"])
+    cx, top = m["x"] + m["width"] // 2, m["y"] + 32               # the 420 × 72 toast below the bar
+    nid = send(nested, "Close me", "", "-a", "TestApp")
+    nested.wait_for(lambda: toast_for(nested, nid), 5)
+    settle(0.6)
+    pointer(nested, "move", cx, top + 36)                          # the ✕ shows on hover
+    settle(0.4)
+    pointer(nested, "click", cx + 210 - 2 - 14, top + 2 + 14)
+    nested.wait_for(lambda: toast_for(nested, nid) is None, 3)
+    away(nested)
+    nid = send(nested, "Middle", "", "-a", "TestApp")
+    nested.wait_for(lambda: toast_for(nested, nid), 5)
+    settle(0.6)
+    pointer(nested, "mclick", cx, top + 36)
+    nested.wait_for(lambda: toast_for(nested, nid) is None, 3)
+    away(nested)
+    nid = send(nested, "Menu", "", "-a", "MuteMe")
+    nested.wait_for(lambda: toast_for(nested, nid), 5)
+    settle(0.6)
+    pointer(nested, "rclick", cx, top + 36)
+    nested.wait_for(lambda: (active(nested)["menu"] or {}).get("owner") == "notch:toast", 3)
+    settle(0.3)
+    nested.key("Escape")
+    nested.wait_for(lambda: active(nested)["menu"] is None, 3)
+    assert toast_for(nested, nid) is not None, "Esc closed only the menu"
+    pointer(nested, "rclick", cx, top + 36)
+    nested.wait_for(lambda: (active(nested)["menu"] or {}).get("owner") == "notch:toast", 3)
+    settle(0.3)
+    nested.key("Down")
+    nested.key("Return")                                          # "Mute MuteMe for 1 hour"
+    nested.wait_for(lambda: toast_for(nested, nid) is None, 3)
+    away(nested)
+    before = history(nested)
+    muted = send(nested, "Muted", "", "-a", "MuteMe")
+    nested.wait_for(lambda: history(nested) == before + 1, 5)
+    settle(0.5)
+    assert toast_for(nested, muted) is None
+
+
+def test_image_is_copied_once_for_its_replaces(nested: Nested) -> None:
+    """today.md §6, wave-2 review: the image is copied into the cache once confirmed; replaces with
+    the same unchanged image reuse the copy; a malformed file:// URL is no image, not a lost
+    notification."""
+    img = nested.root / "sender-image.png"
+    write_test_png(img, 64, 64)
+    cache = nested.paths.cache / "notif"
+    files = lambda: set(cache.iterdir()) if cache.exists() else set()
+    before = files()
+    nid = send(nested, "With image", "", "-a", "TestApp", "-h", f"string:image-path:{img}")
+    nested.wait_for(lambda: len(files() - before) == 1, 5)
+    for i in range(5):
+        notify(nested, f"With image {i}", "", "-a", "TestApp", "-r", str(nid), "-h", f"string:image-path:{img}")
+    settle(1.5)
+    assert len(files() - before) == 1, sorted(p.name for p in files() - before)
+    close_notification(nested, nid)                  # its toast goes: the next one is not stacked
+    nested.wait_for(lambda: toast_for(nested, nid) is None, 5)
+    n = history(nested)
+    bad = send(nested, "Bad image URL", "", "-a", "TestApp", "-h", "string:image-path:file:///tmp/%E0%A4%A.png")
+    nested.wait_for(lambda: history(nested) == n + 1, 5)
+    nested.wait_for(lambda: toast_for(nested, bad), 5)
+
+
+def test_held_then_closed_by_its_sender_is_not_summarised(nested: Nested, fullscreen_window) -> None:
+    nid = send(nested, "Gone before you look", "", "-a", "TestApp")
+    nested.wait_for(lambda: svc(nested)["held"] >= 1, 5)
+    close_notification(nested, nid)
+    nested.wait_for(lambda: svc(nested)["held"] == 0, 5)
+    fullscreen_window.leave()
+    settle(1.0)
+    assert not any(e["key"] == "held" for e in toasts(nested))
 
 
 def test_ipc_notch_toast(nested: Nested) -> None:

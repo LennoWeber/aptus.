@@ -191,6 +191,21 @@ function wheelSteps(carry, delta) {
     invariant(Math.abs(r.carry) < WHEEL_UNIT && (r.steps === 0 || (r.steps > 0) === (d > 0)), "wheel steps " + r.steps + ", carry " + r.carry)
     return r
 }
+// Wave-2 review: bring a ListModel of { wsId } rows to `ids` in place (the strip's pills keep
+// their delegates, so a record update reaches the existing pill: the urgent nudge, hover and
+// tooltip survive a rebuild). Rows whose id left are removed, the others moved, new ones inserted.
+function syncIds(model, ids) {
+    invariant(model && Array.isArray(ids), "syncIds without a model or ids")
+    for (var i = model.count - 1; i >= 0; i--) if (ids.indexOf(model.get(i).wsId) < 0) model.remove(i, 1)
+    for (var j = 0; j < ids.length; j++) {
+        var at = -1
+        for (var k = j; k < model.count && at < 0; k++) if (model.get(k).wsId === ids[j]) at = k
+        if (at < 0) model.insert(j, { wsId: ids[j] })
+        else if (at !== j) model.move(at, j, 1)
+    }
+    if (model.count > ids.length) model.remove(ids.length, model.count - ids.length)
+    invariant(model.count === ids.length, "synced " + model.count + " rows for " + ids.length + " ids")
+}
 function titleWidth(available, narrow, tokens) {
     checkBarTokens(tokens)
     var w = Math.min(available, narrow ? tokens.narrowTitleMaxWidth : tokens.titleMaxWidth)

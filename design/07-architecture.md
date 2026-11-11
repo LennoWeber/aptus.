@@ -117,7 +117,8 @@ the shell's first frame shows the frame colour, not black.
 1. `Config` loads defaults from the schema, then `settings.json`; `Tokens` resolves the palette.
 2. `MonitorShell` per screen creates its layers (§4) hidden.
 3. Services start lazily on first use, except `Hypr`, `Notifications` (must own the bus name
-   before apps send), `Shortcuts`, `Ipc`, `Idle`, `Session` (lock state), `Wallpaper`.
+   before apps send), `Shortcuts`, `Ipc`, `Idle`, `Session` (lock state), `Wallpaper`,
+   `Brightness` (its backlight scan runs at start, so the first brightness key finds the device).
 4. If `~/.local/state/aptus/locked` exists: lock immediately (crash restore), no intro.
 5. Otherwise, the first start of a Hyprland session (the flag `intro.<HYPRLAND_INSTANCE_SIGNATURE>`
    in `$XDG_RUNTIME_DIR/aptus/` is missing) plays M-01; restarts don't.

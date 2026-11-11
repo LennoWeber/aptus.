@@ -11,8 +11,8 @@ from pathlib import Path
 import pytest
 
 from nested import Nested, write_test_png
-from s3bus import (FakePlayer, FakeTray, Window, close_notification, distance, grab, mean, notify, notify_waiting,
-                   pointer, settle, shell_pid)
+from s3bus import (BellWindow, FakePlayer, FakeTray, Window, close_notification, distance, drained, grab, mean, notify,
+                   notify_waiting, passive, pointer, setting, settle, shell_pid, wheel)
 
 
 def shots(nested: Nested) -> Path:
@@ -74,8 +74,13 @@ def test_fullscreen_leave_and_critical_above(nested: Nested, window: Window) -> 
         nested.wait_for(lambda: state_of(nested)["passiveTop"]["kind"] == "osd", 3)   # the OSD too
         close_notification(nested, crit)
         close_notification(nested, normal)
+        # wave-2 review: the held one was closed by its sender, so leaving summarises nothing
+        nested.wait_for(lambda: nested.state()["services"]["notifications"]["held"] == 0, 3)
     finally:
         window.leave()
+    settle(0.5)
+    assert not any(e["key"] == "held" for e in passive(nested)), "a summary of a closed notification"
+    drained(nested)                         # a clean state for the next test (the OSD fades)
 
 
 def test_hot_edge_reveal(nested: Nested, window: Window) -> None:
@@ -100,6 +105,7 @@ def test_hot_edge_reveal(nested: Nested, window: Window) -> None:
 def test_pinned_card_ways_out(nested: Nested, player: FakePlayer) -> None:
     m = mon(nested)
     for way in ("escape", "outside", "again"):
+        drained(nested)                     # a toast or OSD on top would take the card's keyboard
         assert nested.msg("surface", "open", "card:media", '{"pinned": true}') == "ok"
         nested.wait_for(lambda: state_of(nested)["notch"] == "card:media" and state_of(nested)["keyboard"], 3)
         settle(0.4)
@@ -110,6 +116,30 @@ def test_pinned_card_ways_out(nested: Nested, player: FakePlayer) -> None:
         else:
             nested.msg("surface", "toggle", "card:media")
         nested.wait_for(lambda: state_of(nested)["notch"] == "rest", 3)
+
+
+def test_pinned_card_under_a_toast_then_escape(nested: Nested, player: FakePlayer) -> None:
+    """A toast arriving over a pinned card shows above it (notch.md §9) and the card gives up the
+    keyboard meanwhile (rules.js keyboard), so Esc does not reach the shell; once the toast is
+    gone the card has the keyboard again and Esc closes it (05 §3)."""
+    drained(nested)
+    assert nested.msg("surface", "open", "card:media", '{"pinned": true}') == "ok"
+    nested.wait_for(lambda: state_of(nested)["notch"] == "card:media" and state_of(nested)["keyboard"], 3)
+    nid = notify(nested, "Over the card", "", "-a", "TestApp")
+    try:
+        nested.wait_for(lambda: state_of(nested)["passiveTop"]["kind"] == "toast", 3)
+        s = state_of(nested)
+        assert s["notch"] == "card:media" and not s["keyboard"]
+        nested.key("Escape")                # to the window below: neither the toast nor the card closes
+        settle(0.4)
+        s = state_of(nested)
+        assert s["notch"] == "card:media" and s["passiveTop"]["kind"] == "toast"
+    finally:
+        close_notification(nested, nid)
+    nested.wait_for(lambda: state_of(nested)["passiveTop"]["kind"] == "card" and state_of(nested)["keyboard"], 3)
+    settle(0.3)
+    nested.key("Escape")
+    nested.wait_for(lambda: state_of(nested)["notch"] == "rest", 3)
 
 
 def test_hover_card_opens_and_collapses(nested: Nested, player: FakePlayer) -> None:
@@ -167,6 +197,85 @@ def test_tray_item_menu_and_attention(nested: Nested) -> None:
         nested.wait_for(lambda: grab(nested, x - 12, m["y"], 24, 32) != calm, 3)   # the attention dot
     finally:
         tray.stop()
+
+
+def urgent_toast(nested: Nested, ws: int) -> bool:
+    return any(e["kind"] == "toast" and e["key"] == f"urgent:{ws}" for e in passive(nested))
+
+
+def test_urgent_toast_and_its_repeat(nested: Nested) -> None:
+    """bar.md §3, notch.md §6: an urgent window on a workspace not shown toasts once per urgency;
+    once the workspace was shown it may toast again."""
+    drained(nested)
+    nested.hyprctl("dispatch", 'hl.dsp.focus({ workspace = "1" })')
+    w = BellWindow(nested, "aptus.e2e.urgent")
+    try:
+        w.to_workspace("2")
+        nested.hyprctl("dispatch", 'hl.dsp.focus({ workspace = "1" })')
+        settle(0.5)
+        assert not urgent_toast(nested, 2)
+        w.ring()
+        nested.wait_for(lambda: urgent_toast(nested, 2), 5)
+        nested.wait_for(lambda: not urgent_toast(nested, 2), 12)     # the toast's own timeout
+        w.ring()                                                    # still the same urgency: no second toast
+        settle(1.5)
+        assert not urgent_toast(nested, 2)
+        nested.hyprctl("dispatch", 'hl.dsp.focus({ workspace = "2" })')   # seen (the window takes the focus)
+        settle(0.5)
+        nested.hyprctl("dispatch", 'hl.dsp.focus({ workspace = "1" })')
+        settle(0.5)
+        w.ring()
+        nested.wait_for(lambda: urgent_toast(nested, 2), 5)
+    finally:
+        w.close()
+    drained(nested)
+
+
+def test_wheel_on_the_strip_steps_through_used_workspaces(nested: Nested, window: Window) -> None:
+    """bar.md §3: the wheel over the strip goes to the previous / next used workspace, one step per
+    notch."""
+    other = Window(nested, "aptus.e2e.wheel")
+    try:
+        window.to_workspace("1")
+        other.to_workspace("2")
+        nested.hyprctl("dispatch", 'hl.dsp.focus({ workspace = "1" })')
+        nested.wait_for(lambda: strip(nested) == [1, 2], 3)
+        m = mon(nested)
+        active_ws = lambda: (nested.hyprctl("activeworkspace", as_json=True) or {}).get("id")
+        wheel(nested, m["x"] + 60, m["y"] + 16, 1)                    # down: the next one
+        nested.wait_for(lambda: active_ws() == 2, 3)
+        settle(0.3)
+        wheel(nested, m["x"] + 60, m["y"] + 16, -1)                   # up: back
+        nested.wait_for(lambda: active_ws() == 1, 3)
+    finally:
+        other.close()
+
+
+def test_tray_overflow(nested: Nested) -> None:
+    """bar.md §5: items beyond bar.tray.max sit behind the overflow button; its menu lists them and
+    a row activates its item."""
+    m = mon(nested)
+    right = lambda: grab(nested, m["x"] + m["width"] // 2, m["y"], m["width"] // 2, 32)
+    setting(nested, "bar.tray.max", 0)
+    settle(0.5)
+    before = right()
+    tray = FakeTray(nested)
+    try:
+        settle(1.0)
+        cols = [c for c in changed_columns(before, right(), m["width"] // 2) if c > m["width"] // 4]
+        assert cols, "no overflow button appeared"
+        x = m["x"] + m["width"] // 2 + (min(cols) + max(cols)) // 2
+        pointer(nested, "click", x, m["y"] + 16)
+        nested.wait_for(lambda: (state_of(nested)["menu"] or {}).get("owner") == "tray:overflow", 3)
+        settle(0.3)
+        nested.key("Down")
+        nested.key("Return")
+        nested.wait_for(lambda: any(c.startswith("Activate") for c in tray.calls()), 3)
+        nested.wait_for(lambda: state_of(nested)["menu"] is None, 3)
+    finally:
+        tray.stop()
+        setting(nested, "bar.tray.max")
+        pointer(nested, "move", m["x"] + m["width"] // 2, m["y"] + 300)
 
 
 def test_privacy_reports_nothing_under_test(nested: Nested) -> None:

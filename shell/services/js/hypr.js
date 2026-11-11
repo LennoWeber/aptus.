@@ -176,6 +176,24 @@ function splitEvent(data, count) {
     return out
 }
 
+// The keyboards' layouts from `hyprctl -j devices` (wave-2 review: Hypr's `_layouts` at start):
+// { layouts: { keyboard name: active_keymap }, main: the main keyboard's keymap ("" none) }.
+// Hyprland's "error" for an unnamed keymap is no layout (as in the `activelayout` event); text
+// that is no devices JSON gives none.
+function layoutsFromDevices(text) {
+    var out = { layouts: {}, main: "" }
+    var d
+    try { d = JSON.parse(text) } catch (e) { return out }
+    var kbs = d && Array.isArray(d.keyboards) ? d.keyboards : []
+    for (var i = 0; i < kbs.length; i++) {
+        var k = kbs[i]
+        if (!k || typeof k.name !== "string" || typeof k.active_keymap !== "string" || k.active_keymap === "error") continue
+        out.layouts[k.name] = k.active_keymap
+        if (k.main && out.main === "") out.main = k.active_keymap
+    }
+    return out
+}
+
 // Invariants (phase 6): they throw "hypr invariant: …". Hyprland's own data is taken as it comes
 // (ids and names unique); what is checked is the model's own state and the callers' arguments.
 function invariant(cond, message) { if (!cond) throw new Error("hypr invariant: " + message) }

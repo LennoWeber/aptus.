@@ -7,6 +7,7 @@ A sysfs-like tree (`class/backlight/<dev>/{brightness,max_brightness,actual_brig
 """
 from __future__ import annotations
 
+import json
 import os
 from dataclasses import dataclass
 from pathlib import Path
@@ -82,7 +83,14 @@ class FakeHardware:
         tool = bin_dir / "brightnessctl"
         tool.write_text(brightnessctl_script())
         tool.chmod(0o755)
+        self.battery(present=True, percentage=80, charging=False, on_battery=False)
         return {"APTUS_SYSFS": str(self.sysfs), "PATH": f"{bin_dir}:{os.environ.get('PATH', '/usr/bin')}"}
+
+    def battery(self, present: bool = True, percentage: float = 80, charging: bool = False,
+                on_battery: bool = False) -> None:
+        """The Power service's battery double under APTUS_TEST (the shell watches the file)."""
+        (self.sysfs / "aptus-test-battery.json").write_text(json.dumps(
+            {"present": present, "percentage": percentage, "charging": charging, "onBattery": on_battery}) + "\n")
 
     def backlight_value(self) -> int:
         return int((self.sysfs / "class" / "backlight" / self.backlight / "brightness").read_text())

@@ -102,6 +102,51 @@ def test_caps_lock_osd(nested: Nested) -> None:
     assert osd(nested, "caps")                            # the same OSD, updated in place
 
 
+def test_layout_osd_on_the_first_switch_after_the_start(nested: Nested) -> None:
+    """notch.md §8, §11 (wave-2 review): the shell reads every keyboard's layout at start, so the
+    first switch after it shows the layout OSD (tests/e2e/hyprland.lua gives the nested keyboard
+    "de,us"; nothing before this test switches it)."""
+    kb = next(k for k in nested.hyprctl("devices", as_json=True)["keyboards"] if k.get("main"))
+    nested.hyprctl("switchxkblayout", kb["name"], "next")
+    e = nested.wait_for(lambda: osd(nested, "layout"), 3)
+    assert e["priority"] == 0
+    after = next(k for k in nested.hyprctl("devices", as_json=True)["keyboards"] if k["name"] == kb["name"])
+    assert after["active_keymap"] != kb["active_keymap"]
+    nested.wait_for(lambda: not osd(nested, "layout"), 5)
+    nested.hyprctl("switchxkblayout", kb["name"], "next")         # back: the OSD again
+    nested.wait_for(lambda: osd(nested, "layout"), 3)
+
+
+def toast(nested: Nested, key: str) -> dict | None:
+    return next((e for e in active(nested)["passive"] if e["kind"] == "toast" and e["key"] == key), None)
+
+
+def test_battery_toasts(nested: Nested) -> None:
+    """05 §8 (the Power double under APTUS_TEST, fakehw.py battery): a warning once at ≤ 15 %, the
+    critical toast at ≤ 7 % until plugged in, then the "Charging" event."""
+    hw = nested.hw
+    try:
+        hw.battery(percentage=40, on_battery=True)               # unplugged, high: nothing
+        settle(0.8)
+        assert toast(nested, "battery-low") is None and toast(nested, "battery-crit") is None
+        hw.battery(percentage=15, on_battery=True)
+        low = nested.wait_for(lambda: toast(nested, "battery-low"), 3)
+        assert low["priority"] == 0
+        hw.battery(percentage=14, on_battery=True)               # warned once per discharge
+        settle(0.8)
+        assert [e["id"] for e in active(nested)["passive"] if e["key"] == "battery-low"] == [low["id"]]
+        hw.battery(percentage=7, on_battery=True)
+        crit = nested.wait_for(lambda: toast(nested, "battery-crit"), 3)
+        assert crit["priority"] >= 2
+        hw.battery(percentage=7, charging=True, on_battery=False)  # plugged in
+        nested.wait_for(lambda: toast(nested, "battery-crit") is None, 3)
+        nested.wait_for(lambda: any(e["kind"] == "event" for e in active(nested)["passive"]), 3)
+    finally:
+        hw.battery()                                             # on AC at 80 %
+    nested.wait_for(lambda: not any(e["kind"] in ("toast", "event") and e["key"].startswith("battery")
+                                    for e in active(nested)["passive"]), 12)
+
+
 def test_media_keys_act_on_the_fake_player(nested: Nested) -> None:
     player = FakePlayer(nested, "aptustest", playing=True)
     try:

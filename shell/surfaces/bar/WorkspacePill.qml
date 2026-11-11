@@ -81,7 +81,7 @@ Item {
         visible: root.scratch && !!root.workspace.shown
         anchors.fill: parent
         radius: root._bar.pillRadius
-        color: "transparent"
+        color: Tokens.alpha(Tokens.accent, 0)
         border.width: root._bar.scratchRingWidth
         border.color: Tokens.accent
     }

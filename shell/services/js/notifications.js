@@ -184,6 +184,37 @@ function stackPayload(stack, newest, timeout) {
     p.opens = "today"
     return p
 }
+// The summary's reason for held counts { reason: n } (wave-2 review): the reason that held most;
+// a tie goes to the first in HELD_WHILE's order (focus, dnd, fullscreen); "dnd" when none.
+function heldReason(counts) {
+    var best = "", n = 0
+    for (var r in HELD_WHILE) {
+        var c = counts && isHoldReason(r) ? Number(counts[r]) || 0 : 0
+        if (c > n) { best = r; n = c }
+    }
+    return best || "dnd"
+}
+// The local path of a notification's image ("" for none, image-data (image://), an icon name, a
+// relative path or a file:// URL that does not decode: a sender's malformed escape is no image,
+// never a throw). Found by the e2e test: Quickshell hands an image-path hint that is no file:// URL
+// as image://icon/<hint>, so a plain absolute path arrives as image://icon//path.
+function imagePath(image) {
+    var src = String(image || "")
+    if (src.indexOf("image://icon/") === 0) src = src.substring(13)
+    if (src === "" || src.indexOf("image://") === 0) return ""
+    var path = src
+    if (src.indexOf("file://") === 0) {
+        try { path = decodeURIComponent(src.substring(7)) } catch (e) { return "" }
+    }
+    return path.indexOf("/") === 0 ? path : ""
+}
+// The image a toast shows from the live notification: image-data and icons (image://) as they
+// are, a local file as its path, nothing for what imagePath refuses (found by the e2e run: the
+// toast handed a malformed file:// URL to an Image, which logged a warning).
+function liveImage(image) {
+    var src = String(image || "")
+    return src.indexOf("image://") === 0 ? src : imagePath(src)
+}
 // The summary toast for `count` held notifications.
 function heldPayload(count, reason, timeout) {
     invariant(count >= 1, "held summary of " + count)
