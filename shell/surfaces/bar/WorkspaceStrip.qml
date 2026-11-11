@@ -135,7 +135,21 @@ Item {
         interval: 0
         onTriggered: root._placeCapsule()
     }
-    onStripChanged: placeTimer.restart()
+    // Wave-2 review: the pills' model keyed by workspace id (bar.js syncIds), so a rebuild of the
+    // strip updates the existing pills instead of recreating them all (the urgent nudge, hover
+    // and tooltip need the same pill).
+    ListModel { id: pillModel }
+    // The record of a workspace id in the strip (a bare one while its row is being removed).
+    function _record(id: int): var {
+        for (const p of strip.pills) if (p.id === id) return p;
+        return ({ id: id });
+    }
+    function _sync(): void {
+        B.syncIds(pillModel, (strip.pills || []).map(p => p.id));
+        placeTimer.restart();
+    }
+    onStripChanged: _sync()
+    Component.onCompleted: _sync()
 
     // A click or the wheel on the strip's background.
     MouseArea {
@@ -179,23 +193,23 @@ Item {
                 onWidthChanged: placeTimer.restart()
                 Repeater {
                     id: pills
-                    model: root.strip.pills
+                    model: pillModel
                     delegate: WorkspacePill {
                         id: pill
-                        required property var modelData
+                        required property int wsId
                         required property int index
-                        workspace: modelData
+                        workspace: root._record(wsId)
                         menuOpen: root._menuOpen
-                        showIcons: root.showIcons && (root.collapse === 0 || (root.collapse === 1 && modelData.active))
+                        showIcons: root.showIcons && (root.collapse === 0 || (root.collapse === 1 && !!workspace.active))
                         // M-01: pill i starts i × workspaceStaggerMs into the intro
                         readonly property real _total: Math.max(1, Motion.ms("intro", false))
                         readonly property real _stagger: Tokens.surfaces.bar.workspaceStaggerMs
                         appear: root.introProgress >= 1 ? 1 : Math.max(0, Math.min(1,
                             (root.introProgress * _total - index * _stagger)
                             / Math.max(1, _total - (root.strip.pills.length - 1) * _stagger)))
-                        onClicked: root._go(modelData)
-                        onMiddleClicked: root._moveHere(modelData)
-                        onRightClicked: (x, y) => { const q = pill.mapToItem(root, x, y); root._menu(modelData, q.x, q.y); }
+                        onClicked: root._go(workspace)
+                        onMiddleClicked: root._moveHere(workspace)
+                        onRightClicked: (x, y) => { const q = pill.mapToItem(root, x, y); root._menu(pill.workspace, q.x, q.y); }
                         onWheelStep: d => root._wheel(d)
                         property bool _wasUrgent: false
                         onWorkspaceChanged: {
