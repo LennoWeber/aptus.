@@ -490,6 +490,28 @@ def test_own_bat(p, manifest) -> None:
                                                    "--target", str(p.cache_bat)]
 
 
+def test_own_bat_builds_only_a_changed_source(p, manifest) -> None:
+    """Wave-2 review 7: `bat cache --build` (about 0.5 s) runs only when the theme changed or the
+    last build did not finish; an Own file that holds the rendered bytes is not rewritten."""
+    built = "open(os.path.join(args[5], 'themes.bin'), 'w').write('x')\n"
+    fakes.tool(p.home, "bat", built)
+    bat = next(t for t in manifest.targets if t.id == "bat")
+    dark = render.render(p, DARK, manifest)
+    own.apply(p, bat, dark)
+    src = p.bat_source / "themes/aptus.tmTheme"
+    stamp = src.stat().st_mtime_ns
+    own.apply(p, bat, dark)                                      # same theme: no build, no write
+    assert len(fakes.calls(p.home, "bat")) == 1 and src.stat().st_mtime_ns == stamp
+    own.apply(p, bat, render.render(p, LIGHT, manifest))         # a new theme: built again
+    assert len(fakes.calls(p.home, "bat")) == 2
+    fakes.tool(p.home, "bat", "code = 1\n")
+    with pytest.raises(own.OwnError, match="exited 1"):          # a build that fails …
+        own.apply(p, bat, dark)
+    fakes.tool(p.home, "bat", built)
+    own.apply(p, bat, dark)                                      # … is tried again
+    assert len(fakes.calls(p.home, "bat")) == 4
+
+
 # --- hooks ----------------------------------------------------------------------------------------
 
 def test_hook_parse() -> None:
@@ -666,7 +688,13 @@ def test_slot_specs(p, manifest) -> None:
     assert not any(s.startswith("spicetify.") for s in specs)       # opted in, but no slot present
     papirus(p)
     specs = {s.id: s for s in apply.slot_specs(p, manifest, gen)}
+    assert specs["dconf.icon-theme"].value is None                  # wave-2 review 2: not built yet
+    own.icons(p, "teal")
+    specs = {s.id: s for s in apply.slot_specs(p, manifest, gen)}
     assert specs["dconf.icon-theme"].value == "'aptus-icons-dark'"
+    (p.icons / "aptus-icons-light/index.theme").unlink()             # one theme is missing
+    specs = {s.id: s for s in apply.slot_specs(p, manifest, gen)}
+    assert specs["dconf.icon-theme"].value is None
 
 
 # --- the phase-7 review fixes ------------------------------------------------------------------

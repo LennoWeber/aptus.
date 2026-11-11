@@ -216,7 +216,11 @@ a lease nobody would release at Hyprland's exit is never taken.
 ### 5.4 Update (theme or mode changes during the session)
 
 Same as steps 6–7 for the affected slots, with the flock held: the `before` data is never touched
-again, only `after` changes. `theme_generation` is incremented.
+again, only `after` changes. `theme_generation` is incremented. A slot that carries the planned
+paint already is not written again (the session start's apply skips the update altogether for
+the generation it just took). A spec that no longer matches its slot (kind, path, key, sections)
+and a write that fails are failures of that slot only; after a failed write `after` is the paint
+the slot carries then, so a release never mistakes it for someone else's.
 
 ### 5.5 Slot kinds
 

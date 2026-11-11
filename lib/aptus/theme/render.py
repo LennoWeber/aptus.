@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import colorsys
 import dataclasses
-import fcntl
 import hashlib
 import json
 import logging
@@ -19,8 +18,6 @@ import math
 import os
 import re
 import shutil
-import threading
-import time
 from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass, field
@@ -28,7 +25,7 @@ from pathlib import Path
 from typing import Any
 
 from .. import atomic
-from ..lease import invariants
+from ..lease import invariants, locks
 from ..paths import Paths, require_safe_home
 from . import inputs as inputs_mod
 from . import palette, resolve
@@ -62,7 +59,6 @@ GEN = re.compile(r"gen-(\d+)")
 DCONF_JSON = "dconf.json"
 FAILED_JSON = "failed.json"            # target id → why, for the targets that failed to render
 _COLOUR = re.compile(r"#[0-9a-f]{6}")
-_held: dict[tuple[str, int], list[int]] = {}   # (lock path, thread) → [fd, depth]
 _log = logging.getLogger("aptus.theme.render")
 
 
@@ -74,37 +70,14 @@ class LockBusy(RuntimeError):
 def lock(paths: Paths, timeout: float = LOCK_TIMEOUT) -> Iterator[None]:
     """flock(theme/lock) around render, scope, Own writes and the bake queue, so two applies never
     race on gen-<n+1> and `current`; checks require_safe_home first. Re-entrant within one thread
-    (apply holds it while render takes it again). Separate from the lease lock, which is taken
-    inside it (theme first, then lease), never the other way round."""
+    (apply holds it while render takes it again; locks.exclusive). Separate from the lease lock,
+    which is taken inside it (theme first, then lease), never the other way round."""
     require_safe_home(paths)
-    key = (str(paths.theme_lock), threading.get_ident())
-    if key in _held:
-        _held[key][1] += 1
-        try:
-            yield
-        finally:
-            _held[key][1] -= 1
-        return
     invariants.writable(paths, paths.theme_lock, kind="state")
     paths.theme.mkdir(parents=True, exist_ok=True, mode=0o700)
-    fd = os.open(paths.theme_lock, os.O_RDWR | os.O_CREAT | os.O_CLOEXEC, 0o600)
-    end = time.monotonic() + timeout
-    while True:
-        try:
-            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-            break
-        except BlockingIOError:
-            if time.monotonic() > end:
-                os.close(fd)
-                raise LockBusy(f"the theme lock is busy (waited {timeout:.0f} s)") from None
-            time.sleep(0.05)
-    _held[key] = [fd, 1]
-    try:
+    with locks.exclusive(paths.theme_lock, timeout,
+                         lambda: LockBusy(f"the theme lock is busy (waited {timeout:.0f} s)")):
         yield
-    finally:
-        del _held[key]
-        fcntl.flock(fd, fcntl.LOCK_UN)
-        os.close(fd)
 
 
 def _text(value: Any) -> str:

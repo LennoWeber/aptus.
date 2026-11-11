@@ -15,11 +15,11 @@ import sys
 from collections.abc import Sequence
 from typing import Any
 
-from .. import hypr, log
+from .. import log
 from .. import paths as paths_mod
 from ..paths import Paths
 from ..theme import apply, render, targets
-from . import guard, ops, system
+from . import guard, ops
 from .journal import JournalError
 
 
@@ -37,13 +37,6 @@ def parser() -> argparse.ArgumentParser:
     return p
 
 
-def _signature() -> str:
-    try:
-        return hypr.signature()
-    except hypr.HyprError:
-        return ""
-
-
 def _generation(paths: Paths) -> render.Generation:
     gen = render.current(paths)
     if gen is None:
@@ -51,16 +44,11 @@ def _generation(paths: Paths) -> render.Generation:
     return gen
 
 
-def _guard_active(paths: Paths) -> bool:
-    r = system.run(paths, ["systemctl", "--user", "is-active", "--quiet", f"{guard.UNIT}.service"])
-    return not r.skipped and r.code == 0
-
-
 def cmd_take(paths: Paths) -> int:
     """Take for this Hyprland session (HYPRLAND_INSTANCE_SIGNATURE) with the current generation;
     exit 0 when held, 1 otherwise (the reason on stderr). Refused without a running guard: no
     lease without someone to give it back."""
-    if not _guard_active(paths):
+    if not guard.active(paths):
         print("aptus-lease take: aptus-guard is not running; no lease without a guard",
               file=sys.stderr)
         return 1
@@ -79,7 +67,7 @@ def cmd_take(paths: Paths) -> int:
 def cmd_update(paths: Paths, ids: Sequence[str]) -> int:
     """Update the slots of the given target ids (all when none) from the current generation;
     only from the Hyprland session that holds the lease (HYPRLAND_INSTANCE_SIGNATURE)."""
-    if not ops.holds(paths, _signature()):
+    if not ops.holds(paths, ops.signature()):
         print("aptus-lease update: this session does not hold the lease", file=sys.stderr)
         return 1
     gen = _generation(paths)
@@ -103,7 +91,7 @@ def finish_release(paths: Paths, report: ops.ReleaseReport, signature: str) -> i
 def cmd_release(paths: Paths) -> int:
     """The manual escape hatch (and uninstall's release-lease): releases whatever lease is held,
     also a live session's, which then goes on scope-only (02 §5.6)."""
-    return finish_release(paths, ops.release(paths), _signature())
+    return finish_release(paths, ops.release(paths), ops.signature())
 
 
 def cmd_recover(paths: Paths) -> int:

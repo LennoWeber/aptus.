@@ -61,6 +61,12 @@ def write_state(paths: Paths, state: GuardState, detail: str = "") -> None:
 READY_TIMEOUT = 5.0            # seconds aptus-session waits for a new guard's "ok"
 
 
+def active(paths: Paths) -> bool:
+    """The guard's unit is active (`systemctl --user is-active`)."""
+    r = system.run(paths, ["systemctl", "--user", "is-active", "--quiet", f"{UNIT}.service"])
+    return not r.skipped and r.code == 0
+
+
 def ready(paths: Paths) -> bool:
     """The guard watches: guard.state says `ok` (written once its pidfd is open and its signal
     handling is set up) and the unit is active."""
@@ -68,10 +74,7 @@ def ready(paths: Paths) -> bool:
         word = paths.guard_state.read_text(encoding="utf-8").split("\n", 1)[0]
     except OSError:
         return False
-    if word != GuardState.OK.value:
-        return False
-    r = system.run(paths, ["systemctl", "--user", "is-active", "--quiet", f"{UNIT}.service"])
-    return not r.skipped and r.code == 0
+    return word == GuardState.OK.value and active(paths)
 
 
 def pidfd(pid: int) -> int:

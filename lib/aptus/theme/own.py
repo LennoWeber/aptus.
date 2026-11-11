@@ -36,10 +36,19 @@ def _inside(path: Path, root: Path) -> bool:
     return p == r or p.startswith(r + os.sep)
 
 
+def _holds(dest: Path, data: bytes) -> bool:
+    """dest is a regular file (not a symlink) with exactly these bytes."""
+    try:
+        return not dest.is_symlink() and dest.is_file() and dest.read_bytes() == data
+    except OSError:
+        return False
+
+
 def write_files(paths: Paths, target: Target, gen: Generation) -> list[Path]:
-    """Copy the target's rendered files to their `dest` (atomic); returns the destinations. A dest
-    outside aptus's own dirs that exists but is not in own.json (a qt6ct.conf of Lenno's) is never
-    overwritten: OwnError "exists and is not aptus's" (the other files are written)."""
+    """Copy the target's rendered files to their `dest` (atomic); returns the destinations
+    written (a dest that holds the rendered bytes already is left alone). A dest outside aptus's
+    own dirs that exists but is not in own.json (a qt6ct.conf of Lenno's) is never overwritten:
+    OwnError "exists and is not aptus's" (the other files are written)."""
     mine = set(recorded(paths))
     written, refused = [], []
     for f in target.files:
@@ -48,10 +57,13 @@ def write_files(paths: Paths, target: Target, gen: Generation) -> list[Path]:
         if os.path.lexists(dest) and dest not in mine and not _aptus_dir(paths, dest):
             refused.append(str(dest))
             continue
+        data = render.output(gen, f).read_bytes()
+        if _holds(dest, data):
+            continue
         if not os.path.lexists(dest):
             record(paths, [dest])
         dest.parent.mkdir(parents=True, exist_ok=True)
-        atomic.write_bytes(dest, render.output(gen, f).read_bytes(), 0o644)
+        atomic.write_bytes(dest, data, 0o644)
         written.append(dest)
     if refused:
         raise OwnError(f"{', '.join(refused)} exists and is not aptus's")
@@ -124,6 +136,26 @@ def icons(paths: Paths, folder: str) -> list[Path]:
     return rebuilt
 
 
+def bat_stale(paths: Paths) -> bool:
+    """The bat cache needs a build: its themes.bin is missing or older than a file of the source
+    (make's rule: an unchanged theme is not rebuilt, a build that failed is tried again)."""
+    try:
+        built = (paths.cache_bat / "themes.bin").stat().st_mtime_ns
+    except OSError:
+        return True
+    return any(f.stat().st_mtime_ns > built for f in paths.bat_source.rglob("*") if f.is_file())
+
+
+def in_place(paths: Paths, target: Target) -> bool:
+    """The Own target's output exists: every `dest`, and for `own = "icons"` both aptus-icons
+    themes with their index.theme (what a leased key that `requires` it may select)."""
+    if not all(os.path.lexists(targets.expand(paths, f.dest)) for f in target.files if f.dest):
+        return False
+    if target.own == "icons":
+        return all((paths.icons / theme / "index.theme").is_file() for theme in ICON_THEMES)
+    return True
+
+
 def bat(paths: Paths) -> None:
     """`bat cache --build --source <bat_source> --target <cache_bat>` (BAT_CACHE_PATH in
     Hyprland), never into bat's shared default cache. OwnError when bat failed."""
@@ -162,10 +194,12 @@ def recorded(paths: Paths) -> list[Path]:
 
 
 def apply(paths: Paths, target: Target, gen: Generation) -> None:
-    """Write one Own target (files, then its builtin step) under the theme lock."""
+    """Write one Own target (files, then its builtin step) under the theme lock. The builtin
+    steps run only when needed: the icon themes when the folder colour changed, `bat cache
+    --build` when its source changed (bat_stale)."""
     with render.lock(paths):
         write_files(paths, target, gen)
         if target.own == "icons":
             icons(paths, gen.resolved["papirus"])
-        elif target.own == "bat":
+        elif target.own == "bat" and bat_stale(paths):
             bat(paths)

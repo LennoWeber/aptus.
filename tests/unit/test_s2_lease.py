@@ -443,6 +443,30 @@ def test_history_keeps_ten(p) -> None:
     assert len(list(p.lease_history.glob("*.json"))) == journal.HISTORY_KEEP
 
 
+def test_lease_and_theme_lock_share_one_flock_helper(p) -> None:
+    """Wave-2 review 9: ops.lock and render.lock are locks.exclusive, re-entrant per thread:
+    while one thread holds the lease lock another one waits (it used to re-enter it)."""
+    import threading
+
+    from aptus.lease import locks
+    from aptus.theme import render
+    seen = []
+
+    def other() -> None:
+        try:
+            with ops.lock(p, timeout=0.2):
+                seen.append("got it")
+        except ops.LeaseError as e:
+            seen.append(str(e))
+    with ops.lock(p), render.lock(p):
+        assert {k[0] for k in locks._held} == {str(p.lease_lock), str(p.theme_lock)}
+        th = threading.Thread(target=other)
+        th.start()
+        th.join()
+    assert "busy" in seen[0]
+    assert not locks._held
+
+
 def test_lock_is_reentrant_and_times_out(p) -> None:
     with ops.lock(p):
         with ops.lock(p):
@@ -566,3 +590,13 @@ def test_lease_cli_update_only_for_the_holder(p, test_home, hypr, monkeypatch, c
     monkeypatch.setenv("HYPRLAND_INSTANCE_SIGNATURE", "someone-else")
     assert cli.main(["update"]) == 1
     assert "does not hold the lease" in capsys.readouterr().err
+
+
+def test_lease_cli_take_needs_a_running_guard(p, test_home, hypr, monkeypatch, capsys) -> None:
+    """Wave-2 review 9: the check is guard.active (the unit is active), not a copy of it."""
+    from aptus.lease import cli
+    fakes.systemctl(test_home)
+    monkeypatch.setenv("HYPRLAND_INSTANCE_SIGNATURE", hypr.signature)
+    assert cli.main(["take"]) == 1
+    assert "aptus-guard is not running" in capsys.readouterr().err
+    assert journal.load(p) is None

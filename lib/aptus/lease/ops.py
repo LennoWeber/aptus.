@@ -6,9 +6,7 @@ point checks `paths.require_safe_home` (through `lock`).
 """
 from __future__ import annotations
 
-import fcntl
 import logging
-import os
 import time
 from collections.abc import Iterator, Mapping, Sequence
 from contextlib import contextmanager
@@ -17,7 +15,7 @@ from pathlib import Path
 
 from .. import atomic, hypr
 from ..paths import Paths, require_safe_home
-from . import invariants, journal, kinds, liveness, preflight, system
+from . import invariants, journal, kinds, liveness, locks, preflight, system
 from .journal import Journal, JournalError, Owner, SlotKind, SlotRecord, SlotStatus, State
 from .preflight import Preflight
 from .slots import SlotSpec
@@ -69,42 +67,28 @@ class Status:
 LOCK_TIMEOUT = 10.0            # seconds to wait for the flock before giving up (LeaseError)
 
 _log = logging.getLogger("aptus.lease")
-_held: dict[str, list[int]] = {}       # lock path → [fd, depth]: re-entrant within one process
 
 
 @contextmanager
 def lock(paths: Paths, timeout: float = LOCK_TIMEOUT) -> Iterator[None]:
-    """flock(lease/lock), re-entrant within one process (take calls recover); LeaseError after
-    `timeout`. Checks require_safe_home first. Only lease operations run under it: rendering,
-    scope and Own files use the theme lock, so a slow `bat cache --build` never delays a release."""
+    """flock(lease/lock) through locks.exclusive, re-entrant within one thread (take calls
+    recover); LeaseError after `timeout`. Checks require_safe_home first. Only lease operations
+    run under it: rendering, scope and Own files use the theme lock, so a slow `bat cache
+    --build` never delays a release."""
     require_safe_home(paths)
-    key = str(paths.lease_lock)
-    if key in _held:
-        _held[key][1] += 1
-        try:
-            yield
-        finally:
-            _held[key][1] -= 1
-        return
     paths.lease.mkdir(mode=0o700, parents=True, exist_ok=True)
-    fd = os.open(paths.lease_lock, os.O_RDWR | os.O_CREAT | os.O_CLOEXEC, 0o600)
-    end = time.monotonic() + timeout
-    while True:
-        try:
-            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-            break
-        except BlockingIOError:
-            if time.monotonic() > end:
-                os.close(fd)
-                raise LeaseError(f"the lease lock is busy (waited {timeout:.0f} s)") from None
-            time.sleep(0.05)
-    _held[key] = [fd, 1]
-    try:
+    with locks.exclusive(paths.lease_lock, timeout,
+                         lambda: LeaseError(f"the lease lock is busy (waited {timeout:.0f} s)")):
         yield
-    finally:
-        del _held[key]
-        fcntl.flock(fd, fcntl.LOCK_UN)
-        os.close(fd)
+
+
+def signature(env: Mapping[str, str] | None = None) -> str:
+    """This session's HYPRLAND_INSTANCE_SIGNATURE (of `env`, default this process) as
+    hypr.signature checks it; "" when it is missing or refused under test (no lease then)."""
+    try:
+        return hypr.signature(env)
+    except hypr.HyprError:
+        return ""
 
 
 def owner(paths: Paths, env: Mapping[str, str]) -> Owner:

@@ -299,3 +299,65 @@ def test_main_starts_the_shell_whatever_start_did(p, monkeypatch) -> None:
     assert execs
     status = json.loads(p.session_status.read_text())
     assert status["reasons"] == ["start failed"] and status["mode"] == "scope-only"
+
+
+# --- the wave-2 review fixes -------------------------------------------------------------------
+
+BAT_BUILDS = "open(os.path.join(args[5], 'themes.bin'), 'w').write('x')\n"
+
+
+def papirus(p) -> None:
+    """A Papirus with the folder icons own.icons links to (in the test sysroot)."""
+    from aptus.theme import own
+    for size in own.ICON_SIZES:
+        d = p.papirus / size / "places"
+        d.mkdir(parents=True)
+        for colour in ("teal", "green", "blue", "orange", "pink", "yellow", "red", "violet"):
+            (d / f"folder-{colour}.svg").write_text(f"<svg>{colour}</svg>")
+
+
+def test_the_icon_theme_key_names_only_a_built_theme(p, world) -> None:
+    """Wave-2 review 2: at the first login the icon themes are built before the take, so
+    icon-theme selects one at once; when they cannot be built the key is only recorded and
+    GTK keeps Noctalia's icon theme (never a theme that is not there)."""
+    h, _ = world
+    papirus(p)
+    p.icons.parent.mkdir(parents=True)
+    p.icons.write_text("")                                        # ~/.local/share/icons: unusable
+    report = session.start(p, h.env)
+    assert report.mode is session.Mode.LEASE
+    assert any(w.startswith("apply icons:") for w in report.warnings)
+    assert KEY + "icon-theme" not in fakes.dconf_db(p.home)
+    assert session.stop(p) == 0
+    p.icons.unlink()
+    started(p, h)
+    assert (p.icons / "aptus-icons-dark/index.theme").is_file()
+    assert fakes.dconf_db(p.home)[KEY + "icon-theme"] == "'aptus-icons-dark'"
+    assert session.stop(p) == 0
+    assert KEY + "icon-theme" not in fakes.dconf_db(p.home)       # restored: it was not set
+
+
+def test_a_login_writes_each_slot_once(p, world, monkeypatch) -> None:
+    """Wave-2 review 7: at login the take writes every slot and apply_generation does not write
+    them again; a later login with the same theme does not rebuild the bat cache."""
+    from collections import Counter
+
+    from aptus.lease.kinds import file as file_kind
+    from aptus.lease.kinds import ini
+    h, snapshot = world
+    before = snapshot()
+    fakes.tool(p.home, "bat", BAT_BUILDS)
+    writes: Counter = Counter()
+    for mod in (file_kind, ini, dconf):
+        real = mod.write
+        monkeypatch.setattr(mod, "write", lambda paths, rec, spec, real=real:
+                            writes.update([rec.id]) or real(paths, rec, spec))
+    started(p, h)
+    assert writes and set(writes.values()) == {1}, writes
+    assert session.stop(p) == 0
+    writes.clear()
+    started(p, h)                                                 # same settings: generation 1 again
+    assert set(writes.values()) == {1}
+    assert len(fakes.calls(p.home, "bat")) == 1                   # built at the first login only
+    assert session.stop(p) == 0
+    assert snapshot() == before

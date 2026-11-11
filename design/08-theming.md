@@ -198,6 +198,13 @@ half released (`releasing`) is the guard's to finish.
 Triggered by: session start (render + take), any change of mode/accent/glass/contrast (debounced
 250 ms, after the shell's own crossfade ends), `auto` transitions, and `aptus theme apply`.
 
+At session start the Own targets that a leased dconf key `requires` (the icon themes) are applied
+before the take, and the apply after the take does not write the slots it just took again (their
+hooks still run). A `requires` key is written only while its target's output exists (both
+`aptus-icons-*` themes); otherwise it is only recorded, so `icon-theme` never names a theme that
+is not there. Own files that already hold the rendered bytes are not rewritten, and
+`bat cache --build` runs only when its source changed (or the last build did not finish).
+
 ## 7. Reload hooks
 
 | Target | Hook | Effect |
