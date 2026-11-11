@@ -96,12 +96,13 @@ with no player at all shows the event "Nothing to play".
 ╭──────────────────────────────────────────────╮
 │ ▢  App name · now                        ✕   │   app icon 24, app + time in micro ink.meta,
 │    Title of the notification                 │   close appears on hover
-│    Body, at most two lines, ellipsised…  ▣   │   image thumbnail 48 (radius 8) if the notification has one
+│    Body, one line, ellipsised…           ▣   │   image thumbnail 48 (radius 8) if the notification has one
 │    [ Reply ]  [ Mark as read ]               │   up to 3 action buttons (quiet buttons)
 ╰──────────────────────────────────────────────╯
 ```
 
-- Title `title`, body `body` `ink.sec`, at most 2 lines (body markup reduced to bold/italic/links).
+- Title `title`, body `body` `ink.sec`, one line (body markup reduced to bold/italic/links). The
+  heights below hold one body line under the app line and the title; Today shows the whole body.
 - Height: 72 without actions, 104 with actions, 132 with an image and actions.
 - Urgency critical: a `warning` glyph before the title in `crit`; no timeout.
 
@@ -195,7 +196,8 @@ the geometry retargets the spring, old content fades out over 110 ms, new conten
   older than 30 s by then (then it only goes to Today).
 - **A player with no metadata**: the player's name as title, no cover (the cover slot shows the app
   icon on `raised`).
-- **Very long titles**: one line, ellipsised; the card shows two lines.
+- **Very long titles**: one line, ellipsised, in the toast and the media card (the 132 card has no
+  room for a second line beside the 88 cover).
 - **Notch on a monitor that has no focus**: compact activities only; toasts and cards appear on the
   active monitor.
 
