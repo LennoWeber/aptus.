@@ -96,12 +96,13 @@ with no player at all shows the event "Nothing to play".
 ╭──────────────────────────────────────────────╮
 │ ▢  App name · now                        ✕   │   app icon 24, app + time in micro ink.meta,
 │    Title of the notification                 │   close appears on hover
-│    Body, at most two lines, ellipsised…  ▣   │   image thumbnail 48 (radius 8) if the notification has one
+│    Body, one line, ellipsised…           ▣   │   image thumbnail 48 (radius 8) if the notification has one
 │    [ Reply ]  [ Mark as read ]               │   up to 3 action buttons (quiet buttons)
 ╰──────────────────────────────────────────────╯
 ```
 
-- Title `title`, body `body` `ink.sec`, at most 2 lines (body markup reduced to bold/italic/links).
+- Title `title`, body `body` `ink.sec`, one line (body markup reduced to bold/italic/links). The
+  heights below hold one body line under the app line and the title; Today shows the whole body.
 - Height: 72 without actions, 104 with actions, 132 with an image and actions.
 - Urgency critical: a `warning` glyph before the title in `crit`; no timeout.
 
@@ -129,7 +130,7 @@ with no player at all shows the event "Nothing to play".
 | Click a button | that action; dismiss unless the notification is `resident` |
 | Click ✕, middle click | dismiss (it stays in Today as read) |
 | Right click | menu: Mute *App* for 1 hour, Turn on Do not disturb, Notification settings |
-| Reply (inline-reply action) | a field opens inside the toast and takes the keyboard; Enter sends, Esc returns; countdown stopped |
+| Reply (inline-reply action) | a field opens in the button row and takes the keyboard; Enter sends, Esc returns; countdown stopped; while it is open an OSD does not cover the toast (the level still changes) |
 
 ## 7. Events
 
@@ -185,7 +186,7 @@ the geometry retargets the spring, old content fades out over 110 ms, new conten
 | Media | `Quickshell.Services.Mpris` |
 | Timers, focus, recording, progress | aptus services (`Timers`, `Focus`, `Capture`, `Progress`) |
 | Meetings | `Agenda` service ([today.md](today.md) §7) |
-| OSD values | `Audio`, `Brightness`, `Keyboard` services; Caps Lock from Hyprland `activelayout`/device state (`hyprctl devices -j` on the `capslock` event of the keyboard) |
+| OSD values | `Audio`, `Brightness`, `Keyboard` services; the layout from Hyprland `activelayout` (a keyboard's own layout changing; another keyboard becoming active, or Hyprland's `error` for an unnamed keymap, is no change); Caps Lock from a non-consuming `Caps_Lock` release bind (`hypr/binds.lua`) that reads the main keyboard's `caps_lock` (`hl.get_devices()`) and dispatches `aptus:capslock-on` / `-off` (Hyprland has no Caps Lock event) |
 
 ## 12. Edge cases
 
@@ -195,7 +196,8 @@ the geometry retargets the spring, old content fades out over 110 ms, new conten
   older than 30 s by then (then it only goes to Today).
 - **A player with no metadata**: the player's name as title, no cover (the cover slot shows the app
   icon on `raised`).
-- **Very long titles**: one line, ellipsised; the card shows two lines.
+- **Very long titles**: one line, ellipsised, in the toast and the media card (the 132 card has no
+  room for a second line beside the 88 cover).
 - **Notch on a monitor that has no focus**: compact activities only; toasts and cards appear on the
   active monitor.
 

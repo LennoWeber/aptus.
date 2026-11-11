@@ -1448,3 +1448,715 @@ real login.
   warnings on 122 files.
 - `pytest tests/e2e`: 17/17 in the nested Hyprland (1 new).
 - Each new test fails against the file as it was before its fix.
+
+---
+
+## S3 · Bar and notch
+
+### Phase 1 · plan (2026-11-09)
+
+**Goal.** The bar and the notch of surfaces/bar.md and surfaces/notch.md, complete for S3: the
+workspace strip, the active window, the tray, the status cluster, the notification server with
+toasts, the held queue and history, events, the OSD, the hardware keys of 05 §6, media, the compact
+live activities (media, progress; the other four come from S7–S9 through the same host) with their
+cards, the bar's states (fullscreen leave M-31 with the hot edge; quiet collapse wired to
+`Focus.quietBar`, its reveal is S8's), the notch's rest, morph and arbitration (notch.md §9), and
+the hand-offs of the S1 simplify pass (Hypr title events, eager `windows`, Frame shadow box, one
+`normalise()` per change). Services filled: `Hypr`, `Notifications`, `Progress`, `Media`, `Audio`,
+`Brightness`, `Power`, `Network`, `Bt` (status), `Privacy`, `Apps`; each sets `available` when it
+works. Probes P-17 and P-20.
+
+**Architecture decisions** (not spelled out in the spec):
+
+1. **Logic in pure JS again** (S1 decision 1): `shell/services/js/notifications.js` (interruption
+   policy of 05 §8, toast timeout, stack window, history trim, held summary, body markup
+   reduction), `media.js` (active-player rule, time format), `hypr.js` (workspace records for the
+   strip: ids per monitor in `used`/`fixed` mode, MRU app classes, labels, urgent, special),
+   `levels.js` (glyph by level for battery, volume, Wi-Fi, brightness; OSD payloads; step maths),
+   `shell/surfaces/bar/js/bar.js` (strip collapse at 40 %, title throttle, tray overflow, status
+   items and their order, narrow-monitor rules), `shell/surfaces/notch/js/notch.js` (compact
+   slots by priority within 480 px, toast countdown with pause/resume ≥ 2 s, passive timers,
+   bulge size per state, pager). qmltestrunner tests them directly: `tst_notifylogic`,
+   `tst_medialogic`, `tst_hyprmodel`, `tst_levels`, `tst_barlogic`, `tst_notchlogic`, plus
+   `tst_glyphs` (every glyph name S3 uses exists as a ligature in MaterialSymbolsRounded).
+2. **Who posts what.** Services post passive content through `SurfaceManager.post` (they already
+   own the decision): `Notifications` toasts (key `n:<id>` so `replaces_id` updates in place; the
+   stack toast is the shown entry updated in place), `Audio`/`Brightness`/`Hypr` the OSD (key =
+   OSD kind, one OSD per kind; skipped while the Deck is open on that monitor, notch.md §8),
+   `Media` the event "Nothing to play", `Power` the battery toasts (warn once ≤ 15 %, crit until
+   plugged, priority 2). The **Notch** is the presenter: it shows `passiveTop`, runs the toast
+   countdown (pauses on hover and while an OSD or anything else covers it; resumes with ≥ 2 s),
+   dismisses an OSD 1 200 ms after its last `born`, an event 1 600 ms after it shows, and a pinned
+   card after 8 s without the pointer (the `rules.js` TODO moves into the Notch; `rules.js` only
+   loses its TODO comment).
+3. **Interruption policy lives in `Notifications`** (05 §8): low → Today + unread dot; normal →
+   toast, unless DND, focus or a fullscreen window on the active monitor holds it (allowlisted apps
+   override DND and focus); critical → toast with priority 2, no timeout; a progress hint → a
+   `Progress` item until it completes (then a toast). Held notifications go to Today unread and are
+   summarised in one toast when the holding condition ends ("7 notifications while you were
+   focused" / "… during Do not disturb" / "… while in fullscreen"); the summary opens Today. The
+   toast payload carries everything the Notch draws (`appName`, `appIcon`, `summary`, body reduced
+   to bold/italic/links, `image`, `actions` ≤ 3, `critical`, `timeout`, `stack`), and the Notch calls
+   back `Notifications.activate(id, action)`, `dismiss(id)`, `reply(id, text)`, `muteApp(app)`.
+   History is plain records (newest first), persisted to `Paths.notificationsState` 2 s debounced,
+   trimmed by `notifications.historyMax`/`historyDays`; live `Notification` objects stay tracked
+   for actions while the record lives (`persistenceSupported`).
+4. **Notch host.** One `Notch` per monitor (full monitor size, input via `maskItem`): the rest
+   group (clock with `RollingDigits`, date after the clock, unread dot), compact slots left/right of
+   the clock (shared element M-05), one bulge (`BulgeSpec`, dock `top`, centred, width/height on
+   `spring.notch`, coves 0 → 14 over the first 120 ms) whose content is a crossfading stack of
+   toast/OSD/event/card/mode content (old out 110 ms, new in from 60 ms; notch.md §10). Interactive
+   modes load from `modeComponents` with `active`, `registerBack`/`unregisterBack`, `takesClock`,
+   `clockRect` and the scrim. A pinned card closes on Esc (the shell's Esc ladder: `top` is the
+   card), after 8 s without the pointer, and on a click outside: while a card is pinned the Notch's
+   `maskItem` covers the monitor below the bar band and a catcher closes the card and replays focus
+   to the window under the pointer (07 §5 keeps cards out of the shell-wide away catcher). Toasts
+   and cards show on the active monitor only; compact activities on every monitor (05 §7).
+5. **Bar.** `Bar` lays out the zones of bar.md §2 around `notchWidth`: `WorkspaceStrip`
+   (`WorkspacePill` ×n, accent capsule M-02 with lead/trail edges and `spring.snappy` width, urgent
+   nudge M-36, scratch pill, icon collapse at 40 %, interactions of §3), the overview button,
+   `ActiveWindow` (M-03, 250 ms throttle above 4 changes/s, window menu, middle close, wheel
+   cycle), `Tray`/`TrayItem` (overflow menu, DBusMenu through `QsMenuOpener` into the aptus `Menu`
+   model, attention dot), `StatusCluster` with `StatusItem`s (M-04 width open/close, click → Deck
+   `{section}`, or `{page}` when `deck.openPages`; wheel/middle/right actions of §6), tooltips via
+   the component library. Quiet collapse (M-31b) follows `Focus.quietBar` (S8 sets it; the reveal
+   on hover is S8's, marked `TODO(S8)`). Narrow monitors (< 1280 px): date hidden, title ≤ 240,
+   tray ≤ 2.
+6. **Hypr.** `windowtitle`/`windowtitlev2` no longer refresh; the title is patched from the
+   `windowtitlev2` payload (`address,title`) into the window record. `windows` is rebuilt only when
+   `toplevels` changes, cheaply (no per-window bindings). New: `workspaces` records `{ id, name,
+   label, monitor, windows, apps, urgent, special, active, focused }`, `specialOpen` per monitor,
+   `urgent` (from `urgent` events, cleared when the workspace is shown), `submap`, `screencast`,
+   the focus history for MRU app order, workspace names from `Paths.workspacesState` applied with
+   `renameWorkspace`, `activelayout` → layout OSD. The `fixed` strip follows
+   `auto-workspace-monitors.sh`: eDP-1 alone holds 1–10; with an external monitor 1–5 are
+   external, 6–10 eDP-1 (bar.md §3). The urgent toast "<app> needs attention on <ws>" goes to the
+   active monitor when that workspace is not visible.
+7. **Caps Lock OSD.** Hyprland has no Caps Lock event; the stubs show `hl.get_devices()` with
+   `caps_lock` and that `hl.bind` takes a Lua function. A `Caps_Lock` bind (`locked`, `release`,
+   `non_consuming`, `ignore_mods`) reads the main keyboard's state and dispatches
+   `aptus:capslock-on`/`-off`, so no process forks per keypress. Shared change (binds.lua,
+   Shortcuts.qml, 05/07/09 spec lines), checked in phase 5.
+8. **Safety of hardware and buses** (brief): under `Paths.test` `Audio` never connects to
+   PipeWire: it uses an in-memory sink/source double with the same shape (volume, muted, name)
+   and `Privacy` reports nothing (screencast still from Hyprland); the PipeWire backend is a
+   `Component` inside `Audio.qml` instantiated only outside tests, so nothing touches the real
+   graph. `Brightness` reads `$APTUS_SYSFS` (default `/sys`) and, under `APTUS_TEST` without
+   `APTUS_SYSFS`, has no backlight and no LED; it writes only through `brightnessctl` from `PATH`
+   (`-d <device> set <n>`), and re-reads after its own write (sysfs has no inotify). The e2e tests
+   build a fake sysfs tree and a fake `brightnessctl` in the test's own folder and start the
+   nested Hyprland with them (`tests/e2e/test_s3*.py` builds them; `nested.py` gets a minimal
+   `env` hook in a shared commit if it needs one). `Network`/`Bt` only read in tests (toggles
+   refused under `Paths.test`). Media keys in tests act on `tests/e2e/fake_mpris.py` (system
+   `python3` + `gi`), started inside the nested session (`Nested.exec`), so on its private bus.
+9. **Frame** (hand-offs): no whole-frame opacity under a fullscreen window: the band and line
+   slide out and fade, the bulges stay drawn so the notch (critical toast, OSD) shows above a
+   fullscreen window; the drawer shadow blurs only the bodies' bounding box plus the blur radius;
+   `bulge.js` gets `normalised` input so `framePath`/`bodiesPath` share one `normalise()` per
+   change (`Bulge.qml` computes it once).
+
+**Files** (new unless noted):
+
+| Area | Files |
+|---|---|
+| bar | `shell/surfaces/bar/{Bar (filled),WorkspaceStrip,WorkspacePill,ActiveWindow,Tray,TrayItem,StatusCluster,StatusItem}.qml`, `bar/js/bar.js`, `bar/qmldir` |
+| notch | `shell/surfaces/notch/{Notch (filled),RestGroup,CompactSlot,Toast,Osd,EventLine,MediaActivity (filled),MediaCompact,MediaCard,ProgressActivity (filled),ProgressCompact,ProgressCard}.qml`, `notch/js/notch.js`, `notch/qmldir` |
+| frame | `shell/surfaces/frame/Frame.qml` (fullscreen fade, shadow box) |
+| services | `Hypr`, `Notifications`, `Progress`, `Media`, `Audio`, `Brightness`, `Power`, `Network`, `Bt`, `Privacy`, `Apps` (filled); `shell/services/js/{notifications,media,hypr,levels}.js` |
+| assets | `shell/assets/sounds/chime.oga` (for S8's timers and focus, if an encoder is installed; else noted) |
+| tests | `tests/qml/tst_{notifylogic,medialogic,hyprmodel,levels,barlogic,notchlogic,glyphs}.qml`, `tests/e2e/test_s3_{bar,notch,keys,notifications,monitors}.py`, `tests/e2e/fake_mpris.py`, `tests/e2e/fakehw.py` (sysfs tree, `brightnessctl` fake) |
+| probes | `design/probes.md` P-17, P-20 |
+
+**Shared changes expected** (each its own `S3 shared: <file>: <why>` commit, smallest change):
+`shell/windows/MonitorShell.qml` (Notch gets `hide: frame.hide` and the hot-edge reveal so it can
+stay above a fullscreen window); `shell/components/Activity.qml` (`middleClick()` and
+`menuTriggered(row)` hooks the notch calls, notch.md §4); `shell/core/js/rules.js` (TODO(S3)
+comment removed: the pinned-card timeout lives in the Notch); `shell/core/js/bulge.js` +
+`shell/components/Bulge.qml` (one `normalise()` per change); `hypr/binds.lua` +
+`shell/registry/Shortcuts.qml` (Caps Lock OSD shortcuts) with 05/07/09; `shell/registry/Ipc.qml`
+(S3 service summaries in `shell state` for the e2e tests); `shell/config/settings-schema.json` +
+10-settings (`bar.clock.showDate` says "before the time"; bar.md and notch.md put the date after
+the clock: the surfaces are right). Anything else found later is logged here.
+
+**Risks.** (a) Material Symbols axis animation cost (P-17): measured; fallback is the crossfade
+Glyph already does for name swaps. (b) Quickshell's `NotificationServer` and `replaces_id`: the
+object is updated in place without a new signal, so the service listens to its property changes.
+(c) The tray's DBusMenu in an aptus `Menu`: `QsMenuOpener` children are asynchronous; submenus
+are opened lazily. (d) The bulge spring on every frame rebuilds the frame path (S1 risk a): frame
+times measured under toasts and OSD bursts. (e) Two monitors: Notch instances per monitor share
+the singletons; the active-monitor rules for toasts/cards are in `rules.js` already. (f) The fake
+MPRIS player and `notify-send` need the nested bus address: they run through `Nested.exec`.
+(g) Under a fullscreen window the frame no longer fades as a whole; the S1 Frame test and M-31
+screenshots are re-checked.
+
+**Checks (end of S3).** `tests/run` green (pytest, qmltestrunner incl. the new logic tests,
+qmllint 0 warnings); `pytest tests/e2e` green incl. `test_s3_*`: keys → action + OSD (volume and
+mute on the double, brightness on the fake sysfs, keyboard light, mic, Caps Lock, media on the fake
+player, "Nothing to play"), notifications with `notify-send` on the nested bus (low/normal/critical,
+replaces-id, stack, held under DND via the `Dnd` stub's state, history), Ipc `notch toast`,
+fullscreen leave/hot edge, a headless output added and removed with a toast and a card open;
+screenshots at 1920 × 1080 (bar dark and light, toast, OSD, compact activity and card) compared
+with bar.md §2 and notch.md; budgets of 07 §12 (RSS, idle CPU and wakeups, frame times during
+toast/OSD/card morphs) measured; `hyprctl configerrors` empty; no shell-log line above `info`.
+
+### Phase 2 · structures (2026-11-09)
+
+**Done** (types, properties, signals and record shapes only; nothing wired, nothing built):
+- Record shapes as header comments of the new pure-JS libraries: `services/js/notifications.js`
+  (history record, policy context, decision, toast payload, stack), `media.js` (player summary,
+  the active-player rule), `hypr.js` (window, workspace and strip records; the `fixed`
+  assignment of `auto-workspace-monitors.sh`, read-only from `~/.config/hypr/scripts`),
+  `levels.js` (OSD payload, status glyph), `surfaces/bar/js/bar.js` (status item and input,
+  title throttle), `surfaces/notch/js/notch.js` (layer, view, countdown, slot assignment).
+- Bar types: `WorkspaceStrip`, `WorkspacePill` (scratch is a pill with `scratch`),
+  `ActiveWindow`, `Tray`, `TrayItem`, `StatusCluster`, `StatusItem`; `Bar` gains `quiet` and
+  `narrow`; `bar/qmldir` lists them.
+- Notch types: `RestGroup`, `CompactSlot`, `NotchLayer` (one content in the bulge, the 110/60 ms
+  crossfade), `Toast`, `Osd`, `EventLine`, `ActivityCard` (card frame + pager), `MediaCompact`,
+  `MediaCard`, `ProgressCompact`, `ProgressCard`; `MediaActivity`/`ProgressActivity` get their
+  id, slot and source properties; `Notch` gains `hide`, `view` and its private state (layers,
+  hover card, countdowns, OSD/event timers, activity objects, slots, mode); `notch/qmldir`.
+- `Frame`: `shape` (one normalised bulge set) and `shadowBox`.
+- Services: `available` on Hypr, Progress, Media, Audio, Brightness, Power, Network, Privacy,
+  Apps (Notifications had it; `Bt.available` keeps its S1 meaning "an adapter exists");
+  Hypr `screencast`, `layout`, `workspaceNames` and the workspace record documented; Notifications
+  `holding`, `muted` and its private maps; Audio `sourceName`, `testDouble`; Brightness `sysfs`,
+  device names, `max`, `raw`; Power `pluggedIn` and the battery-toast state; Media `pausedSince`;
+  Apps' class cache.
+- Test fakes: `tests/e2e/fakehw.py` (`FakeHardware`), `tests/e2e/fake_mpris.py` (`PlayerState`).
+
+**Changes to the plan found while writing.**
+- `Audio`'s test flag is `testDouble` (`double` is a QML value-type name).
+- The pinned/hover card frame is its own type (`ActivityCard`) so activity cards of other stages
+  only draw their content; the host sets `monitorName`, `activity` and `pinned` on the card item
+  when it has them (documented in phase 3 on `Activity.qml`'s `card`, a shared file).
+- No shared file changes yet: shared changes are made complete in their own commits when they
+  are needed (phase 5/7), not split over phases.
+
+### Phase 3 · signatures (2026-11-09)
+
+**Done** (placeholder bodies throw `not implemented` / `raise NotImplementedError`; nothing calls
+them yet; existing S1 stub bodies untouched):
+- `services/js/notifications.js`: urgency constants, `CRITICAL_PRIORITY`, `MUTE_MS`, fallbacks,
+  `HELD_WHILE`, `KEEP_TAGS`; `makeRecord`, `decide`, `isAllowlisted`, `isMuted`, `toastTimeout`,
+  `toastPayload`, `stackStep`, `stackPayload`, `heldPayload`, `reduceMarkup`, `plainText`,
+  `progressOf`, history `addToHistory`/`trimHistory`/`markRead`/`markAllRead`/`removeRecord`,
+  `unreadInfo`, `serialise`/`parse`.
+- `media.js`: `pickActive`, `isIgnored` (time texts reuse `format.js` `clockDuration`).
+- `hypr.js`: `INTERNAL`, `SCRATCH`; `fixedIds`, `workspaceRecords`, `appsOf`, `labelOf`,
+  `stripFor`, `neighbour`, `parseTitleEvent`, `patchTitle`, `bumpFocus`, `isShown`.
+- `levels.js`: glyph tables (`BATTERY` 8 steps, `WIFI` 4, `VOLUME`, `GLYPHS`); `batteryGlyph`,
+  `volumeGlyph`, `networkGlyph`, `brightnessGlyph`, `step`, OSD payloads for volume, mic,
+  brightness, keyboard light, Caps Lock, layout.
+- `bar/js/bar.js` (imports `format.js`): `STATUS_ORDER`, `WINDOW_GLYPHS`; `statusItems`,
+  `batteryTooltip`, `collapseLevel`, `noteTitleChange`/`titleDelay`, `trayLayout`, `deckArgs`,
+  `workspaceTooltip`, `windowGlyphs`, `windowMenu`, `pillMenu`, `isNarrow`.
+- `notch/js/notch.js` (imports `format.js`): `viewOf`, `keyOf`, `nextLayers`, `dropLayer`,
+  `assignSlots`, `toastHeight`, `eventWidth`, countdown `Start`/`Pause`/`Resume`/`Left`,
+  `pagerStep`, `longDate`.
+- Services: Hypr (`stripFor`, `workspace`, `setWorkspaceName`, `moveWorkspaceToMonitor`,
+  `closeWorkspaceWindows`, `togglePin`, `moveToMonitor`, `sendToScratch`, `cycleFocus`,
+  `showCapsLock`, private `_onTitle`, `_onUrgent`, `_rebuildWindows`, `_rebuildWorkspaces`,
+  `_loadNames`), Notifications (`activate`, `dismiss`, `reply`, `muteApp`, `markRead`,
+  `markAllRead`, `remove`, `clearAll`, `toastGone`, private `_arrive`, `_receive`, `_toast`,
+  `_releaseHeld`, `_changed`), Progress (`fromRecord`, `remove`), Media (`_rebuild`,
+  `_noteState`), Audio (`_osd`), Brightness (`_read`, `_write`, `_osd`), Power
+  (`_checkBattery`), Apps (`nameFor`, `entryFor`).
+- Bar: WorkspaceStrip (`_go`, `_moveHere`, `_menu`, `_wheel`, `_placeCapsule`), WorkspacePill
+  (`nudge`), ActiveWindow (`_changed`, `_show`, `_menu`, `_menuTriggered`), Tray
+  (`_overflowMenu`), TrayItem (`openMenu`), StatusCluster (`_open`, `_wheel`, `_middle`,
+  `_right`). Notch: Notch (`_sync`, `_layerGone`, `_openCard`, `_closeHoverCard`,
+  `_dismissEntry`, `_toastActivated`/`Dismissed`/`Menu`, `_activityMenu`, `_countdownTick`,
+  `_modeEntered`/`_modeLeft`), RestGroup (`_refresh`, `_menu`, `_menuTriggered`), Toast
+  (`openReply`, `closeReply`), ActivityCard (`_setUp`), MediaActivity (`middleClick`,
+  `menuTriggered`), ProgressActivity (`menuTriggered`).
+- Python: `fakehw.BRIGHTNESSCTL`, `FakeHardware.build/backlight_value/kbd_value`;
+  `fake_mpris.Player` (`metadata`, `call`, `get_property`, `changed`), `main`.
+- Test skeletons (`skip("phase 7")`): `tests/qml/tst_{notifylogic,medialogic,hyprmodel,levels,
+  barlogic,notchlogic,glyphs}.qml`, `tests/e2e/test_s3_{keys,notifications,bar,monitors}.py`
+  (the planned `test_s3_notch` is folded into `bar` and `notifications`).
+
+**Shared commits** (separate, see the final list): `S3 shared: shell/components/Activity.qml`
+(`middleClick()` / `menuTriggered(row)` no-op hooks; the card contract comment: the Notch sets
+`activity`, `monitorName`, `pinned` on the created item when it declares them; the Notch adds
+"Open in Today" to every activity menu itself) and `S3 shared: shell/core/MonitorState.qml`
+(the passive payload comment points at S3's toast and OSD shapes; found by the phase-2 review).
+
+**Reported.** Reuse instead of new helpers: `format.js` already has `clockDuration` (media
+times), `duration` (battery tooltip), `dateLong` + `isoWeek` (the clock tooltip), so
+`formatTime`, `remainingText`, `durationText` and `isoWeek` were dropped from the new
+libraries while writing. Every nested session needs the fake backlight (the brief's safety
+rule, and e2e tests share one session per pytest run, so a per-module fixture would come too
+late): planned as `S3 shared: tests/e2e/nested.py` (the harness builds `FakeHardware` into its
+temporary root and passes `APTUS_SYSFS` and the fake `PATH` to the nested Hyprland).
+
+### Review of phase 2 (fresh reviewer, diff `4278cdb..23e617c`)
+
+It arrived while phase 3 was being written; the structure fixes follow phase-2 rules and are
+committed separately ("phase 2: review fixes"), the fake player's fields went into phase 3's file
+rewrite.
+
+| # | Finding | Result |
+|---|---|---|
+| 1 | no logic, wiring or bodies in the phase | — |
+| 2 | `NotchLayer.layer` shadows the FINAL `Item.layer` (qmllint, and Qt refuses to load it) | fixed: `record` |
+| 3 | MonitorState's payload comment says `toast { notification }`, `osd { kind, value, label, device }` | fixed in `S3 shared: shell/core/MonitorState.qml` (points at the S3 shapes; the result-card variant stays and is notch.js view kind `result`) |
+| 4 | `Notch._eventShown` is an `int` holding ms | fixed: `_eventId` (int) + `_eventShownAt` (real) |
+| 5 | `Toast.replying` readonly but set by the toast itself | fixed: writable |
+| 6 | bar.js battery input names differ from `Power` | fixed: the input uses the services' names |
+| 7 | device-change detection specified twice (poster and `Osd._lastDevice`) | fixed: the poster owns it (`Audio._osdSink`/`_osdSource`), `Osd` only times the 1 s |
+| 8 | `Bt.available` means "an adapter exists", unlike the other services | rejected: Ipc guards no Bt function, S5 builds on the S1 meaning; the bar reads `available && enabled` |
+| 9 | Brightness has no monitor for the OSD | rejected: the brightness OSD goes to `hypr.js INTERNAL` (eDP-1) when it is connected, else the active monitor; no state needed |
+| 10 | no `nameFor` for empty titles and tooltips | done in phase 3 (`Apps.nameFor`, `bar.js workspaceTooltip`) |
+| 11 | nothing models `bar.title.show` | rejected: wiring (Bar shows the title only when the setting is on and not quiet), no structure |
+| 12 | fake player lacks cover, shuffle/loop support, a no-metadata mode | fixed in phase 3 (`art_url`, `shuffle`/`loop_status` with `None` = unsupported, `bare`) |
+| 13 | plan says `Bulge.qml` normalises once, structure puts `shape` on Frame | the structure holds: Frame computes `shape` once and both Bulge items take it through a new `shape` input (shared change, phase 7) |
+| 14 | `Notch._osdBorn` repeats the entry's `born` | fixed: removed (the OSD timer runs from `born`) |
+| 15 | `Notch._mode` repeats `monitor.notch` | fixed: comment says it is the mode whose back handler is registered, also while it fades out |
+| 16 | duplicate placeholders (`pillRects`, `hovered`) | fixed: comments name the source (strip coordinates mapped by Bar; `Notch._bulgeHovered` drives timing) |
+| 17 | right-click signals named three ways | fixed: `rightClicked(real x, real y)` everywhere |
+| 18 | `Tray.maxItems: 3` duplicates the setting's default | fixed: `0`, the Bar binds `bar.tray.max` / `narrowTrayMax` |
+| 19 | `RestGroup.unreadAccent` vs `Notifications.unreadAllowlisted` | fixed: `unreadAllowlisted` |
+
+### Review of phase 3 (fresh reviewer, diff 23e617c..76dc96d)
+
+| # | Finding | Result |
+|---|---|---|
+| 1 | Network, Bt, Privacy without signatures; no poster for the S3 events (Bluetooth device, Wi-Fi off, Charging) | Fixed: new `services/js/status.js` (`privacyKind`, `privacy`, `vpnFrom`, `btConnectedEvent`, `chargingEvent`, `wifiOffEvent`, `MIC_CLASS`, `CAMERA_CLASSES`, `EVENT_GLYPHS`) with `tst_statuslogic`; `Privacy._rebuild`, `Network._readVpn`/`_wifiChanged`, `Bt._deviceConnected`, `Power._pluggedChanged` |
+| 2 | notch.js lacks the bulge size per state and the passive timers | Fixed: `bulgeSize(kind, payload, measured, tokens)` replaces `eventWidth`; `dueEntries(passive, shown, eventShownAt, pinnedSince, now, timing)` covers the OSD collapse (after `born`, shown or not, so an OSD posted under a mode never shows late), the event time and the pinned-card timeout; `Notch._expire()` runs it. The hover 300/400 ms stay with CompactSlot's rest timer and the Notch's leave timer (`_closeHoverCard`) |
+| 3 | Menu trigger handlers missing | Fixed: `WorkspaceStrip._menuTriggered(record, row)`, `Tray._overflowTriggered(row)`, `TrayItem._rows(entries)` + `_menuTriggered(row)`, `Notch._toastMenuTriggered(entry, row)`, `Notch._activityMenuTriggered(activity, row)` |
+| 4 | Hypr: no handlers for `activespecial`, `screencast`, `activelayout`, `activewindowv2`; layout OSD caller; scratch toggle; Rename… UI | Fixed: `_onActiveWindow`, `_onActiveSpecial`, `_onScreencast`, `_onLayout` (posts the layout OSD), `toggleScratch()`, `hypr.js splitEvent`. Rename…: the bar never takes the keyboard (05 §2), so the pill menu opens the overview with `{ workspace, rename: true }` for its F2 rename (S6 hand-off, noted in `_menuTriggered`) |
+| 5a | Pinned card: click outside has no signature | Fixed: `Notch._outsideClicked(x, y)` |
+| 5b | Hot edge without signature | Rejected: S1 built it in `MonitorShell` (`barInput`, 2 px, `pushTimer` with `fullscreen.hotEdgePush`, `revealed` until the pointer leaves); S3 only passes `hide` to the Notch (shared change listed in phase 1) and tests it (`test_hot_edge_reveal`) |
+| 6 | Notifications: sender close, policy context, system toasts, window of an app | Fixed: `_senderClosed(id)`, `_context()`, `notifications.js systemToast(title, body, glyph, critical, timeout)`, `Hypr.windowForApp(desktopEntry, appName)`. The hold watch is wiring (`holding` binding → `_releaseHeld`, a phase-4 marker) |
+| 7 | The "Deck open → no OSD" rule split over four posters | Partly: only volume, mic and brightness have Deck sliders (deck.md §4), so the rule concerns `Audio._osd` and `Brightness._osd`; `levels.js deckReplaces(kind)` holds which kinds, both ask it. Caps Lock, layout and keyboard light keep their OSD |
+| 8 | Menu comments contradict the Activity contract; Cancel not in the progress menu | Fixed: MediaActivity's own row is Hide until it changes; ProgressActivity has no own rows (its `menuTriggered` signature removed, the base default stays); Cancel is on the card |
+| 9 | `MUTE_MS` literal; `CRITICAL_PRIORITY` duplicates rules.js | Rejected: tokens.json holds the visual language and surface timings; the one hour is part of the menu text "Mute *App* for 1 hour" and belongs next to it. `rules.js` is shared and states the threshold in prose; `tst_notifylogic.test_critical_priority_passes_over_fullscreen` pins that a `CRITICAL_PRIORITY` toast passes `rules.arbitrate` over a fullscreen window |
+| 10 | Media: ignore applied twice; card seek/shuffle/loop; lastActive on control | Fixed: `pickActive(players)` (ignored players never reach it; `_rebuild` filters with `isIgnored`); `Media.seek`, `toggleShuffle`, `cycleLoop`, `_touch(player)` |
+| 11 | Superfluous: `hypr.js isShown`, `sendToScratch`, `bar.js isNarrow`, `notch.js eventWidth`, `batteryTooltip` | Fixed the first four (`isShown` → the record's `active`; `sendToScratch` → `moveToWorkspace(address, SCRATCH)`; `isNarrow` → `titleWidth(available, narrow, tokens)`, the bar.md §2/§9 title rule; `eventWidth` → `bulgeSize`). Rejected `batteryTooltip`: it is the one tooltip with logic (two durations, profile), tested on its own |
+| 12 | Rule deviations: Activity `{}` defaults; `__main__`; empty `BRIGHTNESSCTL`; fake_mpris `set_property`/`Seeked` | Activity's `{}` bodies are the base defaults (a throw would break every activity without own handlers), so they are complete, not placeholders; `__main__` stays. Fixed: `fakehw.brightnessctl_script()` replaces the empty constant; `Player.set_property`, `Player.seeked` |
+| 13 | Test skeletons missing (held under DND, privacy, no OSD under Deck/mode, budgets) | Fixed: `test_held_under_dnd_then_summary`, `test_sender_close_removes_the_toast`, `test_toast_ways_out`, `test_no_osd_while_the_deck_or_a_mode_is_open`, `test_hover_card_opens_and_collapses`, `test_privacy_reports_nothing_under_test`, new `test_s3_budgets.py`; QML `test_bulge_sizes`, `test_due_entries`, `test_split_event`, `test_title_width`, `test_deck_replaces`, `test_system_toast` |
+
+Checked after the fixes: `tests/lint.sh` 146 files, 0 warnings. The notch states of the plan's
+`test_s3_notch.py` live in `test_s3_bar.py` (one nested session for bar and notch states).
+
+### Phase 4 · TODO markers (2026-11-09)
+
+**Done.** `TODO(phase)` markers (94 in `shell/`) at every place of the owned code that changes:
+the services (`Hypr`: eager `windows` and the title refresh of the S1 hand-off, the raw-event
+routing to `_onTitle`, `_onUrgent`, `_onActiveSpecial`, `_onScreencast`, `_onLayout`,
+`_onActiveWindow`, the names FileView and the first rebuild; `Notifications`: server, tracked
+instantiator with replace and sender close, state file, `holding`, `inject`; `Progress`, `Media`,
+`Audio` with its test double and the PipeWire backend behind a LazyLoader, `Brightness` with the
+sysfs root and the brightnessctl writes, `Power`, `Network` with the nmcli read, `Bt`, `Privacy`,
+`Apps`), `Frame` (one `shape`, `shadowBox`, no whole-frame opacity, the MultiEffect over the
+box), `Bar` (zones, `quiet`, `narrow`, `pillRects`), every new bar and notch component (its
+readonly bindings and its drawing), `Notch` (bulge, clock rect, rest width, mask item, view,
+slots, the content tree and timers) and the two activities. The S1 markers `TODO(S3)` in
+`Notch.qml` and `rules.js` stay until phase 7.
+
+**Shared change points** (not marked in the shared files; each becomes its own `S3 shared:`
+commit in phase 7, smallest change):
+
+| File | Change |
+|---|---|
+| `shell/windows/MonitorShell.qml` | `Notch { hide: frame.hide }` |
+| `shell/core/js/rules.js` | the `TODO(S3)` comment goes (the pinned-card timeout is the Notch's `dueEntries`) |
+| `shell/core/js/bulge.js`, `shell/components/Bulge.qml` | a `shape` input (normalised once by Frame), so `framePath`/`bodiesPath` do not normalise again |
+| `hypr/binds.lua`, `shell/registry/Shortcuts.qml` (+ 05 §6, 07, 09 lines) | Caps Lock bind with a Lua function → `aptus:capslock-on`/`-off`; routes `capslock-on`/`-off` → `Hypr.showCapsLock` (probe in phase 5) |
+| `shell/registry/Ipc.qml` | S3 service summaries in `shell state` (audio, brightness, media, notifications, hypr workspaces) for the e2e tests |
+| `shell/config/settings-schema.json` + `design/10-settings.md` | `bar.clock.showDate` "after the time" |
+| `tests/e2e/nested.py` | build `FakeHardware` for every nested session (APTUS_SYSFS, PATH with the fake brightnessctl) |
+| `design/probes.md` | P-17, P-20 |
+
+**Checked.** `tests/lint.sh`: 146 files, 0 warnings. No body, type or signature changed in
+this phase (the diff adds comments only).
+
+### Review of phase 4 (fresh reviewer, diff d485811..55bf77e)
+
+Gaps of earlier phases found by the review are filled with that phase's rules (structures and
+signatures only, marked [2] / [3]); markers with phase-4 rules.
+
+| # | Finding | Result |
+|---|---|---|
+| 1 | The inline reply cannot get the keyboard (`MonitorState.keyboard` is mode or pinned card only) | Fixed without touching rules.js: [2] `Notch.wantsKeyboard` (the shown toast's `replying`), shared change `MonitorShell` (`keyboardFocus` also while `notch.wantsKeyboard`); Esc is handled by the field itself, not the Esc ladder; spec fix 05 §2 (toasts never take the keyboard, except the open reply field) |
+| 2 | No handler for `Toast.replied` | Fixed: [3] `Notch._toastReplied(entry, text)` |
+| 3 | NotchLayer has no inputs for what it loads; no "result" kind | Fixed: [2] `monitorName`, `payload`, `component`, `args`, `activities`, `pinned`; the loader marker names result cards |
+| 4 | Mode host and card contracts not wired | Fixed: markers for args/notchSerial, active, closeRequested, clockRect, takesClock (M-20), scrim, sizeSpring; result card closeRequested/hovered; ActivityCard picked |
+| 5 | Unread dot colours wrong | Fixed: `ink.sec`, `accent` when allowlisted |
+| 6 | `bar.clock.format` does not exist | Fixed: HH:mm via format.js time |
+| 7 | Quiet and narrow do not reach the date; RestGroup has no introProgress | Fixed: [2] `Notch.quiet`, `Notch.narrow` (shared change MonitorShell passes the Bar's); showDate = setting && !narrow && !quiet; the Notch fades the rest group with introProgress |
+| 8 | `notch.hoverExpand` ignored | Fixed in the CompactSlot wiring marker |
+| 9 | Compact slots during a mode and under fullscreen | Fixed in the `_slots` marker (none under a mode; only recording under `hide`) |
+| 10 | maskItem under `hide` would swallow clicks over a fullscreen window | Fixed in the marker |
+| 11 | Refresh results update `lastIpcObject` in place; the model changes only on add/remove | Fixed: rebuild on `lastIpcObjectChanged`, coalesced (checked in phase 5) |
+| 12 | PwNode has no state; camera "in use" undetectable | Fixed: a camera is in use while its Video/Source has an Active link group (`Pipewire.linkGroups`); status.js node field `linked` replaces `running` [2] |
+| 13 | `extraHints ["value"]` needed for the progress hint | Fixed in the server marker |
+| 14 | Images not cached | Fixed: [3] `Notifications._cacheImage(record, live)` into `Paths.notifCache` |
+| 15 | `serverActive` has no source; doctor fallback | Marker: a one-shot GetServerInformation call. The doctor check is the P-20 fallback only; decided after the probe |
+| 16 | Record has no hold reason | Fixed: [2] record field `held` |
+| 17 | M-36 nudges the battery at critical | Fixed: [2] `StatusItem._nudge`, `_lastNudge`, [3] `nudge()`, marker in StatusCluster |
+| 18 | Media fallbacks without metadata | Fixed: app icon on `raised`, the player's name as title |
+| 19 | `_hiddenTrack` per monitor | Fixed: [2] `Media.hiddenTrack`, `Media.hidden`; [3] `Media.hideUntilChanged()`; removed from MediaActivity |
+| 20 | "a key step unmutes" not in the spec | Fixed: dropped (the spec is the source) |
+| 21 | "Nothing to play" only for XF86AudioPlay | Fixed: toggle only |
+| 22 | RestGroup clockRect comment vs marker | Fixed: item coordinates, the Notch maps |
+| 23 | Brightness is lazy; the first key finds no device | Accepted: shared change `shell/shell.qml` (Brightness in the eager services list) |
+| 24 | Spec/shared list incomplete | Fixed: list below |
+| 25 | Bar marker lacks window/fallback/introProgress/primary tray monitor | Fixed |
+| 26 | WorkspaceStrip wiring incomplete | Fixed |
+| 27 | `CompactSlot.hovered` marker | Fixed |
+| 28 | `inject` without `Paths.test` guard | Fixed in the marker |
+| 29 | UPower percentage 0..1 | Fixed in the marker |
+| 30 | 100 ms polling; "40 %" literal; long markers | Fixed: single-shot timers at the deadline; `stripMaxWidthFraction`; Notch and Notifications markers split per change point |
+| 31 | windowtitlev2 named twice in Hypr | Rejected: two change points (leave the refresh list, route to `_onTitle`) |
+| 32 | `keepOnReload false` undecided | Decided: `true` (a dev reload keeps the server and the live objects, so actions of shown toasts keep working) |
+
+**Shared change points, complete list after this review** (each its own `S3 shared:` commit):
+`shell/windows/MonitorShell.qml` (Notch `hide`, `quiet`, `narrow`; `keyboardFocus` also while
+`notch.wantsKeyboard`), `shell/shell.qml` (Brightness eager), `shell/core/js/rules.js` (TODO(S3)
+comment), `shell/core/js/bulge.js` + `shell/components/Bulge.qml` (shape), `hypr/binds.lua` +
+`shell/registry/Shortcuts.qml` (Caps Lock), `shell/registry/Ipc.qml` (summaries),
+`shell/config/settings-schema.json` + `design/10-settings.md` (showDate wording),
+`tests/e2e/nested.py` (fake hardware), `design/probes.md`. Spec lines: 05 §2 (reply field takes
+the keyboard), 05 §6 / 07 / 09 / notch.md §11 (Caps Lock through a bind and `hl.get_devices()`,
+no Keyboard service), 07 §6 (Brightness: `APTUS_SYSFS`, re-read after own writes, no watch),
+bar.md §8 (`activespecialv2`; camera = a Video/Source with an active PipeWire link).
+
+Checked after the fixes: `tests/lint.sh` 146 files, 0 warnings.
+
+### Phase 5 · probe (2026-11-09/10)
+
+**What was done.** The whole stage was implemented once on the throwaway branch `s3-probe`
+(3fc86e6, kept as the reference for phase 7): the JS logic, all eleven services, every bar and
+notch component, the Frame change, the MonitorShell and `shell.qml` wiring, the fake MPRIS player.
+It ran in the nested session (one 931×1002 output plus a headless 1920×1080 one), driven over
+`hyprctl -i`, `notify-send`/`gdbus` inside the session, the fake player and `grim`.
+
+**How it was checked.** qmllint 0 warnings on the probe; a JS smoke test; screenshots of rest,
+toast with actions, critical toast and OSD over a fullscreen window, event, compact media cover,
+a 1080p bar with title, pill icons and date; `pw-dump` (read only) for PipeWire clients; per-thread
+`/proc` counters for the idle budget; P-17 and P-20 (design/probes.md).
+
+**Result.** Works end to end: notifications on the nested bus become toasts (markup, buttons,
+stack, held, critical without timeout, sender close), keys step the test double and show the OSD
+(the real volume is untouched), `media-toggle` reaches the fake player (`Pause` logged), "Nothing to
+play" without a player, the strip, title, tray and status cluster draw, the date hides below
+1280 px. No PipeWire client from the test shell. P-17 pass (axes at 60 fps), P-20 pass (no doctor
+check needed).
+
+**Budgets measured (07 §12, nested, two outputs):** CPU 0.20 % over 60 s at rest; main thread
+1.5 wakeups/s (all threads 5–12/s, render and Wayland threads included); RSS 268–269 MB, over the
+260 MB budget. The baseline against the phase-4 stubs was interrupted by a reboot; phase 7 measures
+it to see what S3 adds.
+
+**Gaps found, by phase** (filled in phase 7 from the probe code; none changes the design):
+
+| Phase | Gap | Resolution |
+|---|---|---|
+| 2 | Notch: `_widths` (compact widths for `assignSlots`), `_pinnedSince`, `_currentLayer`/`_currentContent`, `_bulgeW`/`_bulgeH`/`_cove`, `_barNow`, a `ListModel` of layers (a Repeater over a JS array recreates its delegates) | added |
+| 2 | services: Hypr `_workspaceEvents` + one coalescing rebuild timer + an Instantiator on `lastIpcObjectChanged`; Media `trackKey`; Brightness `_queue` (one brightnessctl at a time, newest value wins), `_scanned`; Network/Bt `_started` (no event for the state at start); Audio `_b` (the backend item, untyped); Bt `_bt`/`_adapter` (qmllint has no Bluetooth types) | added |
+| 2 | bar: WorkspacePill `fullWidth`/`numberWidth` (the strip's collapse measures every pill at every level), WorkspaceStrip `_trailTo`/`_trailIsLeft` (M-02 trailing edge) | added |
+| 3 | Notch `_noteWidth`, `_pickCurrent`, `_entry(id)`; ActivityCard `_step`; Notifications `_setToast`, `_closeToast`, `_drop`, `_monitorOf`, `_alive` (a toast entry can vanish through `rules.expire`) | added |
+| 4 | `_slots` ↔ slot width formed a binding loop | width notes deferred with `Qt.callLater` |
+| 4 | layer delegates anchored to a parent that is null while they are removed | x from the bulge width |
+| 4 | Frame's whole-frame opacity took the notch body away under a fullscreen window (content floated without a body) | the frame fades out while a bodies-only copy fades in; the notch's bulge casts a shadow while hidden (no shared change) |
+| 4 | a toast with buttons overflowed with two body lines | one body line when buttons show (the 104/132 heights fit one) |
+| 4 | the critical warning glyph hid behind the fallback bell | shown for every critical notification (`nid` ≠ 0); system toasts keep their own glyph |
+| 4 | surfaces lacked `import qs.services`; Network's `_wifi` property clashed with `_wifiChanged`; `Process.onExited` arrow parameters fail qmllint | import added; `_wifiDevice`; `onRunningChanged` |
+| 4 | the media card's play/pause is an IconButton; notch.md §5 wants the 36 px round primary button | phase 7: a primary round button of `card.mediaPrimaryButtonSize` |
+| 4 | image-data images (`image://qsimage`) cannot be copied to the cache | the toast shows the live image; the history keeps no image for them (today.md §6 note in phase 7) |
+| 4 | tray submenus come from a nested `QsMenuOpener` read when the menu opens; DBusMenu may load children lazily | phase 7: checked with a real tray item; else the row opens the item's own menu |
+| — | not probed yet: Caps Lock bind, a real tray item, output removal with surfaces open, the hot edge push, brightness on the fake sysfs (needs the nested.py change) | phase 7 |
+
+**Catch-up (2026-11-10, after the phase-6 review).** The skill wants the gaps filled in phases
+2–4 with their rules, before phase 6; the table above was first only carried to phase 7. Now done
+in its own commit: a script compared every root-level declaration of the probe's 43 changed files
+with the skeleton (82 missing: the private state, helpers and the two `activity`/`monitorName`
+slot properties) and put them in, each documented, properties with neutral defaults and
+`TODO(phase)` for their binding, functions with stub bodies; plus `TODO(phase)` markers at the
+phase-4 change sites of the table (the layer `ListModel`, the `Qt.callLater` width notes, the
+delegate x, Hypr's coalescing rebuild, the toast's single body line and critical glyph, the round
+play button, image-data, tray submenus). qmllint 146 files, 0 warnings. Child objects (timers,
+instantiators, models) stay `TODO(phase)` markers, as in phase 4.
+
+### Phase 6 · invariants (2026-11-10)
+
+**Done** (assertions only; the stubs keep their `throw`, no TODO removed, new `TODO(phase)` markers
+for the postconditions):
+- Every S3 JS library has an `invariant()` that throws "<lib> invariant: …", and every public
+  function checks its input before the stub's throw. Rule: tokens, settings, internal state and
+  the callers' arguments are checked; data from the hardware, Hyprland or D-Bus is clamped, never
+  refused (a refused battery reading would break the bar).
+  - `notch.js`: a legal notch state and passive top (`viewOf`); `checkLayers` (positive unique
+    uids, a key and a layer kind each, never two current layers), `checkView` (the key is its
+    identity, a card names a known activity, a mode a known mode, rest/hidden carry nothing), the
+    serial ahead of every uid; `checkCandidates` (known activities once each, a side, a width) and
+    `checkSlots` (two different activities, no candidate lost); toast heights ascending; a known
+    bulge kind and an event width range; `checkPassive` (rules.js kinds, unique ids) and positive
+    passive timings once entries exist (Motion gives 0 before tokens load); `checkCountdown` (one
+    without a total never runs); pager ids once and a ±1 step; a real `Date`.
+  - `notifications.js`: `checkRecord` (non-zero integer id, an app name, a freedesktop urgency, no
+    `default`/`inline-reply` among the actions, progress −1 or 0–100, a known hold reason),
+    `checkContext` (a known `notch.overFullscreen`), `checkDecision` (critical is never held or
+    sent to Today; priority 2 exactly for critical toasts), `checkTiming`, `checkStack` (≤ 3
+    icons, distinct apps), a stack toast only for ≥ 2 and a live passive id, a held summary only
+    for ≥ 1 and a known reason, a system toast with a title and a timeout unless critical,
+    strings into the markup functions, `checkHistory` (each id once), history limits ≥ 1.
+  - `hypr.js`: unique monitor names, workspace ids and focus order; a name limit ≥ 2; the strip
+    mode; a ±1 wheel step; `isAddress` ("0x" plus hex digits) for `bumpFocus` and `patchTitle`;
+    `checkStrip` (pills once each, in id order, one active at most, no special workspace).
+  - `levels.js`: battery thresholds 0 < crit < warn ≤ 100, a ±1 step of a positive size inside
+    min < max, a keyboard level inside 1..max, finite OSD levels, known OSD kinds; `checkOsd`.
+  - `media.js` (each player key once, a list for `media.ignore`), `status.js` (a node list, a
+    string from nmcli), `bar.js` (`checkBarTokens`: thresholds and title widths in order; the
+    `bar.battery.percent` / `bar.bluetooth` enums; strip widths ≥ 0; the throttle state; tray max
+    a whole number ≥ 0; a Deck section; a window for the window menu, a normal workspace for the
+    pill menu; `checkMenu`: an id and label per row, each id once, submenus too).
+- QML guards (refuse and log, never throw): `Brightness._refused` (under APTUS_TEST only a tree
+  from `APTUS_SYSFS` and only `aptus_test…` devices are written; `fakehw.py` now names its devices
+  `aptus_test_backlight` and `aptus_test::kbd_backlight`, so a real `brightnessctl` that slipped
+  onto PATH finds no such device: before, the fake used the real names `intel_backlight` and
+  `tpacpi::kbd_backlight`), `Audio._refused` (under APTUS_TEST every setter writes the double,
+  never PipeWire), `Notifications.inject` (refused outside the test).
+- Tests: the S3 QML tests are now real (55 cases across levels, medialogic, statuslogic,
+  hyprmodel, barlogic, notchlogic, notifylogic, glyphs) plus one `test_invariants_reject_broken_state`
+  per library (7: the refused cases, and the `check*` helpers accepting good input) and
+  `test_restart_ids_do_not_collide`: 63 in all. `tst_glyphs` shapes every glyph name S3 uses (the JS lists,
+  the menus, the names written in the QML) with the bundled font and requires one icon-wide glyph.
+
+**Checked.** On the branch: the 7 invariant tests pass against the stubs (each check fires before
+the stub's throw); the other S3 cases fail with "not implemented" until phase 7 (56 cases);
+unit 97 passed; qmllint 146 files, 0 warnings. Against the probe (scratch copy of `s3-probe` with
+the checks inserted into its functions by script): every S3 test passes except
+`test_restart_ids_do_not_collide`; the glyph test fails as it should when a bogus name is added.
+
+**Found** (fixed in phase 7):
+- Notification ids restart at 1 with every shell start, but read-back history records kept their
+  old ids: the first new notification replaced (and `markRead`/`removeRecord` would hit) an
+  unrelated old record. Read-back records get `ARCHIVE_ID − index` (`ARCHIVE_ID` = −1000000,
+  below every server and injected id); the record comment says so.
+- The probe's `Hypr._onActiveWindow` turns an empty `activewindowv2` (no window focused) into the
+  address "0x" and bumps it into the focus order; `isAddress` refuses it, phase 7 ignores the
+  empty event.
+- The probe's `StatusCluster` passes `Config.get(...)` for the two bar enums, which is undefined
+  until Config has loaded; the enum check would log at start. Phase 7 passes the schema defaults
+  as fallbacks.
+- The fake hardware used the real device names (above).
+- From phase 5: the structural gaps of its table come over with the probe code in phase 7;
+  nothing in it belongs to phase 6. (Wrong: see the review below and the phase-5 catch-up.)
+
+### Review of phase 6 (fresh reviewer, diff 664e61d..26db87c)
+
+The reviewer ran the seven invariant tests (pass) and read the diff against the skill's rules.
+18 findings; all fixed but the alternative in 10:
+
+| # | Finding | Response |
+|---|---|---|
+| 1 | The phase-5 catch-up was never done; its table said "added" | fixed: catch-up commit (phase 5 section above), then the invariants for it (Brightness `_queue`, Audio `_b`, below) |
+| 2 | `test_persistence_round_trip` still expected the old ids [2, 1] | fixed: times [3000, 2000], ids `ARCHIVE_ID`, `ARCHIVE_ID − 1` |
+| 3 | `checkOsd` and the `isFinite`/`level ≤ max` preconditions refuse hardware levels (a sink at 130 % from pavucontrol) | fixed: only the maximum is checked (`volumeOsd(level, muted, max, device)` now takes it from `osd.volumeMax`/`volumeBoostMax` instead of a boost flag); the level is clamped into 0..max, NaN is 0; tests for 130 %, NaN, a keyboard level above max |
+| 4 | `hypr.js` refused duplicate workspace ids and monitor names (Hyprland data; a placeholder can repeat an id for a moment) | fixed: a later duplicate is dropped (TODO), a monitor listed twice counts once; test; `Hypr._onTitle` skips an event whose address is not one before `patchTitle` (phase 7) |
+| 5 | A damaged state file could empty the history and the next save overwrite it | fixed: `parse` clamps `held`, drops a record failing `checkRecord` and a repeated id; test with `"held":"asleep"`, `"constructor"`, urgency 7 |
+| 6 | Re-keying breaks the link to notifications the server still tracks after a reload with `keepOnReload` | fixed: `parse(…, keep)`; records whose id the server tracks at load keep it. P-23: a reload happens only with `APTUS_DEV` (file watching), a normal start is a new process with nothing tracked, so `keep` is empty there |
+| 7 | The Audio guard was a tautology once `testDouble` = `Paths.test` | fixed: a write is refused while the PipeWire backend exists under APTUS_TEST (`_b`), and the backend appearing there is logged |
+| 8 | `checkSlots` only counted | fixed: every candidate exactly once, each slot on its own side; tests |
+| 9 | A critical progress notification had priority 0, so its fallback toast lost priority 2 | fixed: priority 2 exactly for critical, whatever it shows (`decide` too, phase 7) |
+| 10 | The suite is red at the phase-6 commit (the behaviour cases fail on the stubs) | noted here: from phase 6 until the phase-7 commit `tests/run` is red by design (stubs keep their `throw`); the behaviour cases came in phase 6 because the checks were run against the probe with them (a check that refuses good input shows there). Keeping the skips instead: rejected for that reason |
+| 11 | `HELD_WHILE[x] !== undefined` accepts "constructor" | fixed: `isHoldReason` (own keys only) |
+| 12 | `systemToast` accepted a missing title | fixed: a non-empty string |
+| 13 | `checkStack` without list checks; apps not bound by count; a test fixture with no apps | fixed: lists, 1 ≤ apps ≤ count; fixture fixed |
+| 14 | `pillMenu` took a negative id for special; named workspaces have negative ids (−1337 down) | fixed: `special` alone; `workspaceRecords` tells special by the name (`special`, `special:…`); tests |
+| 15 | No postconditions for `dropLayer` and `nextLayers` | fixed: `dropLayer` only drops a leaving layer; `checkNext` (one current layer with the view's key, none at rest/hidden, the serial never back) |
+| 16 | Brightness compared the sysfs root with "/sys" only | fixed: under APTUS_TEST the tree must lie inside HOME (the Paths rule); the e2e fake hardware moves into the test HOME |
+| 17 | `appsOf` re-checked the focus order per workspace | fixed: `workspaceRecords` checks it once |
+| 18 | The `dropLayer` refusal test tripped the wrong check | fixed: one current layer, refused because it is current |
+
+**Checked.** qmllint 146 files, 0 warnings; the 7 invariant tests pass against the stubs; the
+behaviour cases fail with "not implemented" (finding 10).
+
+### Phase 7 · implementation (2026-11-10/11)
+
+**How.** The probe's code (`s3-probe`, 3fc86e6) was brought over file by file onto phase 6: the
+JS libraries keep their phase-6 checks and gain the postconditions, the QML keeps the skeleton's
+documentation and the phase-6 guards, every `TODO(phase)` is resolved (none left; the remaining
+TODOs name their stage, e.g. `TODO(S8)` for the quiet-bar reveal). Then the stage was run in the
+nested session until every acceptance row of the brief held, fixing what that showed:
+- **Notch.** The expiry timer was stopped by an older `_expire` call (an event after an OSD
+  stayed); the held summary was posted inside a SurfaceManager apply and lost; the hover card did
+  not collapse (SurfaceManager applies the notch and the passive top one after the other, so
+  `view` passed through "rest" and `_sync` cleared the stored card): the hover card is now derived
+  from the MonitorState (a `card:` notch without `pinned`), the bulge and both compact slots are
+  one hover area (`_pointerIn`), and `viewOf` takes only the monitor state (its hover and
+  active-monitor arguments were unused and made `view` depend on fields `_sync` writes). An OSD no
+  longer covers a toast whose reply field is open (`_replyEntry`; typing would lose the field),
+  and the reply field takes the button row instead of growing the bulge below it.
+- **Hypr.** The layout OSD only for a keyboard's own layout change (`_layouts` per keyboard;
+  Hyprland's `error` for an unnamed keymap ignored): wtype's virtual keyboard showed "error", then
+  the real layout. Malformed and empty events (no focused window) are ignored, titles are patched
+  from `windowtitlev2`, the rebuild is coalesced (S1 hand-off).
+- **Frame and bulge** (S1 hand-offs): the shadow blurs only the bodies' bounding box plus the blur
+  radius; `bulge.js` draws from one normalised set (`framePathOf`, `bodiesPathOf`), `Bulge.qml`
+  takes an optional `shape`, and Frame normalises once per change for its three Bulges and the
+  shadow box (`shape`, `shadowShape`).
+- **Idle.** A status item's tooltip text follows the item only while hovered (`_liveTip`/`_tip`):
+  a hidden tooltip label still redrew the layer on every NetworkManager strength signal (~6 s) and
+  battery-time change.
+- **Tray.** Checked with a real StatusNotifierItem (`tests/e2e/fake_sni.py`, nested bus only,
+  DBusMenu with a separator and a submenu): click activates, right click shows the DBusMenu as an
+  aptus menu, a row triggers its event, submenus open (they come with the full layout),
+  NeedsAttention draws the dot. A tooltip stayed over an open menu (under the menu's catcher the
+  hover state is not updated): bar and notch tooltips hide while a menu is open on their monitor
+  (`_menuOpen`, WorkspacePill `menuOpen`); the tray's submenu openers are freed at the next open
+  (`_subOpeners`).
+- **Look** (screenshots at 1920 × 1080, compared with bar.md §2 and notch.md): the rest date in
+  `micro` / `ink.meta` (notch.md §3); the keyboard-light OSD marks the current state's dot instead
+  of filling up to it (the payload was already state-shaped; levels.js comment fixed); the media
+  card's play/pause is the 36 px round primary button; the compact cover (18 px, radius 4) and the
+  card cover (88 px, radius 10) checked with a player that has art.
+- **Assets.** `shell/assets/sounds/chime.oga`: a soft two-tone chime (A5, E6 after 120 ms, a faint
+  A6), 1.5 s, mono 48 kHz Vorbis, peak −6 dBFS, 8 KB, made with sox from sine tones; for S8's
+  timers and focus (`timers.sound`, `focus.sound`).
+- **Tests.** The e2e suites replace the skips: `test_s3_bar` (8: the strip follows workspaces,
+  fullscreen leave with a critical toast above, the hot edge, a pinned card's ways out, the hover
+  card, the tray, privacy empty under test, screenshots), `test_s3_keys` (9: volume, mute and mic,
+  brightness on the fake backlight, keyboard light, Caps Lock, media keys on the fake player,
+  "Nothing to play", an event after an OSD leaves on time, no OSD while the Deck or a mode is open),
+  `test_s3_notifications` (12: aptus owns the name, normal toast and history, low to Today only,
+  critical without timeout, replaces-id, a burst as one stack toast, Ipc `notch toast`, held under
+  fullscreen then the summary (planned as "under DND"; `Dnd` stays S8's stub with no way to
+  switch it on, so DND holding is covered by `tst_notifylogic` only), sender close, a toast's ways out, the toast queued behind Spotlight,
+  the inline reply: Esc keeps the toast, Enter sends `NotificationReplied`),
+  `test_s3_monitors` (1: a headless output added and removed with a toast and a card open),
+  `test_s3_budgets` (2), `test_s3_zlog` (1: no shell-log line above info after all others).
+  Helpers: `fakehw.py` (sysfs tree and `brightnessctl` fake in the test HOME), `fake_mpris.py`
+  (`--art=`), `fake_sni.py`, `s3bus.py` (nested-bus helpers, `FakePlayer`, `FakeTray`, pixel grabs).
+
+**Spec, same stage** (shared commits): notch.md §6 (the reply field in the button row, not
+covered by an OSD) and §11 (layout changes per keyboard), 05 §2 (the reply field takes the
+keyboard) and §6 (Caps Lock and layout source), 09 §7 (the Caps Lock bind), settings-schema and
+10-settings (`bar.clock.showDate` is after the time), bar.md (`activespecialv2`, camera), today.md
+(image-data, archive ids), 07 (Brightness sources).
+
+**Checked:**
+- `tests/run` (2026-11-11, after the reboots): pytest 97 passed; qmltestrunner 241 passed (S3:
+  notifylogic 17, notchlogic 10, hyprmodel 10, barlogic 10, levels 7, statuslogic 5, medialogic 5,
+  glyphs 1; bulge 8 with the new shared-set case); qmllint 146 files, 0 warnings.
+- `pytest tests/e2e` (45 tests: S1 12, S3 33) in a nested Hyprland. The last full run (2026-11-10)
+  was 41/42, the one failure the idle-wakeup budget (3.33/s, fixed below); after the fixes the
+  suites ran again on the changed code: notifications + keys 21/21, bar 8/8 (with the tray test,
+  after the tooltip change), the budget re-measured on whole minutes. The final full run on the
+  phase-7 commit could not be made: after the two reboots on 2026-11-11 the machine is in the
+  Umbriel session, and the harness runs only inside Hyprland (it refuses without the real
+  session's signature, by design). Open item below.
+- Screenshots (rest dark and light, toast with actions, light toast, OSD volume and keyboard
+  light, event, compact media with cover, media card, critical toast over a fullscreen window)
+  looked at and compared; they were in the session scratchpad, which the reboot wiped, so none
+  are kept under `tests/e2e/shots/` yet (`APTUS_SHOTS=<dir>` keeps the next run's).
+- P-17 pass, P-20 pass (design/probes.md, 664e61d). `hyprctl configerrors` empty (test_s1) and no
+  shell-log line above info (test_s3_zlog; the one known line, `qt.qpa.services … Failed to
+  register with host portal`, is the nested session's portal notice) in the last full run.
+
+**Budgets** (07 §12, nested session, shell process):
+
+| Budget | Measured | Limit |
+|---|---|---|
+| RSS at rest | 251 MB | ≤ 260 MB |
+| CPU at rest (60 s) | 0.20 % | < 0.3 % |
+| Main-thread wakeups at rest (whole minutes, one clock roll each) | 1.62/s and 1.55/s (before the tooltip fix 2.22 and 3.10/s) | ≤ 2/s |
+| CPU while animating (5 toasts, 20 volume steps) | 21.0 % of one core | < 50 % (frame-time stand-in; GPU side is P-21) |
+
+At rest a fresh session wakes the main thread ~0.7 times a second; the clock's minute roll (M-34)
+costs ~70–90 switches with the threaded render loop, ~46 with `QSG_RENDER_LOOP=basic`. The phase-5
+RSS (268 MB) came down without a baseline run against the stubs; within budget, so not repeated.
+
+**Found in phase 7** (structure the earlier phases did not have; each documented where it lives):
+Notch `_replyEntry`, `_pointerIn`, `_hoverCard` (now derived, read-only), `viewOf(state)` without
+its two other arguments; Hypr `_layouts`; Frame `shape`, `shadowShape`, `_specs(shadowOnly)`;
+`Bulge.shape`, `bulge.js` `framePathOf`/`bodiesPathOf`; StatusItem `_liveTip`/`_tip`; TrayItem
+`_subOpeners`; `_menuOpen` in TrayItem, Tray, ActiveWindow, WorkspaceStrip, RestGroup, and
+WorkspacePill `menuOpen`; e2e `FakeTray`, `fake_sni.py`, `vpointer.py rclick`, `FakePlayer(art=)`.
+
+**Shared commits of phase 7:** 178447f Ipc (S3 services in `shell state`), 213a3d7 Shortcuts and
+cc32429 binds.lua (Caps Lock OSD), d652b73 test_binds_lua (function binds), 1257766 Button
+(round), 2b3ce83 shell.qml (Brightness eager), eeea0f9 MonitorShell (notch keyboard, hide, quiet,
+narrow), d8919fe notch.md (Caps Lock source), 1efbe02 07 (Brightness sources), 4a500b0 bar.md
+(`activespecialv2`, camera), aea6740 today.md (image-data, archive ids), b6d1b40 rules.js (pinned
+card timeout in the Notch), 184085b nested.py (fake hardware), 4f528fd bulge.js + Bulge.qml (one
+normalise), 3a3fbc7 09 §7, a589dd8 05, af64e27 settings-schema, 4fd0972 10-settings, 2a074bb
+notch.md (reply field, layout), e1cf6f3 vpointer.py (right button).
+
+**Note.** One `hyprctl monitors -j` (read only) ran without `-i` against the real session while
+looking for the nested output; nothing was changed. Every other call named the nested instance.
+
+**Open:**
+- The final full `pytest tests/e2e` on the phase-7 commit and the kept screenshots, in a Hyprland
+  session: `APTUS_SHOTS=tests/e2e/shots /home/lenno/Code/Projekte/aptus/.venv/bin/python -m pytest
+  -p no:anyio tests/e2e -q` from the worktree.
+- Shell-wide: the basic render loop would halve the clock roll's cost (not S3's decision); the
+  shared `Tooltip` redraws while hidden when its text changes (S3 freezes its texts; a central fix
+  belongs to the components).
+- Tray apps that load DBusMenu children lazily may show an empty submenu (Quickshell's
+  `QsMenuOpener` reads the layout when the menu opens; it also sends "opened" at start).
+- The lock-screen half of the hardware keys is checked again in S6; a real tray app on the laptop
+  (only the fake item was tested) in the S3 hands-on round.
+
+### Review of phase 7 (fresh reviewer, diff `1369d8a..4f531c6` without PHASES.md; fixed in "phase 7: review fixes")
+
+The reviewer ran `tests/run` (green: pytest 97, qmltestrunner 241, qmllint 146 files 0 warnings)
+and read the diff against the goal, the phase-7 rules and the spec. 32 findings: 1–28 and 30
+fixed (9, 24, 25 and 30 in part, the rest of each rejected with its reason; M-31b of 23 deferred
+to S8), 29 rejected, 31 in part (its e2e cases come with the final e2e run), 32 agreed.
+
+| # | Finding | Response |
+|---|---|---|
+| 1 | `onPassiveChanged` ran `_expire` inside a SurfaceManager apply; a dismissal there was overwritten by the rest of the apply | fixed: deferred with `Qt.callLater`, like `_sync` |
+| 2 | A replace or a stack join (SurfaceManager.update) did not restart the toast countdown (notch.md §6 rule 3); a stack toast could vanish just after a join | fixed: `_countdownPayloads` (entry id → payload the countdown started for); a new payload object restarts it (checked that QML keeps the payload's identity through `property var` and SurfaceManager's two-level compare) |
+| 3 | `_countdowns` kept entries of toasts closed through Notifications | fixed: each tick keeps only entries still in the monitor's passive list |
+| 4 | Battery warn and crit toasts shared the key "battery": the warn toast replaced the crit one (priority 0, 9 s) | fixed: keys `battery-low` / `battery-crit`; the crit toast also counts as warned |
+| 5 | `_urgentToasted` never cleared; `urgent` never pruned of closed windows | fixed: a workspace leaves `_urgentToasted` once shown or without an urgent window; `_rebuildWindows` drops closed windows from `urgent` |
+| 6 | `_cacheImage` copied any path a sender names (`/dev/zero`, a FIFO, huge files), copied again on every replace, never deleted copies | fixed: only a regular file of at most `IMAGE_MAX_BYTES` (8 MB), `timeout 5 cp`; `_setHistory` deletes the copy of a record that leaves (a replace, trim, removal) unless another record uses it, and only files directly in the cache (`_inCache`: a sender's `…/notif/../x` is neither kept nor deleted); copies older than `historyDays` go at start |
+| 7 | Records trimmed from the history kept their live Notification | fixed: `_setHistory` dismisses and drops the live object of every record that leaves |
+| 8 | `MediaActivity._pausedLong` not armed when created with a player already paused | fixed: `_armPaused()` also at `Component.onCompleted` |
+| 9 | MediaCard `_position` stale after a player/track change while paused; `onCanceled` not handled; `interval: 1000` literal | fixed: `_readPosition()` on player, track (`postTrackChanged`), play state and visibility; `onCanceled` ends the drag. The literal: rejected, see 25 |
+| 10 | `Qt.callLater(_noteWidth, …)` from both slots kept only the last call's arguments | fixed: widths collect in `_pendingWidths`, one `_flushWidths` later |
+| 11 | Wheel handlers step once per event (touchpad, high-resolution, TrackPoint scrolling jump) | fixed: `bar.js wheelSteps` (one step per 120 of `angleDelta`, the rest carried, dropped when the direction turns; `tst_barlogic`); status items take every step, pills, strip and title at most one per event (Hyprland's state lags a second one) |
+| 12 | `pillRects` and the pill menu anchor missed the pill box's x | fixed: rects add `content` and `pillBox`; the menu anchor maps from the pill |
+| 13 | A pinned card under a toast kept the catcher, the whole-monitor mask and the keyboard | fixed: the Notch's `_pinnedShown` (catcher and mask only while the card shows) and rules.js `keyboard()` (shared, `tst_rules`) |
+| 14 | A replace of a stacked notification joined the stack again (count + 1) | fixed: `_stackIds`; a replace of a member updates the stack toast's payload |
+| 15 | The pinned-card catcher swallowed bar clicks | fixed: a press on the bar band closes the card and is not accepted, so the bar below gets it |
+| 16 | Compact activities stayed while Overview or Capture is open (notch.md §9) | fixed: `_slots` empty then |
+| 17 | The recording compact could not show above a fullscreen window (the whole centre row slid out) | fixed: each part of the centre group slides and fades on its own, a slot showing recording stays and keeps input; where it sits under a bulge is `TODO(S9)` |
+| 18 | No in-place content crossfade; `NotchLayer.plain` was dead | fixed: the Toast crossfades its content in place (old out over `morphOutMs`, new in over `fade`; M-06 not replayed); `plain` and Toast `entrance` removed |
+| 19 | The rest menu did not match notch.md §3 | fixed: Do not disturb ▸ (For 1 hour, Until tomorrow 08:00 as in deck.md, Until I turn it off; Turn off while on), Start focus ▸ (25, 50, 90 min), Open calendar settings (Settings page `today`). Found on the way: the toast menu opened the Settings page `notifications`, which does not exist; now `notch` (where `notifications.*` live) |
+| 20 | Pills: no `raised` fill for used inactive pills, empty pills in `ink.sec` (bar.md §3) | fixed: `raised` fill, `ink.faint` for empty pills, "+n" in `ink.meta` |
+| 21 | Type and ink deviations (toast and media titles `bodyStrong`, artist `ink.sec`, window glyphs `faint`); body 1 line with buttons vs "2 lines"; media title 1 line vs "two lines" | fixed: titles `title`, artist and window glyphs `ink.meta`. The lines: the 72 toast cut a second body line off (app line + title + one body line fill it), so one body line everywhere (`toast.bodyMaxLines` 1, shared) and notch.md §6/§12 say so (shared); the 132 media card has no room for a second title line |
+| 22 | Tray overflow rows have no icons (bar.md §5) | fixed: Menu rows take an `icon` (shared, AppIcon in the lead place); the overflow passes the item's icon |
+| 23 | M-35 dot not on `spring.snappy`; M-03 icon literal easing, no crossfade; M-31b instant toggles | fixed: M-35 `SnappySpring`; M-03 the old icon fades out while the new fades in from `title.iconScaleFrom` on the standard curve. M-31b: deferred to S8 (`TODO(S8)` in Bar.qml): `Focus.quietBar` is S8's and cannot be switched on before it, and the hover reveal S8 builds plays the same fade and collapse back |
+| 24 | Hover/click cards open on whichever monitor's slot | fixed for hover (only on the active monitor); click: Hyprland makes the clicked monitor the active one (`misc:mouse_move_focuses_monitor`) |
+| 25 | Literals: MediaCard 1000, RestGroup + 20 ms, StatusItem `* 3 / 4`, `/ 2` | fixed: `bar.statusOverlaySize`, `bar.statusExtraSize` (shared). Rejected: the 1000 ms is how often a position is re-read from MPRIS and the 20 ms keeps the minute timer from firing just before the boundary; neither is a design duration (the services' timers are literal for the same reason) |
+| 26 | `pragma ComponentBehavior: Bound` missing in MediaActivity, ProgressActivity | fixed |
+| 27 | CompactSlot `hoverLeft` and `leaveTimer` dead | fixed: removed |
+| 28 | `markRead` guard never held (always a new array) | fixed: `N.markRead` returns the same array when nothing changes (`tst_notifylogic`) |
+| 29 | `Notifications.available` always true | rejected: `available` gates the IPC path (`notch toast`, the policy, the history), which works without the bus name; owning the name is `serverActive` (P-20), with a warning in the log when another server has it |
+| 30 | Volume-up above the maximum lowered it; unplugging at ≤ 15 % gave no warning; Brightness picks the first backlight; Frame normalises twice | fixed: `levels.step` never steps against its direction and `stepVolume` leaves the level alone then (`tst_levels`); unplugging checks the battery at once. Rejected: since Linux 6.1 the kernel registers one backlight per panel (acpi_video only where native does not work), this machine has `intel_backlight` only, and a type preference would be a guess; Frame normalises two different sets once each (all bulges; those with a shadow), and merging depends on neighbours, so the shadow set cannot be filtered from the full one |
+| 31 | Missing coverage (progress, urgent, layout OSD, battery, quiet, wheel, ✕/menu, tray overflow, countdown restart); weak burst and monitors tests; privacy test reads PipeWire | in part: unit tests for the pure parts (wheel steps, step direction, markRead, keyboard under a toast). The e2e cases (progress activity from a `value` hint, urgent toast and its repeat, layout OSD, battery toasts, countdown restart on replace, burst count and apps, the monitors test's fixed 1–5 / 6–10 split, ✕ / middle click / toast menu, tray overflow, wheel) are written together with the final e2e run: none can run outside Hyprland now, and an unrun e2e test is not added. The privacy test: rejected, the brief allows reading the real PipeWire state (`pw-dump` only reads) |
+| 32 | The final full e2e run and the screenshots are missing | agreed: a blocker before the wave merges (report) |
+
+**Checked:** `tests/run` green after the fixes: pytest 97; qmltestrunner 242 (new cases in
+barlogic, levels, notifylogic, rules); qmllint 146 files, 0 warnings. Not checked on screen: the
+machine is in the Umbriel session (finding 32), so every fix that changes what the notch and bar
+draw (the in-place crossfade, the recording slot under `hide`, the catcher on the bar band, pills,
+titles, the rest menu, the M-03 icon) waits for the final e2e run and its screenshots.
+
+**New since phase 7** (found in review): Notch `_countdownPayloads`, `_pinnedShown`,
+`_pendingWidths` + `_flushWidths`; Toast `_p`, `_swap`, `_ready` (and no `entrance`); NotchLayer
+without `plain`; Notifications `_setHistory`, `_inCache`, `_stackIds`, `N.IMAGE_MAX_BYTES`;
+MediaActivity `_armPaused`; MediaCard `_readPosition`; `bar.js wheelSteps`, `WHEEL_UNIT`;
+`_wheelCarry` in StatusItem, WorkspacePill, WorkspaceStrip, ActiveWindow; ActiveWindow `_oldIcon`,
+`_oldAppName`, `_iconSwap`; Menu rows' `icon`; tokens `bar.statusOverlaySize`,
+`bar.statusExtraSize`. CompactSlot loses `hoverLeft`.
+
+**Shared commits of the review fixes:** 4621544 rules.js (keyboard under a covered card), 6dff347
+tokens.json (one body line, status glyph sizes), 6300ab8 Menu.qml (row icons), 59d4cfd notch.md
+(one body line, one title line).

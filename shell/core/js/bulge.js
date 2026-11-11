@@ -54,7 +54,11 @@ function normalise(bulges, width, edge) {
 // SVG path data of the frame band with the bulges: outer rectangle, then the inner outline.
 // w × h: the monitor; edge: side/bottom thickness; top: the bar height; r: inner corner radius.
 function framePath(w, h, edge, top, r, bulges) {
-    var n = normalise(bulges, w, edge)
+    return framePathOf(w, h, edge, top, r, normalise(bulges, w, edge))
+}
+// framePath of bulges already normalised (normalise(bulges, w, edge)), so one normalise per
+// change can serve several paths.
+function framePathOf(w, h, edge, top, r, n) {
     var t = top + (n.full ? n.full.height : 0)
     var L = edge, R = w - edge, B = h - edge
     r = Math.max(0, Math.min(r, (R - L) / 2, (B - t) / 2))
@@ -113,7 +117,10 @@ function framePath(w, h, edge, top, r, bulges) {
 }
 // SVG path data of the bulge bodies alone (shadow source).
 function bodiesPath(w, edge, top, bulges) {
-    var n = normalise(bulges, w, edge)
+    return bodiesPathOf(w, edge, top, normalise(bulges, w, edge))
+}
+// bodiesPath of bulges already normalised.
+function bodiesPathOf(w, edge, top, n) {
     var p = []
     var t = top
     if (n.full)

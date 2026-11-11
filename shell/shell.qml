@@ -112,7 +112,7 @@ ShellRoot {
     Component.onCompleted: {
         // Step 3: these services start eagerly (singletons are lazy); Notifications must own the
         // bus name before apps send.
-        for (const s of [Hypr, Notifications, Idle, Session, Wallpaper]) Log.debug("shell", "started " + s);
+        for (const s of [Hypr, Notifications, Idle, Session, Wallpaper, Brightness]) Log.debug("shell", "started " + s);
         SurfaceManager.syncMonitors(Hypr.monitors.map(m => m.name));
         _completed = true;
         _startDecide();

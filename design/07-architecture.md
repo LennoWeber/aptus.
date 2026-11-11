@@ -208,7 +208,7 @@ Singletons in `shell/services/`. Each exposes properties (bindable) and methods;
 | `Progress` | progress activities (downloads, copies) from notification hints | `Notifications` | events |
 | `Apps` | desktop entries, icons, running-app lookup | `DesktopEntries` | on change |
 | `Audio` | sinks, sources, streams, volumes, mute | `Quickshell.Services.Pipewire` | events |
-| `Brightness` | eDP-1 backlight, keyboard LED if present | `/sys/class/backlight/*` (FileView watch), `brightnessctl` to write | events |
+| `Brightness` | eDP-1 backlight, keyboard LED if present | `/sys/class/backlight/*` and `/sys/class/leds/*::kbd_backlight` (`$APTUS_SYSFS` instead of `/sys`; under `APTUS_TEST` only inside the test HOME; sysfs has no inotify, so the files are read at start and after every own write), `brightnessctl` to write (under `APTUS_TEST` only a test tree's `aptus_test…` devices) | after writes |
 | `NightLight` | temperature, schedule, sun times | `hyprsunset` via `hyprctl hyprsunset`; sunrise/sunset computed locally from `weather.location` (NOAA formula) | minute tick while scheduled |
 | `Network` | devices, Wi-Fi list, connect, VPN | `Quickshell.Networking` (P-13), `nmcli` | events |
 | `Bt` | adapter, devices, pairing | `Quickshell.Bluetooth` | events |

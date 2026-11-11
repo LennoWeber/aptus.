@@ -235,3 +235,40 @@ Nested Hyprland 0.57.1, temporary HOME, the aptus block loaded:
 | `tests/e2e/test_s2.py::test_logout`: accent changed through `aptus msg theme accent`, Theme.qml runs `aptus-theme apply` | the hook's chunk (`dofile` of generated.lua, then `hl.config`) logs `reload hyprland: applied`; the border equals generated.lua's new accent; `configerrors` stays empty |
 
 **Path:** as designed (08 §7).
+
+## P-17 · Material Symbols FILL/wght animated through `font.variableAxes` — **pass** (2026-11-09, nested)
+
+A probe shell (`qs -p`, inside the nested session) with 30 glyphs of the bundled
+`MaterialSymbolsRounded.ttf` (40 px) in one Overlay layer; each glyph animates FILL 0 ↔ 1 and wght
+400 ↔ 500 every 140 ms through `font.variableAxes`, then the same 30 glyphs as the fallback (two
+`Text`s, FILL 0 and FILL 1, cross-faded). A `FrameAnimation` records frame intervals; 6 s each.
+
+| Mode | Frames | Mean | p50 | p95 | p99 | Max | > 20 ms |
+|---|---|---|---|---|---|---|---|
+| axes (`font.variableAxes`) | 330 | 16.66 ms | 17 | 17 | 20 | 26 | 3 |
+| cross-fade (fallback) | 329 | 16.67 ms | 17 | 17 | 18 | 19 | 0 |
+
+Three screenshots 70 ms apart differ in ink (4254 / 3936 / 4241 grey-sum units over the glyph
+rows): the axes really change the rendered outlines, not just the opacity. 30 glyphs animating at
+once is far more than the shell ever does (one glyph per state change).
+
+**Path:** `Glyph.qml` keeps animating FILL and wght through `font.variableAxes` (03 §5, M-03); the
+cross-fade fallback is not needed. (A probe note: inside a `Text`, `font` names the Text's own font
+property, so a `FontLoader` must not have the id `font`.)
+
+## P-20 · aptus owns `org.freedesktop.Notifications` — **pass** (2026-11-09, nested)
+
+- Activatable services on this machine (read only): only
+  `/usr/share/dbus-1/services/org.kde.plasma.Notifications.service` (`Exec=plasma_waitforname`,
+  starts no server for the freedesktop name); mako, dunst and swaync are not installed. On the
+  real session bus the name belongs to Noctalia (Umbriel); the aptus session never runs Noctalia.
+- Nested session (private bus of `dbus-run-session`): with the shell running,
+  `GetServerInformation` answers `('quickshell', 'quickshell', '', '1.2')`; `notify-send -a Kitty
+  -A ok=OK -A no=Later 'Build finished' '<b>…</b>'` shows the toast with markup and two buttons;
+  `-u critical` stays until dismissed and shows over a fullscreen window; `CloseNotification`
+  from the sender removes it.
+- `NotificationServer` has no "registered" signal, so `Notifications.serverActive` comes from a
+  one-shot `GetServerInformation` call 1.5 s after start (true when it names Quickshell; a warning
+  names the other server otherwise).
+
+**Path:** no doctor check is needed (it was the fallback if another server could take the name).

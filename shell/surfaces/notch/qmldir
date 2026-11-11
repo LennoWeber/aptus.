@@ -2,3 +2,14 @@ module qs.surfaces.notch
 Notch 1.0 Notch.qml
 MediaActivity 1.0 MediaActivity.qml
 ProgressActivity 1.0 ProgressActivity.qml
+RestGroup 1.0 RestGroup.qml
+CompactSlot 1.0 CompactSlot.qml
+NotchLayer 1.0 NotchLayer.qml
+Toast 1.0 Toast.qml
+Osd 1.0 Osd.qml
+EventLine 1.0 EventLine.qml
+ActivityCard 1.0 ActivityCard.qml
+MediaCompact 1.0 MediaCompact.qml
+MediaCard 1.0 MediaCard.qml
+ProgressCompact 1.0 ProgressCompact.qml
+ProgressCard 1.0 ProgressCard.qml

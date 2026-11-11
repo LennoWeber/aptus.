@@ -4,6 +4,7 @@ import QtQuick
 import qs.core
 import qs.components
 import QtQuick.Effects
+import "../../core/js/bulge.js" as BJ
 
 Item {
     id: root
@@ -33,7 +34,39 @@ Item {
     readonly property real edgeNow: Tokens.frameEdge * introProgress * (1 - hide)
     readonly property real barNow: Tokens.barHeight * introProgress * (1 - hide)
 
-    opacity: 1 - hide
+    // The open bulges normalised once per change (bulge.js), shared by the three Bulges and the
+    // shadow box: `shape` all shown bulges (the frame), `shadowShape` those casting a shadow.
+    readonly property var shape: BJ.normalise(_specs(false), width, edgeNow)
+    readonly property var shadowShape: BJ.normalise(_specs(true), width, edgeNow)
+    // The shown bulges as plain objects (reading every field keeps the bindings live).
+    function _specs(shadowOnly: bool): var {
+        const out = [];
+        for (let i = 0; i < bulges.length; i++) {
+            const b = bulges[i];
+            if (b && b.shown && (!shadowOnly || b.shadow))
+                out.push({ dock: b.dock, x: b.x, width: b.width, height: b.height, cove: b.cove, radius: b.radius });
+        }
+        return out;
+    }
+    // The area the drawer shadow is blurred over: the shadow-casting bodies' bounding box plus
+    // the blur radius (monitor-local, clamped to the monitor), empty when nothing casts one. The
+    // blur's texture covers this box instead of the whole monitor (07 §12).
+    readonly property rect shadowBox: {
+        const n = shadowShape;
+        const list = (n.full ? [n.full] : []).concat(n.bulges);
+        if (list.length === 0) return Qt.rect(0, 0, 0, 0);
+        let x0 = width, x1 = 0, deepest = 0;
+        for (const b of list) { x0 = Math.min(x0, b.x); x1 = Math.max(x1, b.x + b.width); }
+        for (const b of n.bulges) deepest = Math.max(deepest, b.height);
+        const pad = Tokens.shadowBlur;
+        const bottom = barNow + (n.full ? n.full.height : 0) + deepest + pad;
+        const x = Math.max(0, x0 - pad), y = Math.max(0, barNow - pad);
+        return Qt.rect(x, y, Math.min(width, x1 + pad) - x, Math.min(height, bottom) - y);
+    }
+
+    // No whole-frame opacity (it would take the notch's bulge, and with it a critical toast or OSD
+    // above a fullscreen window, out too): the frame fades with `hide` while the shadow-casting
+    // bodies (the notch casts one while hidden, Notch.bulge) cross-fade in on their own (M-31).
 
     // The drawer shadow: the open bulge bodies in the shadow colour, blurred and offset (03 §6).
     // (A blurred copy instead of MultiEffect's shadow, which would also draw the bodies themselves
@@ -46,28 +79,51 @@ Item {
         edge: root.edgeNow
         barHeight: root.barNow
         innerRadius: Tokens.frameInnerRadius
-        bulges: root.bulges
+        shape: root.shadowShape
         bodiesOnly: true
         colour: Tokens.shadow
     }
+    // The bodies' box only (shadowBox, padded for the blur), not the whole monitor.
+    ShaderEffectSource {
+        id: shadowSource
+        visible: false
+        sourceItem: bodies
+        sourceRect: root.shadowBox
+        width: root.shadowBox.width
+        height: root.shadowBox.height
+    }
     MultiEffect {
-        source: bodies
-        width: bodies.width
-        height: bodies.height
-        y: Tokens.shadowOffsetY
-        visible: bodies._specs.length > 0
+        source: shadowSource
+        x: root.shadowBox.x
+        y: root.shadowBox.y + Tokens.shadowOffsetY
+        width: root.shadowBox.width
+        height: root.shadowBox.height
+        visible: root.shadowBox.width > 0
         blurEnabled: true
         blur: 1
         blurMax: Tokens.shadowBlur
-        autoPaddingEnabled: true
     }
     Bulge {
+        visible: root.hide > 0
+        opacity: root.hide
         frameWidth: root.width
         frameHeight: root.height
         edge: root.edgeNow
         barHeight: root.barNow
         innerRadius: Tokens.frameInnerRadius
-        bulges: root.bulges
+        shape: root.shadowShape
+        bodiesOnly: true
+        colour: Tokens.alpha(Tokens.ground, Tokens.groundAlpha)
+    }
+    Bulge {
+        visible: root.hide < 1
+        opacity: 1 - root.hide
+        frameWidth: root.width
+        frameHeight: root.height
+        edge: root.edgeNow
+        barHeight: root.barNow
+        innerRadius: Tokens.frameInnerRadius
+        shape: root.shape
         colour: Tokens.alpha(Tokens.ground, Tokens.groundAlpha)
         lineColour: Tokens.frameLine
         lineWidth: Tokens.frameLineWidth

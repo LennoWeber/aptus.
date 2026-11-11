@@ -94,4 +94,15 @@ TestCase {
         compare(b, "M 300 32 L 700 32 L 700 114 A 18 18 0 0 1 682 132 L 318 132 A 18 18 0 0 1 300 114 Z")
         compare(Lib.bodiesPath(1000, 6, 32, []), "")
     }
+
+    // One normalise per change serves several paths: the *Of variants on a normalised set draw
+    // what the plain ones draw.
+    function test_paths_of_a_normalised_set() {
+        var set = [{ dock: "topRight", width: 300, height: 200, cove: 14, radius: 18 },
+                   { dock: "top", x: 300, width: 400, height: 100, cove: 14, radius: 18 },
+                   { dock: "topFull", height: 40 }]
+        var n = Lib.normalise(set, 1000, 6)
+        compare(Lib.framePathOf(1000, 600, 6, 32, 18, n), Lib.framePath(1000, 600, 6, 32, 18, set))
+        compare(Lib.bodiesPathOf(1000, 6, 32, n), Lib.bodiesPath(1000, 6, 32, set))
+    }
 }

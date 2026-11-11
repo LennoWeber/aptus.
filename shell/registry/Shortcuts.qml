@@ -107,7 +107,9 @@ Scope {
         "kbd-toggle": () => Brightness.kbdToggle(),
         "media-toggle": () => Media.toggle(),
         "media-next": () => Media.next(),
-        "media-prev": () => Media.previous()
+        "media-prev": () => Media.previous(),
+        "capslock-on": () => Hypr.showCapsLock(true),
+        "capslock-off": () => Hypr.showCapsLock(false)
     })
 
     // qmllint disable import unresolved-type required
