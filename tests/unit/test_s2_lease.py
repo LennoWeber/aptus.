@@ -178,6 +178,63 @@ def test_crash_mid_update_is_still_aptus_paint(p, test_home, hypr) -> None:
     assert not rel.conflicts and baseline(p, files) == base
 
 
+def test_failed_updates_are_no_conflict_at_release(p, test_home, hypr, monkeypatch) -> None:
+    """Wave-2 review 1: two updates whose writes fail leave the slot with the paint of the take;
+    release restores it without reporting a conflict."""
+    files = setup_world(p, test_home)
+    base = baseline(p, files)
+    take(p, hypr)
+    from aptus.lease.kinds import file as file_kind
+    real_write = file_kind.write
+
+    def boom(paths, rec, spec):
+        raise OSError("disk full")
+    monkeypatch.setattr(file_kind, "write", boom)
+    for n, text in ((2, b"gen 2\n"), (3, b"gen 3\n")):
+        u = ops.update(p, [SlotSpec(id="gtk3.artifact", kind=SlotKind.FILE, target="gtk3",
+                                    path=files["gtk"], content=text)], n)
+        assert "disk full" in u.failed["gtk3.artifact"]
+    rec = journal.slot(journal.load(p), "gtk3.artifact")
+    assert rec.after == {"sha256": hashlib.sha256(b"@define-color accent_color #00ff00;\n").hexdigest()}
+    assert rec.after_prev is None
+    monkeypatch.setattr(file_kind, "write", real_write)
+    rel = ops.release(p)
+    assert not rel.conflicts and not rel.failed and baseline(p, files) == base
+
+
+def test_update_skips_a_slot_that_carries_the_paint(p, test_home, hypr, monkeypatch) -> None:
+    """Wave-2 review 7: an update with the paint the slot already carries writes nothing."""
+    setup_world(p, test_home)
+    take(p, hypr)
+    from aptus.lease.kinds import file as file_kind
+
+    def boom(paths, rec, spec):
+        raise AssertionError(f"{rec.id} written again")
+    for mod in (file_kind, ini, dconf):
+        monkeypatch.setattr(mod, "write", boom)
+    saved = p.lease_journal.stat().st_mtime_ns
+    u = ops.update(p, specs(p), 1)
+    assert not u.written and not u.failed
+    assert sorted(u.unchanged) == ["btop.artifact", "dconf.accent-color", "dconf.color-scheme",
+                                   "ghostty.artifact", "gtk3.artifact", "kde.colors"]
+    assert p.lease_journal.stat().st_mtime_ns == saved
+
+
+def test_update_with_a_mismatched_spec_fails_only_that_slot(p, test_home, hypr) -> None:
+    """Wave-2 review 8: a spec that does not match its journal slot is that slot's failure; the
+    other slots are written."""
+    files = setup_world(p, test_home)
+    take(p, hypr)
+    bad = SlotSpec(id="ghostty.artifact", kind=SlotKind.FILE, target="ghostty",
+                   path=p.config_home / "ghostty/themes/other", content=b"x\n")
+    good = SlotSpec(id="gtk3.artifact", kind=SlotKind.FILE, target="gtk3", path=files["gtk"],
+                    content=b"gen 2\n")
+    u = ops.update(p, [bad, good], 2)
+    assert "changes its kind, path" in u.failed["ghostty.artifact"]
+    assert u.written == ["gtk3.artifact"] and files["gtk"].read_bytes() == b"gen 2\n"
+    assert journal.load(p).theme_generation == 2
+
+
 def test_conflict_is_saved_and_before_restored(p, test_home, hypr) -> None:
     files = setup_world(p, test_home)
     base = baseline(p, files)

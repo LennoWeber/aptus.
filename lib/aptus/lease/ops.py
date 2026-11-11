@@ -41,6 +41,7 @@ class TakeReport:
 class UpdateReport:
     generation: int = 0
     written: list[str] = field(default_factory=list)
+    unchanged: list[str] = field(default_factory=list)   # carried this paint already: not written
     failed: dict[str, str] = field(default_factory=dict)  # slot id → why
 
 
@@ -216,10 +217,32 @@ def take(paths: Paths, env: Mapping[str, str], specs: Sequence[SlotSpec], who: O
     return report
 
 
+def _digest(paths: Paths, mod, rec: SlotRecord) -> dict | None:
+    """mod.digest, None when the slot cannot be read."""
+    try:
+        return mod.digest(paths, rec)
+    except Exception:  # noqa: BLE001 - an unreadable slot is just not known
+        return None
+
+
+def _settle(paths: Paths, mod, rec: SlotRecord) -> None:
+    """After a failed write: `after` is the paint the slot carries now (writes are atomic, so
+    mostly the previous one) and after_prev is cleared, so release never mistakes a later paint
+    for a conflict. When the slot cannot be read both stay: release accepts either."""
+    now = _digest(paths, mod, rec)
+    if now is None:
+        return
+    if now != rec.after and rec.after_prev is not None:   # the write did not land
+        rec.after = rec.after_prev
+    rec.after_prev = None
+
+
 def update(paths: Paths, specs: Sequence[SlotSpec], generation: int) -> UpdateReport:
     """02 §5.4: write the specs of slots this lease holds; `before` is never touched, `after_prev`
-    keeps the previous paint until the new one is in place. A slot not in the journal is
-    ignored (it is taken at the next session start). LeaseError when no lease is held."""
+    keeps the previous paint until the new one is in place. A slot that carries the planned paint
+    already is not written (`unchanged`); a slot not in the journal is ignored (it is taken at the
+    next session start). A spec that does not match its slot (invariants.check_update) and a
+    write that fails are failures of that slot only. LeaseError when no lease is held."""
     invariants.check_specs(paths, specs)
     report = UpdateReport(generation=generation)
     with lock(paths):
@@ -234,9 +257,17 @@ def update(paths: Paths, specs: Sequence[SlotSpec], generation: int) -> UpdateRe
             if rec is None or rec.status != SlotStatus.HELD or not rec.write or \
                     (spec.kind == SlotKind.DCONF and spec.value is None):
                 continue
-            invariants.check_update(spec, rec)
+            try:
+                invariants.check_update(spec, rec)
+            except invariants.InvariantError as e:
+                report.failed[spec.id] = f"InvariantError: {e}"
+                continue
             mod = kinds.module(rec.kind)
-            rec.after_prev, rec.after = rec.after, mod.planned(spec)
+            want = mod.planned(spec)
+            if want == rec.after and rec.after_prev is None and _digest(paths, mod, rec) == want:
+                report.unchanged.append(spec.id)
+                continue
+            rec.after_prev, rec.after = rec.after, want
             journal.save(paths, j)
             try:
                 rec.after = mod.write(paths, rec, spec)
@@ -244,9 +275,11 @@ def update(paths: Paths, specs: Sequence[SlotSpec], generation: int) -> UpdateRe
                 report.written.append(spec.id)
             except Exception as e:
                 report.failed[spec.id] = f"{type(e).__name__}: {e}"
+                _settle(paths, mod, rec)
             journal.save(paths, j)
-        j.theme_generation = generation
-        journal.save(paths, j)
+        if j.theme_generation != generation:
+            j.theme_generation = generation
+            journal.save(paths, j)
     return report
 
 
