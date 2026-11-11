@@ -129,7 +129,7 @@ with no player at all shows the event "Nothing to play".
 | Click a button | that action; dismiss unless the notification is `resident` |
 | Click ✕, middle click | dismiss (it stays in Today as read) |
 | Right click | menu: Mute *App* for 1 hour, Turn on Do not disturb, Notification settings |
-| Reply (inline-reply action) | a field opens inside the toast and takes the keyboard; Enter sends, Esc returns; countdown stopped |
+| Reply (inline-reply action) | a field opens in the button row and takes the keyboard; Enter sends, Esc returns; countdown stopped; while it is open an OSD does not cover the toast (the level still changes) |
 
 ## 7. Events
 
@@ -185,7 +185,7 @@ the geometry retargets the spring, old content fades out over 110 ms, new conten
 | Media | `Quickshell.Services.Mpris` |
 | Timers, focus, recording, progress | aptus services (`Timers`, `Focus`, `Capture`, `Progress`) |
 | Meetings | `Agenda` service ([today.md](today.md) §7) |
-| OSD values | `Audio`, `Brightness`, `Keyboard` services; the layout from Hyprland `activelayout`; Caps Lock from a non-consuming `Caps_Lock` release bind (`hypr/binds.lua`) that reads the main keyboard's `caps_lock` (`hl.get_devices()`) and dispatches `aptus:capslock-on` / `-off` (Hyprland has no Caps Lock event) |
+| OSD values | `Audio`, `Brightness`, `Keyboard` services; the layout from Hyprland `activelayout` (a keyboard's own layout changing; another keyboard becoming active, or Hyprland's `error` for an unnamed keymap, is no change); Caps Lock from a non-consuming `Caps_Lock` release bind (`hypr/binds.lua`) that reads the main keyboard's `caps_lock` (`hl.get_devices()`) and dispatches `aptus:capslock-on` / `-off` (Hyprland has no Caps Lock event) |
 
 ## 12. Edge cases
 
