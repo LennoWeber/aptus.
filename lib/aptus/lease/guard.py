@@ -170,11 +170,18 @@ def unset_environment(paths: Paths) -> list[str]:
 
 def after_release(paths: Paths, report: ReleaseReport, signature: str) -> GuardState:
     """Once a release acted: the environment unset (also when a slot failed: Umbriel must not
-    get aptus's variables because of one slot), then the release hooks; the resulting state."""
+    get aptus's variables because of one slot), then the release hooks; the resulting state.
+    Never raises: a step that fails is logged and the next one still runs (the release is done,
+    the journal is gone, so nothing would repeat these steps)."""
     if not report.acted:
         return GuardState.RELEASED
-    unset_environment(paths)
-    hooks.run_reloads(paths, report.reloads, signature)
+    for what, step in (("unset-environment", lambda: unset_environment(paths)),
+                       ("the release hooks", lambda: hooks.run_reloads(paths, report.reloads,
+                                                                       signature))):
+        try:
+            step()
+        except Exception as e:  # noqa: BLE001 - the slots are back whatever a hook does
+            _log.error("%s failed after the release: %s: %s", what, type(e).__name__, e)
     if report.failed:
         _log.error("release failed for %s; recover retries at the next login",
                    ", ".join(sorted(report.failed)))
@@ -185,18 +192,22 @@ def after_release(paths: Paths, report: ReleaseReport, signature: str) -> GuardS
 def give_back(paths: Paths, pid: int, signature: str) -> GuardState:
     """The guard's release: the environment first while this session holds the lease (a guard
     killed half-way then leaves no variable behind; recover restores the slots), then
-    release_if_ours and after_release. A release that raises (the lease lock busy for 10 s, a
-    full disk) is tried RETRIES times, BACKOFF apart; then FAILED (recover retries later)."""
+    release_if_ours, then after_release once with its report. A release that raises (the lease
+    lock busy for 10 s, a full disk) is tried RETRIES times, BACKOFF apart; then FAILED (recover
+    retries later). Only the release is retried: a retry after it succeeded would find no
+    journal and skip the hooks."""
     for attempt in range(1, RETRIES + 1):
         try:
             if ops.held_by(paths, signature, pid):
                 unset_environment(paths)
-            return after_release(paths, release_if_ours(paths, pid, signature), signature)
+            report = release_if_ours(paths, pid, signature)
         except Exception as e:  # noqa: BLE001 - the guard keeps trying, it never just dies
             _log.warning("release attempt %d of %d failed: %s: %s", attempt, RETRIES,
                          type(e).__name__, e)
             if attempt < RETRIES:
                 time.sleep(BACKOFF)
+            continue
+        return after_release(paths, report, signature)
     return GuardState.FAILED
 
 

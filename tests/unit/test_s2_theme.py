@@ -62,6 +62,20 @@ def test_inputs_from_settings_defaults_and_values(p) -> None:
     assert inputs.from_settings(p).mode == "dark"
 
 
+def test_inputs_reduce_motion_auto_follows_gnome(p) -> None:
+    """Wave-2 review 5: motion.reduce `auto` (the default) is reduced when GNOME's
+    enable-animations is false, as the shell's Motion.reduced counts it; `off` never is."""
+    assert not inputs.from_settings(p).reduce_motion             # no gsettings: not reduced
+    fakes.tool(p.home, "gsettings", "out.append(state.get('v', 'true') + '\\n')\n")
+    assert not inputs.from_settings(p).reduce_motion             # animations on
+    (p.home / ".aptus-test/gsettings.json").write_text(json.dumps({"v": "false"}))
+    assert inputs.from_settings(p).reduce_motion                 # auto + animations off
+    assert ["gsettings", "get", "org.gnome.desktop.interface", "enable-animations"] in fakes.calls(p.home)
+    p.config.mkdir(parents=True)
+    p.settings.write_text(json.dumps({"v": 2, "motion.reduce": "off"}))
+    assert not inputs.from_settings(p).reduce_motion
+
+
 def test_inputs_auto_resolves_and_keeps_wallpaper(p, manifest) -> None:
     from datetime import datetime
     p.config.mkdir(parents=True)
@@ -508,6 +522,7 @@ def test_hooks_tools(p) -> None:
         fakes.tool(p.home, name, "pass\n")
     (p.config_home / "tmux").mkdir(parents=True)
     (p.config_home / "tmux/tmux.conf").write_text("set -g x 1\n")
+    p.tmux_sockets.mkdir(mode=0o700, parents=True)                 # as tmux makes it
     socks = [unix_socket(p.tmux_sockets / "default"), unix_socket(p.nvim_sockets / "nvim.123.0")]
     try:
         got = {r.target: r.state for r in hooks.run_reloads(
@@ -526,6 +541,42 @@ def test_hooks_tools(p) -> None:
     fakes.tool(p.home, "pywalfox", "code = 3\n")
     (r,) = hooks.run_reloads(p, {"pywalfox": "exec:pywalfox update"}, "")
     assert r.state == "failed" and "exited 3" in r.detail
+
+
+def test_hook_tmux_only_in_a_private_socket_dir(p, tmp_path, monkeypatch) -> None:
+    """Security review 11: tmux -S skips tmux's own check of the socket directory, so the hook
+    makes it: a real directory of this uid with mode & 0o077 == 0, sockets of this uid that are
+    not symlinks; otherwise nothing is run ("next-start")."""
+    fakes.tool(p.home, "tmux", "pass\n")
+    (p.config_home / "tmux").mkdir(parents=True)
+    (p.config_home / "tmux/tmux.conf").write_text("set -g x 1\n")
+    d = p.tmux_sockets
+    assert hooks.builtin_tmux(p, "tmux", "").detail == "no tmux server running"    # no directory
+    private = tmp_path / "private"
+    private.mkdir(mode=0o700)
+    socks = [unix_socket(private / "default")]
+    try:
+        d.parent.mkdir(parents=True, exist_ok=True)
+        d.symlink_to(private)                                          # a symlinked directory
+        assert hooks.builtin_tmux(p, "tmux", "").state == "next-start"
+        d.unlink()
+        d.mkdir(mode=0o755)                                            # others may enter
+        socks.append(unix_socket(d / "default"))
+        assert hooks.builtin_tmux(p, "tmux", "").state == "next-start"
+        assert fakes.calls(p.home, "tmux") == []
+        d.chmod(0o700)
+        (d / "other").symlink_to(private / "default")                  # a symlinked socket
+        (d / "file").write_text("")
+        r = hooks.builtin_tmux(p, "tmux", "")
+        assert (r.state, r.detail) == ("applied", "1 tmux server")
+        assert [c[2] for c in fakes.calls(p.home, "tmux")] == [str(d / "default")]
+        real_uid = os.getuid()
+        monkeypatch.setattr(hooks.os, "getuid", lambda: real_uid + 1)  # another uid's directory
+        assert hooks.tmux_sockets(p) is None
+        assert hooks.builtin_tmux(p, "tmux", "").state == "next-start"
+    finally:
+        for s in socks:
+            s.close()
 
 
 def test_hook_hyprland_eval(p, fake_hypr) -> None:

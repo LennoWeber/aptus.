@@ -29,6 +29,7 @@ background a moment later. Nothing waits for apps.
 | `appearance.mode` (`dark` / `light` / `auto`) | settings |
 | `appearance.accent` (six names or `wallpaper`) | settings; the wallpaper hue from `Wallpaper` |
 | `appearance.glass`, `appearance.contrast` | settings |
+| `frame.edge`, `motion.reduce` (`auto`: reduced when GNOME's `enable-animations` is false, as the shell's `Motion.reduced` counts it) | settings; they shape the Own files (`generated.lua`) |
 | Sun times for `auto` | computed from `weather.location` (NOAA algorithm, no network); without a location: 07:00 / 19:00 |
 
 ## 3. Resolution
@@ -209,7 +210,7 @@ Triggered by: session start (render + take), any change of mode/accent/glass/con
 | Ghostty | `SIGUSR2` (P-07) | live |
 | Alacritty | none (it watches imports) | live |
 | foot, btop, cava, fuzzel, fastfetch, yazi, bat | none | next start or run |
-| tmux | `tmux -S <socket> source-file ~/.config/tmux/tmux.conf` for every server socket in `/tmp/tmux-$UID/` | live |
+| tmux | `tmux -S <socket> source-file ~/.config/tmux/tmux.conf` for every server socket in `${TMUX_TMPDIR:-/tmp}/tmux-$UID/`, only when that directory is a real directory (not a symlink) owned by this user with no group or other permissions (tmux's own check, which `-S` skips) and only for sockets owned by this user that are not symlinks; otherwise nothing runs and the target is "next start" | live |
 | Starship | none (re-reads per prompt) | next prompt |
 | Neovim | for each socket `$XDG_RUNTIME_DIR/nvim.*`: `nvim --server <s> --remote-send '<Cmd>colorscheme noctalia<CR>'` | live |
 | Zen | none | next start (userChrome loads once) |
