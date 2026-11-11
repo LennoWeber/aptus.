@@ -32,7 +32,9 @@ Scope {
                           brightness: Brightness.brightness, device: Brightness.device, kbdLevel: Brightness.kbdLevel,
                           kbdMax: Brightness.kbdMax },
             notifications: { available: Notifications.available, serverActive: Notifications.serverActive,
-                             history: Notifications.history.length, unread: Notifications.unread, held: Notifications.held },
+                             history: Notifications.history.length, unread: Notifications.unread, held: Notifications.held,
+                             stack: Notifications.stackInfo },
+            progress: { items: Progress.items.map(i => ({ id: i.id, fraction: i.fraction, cancellable: i.cancellable })) },
             media: { players: Media.players.length, active: Media.active ? Media.active.dbusName : "" },
             privacy: { mic: Privacy.mic.length, camera: Privacy.camera.length, screencast: Privacy.screencast },
             bar: { strips: Hypr.monitors.reduce((o, m) => { o[m.name] = Hypr.stripFor(m.name).pills.map(p => p.id); return o; }, {}) }
