@@ -12,7 +12,8 @@ import qs.core
 Item {
     id: root
 
-    // [{ id, label, glyph, keys: "Ctrl+Enter", risk: bool, confirm: "Press again to …" (inline confirm,
+    // [{ id, label, glyph, icon: an app or tray icon in the glyph's place (AppIcon: a theme name,
+    //    path or URL), keys: "Ctrl+Enter", risk: bool, confirm: "Press again to …" (inline confirm,
     //    bar.md §3), enabled: bool, separator: bool, checked: bool, submenu: [...] }]
     property var model: []
     // The point the menu grows from (monitor-local).
@@ -58,7 +59,7 @@ Item {
     readonly property bool _hasLead: {
         for (let i = 0; i < model.length; i++) {
             const r = model[i];
-            if (r && !r.separator && (r.glyph || r.risk || r.confirm)) return true;
+            if (r && !r.separator && (r.glyph || r.icon || r.risk || r.confirm)) return true;
         }
         return false;
     }
@@ -246,6 +247,14 @@ Item {
             name: row.leadGlyph
             size: Tokens.glyphRow
             colour: ComponentShared.ink(row.usable && !row.risky ? "sec" : row.ink)
+        }
+        AppIcon {
+            x: Tokens.padRowH
+            anchors.verticalCenter: parent.verticalCenter
+            visible: !row.separator && row.leadGlyph === "" && !!row.modelData.icon
+            size: Tokens.glyphRow
+            icon: row.modelData.icon ? String(row.modelData.icon) : ""
+            name: String(row.modelData.label || "")
         }
         Label {
             id: label
