@@ -279,6 +279,24 @@ TestCase {
         verify(refuses(() => N.parse(null, 0, 100, 7)))
         verify(refuses(() => N.parse("{}", 0, 100, 7, 2)))
     }
+    // Wave-2 review of S3: the local file of a notification image (a sender's malformed URL, an
+    // icon name or a relative path is none) and what a toast shows from the live notification.
+    function test_image_path_and_live_image() {
+        compare(N.imagePath("file:///tmp/a%20b.png"), "/tmp/a b.png")
+        compare(N.imagePath("/tmp/a.png"), "/tmp/a.png")
+        compare(N.imagePath("image://icon//tmp/a.png"), "/tmp/a.png")
+        compare(N.imagePath("file:///tmp/%E0%A4%A.png"), "")
+        compare(N.imagePath("image://icon/dialog-information"), "")
+        compare(N.imagePath("image://qsimage/3/0"), "")
+        compare(N.imagePath("relative/a.png"), "")
+        compare(N.liveImage("image://qsimage/3/0"), "image://qsimage/3/0")
+        compare(N.liveImage("image://icon/dialog-information"), "image://icon/dialog-information")
+        compare(N.liveImage("file:///tmp/a%20b.png"), "/tmp/a b.png")
+        compare(N.liveImage("file:///tmp/%E0%A4%A.png"), "")
+        compare(N.liveImage("relative/a.png"), "")
+        compare(N.liveImage(undefined), "")
+    }
+
     function test_restart_ids_do_not_collide() {
         // the server's ids start at 1 again with every shell start: a record read back from the
         // state file gets an id of its own, so a new notification never replaces an old record

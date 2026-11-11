@@ -208,7 +208,8 @@ Singleton {
         const t = Tokens.surfaces.toast;
         const timeout = N.toastTimeout(record, Config.get("notifications.timeout") || "auto", t);
         const payload = N.toastPayload(record, timeout, t.maxActions);
-        if (live && live.image) payload.image = live.image;     // the live image (image-data too)
+        const shown = live ? N.liveImage(live.image) : "";
+        if (shown !== "") payload.image = shown;                 // the live image (image-data too)
         const mon = SurfaceManager.activeMonitor;
         if (_stack && _stack.count >= 2 && _stackIds.indexOf(record.id) >= 0 && _alive(_stack.passiveId)) {
             SurfaceManager.update(_stack.passiveId, N.stackPayload(_stack, record, timeout), _monitorOf(_stack.passiveId));

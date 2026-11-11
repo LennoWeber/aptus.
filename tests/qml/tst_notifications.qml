@@ -88,6 +88,9 @@ TestCase {
         compare(record(5).image, "");
         verify(notifications._live[5] !== undefined, "and stays live");
         compare(notifications._copyJobs.length, 0);
+        // Found by the e2e run: the toast showed the sender's URL as it was (a QML Image warning)
+        compare(toasts().length, 1);
+        compare(toasts()[0].payload.image, "", "the toast shows no image either");
     }
 
     function test_the_image_is_set_once_its_copy_is_confirmed() {

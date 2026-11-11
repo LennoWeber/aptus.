@@ -208,6 +208,13 @@ function imagePath(image) {
     }
     return path.indexOf("/") === 0 ? path : ""
 }
+// The image a toast shows from the live notification: image-data and icons (image://) as they
+// are, a local file as its path, nothing for what imagePath refuses (found by the e2e run: the
+// toast handed a malformed file:// URL to an Image, which logged a warning).
+function liveImage(image) {
+    var src = String(image || "")
+    return src.indexOf("image://") === 0 ? src : imagePath(src)
+}
 // The summary toast for `count` held notifications.
 function heldPayload(count, reason, timeout) {
     invariant(count >= 1, "held summary of " + count)
