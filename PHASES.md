@@ -1233,3 +1233,129 @@ The reviewer ran the seven invariant tests (pass) and read the diff against the 
 
 **Checked.** qmllint 146 files, 0 warnings; the 7 invariant tests pass against the stubs; the
 behaviour cases fail with "not implemented" (finding 10).
+
+### Phase 7 · implementation (2026-11-10/11)
+
+**How.** The probe's code (`s3-probe`, 3fc86e6) was brought over file by file onto phase 6: the
+JS libraries keep their phase-6 checks and gain the postconditions, the QML keeps the skeleton's
+documentation and the phase-6 guards, every `TODO(phase)` is resolved (none left; the remaining
+TODOs name their stage, e.g. `TODO(S8)` for the quiet-bar reveal). Then the stage was run in the
+nested session until every acceptance row of the brief held, fixing what that showed:
+- **Notch.** The expiry timer was stopped by an older `_expire` call (an event after an OSD
+  stayed); the held summary was posted inside a SurfaceManager apply and lost; the hover card did
+  not collapse (SurfaceManager applies the notch and the passive top one after the other, so
+  `view` passed through "rest" and `_sync` cleared the stored card): the hover card is now derived
+  from the MonitorState (a `card:` notch without `pinned`), the bulge and both compact slots are
+  one hover area (`_pointerIn`), and `viewOf` takes only the monitor state (its hover and
+  active-monitor arguments were unused and made `view` depend on fields `_sync` writes). An OSD no
+  longer covers a toast whose reply field is open (`_replyEntry`; typing would lose the field),
+  and the reply field takes the button row instead of growing the bulge below it.
+- **Hypr.** The layout OSD only for a keyboard's own layout change (`_layouts` per keyboard;
+  Hyprland's `error` for an unnamed keymap ignored): wtype's virtual keyboard showed "error", then
+  the real layout. Malformed and empty events (no focused window) are ignored, titles are patched
+  from `windowtitlev2`, the rebuild is coalesced (S1 hand-off).
+- **Frame and bulge** (S1 hand-offs): the shadow blurs only the bodies' bounding box plus the blur
+  radius; `bulge.js` draws from one normalised set (`framePathOf`, `bodiesPathOf`), `Bulge.qml`
+  takes an optional `shape`, and Frame normalises once per change for its three Bulges and the
+  shadow box (`shape`, `shadowShape`).
+- **Idle.** A status item's tooltip text follows the item only while hovered (`_liveTip`/`_tip`):
+  a hidden tooltip label still redrew the layer on every NetworkManager strength signal (~6 s) and
+  battery-time change.
+- **Tray.** Checked with a real StatusNotifierItem (`tests/e2e/fake_sni.py`, nested bus only,
+  DBusMenu with a separator and a submenu): click activates, right click shows the DBusMenu as an
+  aptus menu, a row triggers its event, submenus open (they come with the full layout),
+  NeedsAttention draws the dot. A tooltip stayed over an open menu (under the menu's catcher the
+  hover state is not updated): bar and notch tooltips hide while a menu is open on their monitor
+  (`_menuOpen`, WorkspacePill `menuOpen`); the tray's submenu openers are freed at the next open
+  (`_subOpeners`).
+- **Look** (screenshots at 1920 × 1080, compared with bar.md §2 and notch.md): the rest date in
+  `micro` / `ink.meta` (notch.md §3); the keyboard-light OSD marks the current state's dot instead
+  of filling up to it (the payload was already state-shaped; levels.js comment fixed); the media
+  card's play/pause is the 36 px round primary button; the compact cover (18 px, radius 4) and the
+  card cover (88 px, radius 10) checked with a player that has art.
+- **Assets.** `shell/assets/sounds/chime.oga`: a soft two-tone chime (A5, E6 after 120 ms, a faint
+  A6), 1.5 s, mono 48 kHz Vorbis, peak −6 dBFS, 8 KB, made with sox from sine tones; for S8's
+  timers and focus (`timers.sound`, `focus.sound`).
+- **Tests.** The e2e suites replace the skips: `test_s3_bar` (8: the strip follows workspaces,
+  fullscreen leave with a critical toast above, the hot edge, a pinned card's ways out, the hover
+  card, the tray, privacy empty under test, screenshots), `test_s3_keys` (9: volume, mute and mic,
+  brightness on the fake backlight, keyboard light, Caps Lock, media keys on the fake player,
+  "Nothing to play", an event after an OSD leaves on time, no OSD while the Deck or a mode is open),
+  `test_s3_notifications` (12: aptus owns the name, normal toast and history, low to Today only,
+  critical without timeout, replaces-id, a burst as one stack toast, Ipc `notch toast`, held under
+  fullscreen then the summary (planned as "under DND"; `Dnd` stays S8's stub with no way to
+  switch it on, so DND holding is covered by `tst_notifylogic` only), sender close, a toast's ways out, the toast queued behind Spotlight,
+  the inline reply: Esc keeps the toast, Enter sends `NotificationReplied`),
+  `test_s3_monitors` (1: a headless output added and removed with a toast and a card open),
+  `test_s3_budgets` (2), `test_s3_zlog` (1: no shell-log line above info after all others).
+  Helpers: `fakehw.py` (sysfs tree and `brightnessctl` fake in the test HOME), `fake_mpris.py`
+  (`--art=`), `fake_sni.py`, `s3bus.py` (nested-bus helpers, `FakePlayer`, `FakeTray`, pixel grabs).
+
+**Spec, same stage** (shared commits): notch.md §6 (the reply field in the button row, not
+covered by an OSD) and §11 (layout changes per keyboard), 05 §2 (the reply field takes the
+keyboard) and §6 (Caps Lock and layout source), 09 §7 (the Caps Lock bind), settings-schema and
+10-settings (`bar.clock.showDate` is after the time), bar.md (`activespecialv2`, camera), today.md
+(image-data, archive ids), 07 (Brightness sources).
+
+**Checked:**
+- `tests/run` (2026-11-11, after the reboots): pytest 97 passed; qmltestrunner 241 passed (S3:
+  notifylogic 17, notchlogic 10, hyprmodel 10, barlogic 10, levels 7, statuslogic 5, medialogic 5,
+  glyphs 1; bulge 8 with the new shared-set case); qmllint 146 files, 0 warnings.
+- `pytest tests/e2e` (45 tests: S1 12, S3 33) in a nested Hyprland. The last full run (2026-11-10)
+  was 41/42, the one failure the idle-wakeup budget (3.33/s, fixed below); after the fixes the
+  suites ran again on the changed code: notifications + keys 21/21, bar 8/8 (with the tray test,
+  after the tooltip change), the budget re-measured on whole minutes. The final full run on the
+  phase-7 commit could not be made: after the two reboots on 2026-11-11 the machine is in the
+  Umbriel session, and the harness runs only inside Hyprland (it refuses without the real
+  session's signature, by design). Open item below.
+- Screenshots (rest dark and light, toast with actions, light toast, OSD volume and keyboard
+  light, event, compact media with cover, media card, critical toast over a fullscreen window)
+  looked at and compared; they were in the session scratchpad, which the reboot wiped, so none
+  are kept under `tests/e2e/shots/` yet (`APTUS_SHOTS=<dir>` keeps the next run's).
+- P-17 pass, P-20 pass (design/probes.md, 664e61d). `hyprctl configerrors` empty (test_s1) and no
+  shell-log line above info (test_s3_zlog; the one known line, `qt.qpa.services … Failed to
+  register with host portal`, is the nested session's portal notice) in the last full run.
+
+**Budgets** (07 §12, nested session, shell process):
+
+| Budget | Measured | Limit |
+|---|---|---|
+| RSS at rest | 251 MB | ≤ 260 MB |
+| CPU at rest (60 s) | 0.20 % | < 0.3 % |
+| Main-thread wakeups at rest (whole minutes, one clock roll each) | 1.62/s and 1.55/s (before the tooltip fix 2.22 and 3.10/s) | ≤ 2/s |
+| CPU while animating (5 toasts, 20 volume steps) | 21.0 % of one core | < 50 % (frame-time stand-in; GPU side is P-21) |
+
+At rest a fresh session wakes the main thread ~0.7 times a second; the clock's minute roll (M-34)
+costs ~70–90 switches with the threaded render loop, ~46 with `QSG_RENDER_LOOP=basic`. The phase-5
+RSS (268 MB) came down without a baseline run against the stubs; within budget, so not repeated.
+
+**Found in phase 7** (structure the earlier phases did not have; each documented where it lives):
+Notch `_replyEntry`, `_pointerIn`, `_hoverCard` (now derived, read-only), `viewOf(state)` without
+its two other arguments; Hypr `_layouts`; Frame `shape`, `shadowShape`, `_specs(shadowOnly)`;
+`Bulge.shape`, `bulge.js` `framePathOf`/`bodiesPathOf`; StatusItem `_liveTip`/`_tip`; TrayItem
+`_subOpeners`; `_menuOpen` in TrayItem, Tray, ActiveWindow, WorkspaceStrip, RestGroup, and
+WorkspacePill `menuOpen`; e2e `FakeTray`, `fake_sni.py`, `vpointer.py rclick`, `FakePlayer(art=)`.
+
+**Shared commits of phase 7:** 178447f Ipc (S3 services in `shell state`), 213a3d7 Shortcuts and
+cc32429 binds.lua (Caps Lock OSD), d652b73 test_binds_lua (function binds), 1257766 Button
+(round), 2b3ce83 shell.qml (Brightness eager), eeea0f9 MonitorShell (notch keyboard, hide, quiet,
+narrow), d8919fe notch.md (Caps Lock source), 1efbe02 07 (Brightness sources), 4a500b0 bar.md
+(`activespecialv2`, camera), aea6740 today.md (image-data, archive ids), b6d1b40 rules.js (pinned
+card timeout in the Notch), 184085b nested.py (fake hardware), 4f528fd bulge.js + Bulge.qml (one
+normalise), 3a3fbc7 09 §7, a589dd8 05, af64e27 settings-schema, 4fd0972 10-settings, 2a074bb
+notch.md (reply field, layout), e1cf6f3 vpointer.py (right button).
+
+**Note.** One `hyprctl monitors -j` (read only) ran without `-i` against the real session while
+looking for the nested output; nothing was changed. Every other call named the nested instance.
+
+**Open:**
+- The final full `pytest tests/e2e` on the phase-7 commit and the kept screenshots, in a Hyprland
+  session: `APTUS_SHOTS=tests/e2e/shots /home/lenno/Code/Projekte/aptus/.venv/bin/python -m pytest
+  -p no:anyio tests/e2e -q` from the worktree.
+- Shell-wide: the basic render loop would halve the clock roll's cost (not S3's decision); the
+  shared `Tooltip` redraws while hidden when its text changes (S3 freezes its texts; a central fix
+  belongs to the components).
+- Tray apps that load DBusMenu children lazily may show an empty submenu (Quickshell's
+  `QsMenuOpener` reads the layout when the menu opens; it also sends "opened" at start).
+- The lock-screen half of the hardware keys is checked again in S6; a real tray app on the laptop
+  (only the fake item was tested) in the S3 hands-on round.
