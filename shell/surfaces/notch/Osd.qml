@@ -18,11 +18,20 @@ Item {
 
     // The device name shows instead of the value for osd.deviceNameMs after a payload brought a
     // `device` (the poster sets it only on the first OSD after a device change, levels.js).
+    // Wave-2 review: the name is kept for its whole time (the next press brings no device), but
+    // only for its own kind (every OSD is one layer, notch.js keyOf: brightness updates it too).
     property bool _deviceShown: false
+    property string _deviceName: ""
+    property string _deviceKind: ""
     onPayloadChanged: {
         if (payload && payload.device) {
+            _deviceName = payload.device;
+            _deviceKind = payload.kind || "";
             _deviceShown = true;
             deviceTimer.restart();
+        } else if (_deviceShown && !(payload && payload.kind === _deviceKind)) {
+            _deviceShown = false;
+            deviceTimer.stop();
         }
     }
     Timer {
@@ -74,7 +83,7 @@ Item {
             type: "body"
             ink: "meta"
             tabular: true
-            text: root._deviceShown && root.payload.device ? root.payload.device : (root.payload.value || "")
+            text: root._deviceShown ? root._deviceName : (root.payload.value || "")
         }
     }
 }
