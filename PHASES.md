@@ -1363,40 +1363,59 @@ looking for the nested output; nothing was changed. Every other call named the n
 ### Review of phase 7 (fresh reviewer, diff `1369d8a..4f531c6` without PHASES.md; fixed in "phase 7: review fixes")
 
 The reviewer ran `tests/run` (green: pytest 97, qmltestrunner 241, qmllint 146 files 0 warnings)
-and read the diff against the goal, the phase-7 rules and the spec. 32 findings. "pending" marks
-the ones not done yet while this table is written (it is updated as they are fixed).
+and read the diff against the goal, the phase-7 rules and the spec. 32 findings: 1–28 and 30
+fixed (9, 24, 25 and 30 in part, the rest of each rejected with its reason; M-31b of 23 deferred
+to S8), 29 rejected, 31 in part (its e2e cases come with the final e2e run), 32 agreed.
 
 | # | Finding | Response |
 |---|---|---|
 | 1 | `onPassiveChanged` ran `_expire` inside a SurfaceManager apply; a dismissal there was overwritten by the rest of the apply | fixed: deferred with `Qt.callLater`, like `_sync` |
 | 2 | A replace or a stack join (SurfaceManager.update) did not restart the toast countdown (notch.md §6 rule 3); a stack toast could vanish just after a join | fixed: `_countdownPayloads` (entry id → payload the countdown started for); a new payload object restarts it (checked that QML keeps the payload's identity through `property var` and SurfaceManager's two-level compare) |
 | 3 | `_countdowns` kept entries of toasts closed through Notifications | fixed: each tick keeps only entries still in the monitor's passive list |
-| 4 | Battery warn and crit toasts shared the key "battery": the warn toast replaced the crit one (priority 0, 9 s) | pending: own keys, crit also counts as warned |
-| 5 | `_urgentToasted` never cleared; `urgent` never pruned of closed windows | pending |
-| 6 | `_cacheImage` copied any path a sender names (`/dev/zero`, a FIFO, huge files), copied again on every replace, never deleted copies | pending: regular files under a size cap, with a timeout; copies of records that leave the history are deleted; old copies cleaned at start |
-| 7 | Records trimmed from the history kept their live Notification | pending: dismissed and dropped when they leave |
-| 8 | `MediaActivity._pausedLong` not armed when created with a player already paused | pending |
-| 9 | MediaCard `_position` stale after a player/track change while paused; `onCanceled` not handled; `interval: 1000` literal | pending (the literal: see 25) |
+| 4 | Battery warn and crit toasts shared the key "battery": the warn toast replaced the crit one (priority 0, 9 s) | fixed: keys `battery-low` / `battery-crit`; the crit toast also counts as warned |
+| 5 | `_urgentToasted` never cleared; `urgent` never pruned of closed windows | fixed: a workspace leaves `_urgentToasted` once shown or without an urgent window; `_rebuildWindows` drops closed windows from `urgent` |
+| 6 | `_cacheImage` copied any path a sender names (`/dev/zero`, a FIFO, huge files), copied again on every replace, never deleted copies | fixed: only a regular file of at most `IMAGE_MAX_BYTES` (8 MB), `timeout 5 cp`; `_setHistory` deletes the copy of a record that leaves (a replace, trim, removal) unless another record uses it, and only files directly in the cache (`_inCache`: a sender's `…/notif/../x` is neither kept nor deleted); copies older than `historyDays` go at start |
+| 7 | Records trimmed from the history kept their live Notification | fixed: `_setHistory` dismisses and drops the live object of every record that leaves |
+| 8 | `MediaActivity._pausedLong` not armed when created with a player already paused | fixed: `_armPaused()` also at `Component.onCompleted` |
+| 9 | MediaCard `_position` stale after a player/track change while paused; `onCanceled` not handled; `interval: 1000` literal | fixed: `_readPosition()` on player, track (`postTrackChanged`), play state and visibility; `onCanceled` ends the drag. The literal: rejected, see 25 |
 | 10 | `Qt.callLater(_noteWidth, …)` from both slots kept only the last call's arguments | fixed: widths collect in `_pendingWidths`, one `_flushWidths` later |
-| 11 | Wheel handlers step once per event (touchpad, high-resolution, TrackPoint scrolling jump) | pending: `bar.js wheelSteps` accumulates `angleDelta` per 120 |
-| 12 | `pillRects` and the pill menu anchor missed the pill box's x | pending |
-| 13 | A pinned card under a toast kept the catcher, the whole-monitor mask and the keyboard | fixed in the Notch (`_pinnedShown`: catcher and mask only while the card shows); pending: rules.js `keyboard` (shared) |
-| 14 | A replace of a stacked notification joined the stack again (count + 1) | pending |
+| 11 | Wheel handlers step once per event (touchpad, high-resolution, TrackPoint scrolling jump) | fixed: `bar.js wheelSteps` (one step per 120 of `angleDelta`, the rest carried, dropped when the direction turns; `tst_barlogic`); status items take every step, pills, strip and title at most one per event (Hyprland's state lags a second one) |
+| 12 | `pillRects` and the pill menu anchor missed the pill box's x | fixed: rects add `content` and `pillBox`; the menu anchor maps from the pill |
+| 13 | A pinned card under a toast kept the catcher, the whole-monitor mask and the keyboard | fixed: the Notch's `_pinnedShown` (catcher and mask only while the card shows) and rules.js `keyboard()` (shared, `tst_rules`) |
+| 14 | A replace of a stacked notification joined the stack again (count + 1) | fixed: `_stackIds`; a replace of a member updates the stack toast's payload |
 | 15 | The pinned-card catcher swallowed bar clicks | fixed: a press on the bar band closes the card and is not accepted, so the bar below gets it |
 | 16 | Compact activities stayed while Overview or Capture is open (notch.md §9) | fixed: `_slots` empty then |
 | 17 | The recording compact could not show above a fullscreen window (the whole centre row slid out) | fixed: each part of the centre group slides and fades on its own, a slot showing recording stays and keeps input; where it sits under a bulge is `TODO(S9)` |
 | 18 | No in-place content crossfade; `NotchLayer.plain` was dead | fixed: the Toast crossfades its content in place (old out over `morphOutMs`, new in over `fade`; M-06 not replayed); `plain` and Toast `entrance` removed |
-| 19 | The rest menu did not match notch.md §3 | pending: Do not disturb ▸ (1 hour, until tomorrow 08:00, until I turn it off), Start focus ▸ (25, 50, 90 min), Open calendar settings |
-| 20 | Pills: no `raised` fill for used inactive pills, empty pills in `ink.sec` (bar.md §3) | pending |
-| 21 | Type and ink deviations (toast and media titles `bodyStrong`, artist `ink.sec`, window glyphs `faint`); body 1 line with buttons vs "2 lines"; media title 1 line vs "two lines" | pending: `title`, `ink.meta`; spec: the 72/104/132 heights and the 132 card hold one body/title line |
-| 22 | Tray overflow rows have no icons (bar.md §5) | pending |
-| 23 | M-35 dot not on `spring.snappy`; M-03 icon literal easing, no crossfade; M-31b instant toggles | pending (M-31b: with S8's reveal) |
+| 19 | The rest menu did not match notch.md §3 | fixed: Do not disturb ▸ (For 1 hour, Until tomorrow 08:00 as in deck.md, Until I turn it off; Turn off while on), Start focus ▸ (25, 50, 90 min), Open calendar settings (Settings page `today`). Found on the way: the toast menu opened the Settings page `notifications`, which does not exist; now `notch` (where `notifications.*` live) |
+| 20 | Pills: no `raised` fill for used inactive pills, empty pills in `ink.sec` (bar.md §3) | fixed: `raised` fill, `ink.faint` for empty pills, "+n" in `ink.meta` |
+| 21 | Type and ink deviations (toast and media titles `bodyStrong`, artist `ink.sec`, window glyphs `faint`); body 1 line with buttons vs "2 lines"; media title 1 line vs "two lines" | fixed: titles `title`, artist and window glyphs `ink.meta`. The lines: the 72 toast cut a second body line off (app line + title + one body line fill it), so one body line everywhere (`toast.bodyMaxLines` 1, shared) and notch.md §6/§12 say so (shared); the 132 media card has no room for a second title line |
+| 22 | Tray overflow rows have no icons (bar.md §5) | fixed: Menu rows take an `icon` (shared, AppIcon in the lead place); the overflow passes the item's icon |
+| 23 | M-35 dot not on `spring.snappy`; M-03 icon literal easing, no crossfade; M-31b instant toggles | fixed: M-35 `SnappySpring`; M-03 the old icon fades out while the new fades in from `title.iconScaleFrom` on the standard curve. M-31b: deferred to S8 (`TODO(S8)` in Bar.qml): `Focus.quietBar` is S8's and cannot be switched on before it, and the hover reveal S8 builds plays the same fade and collapse back |
 | 24 | Hover/click cards open on whichever monitor's slot | fixed for hover (only on the active monitor); click: Hyprland makes the clicked monitor the active one (`misc:mouse_move_focuses_monitor`) |
-| 25 | Literals: MediaCard 1000, RestGroup + 20 ms, StatusItem `* 3 / 4`, `/ 2` | pending |
-| 26 | `pragma ComponentBehavior: Bound` missing in MediaActivity, ProgressActivity | pending |
-| 27 | CompactSlot `hoverLeft` and `leaveTimer` dead | pending |
-| 28 | `markRead` guard never held (always a new array) | pending |
-| 29 | `Notifications.available` always true | pending |
-| 30 | Volume-up above the maximum lowered it; unplugging at ≤ 15 % gave no warning; Brightness picks the first backlight; Frame normalises twice | pending |
-| 31 | Missing coverage (progress, urgent, layout OSD, battery, quiet, wheel, ✕/menu, tray overflow, countdown restart); weak burst and monitors tests; privacy test reads PipeWire | pending |
+| 25 | Literals: MediaCard 1000, RestGroup + 20 ms, StatusItem `* 3 / 4`, `/ 2` | fixed: `bar.statusOverlaySize`, `bar.statusExtraSize` (shared). Rejected: the 1000 ms is how often a position is re-read from MPRIS and the 20 ms keeps the minute timer from firing just before the boundary; neither is a design duration (the services' timers are literal for the same reason) |
+| 26 | `pragma ComponentBehavior: Bound` missing in MediaActivity, ProgressActivity | fixed |
+| 27 | CompactSlot `hoverLeft` and `leaveTimer` dead | fixed: removed |
+| 28 | `markRead` guard never held (always a new array) | fixed: `N.markRead` returns the same array when nothing changes (`tst_notifylogic`) |
+| 29 | `Notifications.available` always true | rejected: `available` gates the IPC path (`notch toast`, the policy, the history), which works without the bus name; owning the name is `serverActive` (P-20), with a warning in the log when another server has it |
+| 30 | Volume-up above the maximum lowered it; unplugging at ≤ 15 % gave no warning; Brightness picks the first backlight; Frame normalises twice | fixed: `levels.step` never steps against its direction and `stepVolume` leaves the level alone then (`tst_levels`); unplugging checks the battery at once. Rejected: since Linux 6.1 the kernel registers one backlight per panel (acpi_video only where native does not work), this machine has `intel_backlight` only, and a type preference would be a guess; Frame normalises two different sets once each (all bulges; those with a shadow), and merging depends on neighbours, so the shadow set cannot be filtered from the full one |
+| 31 | Missing coverage (progress, urgent, layout OSD, battery, quiet, wheel, ✕/menu, tray overflow, countdown restart); weak burst and monitors tests; privacy test reads PipeWire | in part: unit tests for the pure parts (wheel steps, step direction, markRead, keyboard under a toast). The e2e cases (progress activity from a `value` hint, urgent toast and its repeat, layout OSD, battery toasts, countdown restart on replace, burst count and apps, the monitors test's fixed 1–5 / 6–10 split, ✕ / middle click / toast menu, tray overflow, wheel) are written together with the final e2e run: none can run outside Hyprland now, and an unrun e2e test is not added. The privacy test: rejected, the brief allows reading the real PipeWire state (`pw-dump` only reads) |
 | 32 | The final full e2e run and the screenshots are missing | agreed: a blocker before the wave merges (report) |
+
+**Checked:** `tests/run` green after the fixes: pytest 97; qmltestrunner 242 (new cases in
+barlogic, levels, notifylogic, rules); qmllint 146 files, 0 warnings. Not checked on screen: the
+machine is in the Umbriel session (finding 32), so every fix that changes what the notch and bar
+draw (the in-place crossfade, the recording slot under `hide`, the catcher on the bar band, pills,
+titles, the rest menu, the M-03 icon) waits for the final e2e run and its screenshots.
+
+**New since phase 7** (found in review): Notch `_countdownPayloads`, `_pinnedShown`,
+`_pendingWidths` + `_flushWidths`; Toast `_p`, `_swap`, `_ready` (and no `entrance`); NotchLayer
+without `plain`; Notifications `_setHistory`, `_inCache`, `_stackIds`, `N.IMAGE_MAX_BYTES`;
+MediaActivity `_armPaused`; MediaCard `_readPosition`; `bar.js wheelSteps`, `WHEEL_UNIT`;
+`_wheelCarry` in StatusItem, WorkspacePill, WorkspaceStrip, ActiveWindow; ActiveWindow `_oldIcon`,
+`_oldAppName`, `_iconSwap`; Menu rows' `icon`; tokens `bar.statusOverlaySize`,
+`bar.statusExtraSize`. CompactSlot loses `hoverLeft`.
+
+**Shared commits of the review fixes:** 4621544 rules.js (keyboard under a covered card), 6dff347
+tokens.json (one body line, status glyph sizes), 6300ab8 Menu.qml (row icons), 59d4cfd notch.md
+(one body line, one title line).
