@@ -1,18 +1,21 @@
 """aptus-guard <hyprland-pid> <signature> (02 §7): a transient user service (Type=notify) outside
 Hyprland's process tree, started by aptus-session *before* the lease is taken (no lease without a
-guard: READY=1 goes out once it watches, and systemd-run returns only then). Waits on Hyprland's pidfd (readable when Hyprland exits) or SIGTERM from the user manager
-(logout, shutdown, `aptus-session stop`), then unsets the variables the session imported,
-releases the lease if this session owns it (retried when it raises), runs the release hooks and
-exits 0; units bound to it (BindsTo) stop with it. While waiting it also
-- polls logind's record of this user (/run/systemd/users/<uid>, 1 s): when another graphical
-  session opens while the lease is held (Umbriel logged in on another VT), it releases at once
-  and the session continues scope-only (02 §7 exit matrix);
-- retries bakes queued until their app closed (30 s tick; opt-in, D-02).
-Writes <runtime>/guard.state for the shell (07 §7)."""
+guard: READY=1 goes out once it watches, and systemd-run returns only then). Waits on Hyprland's
+pidfd (readable when Hyprland exits) or SIGTERM from the user manager (logout, shutdown,
+`aptus-session stop`), then unsets the variables the session imported, releases the lease if
+this session owns it (retried when it raises), runs the release hooks and exits 0; units bound to
+it (BindsTo) stop with it. While waiting it also
+- watches logind's record of this user (/run/systemd/users/<uid>, inotify; polled each second
+  while a change still waits for a check with the lease held, or without inotify): when another
+  graphical session opens while the lease is held (Umbriel logged in on another VT), it releases
+  at once and the session continues scope-only (02 §7 exit matrix);
+- retries bakes queued until their app closed (a 30 s tick while the queue exists; opt-in, D-02).
+Nothing else wakes it. Writes <runtime>/guard.state for the shell (07 §7)."""
 from __future__ import annotations
 
 import contextlib
 import logging
+import math
 import os
 import select
 import signal
@@ -26,7 +29,7 @@ from typing import Any
 from .. import atomic, hypr, log
 from ..paths import Paths, inside
 from ..theme import hooks, resolve
-from . import invariants, journal, ops, preflight, system
+from . import inotify, invariants, journal, ops, preflight, system
 from .ops import ReleaseReport
 
 
@@ -37,8 +40,8 @@ class GuardState(str, Enum):
     RELEASED = "released"      # Hyprland ended (or SIGTERM) and the lease was given back
 
 
-TICK = 30.0                    # seconds between bake retries while waiting
-POLL = 1.0                     # seconds between checks of logind's user record
+TICK = 30.0                    # seconds between bake retries while the queue exists
+POLL = 1.0                     # seconds between checks of logind's record while one is due
 RETRIES = 4                    # attempts of a release that raised (a busy lock, a full disk)
 BACKOFF = 2.0                  # seconds between those attempts (all of them fit in the 90 s stop)
 UNIT = "aptus-guard"           # the transient unit name (systemd-run --unit)
@@ -85,22 +88,59 @@ def notify_ready(paths: Paths) -> None:
         _log.warning("cannot notify systemd (%s): %s", addr, e)
 
 
-def wait(fd: int, stop_fd: int, poll: float, on_poll: Callable[[], bool]) -> str:
+def wait(fd: int, stop_fd: int, timeout: Callable[[], float | None],
+         on_poll: Callable[[], bool], watch: inotify.Files | None = None) -> str:
     """Block until the pidfd is readable ("exited"), SIGTERM wrote to `stop_fd` ("stopped"), or
-    `on_poll` (called every `poll` seconds) returns True ("other-session")."""
+    `on_poll` returns True ("other-session"). on_poll runs when `watch` saw one of its files
+    change, and when `timeout()` seconds (asked again after each on_poll; None: no limit) passed
+    without that. Other events of the watched directories do not wake it for long."""
     p = select.poll()
     p.register(fd, select.POLLIN)
     p.register(stop_fd, select.POLLIN)
+    if watch is not None and watch.fd >= 0:
+        p.register(watch.fd, select.POLLIN)
+    due: float | None = None
+    fresh = True
     while True:
-        ready = {f for f, _ in p.poll(int(poll * 1000))}
+        if fresh:
+            t = timeout()
+            due = None if t is None else time.monotonic() + t
+            fresh = False
+        ms = None if due is None else max(0, math.ceil((due - time.monotonic()) * 1000))
+        ready = {f for f, _ in p.poll(ms)}
         if fd in ready:
             return "exited"
         if stop_fd in ready:
             with contextlib.suppress(OSError):
                 os.read(stop_fd, 64)
             return "stopped"
+        changed = watch is not None and watch.fd in ready and watch.changed()
+        if not changed and (due is None or time.monotonic() < due):
+            continue
+        fresh = True
         if on_poll():
             return "other-session"
+
+
+def logind_key(paths: Paths) -> Any:
+    """The identity of logind's user record now: (inode, mtime) (None when it is missing)."""
+    try:
+        st = os.stat(paths.logind_user)
+    except OSError:
+        return None
+    return (st.st_ino, st.st_mtime_ns)
+
+
+def next_check(paths: Paths, watching: bool, last: list[Any], next_tick: float) -> float | None:
+    """Seconds until the guard must look again without an inotify event: POLL while logind's
+    record changed and no check with the lease held used the change up (other_session_opened)
+    or inotify does not watch; until the bake tick while the queue exists; else None (only an
+    event, the pidfd or SIGTERM wakes it)."""
+    if not watching or logind_key(paths) != last[0]:
+        return POLL
+    if paths.bake_queue.exists():
+        return max(0.0, next_tick - time.monotonic())
+    return None
 
 
 def other_session_opened(paths: Paths, signature: str, pid: int, last: list[Any]) -> bool:
@@ -109,11 +149,7 @@ def other_session_opened(paths: Paths, signature: str, pid: int, last: list[Any]
     logind session is the journal owner's. A change is only used up by a check that listed the
     sessions while the lease was held: one that lands before the take finished, or while
     loginctl fails (the lease stays held, logged once), is checked again at the next poll."""
-    try:
-        st = os.stat(paths.logind_user)
-        key: Any = (st.st_ino, st.st_mtime_ns)
-    except OSError:
-        key = None
+    key = logind_key(paths)
     if key == last[0]:
         return False
     try:
@@ -235,6 +271,10 @@ def run(paths: Paths, pid: int, signature: str) -> int:
         fd: int | None = os.pidfd_open(pid)
     except ProcessLookupError:
         fd = None
+    paths.make_runtime()
+    watch = inotify.Files([paths.logind_user, paths.bake_queue])
+    if not watch.watching:
+        _log.info("inotify does not watch %s: checking it each second", paths.logind_user)
     if fd is not None:
         write_state(paths, GuardState.OK)
         notify_ready(paths)                        # aptus-session takes the lease only after this
@@ -251,13 +291,17 @@ def run(paths: Paths, pid: int, signature: str) -> int:
         return other_session_opened(paths, signature, pid, last)
 
     why = "exited"
-    while fd is not None:
-        why = wait(fd, stop, POLL, on_poll)
-        if why != "other-session":
-            break
-        state = give_back(paths, pid, signature)
-        write_state(paths, GuardState.SCOPE_ONLY if state == GuardState.RELEASED else state,
-                    preflight.NOTICE_OTHER_SESSION)
+    try:
+        while fd is not None:
+            why = wait(fd, stop, lambda: next_check(paths, watch.watching, last, next_tick[0]),
+                       on_poll, watch)
+            if why != "other-session":
+                break
+            state = give_back(paths, pid, signature)
+            write_state(paths, GuardState.SCOPE_ONLY if state == GuardState.RELEASED else state,
+                        preflight.NOTICE_OTHER_SESSION)
+    finally:
+        watch.close()
     _log.info("Hyprland %d %s: releasing", pid, why)
     state = give_back(paths, pid, signature)
     write_state(paths, state)

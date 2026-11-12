@@ -4,18 +4,21 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import signal
 import socket
 import subprocess
 import sys
+import threading
 import time
 from pathlib import Path
 
 import pytest
 
 import s2_fakes as fakes
+from aptus import atomic
 from aptus import paths as paths_mod
-from aptus.lease import guard, journal, ops
+from aptus.lease import guard, inotify, journal, ops
 from aptus.lease.journal import SlotKind
 from aptus.lease.slots import SlotSpec
 from aptus.theme import hooks
@@ -40,14 +43,15 @@ def test_wait_exit_stop_and_poll() -> None:
     fd = os.pidfd_open(child.pid)
     r, w = os.pipe()
     try:
-        assert guard.wait(fd, r, 0.05, lambda: False) == "exited"
+        assert guard.wait(fd, r, lambda: 0.05, lambda: False) == "exited"
         child.wait()
         live = subprocess.Popen(["sleep", "30"])
         fd2 = os.pidfd_open(live.pid)
         os.write(w, b"\x0f")
-        assert guard.wait(fd2, r, 0.05, lambda: False) == "stopped"
+        assert guard.wait(fd2, r, lambda: 0.05, lambda: False) == "stopped"
         calls = []
-        assert guard.wait(fd2, r, 0.01, lambda: calls.append(1) or len(calls) > 2) == "other-session"
+        assert guard.wait(fd2, r, lambda: 0.01,
+                          lambda: calls.append(1) or len(calls) > 2) == "other-session"
         live.kill()
         live.wait()
         os.close(fd2)
@@ -59,6 +63,124 @@ def test_wait_exit_stop_and_poll() -> None:
     gone.wait()                                    # reaped: the pid no longer exists
     with pytest.raises(ProcessLookupError):
         os.pidfd_open(gone.pid)
+
+
+# --- wave-2 simplify E3: inotify instead of the 1 s poll ------------------------------------------
+
+def test_inotify_sees_its_files_only(tmp_path) -> None:
+    users, rt = tmp_path / "users", tmp_path / "rt"
+    users.mkdir()
+    rt.mkdir()
+    w = inotify.Files([users / "1000", rt / "bake-queue.json"])
+    try:
+        assert w.watching and w.fd >= 0 and not w.changed()
+        (rt / "guard.state").write_text("ok\n")                 # another file of a watched dir
+        (users / ".#1000new").write_text("SESSIONS=2 3\n")      # logind's temporary file
+        assert not w.changed()
+        os.rename(users / ".#1000new", users / "1000")          # ... renamed over the record
+        assert w.changed() and not w.changed()                  # drained
+        atomic.write_json(rt / "bake-queue.json", {"x": "bake:a:b"})
+        assert w.changed()
+        os.utime(users / "1000", (1, 1))
+        assert w.changed()
+        (users / "1000").unlink()
+        assert w.changed()
+        shutil.rmtree(rt)                                       # a watched directory goes
+        assert w.changed() and not w.watching
+    finally:
+        w.close()
+    missing = inotify.Files([tmp_path / "nowhere/1000"])
+    assert not missing.watching                                 # the guard polls then
+    missing.close()
+
+
+def test_wait_wakes_only_for_a_change_or_when_due(tmp_path) -> None:
+    """No timeout (None): neither time nor other files of the watched directory run on_poll;
+    the record's change does, at once. With a timeout it runs when due, as the 1 s poll did."""
+    users = tmp_path / "users"
+    users.mkdir()
+    w = inotify.Files([users / "1000"])
+    live = subprocess.Popen(["sleep", "30"])
+    fd = os.pidfd_open(live.pid)
+    r, wr = os.pipe()
+    calls: list[float] = []
+    (users / ".#1000new").write_text("2 3")
+
+    def logind_rewrites() -> None:
+        os.rename(users / ".#1000new", users / "1000")
+    timers = [threading.Timer(0.3, (users / "noise").write_text, ("x",)),
+              threading.Timer(0.8, logind_rewrites),
+              threading.Timer(1.6, os.write, (wr, b"\x0f"))]
+    try:
+        t0 = time.monotonic()
+        for t in timers:
+            t.start()
+        assert guard.wait(fd, r, lambda: None, lambda: calls.append(time.monotonic()) or False,
+                          w) == "stopped"
+        assert len(calls) == 1 and 0.75 < calls[0] - t0 < 1.3   # the record's change, nothing else
+        calls.clear()
+        t0 = time.monotonic()
+        assert guard.wait(fd, r, lambda: 0.2, lambda: calls.append(time.monotonic()) or
+                          len(calls) == 3, w) == "other-session"
+        assert 0.55 < calls[-1] - t0 < 1.5
+    finally:
+        for t in timers:
+            t.cancel()
+        live.kill()
+        live.wait()
+        for f in (fd, r, wr):
+            os.close(f)
+        w.close()
+
+
+def test_next_check(p) -> None:
+    last: list = [None]
+    assert guard.next_check(p, False, last, 0) == guard.POLL      # inotify does not watch: poll
+    assert guard.next_check(p, True, last, 0) is None             # no record, no queue: events only
+    p.logind_user.parent.mkdir(parents=True)
+    p.logind_user.write_text("2")
+    assert guard.next_check(p, True, last, 0) == guard.POLL       # a change not used up yet
+    last[0] = guard.logind_key(p)
+    assert guard.next_check(p, True, last, 0) is None
+    hooks.update_queue(p, add={"spicetify": "bake:spotify:spicetify apply"})
+    assert guard.next_check(p, True, last, time.monotonic() + 30) == pytest.approx(30, abs=1)
+    assert guard.next_check(p, True, last, 0) == 0.0              # the tick is due
+    last[0] = ("retry", last[0])                                  # loginctl failed: ask again
+    assert guard.next_check(p, True, last, 0) == guard.POLL
+
+
+def slow_guard(poll: float = 3600.0, tick: float | None = None) -> list[str]:
+    """argv of the real guard with POLL (and TICK) changed: with POLL an hour only an inotify
+    event can make it look at logind's record or the bake queue early."""
+    lib = str(Path(__file__).resolve().parents[2] / "lib")
+    code = (f"import sys; sys.path.insert(0, {lib!r}); from aptus.lease import guard; "
+            f"guard.POLL = {poll!r}; guard.TICK = {tick or guard.TICK!r}; "
+            "sys.exit(guard.main(sys.argv[1:]))")
+    return [sys.executable, "-I", "-c", code]
+
+
+def test_a_queued_bake_wakes_the_guard(p, hypr) -> None:
+    """E3: the guard sleeps until the bake queue appears, then retries on its tick (here 0.3 s)
+    while the queue exists; the bake ran, the queue is gone."""
+    fakes.logind_dir(p.home)
+    fakes.tool(p.home, "spicetify", "pass\n")
+    g = subprocess.Popen([*slow_guard(tick=0.3), str(hypr.pid), hypr.signature])
+    try:
+        fakes.wait_for(lambda: p.guard_state.exists(), what="guard.state")
+        assert p.guard_state.read_text() == "ok\n\n"
+        time.sleep(1)                                           # ticks pass: no queue, nothing runs
+        assert fakes.calls(p.home, "spicetify") == []
+        hooks.update_queue(p, add={"spicetify": "bake:spotify:spicetify apply"})
+        fakes.wait_for(lambda: not p.bake_queue.exists(), what="the queued bake")
+        assert fakes.calls(p.home, "spicetify") == [["spicetify", "apply"]]
+        g.send_signal(signal.SIGTERM)
+        assert g.wait(20) == 0
+    finally:
+        if g.poll() is None:
+            g.kill()
+            g.wait()
+    assert "Hyprland" in (p.home / "aptus-guard.log").read_text()  # its log, without
+    assert "each second" not in (p.home / "aptus-guard.log").read_text()   # the poll fallback
 
 
 def test_write_state(p) -> None:

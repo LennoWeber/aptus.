@@ -333,8 +333,10 @@ aptus-guard (transient user service, Type=notify, outside Hyprland's process tre
   - pidfd_open(hyprland_pid), guard.state `ok`, READY=1; poll until the pidfd becomes readable
     (Hyprland exited)
   - or SIGTERM from the user manager (logout, shutdown, `aptus-session stop`)
-  - meanwhile: logind's user record each second (another session opened → release, scope-only,
-    keep watching, §5.6) and the bake queue every 30 s
+  - meanwhile: logind's user record, watched with inotify (logind renames a new one into place;
+    another session opened → release, scope-only, keep watching, §5.6), looked at each second
+    only while a change still waits for a check with the lease held or when inotify cannot watch
+    its directory; and the bake queue every 30 s while it exists. Nothing else wakes the guard
   → release (if this session holds the lease); reload hooks; unset env; guard.state; exit 0
 
 aptus-recover.service (the only installed user unit; WantedBy=default.target; Type=oneshot)

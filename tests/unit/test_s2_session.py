@@ -10,6 +10,7 @@ from __future__ import annotations
 import dataclasses
 import json
 import os
+import shutil
 import signal
 import subprocess
 import sys
@@ -58,6 +59,7 @@ def world(p, test_home, tmp_path, monkeypatch):
     (cfg / "btop/themes").mkdir(parents=True)                     # a slot aptus creates
     fakes.dconf(test_home, {KEY + "color-scheme": "'prefer-light'", KEY + "gtk-theme": "'adw-gtk3'"})
     fakes.one_session(test_home)
+    fakes.logind_dir(test_home)
     fakes.systemd_run(test_home)
     fakes.systemctl(test_home)
     h = fakes.hyprland(test_home, tmp_path)
@@ -218,6 +220,54 @@ def test_umbriel_logs_in_mid_session(p, world) -> None:
     assert snapshot() == before                                   # a later render leases nothing
     assert session.stop(p) == 0
     assert guard_state(p) == "released"
+
+
+def slow_guard(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The session starts the real guard with POLL an hour: only an inotify event can make it
+    look at logind's record (the systemd-run fake runs this instead of bin/aptus-guard)."""
+    code = (f"import sys; sys.path.insert(0, {str(REPO / 'lib')!r}); "
+            "from aptus.lease import guard; guard.POLL = 3600.0; sys.exit(guard.main(sys.argv[1:]))")
+    real_run = session.system.run
+
+    def run(paths, argv, **kw):
+        if argv[0] == "systemd-run":
+            *flags, _launcher, pid, sig = argv
+            argv = [*flags, sys.executable, "-I", "-c", code, pid, sig]
+        return real_run(paths, argv, **kw)
+    monkeypatch.setattr(session.system, "run", run)
+
+
+def test_umbriel_mid_session_wakes_the_guard_through_inotify(p, world, monkeypatch) -> None:
+    """Wave-2 simplify E3: logind's rewrite of the user record (a rename) wakes the guard, not a
+    timer (its POLL is an hour here); it releases and keeps watching."""
+    h, snapshot = world
+    before = snapshot()
+    slow_guard(monkeypatch)
+    started(p, h)
+    assert_painted(p)
+    fakes.one_session(p.home, "2", {"Id": "3", "Class": "user", "Type": "wayland", "State": "online"})
+    fakes.logind_record(p.home, "SESSIONS=2 3\n")
+    fakes.wait_for(lambda: guard_state(p) == "scope-only", what="the guard to release")
+    assert snapshot() == before
+    assert fakes.alive(guard_pid(p))
+    assert session.stop(p) == 0
+    assert guard_state(p) == "released"
+    assert "each second" not in (p.home / "aptus-guard.log").read_text()
+
+
+def test_without_inotify_the_guard_polls_logind(p, world) -> None:
+    """The fallback: logind's directory cannot be watched when the guard starts (missing here),
+    so the guard looks at the record each second, as before E3."""
+    h, snapshot = world
+    before = snapshot()
+    shutil.rmtree(p.logind_user.parent)
+    started(p, h)
+    fakes.one_session(p.home, "2", {"Id": "3", "Class": "user", "Type": "wayland", "State": "online"})
+    fakes.logind_record(p.home, "SESSIONS=2 3\n")             # the directory is back, unwatched
+    fakes.wait_for(lambda: guard_state(p) == "scope-only", what="the guard to release")
+    assert snapshot() == before
+    assert session.stop(p) == 0
+    assert "checking it each second" in (p.home / "aptus-guard.log").read_text()
 
 
 def test_no_guard_no_lease(p, world) -> None:

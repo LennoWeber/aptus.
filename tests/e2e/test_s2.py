@@ -182,6 +182,7 @@ def world(tmp_path: Path) -> Iterator[World]:
     home.mkdir()
     slots = copy_real_slots(home)
     fakes.dconf(home, real_dconf() or {dconf_kind.KEY_DIR + "color-scheme": "'prefer-light'"})
+    fakes.logind_dir(home)                  # the guard watches it with inotify
     fakes.systemd_run(home)
     fakes.systemctl(home)
     w = World(tmp_path, home, slots, Nested(root=tmp_path / "first", home=home))
@@ -314,6 +315,32 @@ def test_power_off_then_next_login(world: World) -> None:
     w.nested.wait_for(lambda: w.nested.proc.poll() is not None, timeout=20)
     w.wait_released()
     assert_given_back(w, before)
+
+
+def test_umbriel_logs_in_mid_session(world: World) -> None:
+    """Wave-2 simplify E3: Umbriel logs in while the lease is held; logind renames a new user
+    record into place, the guard (inotify, no poll) releases at once and keeps watching, the shell
+    shows scope-only with the notice. Logout afterwards gives back nothing more."""
+    w = world
+    before = w.snapshot()
+    assert_leased(w, w.start(), before)
+    w.nested.start_shell(timeout=30)
+    fakes.one_session(w.home, OWN_SESSION, UMBRIEL)
+    fakes.logind_record(w.home, f"SESSIONS={OWN_SESSION} {UMBRIEL['Id']}\n")
+    w.nested.wait_for(lambda: w.guard_state() == "scope-only", timeout=10)
+    assert_given_back(w, before)
+    assert w.guard_pid()                                   # it keeps watching Hyprland
+    w.nested.wait_for(lambda: w.nested.state()["services"]["lease"]["mode"] == "scope-only",
+                      timeout=10)
+    assert w.nested.state()["services"]["lease"]["notice"] == preflight.NOTICE_OTHER_SESSION
+    w.shot("s2-umbriel-mid-session")
+    w.nested.msg("session", "logout")
+    w.nested.wait_for(lambda: w.nested.proc.poll() is not None, timeout=20)
+    w.wait_released()
+    assert w.guard_state() == "released"
+    assert_given_back(w, before)
+    log = (w.home / "aptus-guard.log").read_text()
+    assert "each second" not in log and "Traceback" not in log
 
 
 def test_umbriel_open_means_scope_only(world: World) -> None:

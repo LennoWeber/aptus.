@@ -109,6 +109,22 @@ def one_session(home: Path, own: str = "2", *others: dict[str, str]) -> None:
     loginctl(home, [{"Id": own, "Class": "user", "Type": "wayland", "State": "active"}, *others])
 
 
+def logind_dir(home: Path) -> Path:
+    """<test sysroot>/run/systemd/users, logind's record directory (always there on a real
+    system; the guard watches it with inotify)."""
+    d = home / ".aptus-test/root/run/systemd/users"
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
+def logind_record(home: Path, text: str) -> None:
+    """Rewrite this user's logind record as logind does: a temporary file renamed over it."""
+    d = logind_dir(home)
+    tmp = d / f".#{os.getuid()}new"
+    tmp.write_text(text)
+    os.rename(tmp, d / str(os.getuid()))
+
+
 @dataclass
 class FakeHyprland:
     proc: subprocess.Popen
