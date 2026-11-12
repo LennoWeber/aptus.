@@ -51,7 +51,7 @@ prefers. A stage ends with its acceptance checks (§3) and a commit series on th
 | S8 | Time and attention | Today (agenda, weather, history, jot inbox), focus, DND, quiet bar, Keys, Jot | — |
 | S9 | Capture | screenshots, recording, colour picker | P-15 |
 | S10 | Settings and gallery | settings window (generated pages, calendars, keys editing, isolation page), wallpaper gallery and rotation | — |
-| S11 | Finish | motion calibration, reduced motion, high contrast, glass, accessibility pass, performance budgets, docs (README, CLAUDE.md) | P-08, P-21 |
+| S11 | Finish | motion calibration, reduced motion, high contrast, glass, accessibility pass, performance budgets, docs (CLAUDE.md; README rewritten as the project's front page: professional, with current screenshots of every surface in dark and light, taken in a nested session at 1920 × 1080 with a real wallpaper) | P-08, P-21 |
 
 After S2, Hyprland is usable every day with aptus; every later stage replaces a missing piece
 without breaking the earlier ones.
