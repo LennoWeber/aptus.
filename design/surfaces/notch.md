@@ -58,6 +58,8 @@ Two slots flank the clock. Each shows at most one activity; others wait by prior
 | right | progress (download, copy, export) | 14 px ring + "42 %" | 50 |
 
 There is no perpetual animation in compact form. Media is a still cover, not an equaliser.
+Under a fullscreen window only an activity marked `aboveFullscreen` keeps its compact look
+(recording); the others leave with the bar.
 
 The clock slides aside to make room (shared element, M-05). The whole centre group never exceeds
 480 px; when it would, the lower-priority slot gives way.

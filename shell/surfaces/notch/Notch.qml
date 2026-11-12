@@ -86,11 +86,12 @@ Item {
         return out;
     }
     // The compact slots after arbitration (notch.js slot assignment): none while an interactive
-    // mode, Overview or Capture is open; under `hide` only recording (notch.md §2, §9).
+    // mode, Overview or Capture is open; under `hide` only an activity above fullscreen
+    // (recording, notch.md §2, §9).
     readonly property var _slots: {
         if (view.kind === "mode" || (monitor && (monitor.overview || monitor.capture !== null)))
             return { left: "", right: "", waiting: [] };
-        const cands = _live.filter(a => hide < 0.5 || a.activity === "recording")
+        const cands = _live.filter(a => hide < 0.5 || a.aboveFullscreen)
                            .map(a => ({ id: a.activity, slot: a.slot, priority: a.priority, width: _widths[a.activity] || 0 }));
         return NJ.assignSlots(cands, rest.implicitWidth, Tokens.gapBarItem, Tokens.surfaces.notch.centreGroupMaxWidth);
     }
@@ -371,7 +372,7 @@ Item {
         opacity: root.introProgress
         CompactSlot {
             id: leftSlot
-            readonly property real _leave: activity && activity.activity === "recording" ? 0 : root.hide
+            readonly property real _leave: activity && activity.aboveFullscreen ? 0 : root.hide
             opacity: 1 - _leave
             transform: Translate { y: -Tokens.barHeight * leftSlot._leave }
             side: "left"
@@ -395,7 +396,7 @@ Item {
         }
         CompactSlot {
             id: rightSlot
-            readonly property real _leave: activity && activity.activity === "recording" ? 0 : root.hide
+            readonly property real _leave: activity && activity.aboveFullscreen ? 0 : root.hide
             opacity: 1 - _leave
             transform: Translate { y: -Tokens.barHeight * rightSlot._leave }
             side: "right"

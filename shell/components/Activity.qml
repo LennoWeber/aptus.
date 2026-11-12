@@ -15,6 +15,9 @@ QtObject {
     property bool live: false
     // Current priority (Tokens.surfaces.notch.activityPriorities; media drops to mediaPaused).
     property int priority: 0
+    // Its compact look stays when the bar slides out under a fullscreen window (notch.md §2:
+    // recording); every other one leaves with the bar.
+    property bool aboveFullscreen: false
     // The compact look (its implicitWidth is the slot width) and the card content. The Notch sets
     // these on the created item when it declares them: `activity` (this object), `monitorName`,
     // `pinned` (the card was opened by click and has the keyboard).
