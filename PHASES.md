@@ -15,7 +15,7 @@ The work log for aptus v2, from stage S0 on. The v1 log is in the `v1-final` tag
 |---|---|---|
 | 0 | S0 probes | P-01, P-03, P-11, P-23 pass; P-14 half; the rest run with their stage |
 | 1 | S1 Foundation | done: phases 1–7, wave-1 review, simplify |
-| 2 | S2 Isolation ‖ S3 Bar and notch | — |
+| 2 | S2 Isolation ‖ S3 Bar and notch | done: phases 1–7 each, wave-2 review, security reviews, simplify; Lenno's isolation round trip pending |
 | 3 | S4 Spotlight ‖ S5 Deck ‖ S6 Session ‖ S7 Windows | — |
 | 4 | S8 Time and attention ‖ S9 Capture ‖ S10 Settings and gallery | — |
 | 5 | S11 Finish, acceptance | — |
@@ -24,6 +24,15 @@ The work log for aptus v2, from stage S0 on. The v1 log is in the `v1-final` tag
 
 - Physical-key check of P-01 (virtual keyboards cannot fire binds): during the S1 hands-on round.
 - P-22: no finger is enrolled; enrolling is Lenno's choice (machine-wide, Umbriel would see it).
+- The S2 isolation round trip (install, Hyprland login, kill -9, power-off, P-04 measurement):
+  steps in the wave-2 section below; isolation code from wave 3 (S6) merges only after it passed.
+- S2 decisions: the stale restore after a power-off when Umbriel logs in before recover ran; the
+  ≤ 1 s window in which Umbriel can see aptus paint when it logs in mid-session; whether to split
+  recovery (P-04); doctor check 3's false alarm if hyprland.lua runs
+  `dbus-update-activation-environment --all`; "only aptus-lease writes a leased slot" read as
+  "only the lease package" (session and theme call it in-process).
+- S3 hands-on: every hardware key shows its OSD; a real tray app's menu with a submenu; touchpad
+  and TrackPoint scrolling on the volume item and the pills; listen to `shell/assets/sounds/chime.oga`.
 
 ---
 
@@ -2390,3 +2399,30 @@ Checks:
   elsewhere at most 5 levels of antialiasing). `fullscreen-critical.png` came out 931×494 instead
   of 931×1002 (the nested output's size follows the host window); in the shared area only the test
   terminal's prompt differs, the toast matches.
+
+### Wave-2 simplify and the closing checks (main session, 2026-11-12)
+- Four read-only reviewers (reuse, simplification, efficiency, altitude) found ~45 items after
+  deduplication (`.claude/briefs/wave2-simplify.md`, not tracked); two worktree agents applied them
+  (Python/S2 and shell/S3 + core, their subsections above), merged as `aa48edd` and `ba42b69`
+  (conflict: PHASES.md only, both parts kept).
+- `security-review` on the Python simplify diff (`19575f5..aa48edd`, lib/bin/hypr: guard
+  `Type=notify` + `NOTIFY_SOCKET`, `lease/inotify.py`, `paths.below`/`plain_name` replacing four
+  containment helpers, `log.setup_tool`, `dconf dump`, preflight, `hypr/paint.lua`): no finding at
+  ≥ 8/10 confidence, none at Medium. The one semantic difference (a root resolving to `/` now
+  counts every path as below it) needs a trusted variable or the user's own symlink.
+- Final state of wave 2 on `v2`: `tests/run` 369 unit, 296 QML, qmllint 0 on 152 files; e2e 65/65
+  in a nested Hyprland; idle 0.10 % cpu, 1.22 main-thread wakeups/s, 249 MB.
+- Lenno's round trip, after `git switch v2` in Umbriel:
+  1. `cd ~/Code/Projekte/aptus && ./install.sh` (the hyprland.lua diff is shown first).
+  2. `systemctl --user is-enabled aptus-recover.service` → `enabled`.
+  3. `python3 tests/e2e/slot_hashes.py > ~/aptus-before.txt`; `aptus doctor isolation` → all pass.
+  4. Log out, log into Hyprland: `aptus lease status` → `state: held`; `hyprctl configerrors`
+     empty; `python3 ~/Code/Projekte/aptus/tests/e2e/slot_hashes.py | diff ~/aptus-before.txt - |
+     head` shows differences; look at kitty, Ghostty, a GTK app.
+  5. `kill -9 $(pidof Hyprland)`, log into Umbriel: the slot_hashes diff prints nothing; `aptus
+     lease status` → `state: none`; `aptus doctor isolation` passes; `systemctl --user
+     show-environment | grep -E '^(APTUS_SESSION|QT_QPA_PLATFORMTHEME|XCURSOR_THEME|HYPRCURSOR_SIZE)='`
+     prints nothing.
+  6. Power-off variant: Hyprland, lease held, hold the power button ~10 s, boot, Umbriel, repeat 5;
+     `journalctl --user -b -u aptus-recover.service` shows the recovery.
+  7. P-04: steps 5–7 of P-04 in design/probes.md.
