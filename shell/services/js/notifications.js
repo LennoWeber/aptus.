@@ -9,9 +9,11 @@
 //     summary, body (reduced markup: <b> <i> <a href>), image: url string | "",
 //     urgency: 0 low | 1 normal | 2 critical, actions: [{ id, text }] (without "default"),
 //     hasDefault: bool, resident: bool, reply: bool (inline-reply action), progress: -1 | 0..100,
-//     time: ms since the epoch (arrival or last replace), read: bool, live: bool (the sender
-//     still tracks it; actions work), held: "" | "dnd" | "focus" | "fullscreen" (why it did
-//     not toast; Today's "Held during focus" subtitle, today.md §6) }
+//     time: ms since the epoch (arrival or last replace), read: bool,
+//     held: "" | "dnd" | "focus" | "fullscreen" (why it did not toast; Today's "Held during
+//     focus" subtitle, today.md §6) }
+// Whether the sender still tracks a record (its actions work) is Notifications.qml's: the record
+// id is in its _live map.
 //
 // The policy context (what decides whether a toast shows, 05 §8):
 //   { dnd: bool, focus: bool, fullscreen: bool (on the active monitor), overFullscreen:
@@ -79,7 +81,6 @@ function makeRecord(src, now) {
         progress: progressOf(src.hints),
         time: now,
         read: false,
-        live: !!src.live,
         held: ""
     }
 }
@@ -317,7 +318,8 @@ function unreadInfo(history, allowlist) {
     }
     return { unread: n, allowlisted: allow }
 }
-// Persistence: the state file's JSON text, and the history read back (records not live).
+// Persistence: the state file's JSON text, and the history read back (without actions: no
+// sender tracks them any more).
 // keep: the ids the server still tracks at load (after a reload with keepOnReload, which P-23
 // limits to APTUS_DEV runs); their records keep their id, every other one gets ARCHIVE_ID − index.
 function serialise(history) {

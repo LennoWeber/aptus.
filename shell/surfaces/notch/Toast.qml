@@ -36,6 +36,8 @@ Item {
 
     // M-06 entrance progress of the icon, title and body (0 → 1).
     property real _icon: 1
+    // The icon's entrance scale at progress 0 (toast.iconScaleFrom; 1 with reduced motion).
+    readonly property real _iconFrom: Motion.reduced ? 1 : Motion.catalogueValue("toast.iconScaleFrom")
     property real _title: 1
     property real _body: 1
 
@@ -93,7 +95,7 @@ Item {
         y: Tokens.padToast
         width: root._t.iconSize
         height: width
-        scale: (Motion.reduced ? 1 : Motion.catalogueValue("toast.iconScaleFrom")) + (1 - (Motion.reduced ? 1 : Motion.catalogueValue("toast.iconScaleFrom"))) * root._icon
+        scale: root._iconFrom + (1 - root._iconFrom) * root._icon
         opacity: root._icon * root._swap
         AppIcon {
             anchors.fill: parent

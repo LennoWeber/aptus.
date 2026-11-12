@@ -16,8 +16,6 @@ Singleton {
     property var failed: ({})
     // The theme generation the last apply produced (0: none yet).
     property int generation: 0
-    // The resolve inputs of the last request, as JSON (lib/aptus/theme/inputs.py Inputs).
-    property string _pendingInputs: ""
     // A request arrived while a run was going: run once more after it.
     property bool _queued: false
     // A render of the shell's own is waiting or running (Tokens ignores resolved.json meanwhile).
@@ -80,9 +78,9 @@ Singleton {
             return;
         }
         _queued = false;
-        _pendingInputs = JSON.stringify(_inputs());
         applying = true;
-        proc.command = [Paths.bin + "/aptus-theme", "apply", "--inputs", _pendingInputs];
+        // the resolve inputs as JSON (lib/aptus/theme/inputs.py Inputs)
+        proc.command = [Paths.bin + "/aptus-theme", "apply", "--inputs", JSON.stringify(_inputs())];
         proc.start();
     }
 

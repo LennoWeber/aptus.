@@ -171,7 +171,7 @@ Singleton {
         const r = N.makeRecord({
             id: n.id, appName: n.appName, appIcon: n.appIcon, desktopEntry: n.desktopEntry, summary: n.summary,
             body: n.body, image: n.image, urgency: n.urgency, resident: n.resident, hasInlineReply: n.hasInlineReply,
-            hints: n.hints, live: true, actions: (n.actions || []).map(a => ({ id: a.identifier, text: a.text }))
+            hints: n.hints, actions: (n.actions || []).map(a => ({ id: a.identifier, text: a.text }))
         }, Date.now());
         _receive(r, n);
     }
@@ -327,10 +327,14 @@ Singleton {
     }
     // The history changed: recount unread, write the state file (debounced).
     function _changed(): void {
+        _recount();
+        saveTimer.restart();
+    }
+    // Count the unread records and whether one of them is from an allowlisted app (the rest dot).
+    function _recount(): void {
         const u = N.unreadInfo(history, Config.get("notifications.allowlist") || []);
         unread = u.unread;
         unreadAllowlisted = u.allowlisted;
-        saveTimer.restart();
     }
 
     // The toast of a record is now the passive entry `passiveId` (0: the post was refused).
@@ -346,13 +350,12 @@ Singleton {
         if (p !== undefined) SurfaceManager.dismiss(p);
     }
     // Forget a record's live Notification (the sender closed it, or it was dismissed): the record
-    // stays in the history without actions.
+    // stays in the history, its actions no longer work.
     function _drop(id: int): void {
         if (_live[id] === undefined) return;
         const live = Object.assign({}, _live);
         delete live[id];
         _live = live;
-        history = history.map(r => r.id === id && r.live ? Object.assign({}, r, { live: false }) : r);
     }
 
     NotificationServer {
@@ -434,9 +437,7 @@ Singleton {
             const live = {};
             for (const n of tracked) live[n.id] = n;
             root._live = live;
-            const u = N.unreadInfo(root.history, Config.get("notifications.allowlist") || []);
-            root.unread = u.unread;
-            root.unreadAllowlisted = u.allowlisted;
+            root._recount();
             // image copies older than the history's days belong to no record any more
             Quickshell.execDetached(["sh", "-c", '[ -d "$1" ] && find "$1" -maxdepth 1 -type f -mtime "+$2" -delete',
                                      "sh", Paths.notifCache, String(root._days)]);

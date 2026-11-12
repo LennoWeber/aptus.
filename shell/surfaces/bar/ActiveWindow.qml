@@ -35,6 +35,8 @@ Item {
     property string _oldIcon: ""
     property string _oldAppName: ""
     property real _iconSwap: 1
+    // The new icon's scale at swap progress 0 (title.iconScaleFrom; 1 with reduced motion).
+    readonly property real _iconFrom: Motion.reduced ? 1 : Motion.catalogueValue("title.iconScaleFrom")
     // Found in review: the wheel's carried delta (small deltas add up).
     readonly property WheelStepper _wheel: WheelStepper {}
 
@@ -131,8 +133,7 @@ Item {
                 icon: root._icon
                 name: root._appName
                 opacity: root._iconSwap
-                scale: (Motion.reduced ? 1 : Motion.catalogueValue("title.iconScaleFrom"))
-                       + (1 - (Motion.reduced ? 1 : Motion.catalogueValue("title.iconScaleFrom"))) * root._iconSwap
+                scale: root._iconFrom + (1 - root._iconFrom) * root._iconSwap
             }
             StandardAnimation {
                 id: iconSwap
