@@ -77,7 +77,7 @@ def notify_ready(paths: Paths) -> None:
     addr = os.environ.pop("NOTIFY_SOCKET", "")
     if not addr:
         return
-    if paths.test and not inside(addr, paths.home):
+    if paths.test and not (os.path.isabs(addr) and inside(addr, paths.home)):
         _log.warning("refusing NOTIFY_SOCKET %s outside the test HOME", addr)
         return
     try:

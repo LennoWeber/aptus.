@@ -364,9 +364,17 @@ def test_notify_ready_refuses_a_socket_outside_the_test_home(p, tmp_path, monkey
         guard.notify_ready(p)
         with pytest.raises(TimeoutError):
             s.recv(64)
-    monkeypatch.setenv("NOTIFY_SOCKET", "@/org/freedesktop/systemd1/notify")   # abstract
-    guard.notify_ready(p)
-    assert "NOTIFY_SOCKET" not in os.environ
+    monkeypatch.chdir(p.home)               # a relative or abstract name is never "inside HOME"
+    abstract = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
+    abstract.bind(f"\0aptus-unit-test-{os.getpid()}")
+    abstract.settimeout(0.3)
+    with abstract, notify_socket(p.home / "relative") as rel:
+        for addr, s in ((f"@aptus-unit-test-{os.getpid()}", abstract), ("relative", rel)):
+            monkeypatch.setenv("NOTIFY_SOCKET", addr)
+            guard.notify_ready(p)
+            assert "NOTIFY_SOCKET" not in os.environ
+            with pytest.raises(TimeoutError):
+                s.recv(64)
 
 
 def test_the_guard_says_ready_only_once_it_watches(p, hypr) -> None:
