@@ -63,7 +63,6 @@ TestCase {
         outside.accentName = outside.accentName === "jade" ? "sky" : "jade";
         Tokens._external(JSON.stringify(outside));
         compare(Tokens.mode, outside.mode);
-        verify(!Tokens.applyingExternal);
         verify(!theme.busy, "an apply now would paint the apps with Config's values again");
         Tokens.resolveNow();                            // the shell's own resolution: an apply
         verify(theme.busy);

@@ -30,6 +30,24 @@ TestCase {
         verify(String(Tokens.ground) !== dark);
     }
 
+    // Wave-2 simplify A5: `resolved` comes for the shell's own change of the apps' paint only.
+    SignalSpy { id: resolvedSpy; target: Tokens; signalName: "resolved" }
+    function test_resolved_only_for_a_change_of_paint() {
+        resolvedSpy.clear();
+        Tokens.resolveNow();                                  // nothing changed
+        compare(resolvedSpy.count, 0);
+        compare(Config.set("appearance.mode", "light"), "");
+        tryCompare(Tokens, "mode", "light");
+        compare(resolvedSpy.count, 1);
+        // an outside resolution (resolved.json) changes the paint without it
+        Tokens._resolvedSeen = true;
+        const outside = JSON.parse(JSON.stringify(Tokens._r));
+        outside.accentName = outside.accentName === "jade" ? "sky" : "jade";
+        Tokens._external(JSON.stringify(outside));
+        compare(Tokens.accentName, outside.accentName);
+        compare(resolvedSpy.count, 1);
+    }
+
     function test_same_resolution_starts_no_crossfade() {
         const before = String(Tokens.ground);
         Tokens.resolveNow();

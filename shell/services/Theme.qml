@@ -107,18 +107,12 @@ Singleton {
         _applied(stdout, stderr, exitCode);
         if (_queued) _run();
     }
-    // What changes the apps' paint: the resolution (not one an outside render brought: the apps
-    // carry it already, and an apply now would send Config's values back), and the settings that
-    // shape Own files and bakes.
-    function _resolutionChanged(): void {
-        if (!Tokens.applyingExternal) requestApply();
-    }
+    // What changes the apps' paint: the shell's own resolution (Tokens.resolved; not one an
+    // outside render brought: the apps carry it already, and an apply now would send Config's
+    // values back), and the settings that shape Own files and bakes.
     Connections {
         target: Tokens
-        function onModeChanged(): void { root._resolutionChanged(); }
-        function onAccentNameChanged(): void { root._resolutionChanged(); }
-        function onGlassChanged(): void { root._resolutionChanged(); }
-        function onHighContrastChanged(): void { root._resolutionChanged(); }
+        function onResolved(): void { root.requestApply(); }
     }
     Connections {
         target: Config
