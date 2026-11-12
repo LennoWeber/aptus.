@@ -7,6 +7,7 @@ import Quickshell
 import Quickshell.Io
 import qs.core
 import "js/levels.js" as L
+import "js/hypr.js" as H
 
 Singleton {
     id: root
@@ -105,10 +106,10 @@ Singleton {
         Log.error("service.brightness", "write to " + dev + " under " + (sysfs || "no sysfs") + " refused in a test");
         return true;
     }
-    // Post the OSD ("brightness" on the monitor showing eDP-1, "kbd" on the active one), unless
+    // Post the OSD ("brightness" on the internal monitor eDP-1, "kbd" on the active one), unless
     // the Deck is open there and has a slider for it (levels.js deckReplaces).
     function _osd(kind: string): void {
-        const mon = kind === "brightness" && SurfaceManager.monitorState("eDP-1") ? "eDP-1" : SurfaceManager.activeMonitor;
+        const mon = kind === "brightness" && SurfaceManager.monitorState(H.INTERNAL) ? H.INTERNAL : SurfaceManager.activeMonitor;
         const m = SurfaceManager.monitorState(mon);
         if (m && m.deck && L.deckReplaces(kind)) return;
         SurfaceManager.post("osd", kind === "kbd" ? L.kbdOsd(kbdLevel, kbdMax) : L.brightnessOsd(brightness), 0, mon, kind);

@@ -27,14 +27,19 @@ var INTERNAL = "eDP-1"
 // The scratch workspace (09: `special:scratch`).
 var SCRATCH = "special:scratch"
 
+// The primary monitor given every monitor name in Hyprland's order: the first one that is not
+// eDP-1, else eDP-1 (10-settings; it holds workspaces 1–5, or 1–10 alone).
+function primary(monitorNames) {
+    invariant(Array.isArray(monitorNames), "monitor names " + monitorNames)
+    for (var i = 0; i < monitorNames.length; i++) if (monitorNames[i] !== INTERNAL) return monitorNames[i]
+    return INTERNAL
+}
 // The fixed workspace ids of `monitor` given every monitor name in Hyprland's order ([] = none).
 function fixedIds(monitorNames, monitor) {
-    invariant(Array.isArray(monitorNames), "monitor names " + monitorNames)
-    var external = ""
-    for (var i = 0; i < monitorNames.length; i++) if (monitorNames[i] !== INTERNAL) { external = monitorNames[i]; break }
+    var first = primary(monitorNames)
     var range = function (a, b) { var r = []; for (var k = a; k <= b; k++) r.push(k); return r }
-    if (external === "") return monitor === INTERNAL ? range(1, 10) : []
-    if (monitor === external) return range(1, 5)
+    if (first === INTERNAL) return monitor === INTERNAL ? range(1, 10) : []
+    if (monitor === first) return range(1, 5)
     if (monitor === INTERNAL) return range(6, 10)
     return []
 }
@@ -129,12 +134,16 @@ function neighbour(strip, current, direction) {
     }
     return current
 }
+// A window address from an event, with the "0x" Hyprland's records carry (events leave it out).
+function address(a) {
+    invariant(typeof a === "string", "address is not a string")
+    return a.indexOf("0x") === 0 ? a : "0x" + a
+}
 // `windowtitlev2` data ("address,title") → { address: "0x…", title }.
 function parseTitleEvent(data) {
     invariant(typeof data === "string", "event data is not a string")
     var p = splitEvent(data, 2)
-    var a = p[0]
-    return { address: a.indexOf("0x") === 0 ? a : "0x" + a, title: p[1] }
+    return { address: address(p[0]), title: p[1] }
 }
 // The window list with one title replaced, or null when the address is unknown (then refresh).
 // Hypr._onTitle skips an event whose address is not one (isAddress) before it calls this.
@@ -154,7 +163,6 @@ function patchTitle(windows, address, title) {
 function bumpFocus(order, address) {
     invariant(unique(order), "an address twice in the focus order")
     invariant(isAddress(address), "address " + address)
-    if (!address) return order
     var out = [address]
     for (var i = 0; i < order.length && out.length < 200; i++) if (order[i] !== address) out.push(order[i])
     return out

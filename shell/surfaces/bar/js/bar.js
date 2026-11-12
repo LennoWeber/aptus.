@@ -175,8 +175,6 @@ function pillMenu(record, monitors, monitor) {
     checkMenu(rows)
     return rows
 }
-// The title's width (bar.md §2, §9): what is left between the zones, at most titleMaxWidth (240
-// on a narrow monitor), 0 (hidden) below titleMinWidth. tokens: Tokens.surfaces.bar.
 // Wheel steps from a wheel event's angleDelta.y (bar.md §3, §4, §6; 05 §4). High-resolution
 // wheels, touchpads and TrackPoint scrolling send many small deltas: one step per WHEEL_UNIT (a
 // classic wheel notch), the rest carried to the next event and dropped when the direction turns.
@@ -206,6 +204,8 @@ function syncIds(model, ids) {
     if (model.count > ids.length) model.remove(ids.length, model.count - ids.length)
     invariant(model.count === ids.length, "synced " + model.count + " rows for " + ids.length + " ids")
 }
+// The title's width (bar.md §2, §9): what is left between the zones, at most titleMaxWidth (240
+// on a narrow monitor), 0 (hidden) below titleMinWidth. tokens: Tokens.surfaces.bar.
 function titleWidth(available, narrow, tokens) {
     checkBarTokens(tokens)
     var w = Math.min(available, narrow ? tokens.narrowTitleMaxWidth : tokens.titleMaxWidth)

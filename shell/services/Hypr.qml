@@ -172,7 +172,7 @@ Singleton {
     }
     // An `urgent` event: mark the window's workspace; toast when that workspace is not shown.
     function _onUrgent(address: string): void {
-        const a = address.indexOf("0x") === 0 ? address : "0x" + address;
+        const a = H.address(address);
         if (urgent.indexOf(a) < 0) urgent = urgent.concat([a]);
         _rebuildWorkspaces();
         const w = windows.find(x => x.address === a);
@@ -186,7 +186,7 @@ Singleton {
     }
     // `activewindowv2` (address): the focus order for the pills' MRU apps (hypr.js bumpFocus).
     function _onActiveWindow(address: string): void {
-        const a = address.indexOf("0x") === 0 ? address : "0x" + address;
+        const a = H.address(address);
         if (!H.isAddress(a)) return;                            // "": no window is focused
         _focusOrder = H.bumpFocus(_focusOrder, a);
         if (urgent.indexOf(a) >= 0) urgent = urgent.filter(x => x !== a);
