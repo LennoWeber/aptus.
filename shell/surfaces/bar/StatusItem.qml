@@ -129,16 +129,9 @@ Item {
             for (let i = 0; i < Math.abs(r.steps); i++) root.wheelStep(r.steps > 0 ? 1 : -1);
         }
     }
-    // The tooltip's text follows the item only while the pointer is on it: the Wi-Fi strength
-    // and the battery's time left change every few seconds, and a hidden tooltip's label would
-    // redraw the whole layer each time (07 §12 idle wakeups).
-    readonly property string _liveTip: item.tooltip || ""
-    property string _tip: ""
-    on_LiveTipChanged: if (hovered) _tip = _liveTip
-    onHoveredChanged: if (hovered) _tip = _liveTip
     Tooltip {
         target: root
-        text: root._tip
+        text: root.item.tooltip || ""
         active: root.hovered
     }
     SequentialAnimation {

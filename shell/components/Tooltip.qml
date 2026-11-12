@@ -10,9 +10,13 @@ Item {
     property string text: ""
     property bool active: false
 
-    // Wanted now (the owner's hover state, a text, a visible target).
-    readonly property bool _want: active && text !== "" && target !== null && target.visible
+    // Wanted now (the owner's hover state, a text, a visible target, no menu open in its window).
+    readonly property bool _want: active && text !== "" && target !== null && target.visible && !_menuHere
+    readonly property bool _menuHere: target !== null && ComponentShared.menuWindows.indexOf(target.Window.window) >= 0
     property bool _shown: false
+    // The text on the label: it follows `text` only while shown, so a hidden tooltip does not
+    // redraw its layer when a live text changes (a Wi-Fi strength, a battery's time left; 07 §12).
+    property string _text: ""
     // Placement in the content item, computed when it shows.
     property real _x: 0
     property real _y: 0
@@ -20,6 +24,7 @@ Item {
 
     function _show(): void {
         if (_shown || !_want) return;
+        _text = text;
         _place();
         _shown = true;
         ComponentShared.tooltipsVisible++;
@@ -63,7 +68,7 @@ Item {
         else if (ComponentShared.tooltipWarm()) _show();
         else delay.restart();
     }
-    onTextChanged: if (_shown) Qt.callLater(_place)
+    onTextChanged: if (_shown) { _text = text; Qt.callLater(_place); }
     Component.onDestruction: _hide()
 
     Timer {
@@ -79,7 +84,7 @@ Item {
     Label {
         id: label
         anchors.centerIn: parent
-        text: root.text
+        text: root._text
         type: "body"
         ink: "main"
     }

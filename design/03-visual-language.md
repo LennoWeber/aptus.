@@ -278,7 +278,9 @@ Behaviour settled while building the library (S1), binding for every surface:
   row waits `spotlight.destructiveConfirmMs`. A press outside reaches what is under the pointer,
   then the menu closes; focus returns where it was. Rows have radius 6 (12 − 6, concentric).
 - **Tooltip.** Centred below the target, above it when there is no room, `s2` gap, `s4` from the
-  window edges; hidden while the target is pressed.
+  window edges; hidden while the target is pressed and while a menu is open in its window
+  (MenuHost marks the window). A hidden tooltip keeps its last text: a live text (Wi-Fi strength,
+  time left) reaches the label only while it shows.
 - **List** forwards keys through `navigate(key, modifiers)`, so a surface whose Field keeps the
   focus (Spotlight) drives the list; the highlight follows on `spring.snappy`.
 - **Smaller points:** Badge shows "99+" above 99; AppIcon's letter fallback has radius size / 4;

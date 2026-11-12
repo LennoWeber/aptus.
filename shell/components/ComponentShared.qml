@@ -13,6 +13,13 @@ QtObject {
     // Tooltips currently visible and when the last one hid (ms since epoch).
     property int tooltipsVisible: 0
     property real tooltipHiddenAt: 0
+    // The windows that show a menu now (MenuHost marks them): a tooltip there stays hidden.
+    property var menuWindows: []
+    function markMenu(window: var, open: bool): void {
+        const has = menuWindows.indexOf(window) >= 0;
+        if (open && !has) menuWindows = menuWindows.concat([window]);
+        else if (!open && has) menuWindows = menuWindows.filter(w => w !== window);
+    }
 
     // The colour of an ink name: "main" | "sec" | "meta" | "faint" | "accent" | "warn" | "crit" | "onAccent".
     function ink(name: string): color {

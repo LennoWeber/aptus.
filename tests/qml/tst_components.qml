@@ -304,6 +304,33 @@ Item {
             tryCompare(host, "_shown", null, 1000);
             host.destroy();
         }
+        // Wave-2 simplify A4: no tooltip while a menu is open in its window (MenuHost marks it),
+        // and a hidden tooltip's label keeps its text (a live text redraws nothing).
+        function test_tooltip_under_a_menu_and_its_text() {
+            SurfaceManager.syncMonitors(["A"]);
+            const st = SurfaceManager.monitors["A"];
+            const host = hostComp.createObject(top, { monitor: st, width: 800, height: 600 });
+            mouseMove(top, 780, 20);
+            tryVerify(() => !ComponentShared.tooltipWarm(), 2000);
+            const t = top.tipOf("Try again");
+            SurfaceManager.openMenu("A", { anchorX: 400, anchorY: 300, owner: "t", model: [{ label: "X" }] });
+            compare(ComponentShared.menuWindows.length, 1);
+            mouseMove(button, 10, 10);
+            wait(50);
+            verify(t._menuHere);
+            compare(t._want, false, "no tooltip under a menu");
+            SurfaceManager.closeMenu("A");
+            compare(ComponentShared.menuWindows.length, 0);
+            tryCompare(t, "_shown", true, 1500);
+            compare(t._text, "Try again");
+            mouseMove(top, 780, 20);
+            tryCompare(t, "_shown", false, 500);
+            button.tooltip = "Changed while hidden";
+            compare(t._text, "Try again", "the hidden label keeps its text");
+            button.tooltip = "Try again";
+            host.destroy();
+            compare(ComponentShared.menuWindows.length, 0);
+        }
         function test_tooltip_regrace() {
             mouseMove(top, 780, 20);
             tryVerify(() => !ComponentShared.tooltipWarm(), 2000);
