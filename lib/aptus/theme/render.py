@@ -260,12 +260,17 @@ def _render_target(paths: Paths, target: Target, ctx: dict[str, str], build: Pat
         (build / target.id / DCONF_JSON).write_text(json.dumps(values, indent=2, sort_keys=True) + "\n")
 
 
+def outputs(target: Target) -> list[str]:
+    """The target's files in a generation (relative paths): every `out`, and <id>/dconf.json for a
+    dconf target."""
+    return [f.out for f in target.files] + ([f"{target.id}/{DCONF_JSON}"] if target.dconf else [])
+
+
 def _keep_previous(target: Target, prev: Generation | None, build: Path) -> None:
     """A failed target keeps the output of the previous generation (when there is one)."""
     if prev is None:
         return
-    outs = [f.out for f in target.files] + ([f"{target.id}/{DCONF_JSON}"] if target.dconf else [])
-    for out in outs:
+    for out in outputs(target):
         src = prev.path / out
         if src.is_file():
             (build / out).parent.mkdir(parents=True, exist_ok=True)

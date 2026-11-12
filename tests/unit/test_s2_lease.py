@@ -443,6 +443,16 @@ def test_history_keeps_ten(p) -> None:
     assert len(list(p.lease_history.glob("*.json"))) == journal.HISTORY_KEEP
 
 
+def test_history_is_newest_first_without_unreadable_entries(p) -> None:
+    """journal.history behind last_released and the doctor's lease periods."""
+    assert list(journal.history(p)) == [] and journal.last_released(p) is None
+    for gen in (1, 2):
+        journal.archive(p, Journal(state=State.RELEASED, released_at=f"t{gen}", theme_generation=gen))
+    (p.lease_history / "99999999T999999-999999999.json").write_text("{")    # newest, unreadable
+    assert [j.theme_generation for j in journal.history(p)] == [2, 1]
+    assert journal.last_released(p).theme_generation == 2
+
+
 def test_lease_and_theme_lock_share_one_flock_helper(p) -> None:
     """Wave-2 review 9: ops.lock and render.lock are locks.exclusive, re-entrant per thread:
     while one thread holds the lease lock another one waits (it used to re-enter it)."""

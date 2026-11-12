@@ -64,10 +64,7 @@ def _dconf_specs(paths: Paths, manifest: Manifest, gen: Generation, t: Target) -
 def _rendered(gen: Generation, t: Target) -> bool:
     """Every output of the target exists in the generation (a target that failed in a generation
     with no earlier output has none)."""
-    outs = [render.output(gen, f) for f in t.files]
-    if t.dconf:
-        outs.append(gen.path / t.id / render.DCONF_JSON)
-    return all(o.is_file() for o in outs)
+    return all((gen.path / out).is_file() for out in render.outputs(t))
 
 
 def _file_specs(paths: Paths, gen: Generation, t: Target) -> list[SlotSpec]:

@@ -12,7 +12,6 @@ Writes <runtime>/guard.state for the shell (07 §7)."""
 from __future__ import annotations
 
 import contextlib
-import json
 import logging
 import os
 import select
@@ -26,7 +25,7 @@ from typing import Any
 from .. import atomic, hypr, log
 from .. import paths as paths_mod
 from ..paths import Paths
-from ..theme import hooks
+from ..theme import hooks, resolve
 from . import invariants, journal, ops, preflight, system
 from .ops import ReleaseReport
 
@@ -130,23 +129,29 @@ def other_session_opened(paths: Paths, signature: str, pid: int, last: list[Any]
 def aptus_values(paths: Paths) -> dict[str, str]:
     """The values aptus imports (hypr/env.lua): only these are ever unset."""
     try:
-        with open(paths.tokens, encoding="utf-8") as f:
-            cursor = json.load(f)["cursor"]
+        cursor = resolve.load_tokens(paths)["cursor"]
     except (OSError, ValueError, KeyError):
         cursor = {"theme": "Adwaita", "size": 24}
     return {"APTUS_SESSION": "1", "QT_QPA_PLATFORMTHEME": "qt6ct",
             "XCURSOR_THEME": str(cursor["theme"]), "HYPRCURSOR_SIZE": str(cursor["size"])}
 
 
+def user_environment(paths: Paths) -> tuple[dict[str, str] | None, str]:
+    """`systemctl --user show-environment` as a dict, or (None, why) when it did not run."""
+    r = system.run(paths, ["systemctl", "--user", "show-environment"])
+    if not r.ok:
+        return None, r.stderr.strip() or "skipped"
+    return dict(line.split("=", 1) for line in r.stdout.splitlines() if "=" in line), ""
+
+
 def unset_environment(paths: Paths) -> list[str]:
     """`systemctl --user unset-environment` of the UNSET variables that still hold aptus's value in
     `systemctl --user show-environment`; returns the names unset. Called only after this
     session's own lease was released (scope-only sessions never imported anything)."""
-    r = system.run(paths, ["systemctl", "--user", "show-environment"])
-    if not r.ok:
-        _log.warning("systemctl --user show-environment failed: %s", r.stderr.strip() or "skipped")
+    env, why = user_environment(paths)
+    if env is None:
+        _log.warning("systemctl --user show-environment failed: %s", why)
         return []
-    env = dict(line.split("=", 1) for line in r.stdout.splitlines() if "=" in line)
     ours = aptus_values(paths)
     names = [n for n in UNSET if env.get(n) == ours[n]]
     if not names:
