@@ -23,6 +23,8 @@ Singleton {
         if (!windowClass) return null;
         return DesktopEntries.byId(windowClass) || DesktopEntries.heuristicLookup(windowClass) || null;
     }
+    // The desktop entry id for a window class ("" none), from the cache (Hypr.windowForApp).
+    function idFor(windowClass: string): string { return _lookup(windowClass).id; }
     // { icon, name, id } of a class, cached in _byClass.
     function _lookup(windowClass: string): var {
         const c = String(windowClass || "");

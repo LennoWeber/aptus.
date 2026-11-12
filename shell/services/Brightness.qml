@@ -69,10 +69,11 @@ Singleton {
         _write(device, raw);
     }
 
-    // Read the backlight and LED files under `sysfs` (sysfs has no inotify: after every own write).
+    // Read the backlight and LED levels under `sysfs` (sysfs has no inotify: after every own
+    // write). E14: the maxima are constant; their views load once, when the scan names the device.
     function _read(): void {
-        if (device !== "") { backlightNow.reload(); backlightMax.reload(); }
-        if (kbdDevice !== "") { kbdNow.reload(); kbdMaxView.reload(); }
+        if (device !== "") backlightNow.reload();
+        if (kbdDevice !== "") kbdNow.reload();
     }
     // brightnessctl -d <device> set <value> (from PATH; the e2e tests put a fake first). One run
     // at a time; a newer value for the same device replaces the queued one.

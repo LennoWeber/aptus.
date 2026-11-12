@@ -5,4 +5,5 @@ QtObject {
     function iconFor(cls: string): string { return ""; }
     function nameFor(cls: string): string { return String(cls || ""); }
     function entryFor(cls: string): var { return null; }
+    function idFor(cls: string): string { return ""; }
 }

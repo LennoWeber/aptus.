@@ -140,14 +140,14 @@ Singleton {
     // The scratch pill (bar.md §3): show or hide special:scratch on the focused monitor.
     function toggleScratch(): void { dispatch(`hl.dsp.workspace.toggle_special("scratch")`); }
     // The window of an app (a toast without a default action focuses it, notch.md §6): by the
-    // desktop entry (Apps.entryFor of each window's class), else by class = app name; most
+    // desktop entry (Apps.idFor of each window's class), else by class = app name; most
     // recently focused first; null when none.
     function windowForApp(desktopEntry: string, appName: string): var {
         const want = String(desktopEntry || "").toLowerCase(), app = String(appName || "").toLowerCase();
         let best = null;
         for (const w of windows) {
-            const e = Apps.entryFor(w["class"]);
-            const match = (want !== "" && e && String(e.id).toLowerCase().replace(/\.desktop$/, "") === want)
+            const id = Apps.idFor(w["class"]);
+            const match = (want !== "" && id !== "" && id.toLowerCase().replace(/\.desktop$/, "") === want)
                        || (app !== "" && String(w["class"]).toLowerCase() === app);
             if (match && (!best || w.focusHistoryId < best.focusHistoryId)) best = w;
         }
@@ -222,8 +222,11 @@ Singleton {
         if (layout === "") layout = d.main;
     }
     // Rebuild `windows` from the toplevels (after a toplevel refresh only).
+    // E6: the lists are assigned only when they differ, so a refresh that changed nothing
+    // re-runs nothing downstream (the strips, their invariants, the pills).
     function _rebuildWindows(): void {
-        windows = Hyprland.toplevels.values.map(t => _client(t)).filter(w => w.address !== "");
+        const next = Hyprland.toplevels.values.map(t => _client(t)).filter(w => w.address !== "");
+        if (JSON.stringify(next) !== JSON.stringify(windows)) windows = next;
         // Found in review: a closed window leaves the urgent list.
         const open = urgent.filter(a => windows.some(w => w.address === a));
         if (open.length !== urgent.length) urgent = open;
@@ -232,8 +235,9 @@ Singleton {
     // Rebuild `workspaces` from Hyprland's workspaces, the windows and the focus order.
     function _rebuildWorkspaces(): void {
         const ws = Hyprland.workspaces.values.map(w => ({ id: w.id, name: w.name, monitor: w.monitor ? w.monitor.name : "" }));
-        workspaces = H.workspaceRecords(ws, windows, monitors, focusedMonitor, _focusOrder, urgent, workspaceNames,
+        const next = H.workspaceRecords(ws, windows, monitors, focusedMonitor, _focusOrder, urgent, workspaceNames,
                                         Tokens.surfaces.bar.workspaceNameMaxChars);
+        if (JSON.stringify(next) !== JSON.stringify(workspaces)) workspaces = next;
         // Found in review: a workspace may toast again once it was shown or has no urgent window.
         let t = null;
         for (const id in _urgentToasted) {
@@ -273,10 +277,12 @@ Singleton {
         return "{ " + parts.join(", ") + " }";
     }
 
-    // Hyprland event names after which lastIpcObject is stale (refreshToplevels needed).
-    // (Not the title events: a terminal retitles many times a second; _onTitle patches instead.)
+    // Hyprland event names after which lastIpcObject and the workspace list are stale.
+    // (Not the title events: a terminal retitles many times a second; _onTitle patches instead.
+    // E7: a focus change, `activewindowv2`, only refreshes the toplevels' focus history; it
+    // changes neither the workspace list nor a workspace's fullscreen.)
     readonly property var _windowEvents: ["openwindow", "closewindow", "movewindow", "movewindowv2",
-        "changefloatingmode", "fullscreen", "pin", "activewindowv2", "workspacev2", "resizewindow"]
+        "changefloatingmode", "fullscreen", "pin", "workspacev2", "resizewindow"]
     // Events after which the workspace list (names, monitors) is stale.
     readonly property var _workspaceEvents: ["createworkspacev2", "destroyworkspacev2", "renameworkspace",
         "moveworkspacev2", "activespecialv2"]
@@ -291,7 +297,8 @@ Singleton {
             else if (n === "activelayout") root._onLayout(event.data);
             if (n === "activewindowv2") root._onActiveWindow(event.data);
             if (n === "activespecialv2") root._onActiveSpecial(event.data);
-            if (root._windowEvents.indexOf(n) >= 0) root._refresh(["toplevels", "workspaces"]);
+            if (n === "activewindowv2") root._refresh(["toplevels"]);
+            else if (root._windowEvents.indexOf(n) >= 0) root._refresh(["toplevels", "workspaces"]);
             else if (root._workspaceEvents.indexOf(n) >= 0) root._refresh(["workspaces"]);
             if (event.name === "fullscreen" || event.name === "workspacev2" || event.name === "monitoraddedv2"
                     || event.name === "monitorremovedv2" || event.name === "focusedmonv2") root._refresh(["monitors"]);

@@ -253,7 +253,9 @@ code −1 when the program cannot start (Quickshell then only turns `running` of
 `Hypr` serialises `Hyprland.refresh*()`: Quickshell 0.3.2 empties every list when two refreshes run
 in the same JS turn, and `refreshMonitors()` clears `focusedMonitor` until the next
 `refreshWorkspaces()`. So refreshes are queued, one per 15 ms tick, and a monitor refresh is always
-followed by a workspace refresh (found in S1).
+followed by a workspace refresh (found in S1). A focus change (`activewindowv2`) refreshes only the
+toplevels (their focus history); the rebuilt `windows` and `workspaces` lists are assigned only
+when they differ, so a refresh that changed nothing re-runs nothing downstream.
 
 Lazily created singletons start with their bindings already evaluated, so a service never relies on
 `on<Prop>Changed` for its first value (it also acts in `Component.onCompleted`), and no singleton

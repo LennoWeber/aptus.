@@ -27,7 +27,7 @@ TestCase {
         function refreshToplevels(): void {}
     }
     readonly property var hyprland: fakeHyprland
-    readonly property var apps: ({ entryFor: cls => null, nameFor: cls => String(cls) })
+    readonly property var apps: ({ idFor: cls => "", nameFor: cls => String(cls) })
     property var hypr: null
     property var proc: null
 

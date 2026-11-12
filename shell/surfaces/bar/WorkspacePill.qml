@@ -44,6 +44,9 @@ Item {
     readonly property var _apps: scratch ? [] : (workspace.apps || [])
     readonly property int _iconCount: showIcons ? Math.min(_apps.length, _bar.pillMaxIcons) : 0
     readonly property int _more: showIcons ? Math.max(0, _apps.length - _bar.pillMaxIcons) : 0
+    // The classes of the icons shown, as one string: a rebuild with the same apps changes nothing,
+    // so the Repeater keeps its AppIcons (a fresh array as the model would recreate them all).
+    readonly property string _iconKey: _apps.slice(0, _iconCount).join("\n")
 
     // The pill's width with its icons, and with the number only (the strip's collapse, bar.js).
     readonly property real fullWidth: 2 * _bar.pillPadH + numberLabel.implicitWidth + (scratch ? 0
@@ -99,7 +102,7 @@ Item {
             text: root.workspace.label || ""
         }
         Repeater {
-            model: root._apps.slice(0, root._iconCount)
+            model: root._iconKey === "" ? [] : root._iconKey.split("\n")
             delegate: AppIcon {
                 required property string modelData
                 anchors.verticalCenter: parent ? parent.verticalCenter : undefined

@@ -35,6 +35,9 @@ Item {
     property string _oldIcon: ""
     property string _oldAppName: ""
     property real _iconSwap: 1
+    // The window's state glyphs (bar.js windowGlyphs) as one string: a title change changes
+    // nothing, so the Repeater keeps its Glyphs.
+    readonly property string _glyphKey: B.windowGlyphs(window).join(" ")
     // The new icon's scale at swap progress 0 (title.iconScaleFrom; 1 with reduced motion).
     readonly property real _iconFrom: Motion.reduced ? 1 : Motion.catalogueValue("title.iconScaleFrom")
     // Found in review: the wheel's carried delta (small deltas add up).
@@ -177,7 +180,7 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             spacing: Tokens.s1
             Repeater {
-                model: B.windowGlyphs(root.window)
+                model: root._glyphKey === "" ? [] : root._glyphKey.split(" ")
                 delegate: Glyph {
                     required property string modelData
                     name: modelData
