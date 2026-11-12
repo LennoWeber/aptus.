@@ -70,9 +70,9 @@ TestCase {
     function layoutOsds(): var {
         return SurfaceManager.monitors["A"].passive.filter(e => e.kind === "osd" && e.payload.kind === "layout");
     }
+    // hyprctl's answer (devicesProc is a Run).
     function answer(text: string): void {
-        proc.stdout.text = text;
-        proc.stdout.streamFinished();
+        proc.finished(text, "", 0);
     }
 
     function test_devices_give_each_keyboards_layout() {

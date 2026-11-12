@@ -56,7 +56,7 @@ aptus/
 │  └─ doctor/ (isolation.py, deps.py, config.py)
 ├─ shell/                       qs -p shell
 │  ├─ shell.qml                 root: ShellRoot, Variants over Quickshell.screens → MonitorShell
-│  ├─ core/                     Tokens, Motion, Config, Paths, Log, Format, SurfaceManager, MonitorState, WatchedFile,
+│  ├─ core/                     Tokens, Motion, Config, Paths, Log, Format, SurfaceManager, MonitorState, WatchedFile, Run,
 │  │                            js/ (pure logic: rules, config, colour, resolve, format, bulge, sun)
 │  ├─ components/               Bulge (frame/cove path), BulgeSpec, NotchMode, Drawer, DrawerSlot, Activity, ListRow,
 │  │                            List, Button, IconButton, Tile, Slider, Switch, Segmented, Checkbox, Field,
@@ -213,6 +213,9 @@ catcher's focus replay.
 ## 6. Services
 
 Singletons in `shell/services/`. Each exposes properties (bindable) and methods; none touches the UI.
+A service runs a program to its end through `core/Run`: one `finished(stdout, stderr, code)` per
+run, after both the exit and the end of stdout (Quickshell reports them in either order), and
+code −1 when the program cannot start (Quickshell then only turns `running` off).
 
 | Service | Responsibility | Source | Updates |
 |---|---|---|---|

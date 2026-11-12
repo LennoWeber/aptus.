@@ -76,10 +76,9 @@ TestCase {
     }
     function record(id: int): var { return notifications.history.find(r => r.id === id) || null; }
     function toasts(): var { return SurfaceManager.monitors["A"].passive.filter(e => e.kind === "toast"); }
-    // Finish an image copy job as the shell script would ("" = it failed).
+    // Finish an image copy job (a Run) as the shell script would ("" = it failed).
     function finish(job: var, out: string): void {
-        job.stdout.text = out;
-        job.stdout.streamFinished();
+        job.finished(out, "", out === "" ? 1 : 0);
     }
 
     function test_a_malformed_image_url_is_no_image() {

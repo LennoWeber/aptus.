@@ -61,7 +61,7 @@ Singleton {
     // Source path → the confirmed copy of a notification image { dst, stamp } (stamp: the source's
     // "size mtime" when copied); a replace with an unchanged source reuses it.
     property var _copies: ({})
-    // The image copies running (Processes of copyComponent; one per source at a time).
+    // The image copies running (Runs of copyComponent; one per source at a time).
     property var _copyJobs: []
 
     // Found by the probe (phase 5):
@@ -402,7 +402,7 @@ Singleton {
     // path: no device, FIFO or huge file). Prints "ok", the stamp and the copy's path.
     Component {
         id: copyComponent
-        Process {
+        Run {
             id: job
             property string source
             property string known
@@ -414,8 +414,9 @@ Singleton {
                 + '[ -n "$s" ] && [ "${s%% *}" -le "$6" ] && timeout 5 cp -f -- "$2" "$5" && printf "ok\\n%s\\n%s\\n" "$s" "$5" && exit 0; '
                 + 'rm -f -- "$5"; exit 1',
                 "sh", Paths.notifCache, source, known, stamp, dst, String(N.IMAGE_MAX_BYTES)]
-            running: true
-            stdout: StdioCollector { onStreamFinished: root._copied(job, text) }
+            // a run that could not start is a failed copy ("")
+            onFinished: (stdout, stderr, code) => root._copied(job, stdout)
+            Component.onCompleted: start()
         }
     }
     Timer { id: saveTimer; interval: 2000; onTriggered: stateView.setText(N.serialise(root.history) + "\n") }
@@ -442,16 +443,15 @@ Singleton {
         }
     }
     // P-20: who owns org.freedesktop.Notifications on this session bus.
-    Process {
+    Run {
         id: whoOwns
         command: ["gdbus", "call", "--session", "--dest", "org.freedesktop.Notifications", "--object-path",
             "/org/freedesktop/Notifications", "--method", "org.freedesktop.Notifications.GetServerInformation"]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                root.serverActive = /quickshell/i.test(text);
-                if (!root.serverActive) Log.warn("service.notifications", "another server owns org.freedesktop.Notifications: " + text.trim());
-            }
+        onFinished: (stdout, stderr, code) => {
+            if (code < 0) return;                       // no gdbus: nothing known
+            root.serverActive = /quickshell/i.test(stdout);
+            if (!root.serverActive) Log.warn("service.notifications", "another server owns org.freedesktop.Notifications: " + stdout.trim());
         }
     }
-    Timer { interval: 1500; running: true; onTriggered: whoOwns.running = true }
+    Timer { interval: 1500; running: true; onTriggered: whoOwns.start() }
 }

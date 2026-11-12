@@ -63,20 +63,20 @@ Singleton {
         if (_started && !wifiEnabled) SurfaceManager.post("event", S.wifiOffEvent());
     }
 
-    Process {
+    Run {
         id: vpnRead
         command: ["nmcli", "-t", "-f", "NAME,TYPE", "connection", "show", "--active"]
-        stdout: StdioCollector { onStreamFinished: root._readVpn(text) }
+        onFinished: (stdout, stderr, code) => { if (code >= 0) root._readVpn(stdout); }
     }
     Process {
         id: nmMonitor
         command: ["nmcli", "monitor"]
         stdout: SplitParser { onRead: _ => vpnDebounce.restart() }
     }
-    Timer { id: vpnDebounce; interval: 500; onTriggered: vpnRead.running = true }
+    Timer { id: vpnDebounce; interval: 500; onTriggered: vpnRead.start() }
     Timer { interval: 2000; running: true; onTriggered: root._started = true }
     Component.onCompleted: {
-        vpnRead.running = true;
+        vpnRead.start();
         nmMonitor.running = true;
     }
 }

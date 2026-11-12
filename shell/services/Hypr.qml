@@ -359,13 +359,13 @@ Singleton {
         onFileChanged: reload()
         onLoaded: root._loadNames(text())
     }
-    Process {
+    Run {
         id: devicesProc
         command: ["hyprctl", "-j", "devices"]
-        stdout: StdioCollector { onStreamFinished: root._loadLayouts(text) }
+        onFinished: (stdout, stderr, code) => { if (code >= 0) root._loadLayouts(stdout); }
     }
     Component.onCompleted: {
         _refresh(["monitors", "toplevels"]);
-        devicesProc.running = true;
+        devicesProc.start();
     }
 }
