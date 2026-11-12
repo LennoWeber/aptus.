@@ -70,7 +70,7 @@ Singleton {
     // The Esc ladder (05 §3): the menu, then the top surface's back handler, then the surface.
     function back(monitor: var): void {
         const name = _monitorFor(monitor);
-        const m = monitors[name];
+        const m = _state.monitors[name];
         if (!m) return;
         const t = m.top;
         let stepped = false;
@@ -111,7 +111,7 @@ Singleton {
         return JSON.stringify(s);
     }
     function isOpen(surface: string, monitor: var): bool {
-        return Rules.isOpen(monitors[_monitorFor(monitor)] || null, { settingsOpen: settingsOpen }, surface);
+        return Rules.isOpen(_state.monitors[_monitorFor(monitor)] || null, _state.global, surface);
     }
     function monitorState(name: string): MonitorState { return monitors[name] || null; }
 
@@ -145,8 +145,8 @@ Singleton {
     // Keep `monitors` in step with Hypr.monitors (create, remove without animation).
     function syncMonitors(names: var): void {
         const want = Array.from(names || []).map(String);
-        for (const n of want) if (!monitors[n]) _run("addMonitor", n);
-        for (const n in monitors) if (want.indexOf(n) < 0) _run("removeMonitor", n);
+        for (const n of want) if (!_state.monitors[n]) _run("addMonitor", n);
+        for (const n in _state.monitors) if (want.indexOf(n) < 0) _run("removeMonitor", n);
         _syncActive();
         _syncFullscreen();
     }
@@ -158,39 +158,53 @@ Singleton {
         _apply(r);
         return r;
     }
-    // Copy a rules.js result into the MonitorState objects and emit the signals of its effects.
+    // Make a rules.js result the state: it becomes `_state` at once, then the MonitorState objects
+    // and the session properties follow field by field, then the signals of its effects. A
+    // subscriber may run another operation from inside (a field's change handler dismisses an
+    // entry, posts a toast): that one starts from `_state`, applies in full, and this apply stops
+    // writing (its changes are in the newer result already); its effects are still emitted.
     function _apply(result: var): void {
+        const serial = ++_applySerial;
         const g = result.global;
-        _g = g;
-        if (polkitMonitor !== g.polkitMonitor) polkitMonitor = g.polkitMonitor;
-        if (!_same(pending, g.pending)) pending = g.pending;
-        if (previousWindow !== g.previousWindow) previousWindow = g.previousWindow;
-        if (settingsArgs !== g.settingsArgs) settingsArgs = g.settingsArgs;
-        if (settingsFocused !== g.settingsFocused) settingsFocused = g.settingsFocused;
-        if (settingsOpen !== g.settingsOpen) settingsOpen = g.settingsOpen;
-        passiveSerial = g.passiveSerial;
+        _state = { monitors: result.monitors, global: g };
+        // one MonitorState per monitor of the result first (a new one starts with the defaults,
+        // which a nested apply then sees too), the fields after
         let map = monitors, changed = false;
-        for (const n in result.monitors) {
-            let m = map[n];
-            if (!m) {
-                m = stateComp.createObject(root, { name: n });
-                if (!changed) { map = Object.assign({}, map); changed = true; }
-                map[n] = m;
-            }
-            const src = result.monitors[n];
-            // args before the mode, so a surface reacting to `notch` sees its new args
-            for (const f of _fields) if (!_same(m[f], src[f])) m[f] = src[f];
+        const gone = [];
+        for (const n in result.monitors) if (!map[n]) {
+            if (!changed) { map = Object.assign({}, map); changed = true; }
+            map[n] = stateComp.createObject(root, { name: n });
         }
         for (const n in map) if (!(n in result.monitors)) {
             if (!changed) { map = Object.assign({}, map); changed = true; }
-            map[n].destroy();
+            gone.push(map[n]);
             delete map[n];
         }
         if (changed) monitors = map;
-        // the next entry that ages out without an operation (rules.nextDeadline): one timer, no polling
-        const due = Rules.nextDeadline(result.monitors, g);
-        if (due) { expiry.interval = Math.max(1, due - Date.now()); expiry.restart(); }
-        else expiry.stop();
+        for (const m of gone) m.destroy();
+        const live = () => serial === _applySerial;
+        if (live() && polkitMonitor !== g.polkitMonitor) polkitMonitor = g.polkitMonitor;
+        if (live() && !_same(pending, g.pending)) pending = g.pending;
+        if (live() && previousWindow !== g.previousWindow) previousWindow = g.previousWindow;
+        if (live() && settingsArgs !== g.settingsArgs) settingsArgs = g.settingsArgs;
+        if (live() && settingsFocused !== g.settingsFocused) settingsFocused = g.settingsFocused;
+        if (live() && settingsOpen !== g.settingsOpen) settingsOpen = g.settingsOpen;
+        if (live()) passiveSerial = g.passiveSerial;
+        for (const n in result.monitors) {
+            const m = map[n], src = result.monitors[n];
+            // args before the mode, so a surface reacting to `notch` sees its new args
+            for (const f of _fields) {
+                if (!live()) break;
+                if (!_same(m[f], src[f])) m[f] = src[f];
+            }
+        }
+        // the next entry that ages out without an operation (rules.nextDeadline): one timer, no
+        // polling (an overtaking apply has armed it for the newer state)
+        if (live()) {
+            const due = Rules.nextDeadline(result.monitors, g);
+            if (due) { expiry.interval = Math.max(1, due - Date.now()); expiry.restart(); }
+            else expiry.stop();
+        }
         for (const e of result.effects) {
             if (e.kind === "opened") surfaceOpened(e.monitor, e.surface);
             else if (e.kind === "closed") surfaceClosed(e.monitor, e.surface);
@@ -213,37 +227,34 @@ Singleton {
         for (const k of ka) if (!(k in b) || !_sameAt(a[k], b[k], depth - 1)) return false;
         return true;
     }
-    // Plain-object snapshot of the current state for rules.js.
+    // Plain-object snapshot of the current state for rules.js: the last result (`_state`, never the
+    // MonitorState objects, which may be half-written), each monitor a shallow copy.
     function _snapshot(): var {
         const ms = {};
-        for (const n in monitors) {
-            const m = monitors[n], o = { name: n };
-            for (const f of _fields) o[f] = m[f];
-            o.interactive = m.interactive; o.keyboard = m.keyboard; o.top = m.top;
-            o.passive = Array.from(m.passive);
-            o.deckPages = Array.from(m.deckPages);
-            ms[n] = o;
-        }
+        for (const n in _state.monitors) ms[n] = Object.assign({}, _state.monitors[n]);
         // the session state as rules.js last left it, plus the inputs that do not go through an
         // operation (the lock and the active monitor do: their change handlers run setLocked/setActive
         // on the state before)
-        const g = Object.assign({}, _g, { pending: Array.from(_g.pending), currentWindow: currentWindow, limits: limits,
-            overFullscreen: Config.loaded ? Config.get("notch.overFullscreen") : "critical" });
+        const g = Object.assign({}, _state.global, { pending: Array.from(_state.global.pending), currentWindow: currentWindow,
+            limits: limits, overFullscreen: Config.loaded ? Config.get("notch.overFullscreen") : "critical" });
         return { monitors: ms, global: g };
     }
     function _monitorFor(monitor: var): string {
         return monitor === undefined || monitor === null || monitor === "" || monitor === "undefined" ? activeMonitor : String(monitor);
     }
 
-    // The session-wide state of the last rules.js result.
-    property var _g: Rules.newGlobal({})
+    // The last rules.js result, the state every operation starts from: { monitors: { name: plain
+    // monitor state }, global } (07 §5).
+    property var _state: ({ monitors: {}, global: Rules.newGlobal({}) })
+    // Bumped by every _apply; an apply that a nested one overtook stops writing.
+    property int _applySerial: 0
     // The MonitorState fields copied from a rules.js result, in order (_apply).
     readonly property var _fields: ["instant", "hero", "notchArgs", "notchSerial", "deckPages", "deckArgs",
         "overviewArgs", "menu", "capture", "fullscreen", "passive", "notch", "deck", "overview", "passiveTop"]
 
     // Tell rules.js about a new active monitor (setActive) when it differs from the one it knows.
     function _syncActive(): void {
-        if (activeMonitor === "" || activeMonitor === _g.activeMonitor || !monitors[activeMonitor]) return;
+        if (activeMonitor === "" || activeMonitor === _state.global.activeMonitor || !_state.monitors[activeMonitor]) return;
         _run("setActive", activeMonitor);
     }
 
@@ -261,9 +272,10 @@ Singleton {
     onFullscreenMonitorsChanged: _syncFullscreen()
     // A monitor's fullscreen flag follows fullscreenMonitors (also for a monitor added later).
     function _syncFullscreen(): void {
-        for (const n in monitors) {
+        for (const n in _state.monitors) {
             const fs = fullscreenMonitors.indexOf(n) >= 0;
-            if (monitors[n].fullscreen !== fs) _run("setFullscreen", n, fs);
+            const m = _state.monitors[n];
+            if (m && m.fullscreen !== fs) _run("setFullscreen", n, fs);
         }
     }
     Connections {

@@ -68,9 +68,8 @@ Singleton {
     readonly property int _days: Config.get("notifications.historyDays") || 7
 
     onHoldingChanged: {
-        // Later, not here: `holding` changes while SurfaceManager applies a rules.js result (the
-        // monitor's fullscreen), and a post from inside that would be overwritten by the rest of
-        // the same apply (its passive list).
+        // Later, not here: one hold can end as another begins in the same turn (focus ends, DND
+        // stays on); only a hold still ended after the turn releases.
         if (holding === "" && held > 0) Qt.callLater(() => { if (root.holding === "") root._releaseHeld(); });
     }
 

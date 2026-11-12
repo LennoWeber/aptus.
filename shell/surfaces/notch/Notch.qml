@@ -74,8 +74,6 @@ Item {
     property var _layers: []
     property int _layerSerial: 0
     // The activity whose card is open by hover ("" none): a `card:` notch without `pinned`.
-    // Derived, never stored: SurfaceManager applies notch and passive top one after the other,
-    // so `view` passes through "rest" while a card opens.
     readonly property string _hoverCard: monitor && monitor.notch.indexOf("card:") === 0 && !monitor.notchArgs.pinned
                                          ? monitor.notch.slice(5) : ""
     // The pointer is over the bulge (the source for the toast countdown pause, the pinned-card
@@ -144,9 +142,7 @@ Item {
     Component.onCompleted: _sync()
     Connections {
         target: root.monitor
-        // Later, not here: the passive list is written in the middle of a SurfaceManager apply
-        // (before notch and passiveTop), and a dismissal from inside it would be overwritten.
-        function onPassiveChanged(): void { Qt.callLater(root._expire); }
+        function onPassiveChanged(): void { root._expire(); }
     }
 
     // The view changed: update the layers (notch.js nextLayers) and the timers of what shows.
@@ -166,8 +162,8 @@ Item {
         else if (view.kind !== "event") { _eventId = 0; _eventShownAt = 0; }
         const pinned = monitor.notch.indexOf("card:") === 0 && !!monitor.notchArgs.pinned;
         _pinnedSince = pinned && !_bulgeHovered ? (_pinnedSince || Date.now()) : 0;
-        // Later, not here: both may dismiss an entry, which changes the passive list `view` is
-        // still notifying about (a binding loop leaves `view` stale).
+        // Later, not here: _sync runs inside `view`'s change notification, and both may dismiss an
+        // entry, which changes `view` again (a binding loop would leave it stale).
         Qt.callLater(root._countdownTick);
         Qt.callLater(root._expire);
     }

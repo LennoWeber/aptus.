@@ -169,6 +169,12 @@ API (also exposed over IPC): `open(surface, args)`, `close(surface)`, `toggle(su
 `back()` (the Esc ladder, [05-interaction.md](05-interaction.md) §3), `post(kind, payload,
 priority)` for passive content, `state()`.
 
+Every operation is a pure function of `rules.js` over the last result, which the manager keeps as
+the state; the `MonitorState` objects follow it field by field. The API is reentrant: a surface or
+service may call it from a change handler while a result is still being copied (a dismissal when
+the passive list changes, a post when a hold ends). That operation starts from the last result
+and applies in full; the apply it interrupted stops writing, and its effects are still signalled.
+
 Transition rules (enforced here, not in surfaces):
 
 | Request | When | Result |
