@@ -5,6 +5,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import qs.core
 import qs.components
+import "js/notch.js" as NJ
 
 Item {
     id: root
@@ -12,9 +13,10 @@ Item {
     // The OSD payload (levels.js).
     property var payload: ({})
 
-    // 300 × 44.
-    readonly property real bulgeWidth: Tokens.surfaces.osd.width
-    readonly property real bulgeHeight: Tokens.surfaces.osd.height
+    // The bulge size: 300 × 44.
+    readonly property var _size: NJ.bulgeSize("osd", payload, null, Tokens.surfaces)
+    readonly property real bulgeWidth: _size.width
+    readonly property real bulgeHeight: _size.height
 
     // The device name shows instead of the value for osd.deviceNameMs after a payload brought a
     // `device` (the poster sets it only on the first OSD after a device change, levels.js).

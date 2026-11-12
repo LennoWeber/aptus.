@@ -29,14 +29,7 @@ Item {
 
     // The slot's animated width (M-05).
     property real _width: openWidth
-    Behavior on _width {
-        SpringAnimation {
-            spring: Motion.springs.notch.spring
-            damping: Motion.springs.notch.damping
-            mass: Motion.springs.notch.mass
-            epsilon: Motion.springs.notch.epsilon
-        }
-    }
+    Behavior on _width { NotchSpring {} }
 
     implicitWidth: _width
     implicitHeight: Tokens.barHeight

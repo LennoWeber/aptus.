@@ -63,7 +63,7 @@ aptus/
 │  │                            Keycap, Ring, Level, Menu, MenuHost, Tooltip, Badge, EmptyState, Glyph,
 │  │                            Label, Wash, FocusRing, AppIcon, Thumb, Scrim, RollingDigits, Ellipsis,
 │  │                            ErrorLine, PagerDots, Swatch, StandardAnimation, StandardColorAnimation,
-│  │                            SnappySpring, Nudge
+│  │                            SnappySpring, NotchSpring, Nudge
 │  ├─ services/                 one singleton per data source (§6)
 │  ├─ surfaces/<name>/          one folder (QML module qs.surfaces.<name>) per surface, owned by one
 │  │                            stage: frame, wallpaper, bar, notch (rest, compact, toast, osd, event,

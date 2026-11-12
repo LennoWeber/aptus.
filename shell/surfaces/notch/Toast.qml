@@ -19,9 +19,9 @@ Item {
 
     // The bulge size: 420 × 72 / 104 / 132 (notch.md §6); while the reply field is open it takes
     // the button row's place and the toast grows by the difference.
-    readonly property real bulgeWidth: Tokens.surfaces.toast.width
-    readonly property real bulgeHeight: NJ.toastHeight(payload, Tokens.surfaces.toast.heights)
-        + (replying ? Math.max(0, replyField.height - actions.height) : 0)
+    readonly property var _size: NJ.bulgeSize("toast", payload, null, Tokens.surfaces)
+    readonly property real bulgeWidth: _size.width
+    readonly property real bulgeHeight: _size.height + (replying ? Math.max(0, replyField.height - actions.height) : 0)
     readonly property bool hovered: hover.hovered
     // The inline reply field is open (takes the keyboard; the countdown stops).
     property bool replying: false

@@ -21,6 +21,11 @@
 // A slot assignment (notch.md §4): { left: activity id | "", right: activity id | "",
 //   waiting: [id] } from candidates [{ id, slot, priority, width }].
 
+// rules.js's card tests, for the Notch (functions, so qmllint sees them): a `card:<activity>`
+// notch, and one opened by click.
+function isCard(notch) { return R.isCard(notch) }
+function pinnedCard(monitor) { return R.pinnedCard(monitor) }
+
 // The view for a monitor state (MonitorState fields as a plain object): interactive notch modes
 // come from state.notch, cards (hover and pinned) from its passive top. A toast whose payload has
 // `card` is a result card (kind "result").
@@ -28,7 +33,7 @@ function viewOf(state) {
     invariant(state && R.legalNotch(state.notch), "illegal notch state " + (state && state.notch))
     invariant(!state.passiveTop || TOP_KINDS.indexOf(state.passiveTop.kind) >= 0, "illegal passive top " + (state.passiveTop && state.passiveTop.kind))
     var n = state.notch
-    if (n && n !== "rest" && R.isInteractiveMode(n))
+    if (R.isInteractiveMode(n))
         return { kind: "mode", key: "mode:" + n, entry: null, activity: "", mode: n }
     var t = state.passiveTop || { kind: "rest", entry: null }
     if (t.kind === "osd" || t.kind === "toast" || t.kind === "event") {
@@ -122,12 +127,12 @@ function toastHeight(payload, heights) {
     if (acts) return heights[1]
     return heights[0]
 }
-// The bulge size { width, height } of a view kind (notch.md §5–§8): toast 420 × toastHeight, OSD
-// 300 × 44, event the content width clamped to 260–360 × 36, card and result 420 × the card's
-// height (+ the pager when more than one activity is live), mode the mode's own size; rest and
-// hidden 0 × 0. measured: { width, height, pager: bool } of the content; tokens: Tokens.surfaces.
+// The bulge size { width, height } of a content (notch.md §5–§8): toast 420 × toastHeight, OSD
+// 300 × 44, event the content width clamped to 260–360 × 36, card 420 × the card's height (+ the
+// pager when more than one activity is live). A mode and a result card bring their own size.
+// measured: { width, height, pager: bool } of the content; tokens: Tokens.surfaces.
 function bulgeSize(kind, payload, measured, tokens) {
-    invariant(VIEW_KINDS.indexOf(kind) >= 0, "illegal view kind " + kind)
+    invariant(SIZED_KINDS.indexOf(kind) >= 0, "no bulge size for " + kind)
     invariant(tokens && tokens.toast && tokens.osd && tokens.event && tokens.card, "surface tokens missing")
     invariant(tokens.event.minWidth <= tokens.event.maxWidth, "event width range " + tokens.event.minWidth + ".." + tokens.event.maxWidth)
     var m = measured || {}
@@ -135,11 +140,9 @@ function bulgeSize(kind, payload, measured, tokens) {
     case "toast": return { width: tokens.toast.width, height: toastHeight(payload, tokens.toast.heights) }
     case "osd": return { width: tokens.osd.width, height: tokens.osd.height }
     case "event": return { width: Math.max(tokens.event.minWidth, Math.min(tokens.event.maxWidth, m.width || 0)), height: tokens.event.height }
-    case "card": case "result":
+    default:
         return { width: tokens.card.width,
                  height: (m.height || 0) + (m.pager ? tokens.card.pagerDotSize + tokens.card.padding : 0) }
-    case "mode": return { width: m.width || 0, height: m.height || 0 }
-    default: return { width: 0, height: 0 }
     }
 }
 // The passive timers (notch.md §6–§8, rules.js limits): which entries are due now and when the
@@ -208,6 +211,8 @@ var VIEW_KINDS = ["rest", "hidden", "toast", "osd", "event", "card", "result", "
 // The kinds rules.js arbitrate reports, and the view kinds that carry a passive entry.
 var TOP_KINDS = ["rest", "hidden", "osd", "toast", "event", "card"]
 var ENTRY_KINDS = ["toast", "result", "osd", "event"]
+// The contents bulgeSize knows.
+var SIZED_KINDS = ["toast", "osd", "event", "card"]
 function invariant(cond, message) { if (!cond) throw new Error("notch invariant: " + message) }
 function unique(list) {
     for (var i = 0; i < list.length; i++) if (list.indexOf(list[i]) !== i) return false

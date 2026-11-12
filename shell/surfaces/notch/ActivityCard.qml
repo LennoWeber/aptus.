@@ -23,9 +23,7 @@ Item {
     // size: 420 × the activity's cardHeight (+ the pager).
     readonly property var _activity: activities.find(a => a.activity === current) || null
     readonly property bool _pager: activities.length > 1
-    // 420 × the activity's cardHeight (+ the pager).
     readonly property var _size: NJ.bulgeSize("card", null, { height: _activity ? _activity.cardHeight : 0, pager: _pager }, Tokens.surfaces)
-    // 420 × the activity's cardHeight (+ the pager).
     readonly property real bulgeWidth: _size.width
     readonly property real bulgeHeight: _size.height
     readonly property bool hovered: hover.hovered
