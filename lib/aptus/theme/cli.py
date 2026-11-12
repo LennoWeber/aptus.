@@ -12,9 +12,8 @@ import sys
 from collections.abc import Sequence
 
 from .. import log
-from .. import paths as paths_mod
 from ..lease import ops
-from ..paths import Paths, UnsafeHome
+from ..paths import Paths
 from . import inputs as inputs_mod
 from . import noctalia, render, targets
 from .targets import Mechanism
@@ -91,14 +90,10 @@ def cmd_targets(paths: Paths, as_json: bool) -> int:
 
 def main(argv: Sequence[str]) -> int:
     args = parser().parse_args(list(argv))
-    paths = paths_mod.get()
-    try:                                  # before the logs: under test they go to $HOME
-        paths_mod.require_safe_home(paths)
-    except UnsafeHome as e:
-        print(f"aptus-theme: {e}", file=sys.stderr)
+    started = log.setup_tool("theme", "lease")
+    if started is None:
         return 3
-    logger = log.setup("theme")
-    log.setup("lease", "aptus-theme")
+    paths, logger = started
     try:
         if args.command == "targets":
             return cmd_targets(paths, args.json)

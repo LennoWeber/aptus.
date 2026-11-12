@@ -13,8 +13,8 @@ from . import atomic, hypr
 from .lease import guard, invariants, journal, ops, preflight, system
 from .lease.invariants import InvariantError
 from .lease.journal import JournalError
-from .log import setup
-from .paths import Paths, UnsafeHome, get, require_safe_home
+from .log import setup_tool
+from .paths import Paths, UnsafeHome, require_safe_home
 from .theme import apply, inputs, render, targets
 from .theme.render import Generation
 from .theme.targets import Manifest
@@ -255,15 +255,10 @@ def stop(paths: Paths) -> int:
 
 
 def main(argv: Sequence[str]) -> int:
-    p = get()
-    try:                                  # before the logs: under test they go to $HOME
-        require_safe_home(p)
-    except UnsafeHome as e:
-        print(f"aptus-session: {e}", file=sys.stderr)
+    started = setup_tool("session", "lease", "theme")
+    if started is None:
         return 3
-    log = setup("session")
-    setup("lease", "aptus-session")
-    setup("theme", "aptus-session")
+    p, log = started
     if list(argv) == ["stop"]:
         return stop(p)
     if list(argv) != ["start"]:

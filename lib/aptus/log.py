@@ -10,6 +10,10 @@ import socket
 import struct
 import sys
 from collections.abc import Mapping
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .paths import Paths
 
 
 LEVELS = {"debug": logging.DEBUG, "info": logging.INFO, "warn": logging.WARNING,
@@ -89,3 +93,22 @@ def setup(name: str, tag: str | None = None) -> logging.Logger:
         handler.setFormatter(formatter)
         logger.addHandler(handler)
     return logger
+
+
+def setup_tool(name: str, *also: str, refusing: str = "") -> tuple[Paths, logging.Logger] | None:
+    """The prologue of the session tools aptus-<name>: the paths, then require_safe_home before
+    any log is set up (under test the logs go to $HOME); refused: "aptus-<name>: <refusing><why>"
+    on stderr and None (the tool exits 3). Else the logger of `name` (tag aptus-<name>) and the
+    loggers of `also` under the same tag, so the lease and theme modules log as this tool."""
+    from .paths import UnsafeHome, get, require_safe_home
+
+    paths = get()
+    try:
+        require_safe_home(paths)
+    except UnsafeHome as e:
+        print(f"aptus-{name}: {refusing}{e}", file=sys.stderr)
+        return None
+    logger = setup(name)
+    for other in also:
+        setup(other, f"aptus-{name}")
+    return paths, logger

@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import logging
+import os
+import pwd
 import socket
 import struct
 from pathlib import Path
@@ -75,3 +77,26 @@ def test_no_journal_in_tests() -> None:
     assert not any(isinstance(h, log.JournalHandler) for h in logger.handlers)
     assert any(isinstance(h, logging.FileHandler) for h in logger.handlers)
     assert not logger.propagate
+
+
+def test_setup_tool_refuses_before_any_log(tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+                                           capsys: pytest.CaptureFixture[str]) -> None:
+    """The tools' prologue: an unsafe HOME under APTUS_TEST is refused on stderr with the tool's
+    prefix, before a log file exists; a safe one gives the paths and the tool's logger, and the
+    other modules' loggers log under the tool's tag."""
+    monkeypatch.setenv("HOME", pwd.getpwuid(os.getuid()).pw_dir)
+    assert log.setup_tool("guard", "lease", refusing="refusing: ") is None
+    err = capsys.readouterr().err
+    assert err.startswith("aptus-guard: refusing: APTUS_TEST=1 but HOME"), err
+    home = tmp_path / "other-home"
+    monkeypatch.setenv("HOME", str(home))
+    assert log.setup_tool("lease") is None                       # not a directory
+    assert capsys.readouterr().err.startswith("aptus-lease: APTUS_TEST=1 but HOME")
+    assert not home.exists()
+    home.mkdir()
+    paths, logger = log.setup_tool("theme", "lease")
+    assert paths.home == home and logger.name == "aptus.theme"
+    logging.getLogger("aptus.lease").warning("from the lease")
+    for h in logging.getLogger("aptus.lease").handlers:
+        h.flush()
+    assert "lease: warn: from the lease" in (home / "aptus-lease.log").read_text()

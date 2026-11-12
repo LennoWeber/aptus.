@@ -23,7 +23,6 @@ from enum import Enum
 from typing import Any
 
 from .. import atomic, hypr, log
-from .. import paths as paths_mod
 from ..paths import Paths
 from ..theme import hooks, resolve
 from . import invariants, journal, ops, preflight, system
@@ -261,15 +260,10 @@ def main(argv: Sequence[str]) -> int:
     if len(args) != 2 or not args[0].isdigit() or not args[1]:
         print("usage: aptus-guard <hyprland-pid> <signature>", file=sys.stderr)
         return 2
-    paths = paths_mod.get()
-    try:                                  # before the logs: under test they go to $HOME
-        paths_mod.require_safe_home(paths)
-    except paths_mod.UnsafeHome as e:
-        print(f"aptus-guard: refusing: {e}", file=sys.stderr)
+    started = log.setup_tool("guard", "lease", "theme", refusing="refusing: ")
+    if started is None:
         return 3
-    logger = log.setup("guard")
-    log.setup("lease", "aptus-guard")
-    log.setup("theme", "aptus-guard")
+    paths, logger = started
     try:
         hypr.check_allowed(args[1])
     except hypr.HyprError as e:
