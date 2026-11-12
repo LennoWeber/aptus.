@@ -17,8 +17,6 @@ Item {
     property string monitorName: ""
 
     readonly property bool hovered: mouse.containsMouse
-    // Found in phase 7: a menu is open on this monitor (no tooltip over it; under the menu's
-    // catcher the hover state is not updated).
     // Found in phase 7: the submenu openers of the menu shown last (destroyed at the next open).
     property var _subOpeners: []
 

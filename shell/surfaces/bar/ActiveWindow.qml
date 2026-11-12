@@ -13,8 +13,6 @@ Item {
 
     // The Hyprland monitor name of this bar.
     property string monitorName: ""
-    // Found in phase 7: a menu is open on this monitor (no tooltip over it; under the menu's
-    // catcher the hover state is not updated).
     // The focused window when it is on this monitor's active workspace (a Hypr window record), or null.
     property var window: null
     // What shows without a window: the active workspace's name ("" for none).

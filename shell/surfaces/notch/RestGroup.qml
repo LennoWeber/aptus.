@@ -14,8 +14,6 @@ Item {
 
     // The Hyprland monitor name (Today and the menu open there).
     property string monitorName: ""
-    // Found in phase 7: a menu is open on this monitor (no tooltip over it; under the menu's
-    // catcher the hover state is not updated).
     // bar.clock.showDate and not a narrow monitor.
     property bool showDate: true
     // Today has unread notifications; one of them is from an allowlisted app (accent dot).
