@@ -173,7 +173,7 @@ def check_environment(paths: Paths) -> Check:
     show-environment` unless a live owner holds the lease."""
     name = "isolation.environment"
     r = system.run(paths, ["systemctl", "--user", "show-environment"])
-    if r.skipped or r.code != 0:
+    if not r.ok:
         return Check(name, True, "systemctl --user show-environment did not run", warn=True)
     env = dict(line.split("=", 1) for line in r.stdout.splitlines() if "=" in line)
     found = [n for n in ENV_VARS if n in env]
@@ -190,7 +190,7 @@ def check_units(paths: Paths) -> Check:
     name = "isolation.units"
     r = system.run(paths, ["systemctl", "--user", "list-units", "aptus-*", "--state=active",
                            "--plain", "--no-legend", "--no-pager"])
-    if r.skipped or r.code != 0:
+    if not r.ok:
         return Check(name, True, "systemctl --user list-units did not run", warn=True)
     units = [ln.split()[0] for ln in r.stdout.splitlines() if ln.split()]
     units = [u for u in units if u != "aptus-recover.service"]

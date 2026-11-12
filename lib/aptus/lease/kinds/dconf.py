@@ -33,14 +33,14 @@ def read_key(paths: Paths, key: str) -> str | None:
     """`dconf read KEY`: the GVariant text, None when the key is not set."""
     check_key(key, writing=False)
     r = system.run(paths, ["dconf", "read", key])
-    if r.skipped or r.code != 0:
+    if not r.ok:
         raise DconfError(f"dconf read {key}: {'not available' if r.skipped else r.stderr.strip()}")
     return r.stdout.strip() or None
 
 
 def _change(paths: Paths, argv: list[str]) -> None:
     r = system.run(paths, argv)
-    if r.skipped or r.code != 0:
+    if not r.ok:
         raise DconfError(f"{' '.join(argv[:3])}: {'not available' if r.skipped else r.stderr.strip()}")
 
 

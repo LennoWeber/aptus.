@@ -29,6 +29,11 @@ class ToolResult:
     skipped: bool = False      # no such tool (or no fake under test): nothing ran
     timed_out: bool = False
 
+    @property
+    def ok(self) -> bool:
+        """The tool ran and exited 0 (a timeout or a failed start has code -1)."""
+        return not self.skipped and self.code == 0
+
 
 @dataclass(frozen=True)
 class Proc:

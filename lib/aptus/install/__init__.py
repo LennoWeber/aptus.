@@ -119,7 +119,7 @@ def systemctl_user(paths: Paths, args: Sequence[str]) -> None:
     fails or is not available."""
     from ..lease import system
     r = system.run(paths, ["systemctl", "--user", *args], timeout=30)
-    if r.skipped or r.code != 0:
+    if not r.ok:
         raise RuntimeError(f"systemctl --user {' '.join(args)} failed: "
                            f"{r.stderr.strip() or 'systemctl is not available'}")
 

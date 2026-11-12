@@ -64,7 +64,7 @@ READY_TIMEOUT = 5.0            # seconds aptus-session waits for a new guard's "
 def active(paths: Paths) -> bool:
     """The guard's unit is active (`systemctl --user is-active`)."""
     r = system.run(paths, ["systemctl", "--user", "is-active", "--quiet", f"{UNIT}.service"])
-    return not r.skipped and r.code == 0
+    return r.ok
 
 
 def ready(paths: Paths) -> bool:
@@ -75,11 +75,6 @@ def ready(paths: Paths) -> bool:
     except OSError:
         return False
     return word == GuardState.OK.value and active(paths)
-
-
-def pidfd(pid: int) -> int:
-    """os.pidfd_open(pid); ProcessLookupError when it is already gone."""
-    return os.pidfd_open(pid)
 
 
 def wait(fd: int, stop_fd: int, poll: float, on_poll: Callable[[], bool]) -> str:
@@ -132,13 +127,6 @@ def other_session_opened(paths: Paths, signature: str, pid: int, last: list[Any]
     return bool(found)
 
 
-def release_if_ours(paths: Paths, pid: int, signature: str) -> ReleaseReport:
-    """ops.release of the journal when it belongs to `pid` and `signature` (taking, held or
-    releasing; checked under the flock); `acted` false for a scope-only session or another
-    owner."""
-    return ops.release(paths, expect=(signature, pid))
-
-
 def aptus_values(paths: Paths) -> dict[str, str]:
     """The values aptus imports (hypr/env.lua): only these are ever unset."""
     try:
@@ -155,7 +143,7 @@ def unset_environment(paths: Paths) -> list[str]:
     `systemctl --user show-environment`; returns the names unset. Called only after this
     session's own lease was released (scope-only sessions never imported anything)."""
     r = system.run(paths, ["systemctl", "--user", "show-environment"])
-    if r.skipped or r.code != 0:
+    if not r.ok:
         _log.warning("systemctl --user show-environment failed: %s", r.stderr.strip() or "skipped")
         return []
     env = dict(line.split("=", 1) for line in r.stdout.splitlines() if "=" in line)
@@ -165,7 +153,7 @@ def unset_environment(paths: Paths) -> list[str]:
         return []
     invariants.check_unset(names, UNSET)
     r = system.run(paths, ["systemctl", "--user", "unset-environment", *names])
-    if r.skipped or r.code != 0:
+    if not r.ok:
         _log.warning("unset-environment %s failed: %s", names, r.stderr.strip())
         return []
     return names
@@ -194,8 +182,10 @@ def after_release(paths: Paths, report: ReleaseReport, signature: str) -> GuardS
 
 def give_back(paths: Paths, pid: int, signature: str) -> GuardState:
     """The guard's release: the environment first while this session holds the lease (a guard
-    killed half-way then leaves no variable behind; recover restores the slots), then
-    release_if_ours, then after_release once with its report. A release that raises (the lease
+    killed half-way then leaves no variable behind; recover restores the slots), then ops.release
+    of the journal when it belongs to `pid` and `signature` (taking, held or releasing; checked
+    under the flock; `acted` false for a scope-only session or another owner), then after_release
+    once with its report. A release that raises (the lease
     lock busy for 10 s, a full disk) is tried RETRIES times, BACKOFF apart; then FAILED (recover
     retries later). Only the release is retried: a retry after it succeeded would find no
     journal and skip the hooks."""
@@ -203,7 +193,7 @@ def give_back(paths: Paths, pid: int, signature: str) -> GuardState:
         try:
             if ops.held_by(paths, signature, pid):
                 unset_environment(paths)
-            report = release_if_ours(paths, pid, signature)
+            report = ops.release(paths, expect=(signature, pid))
         except Exception as e:  # noqa: BLE001 - the guard keeps trying, it never just dies
             _log.warning("release attempt %d of %d failed: %s: %s", attempt, RETRIES,
                          type(e).__name__, e)
@@ -228,7 +218,7 @@ def run(paths: Paths, pid: int, signature: str) -> int:
     On another session opening: the same release, guard.state scope-only, and keep watching."""
     stop = _stop_pipe()
     try:
-        fd: int | None = pidfd(pid)
+        fd: int | None = os.pidfd_open(pid)
     except ProcessLookupError:
         fd = None
     if fd is not None:

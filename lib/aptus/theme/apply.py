@@ -169,7 +169,7 @@ def _record_hooks(report: Report, manifest: Manifest, changed: dict[str, str],
 def apply_generation(paths: Paths, manifest: Manifest, gen: Generation, signature: str,
                      taken: Sequence[str] | None = None) -> Report:
     """08 §6 steps 1–5 for a rendered generation: the lease targets through ops.update when this
-    session holds the lease (ops.held_by), else they stay Noctalia's; under the theme lock the
+    session holds the lease (ops.holds), else they stay Noctalia's; under the theme lock the
     scope targets and the Own targets; then the reload hooks of what changed; the report.
     aptus-session uses it at start, right after the take of this generation (`taken`: the slot
     ids it wrote, which are not written again), apply after each render."""

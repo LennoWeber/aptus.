@@ -8,7 +8,7 @@ import hashlib
 import os
 import re
 import tomllib
-from collections.abc import Mapping, Sequence
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path

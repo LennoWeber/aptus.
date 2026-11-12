@@ -45,7 +45,7 @@ def sessions(paths: Paths) -> list[LoginSession] | None:
     """This user's logind sessions (`loginctl list-sessions` + `show-session`), None when loginctl
     is missing or fails (the caller fails closed: no lease)."""
     r = system.run(paths, ["loginctl", "list-sessions", "--no-legend", "--no-pager"])
-    if r.skipped or r.code != 0:
+    if not r.ok:
         return None
     uid, out = str(os.getuid()), []
     for line in r.stdout.splitlines():
@@ -67,7 +67,7 @@ def show_session(paths: Paths, session_id: str) -> dict[str, str] | None:
     for prop in ("Id", "Class", "Type", "State", "Desktop", "Service"):
         argv += ["-p", prop]
     r = system.run(paths, argv)
-    if r.skipped or r.code != 0:
+    if not r.ok:
         return None
     return dict(line.split("=", 1) for line in r.stdout.splitlines() if "=" in line)
 

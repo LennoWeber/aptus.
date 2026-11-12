@@ -12,7 +12,7 @@ import os
 import shlex
 import signal as signals
 import stat
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import TimeoutError as FutureTimeout
 from dataclasses import dataclass
@@ -41,11 +41,9 @@ class HookResult:
 
 
 TIMEOUT = 3.0
-BUILTINS = ("kde", "tmux", "nvim", "hyprland")
 KDE_SIGNAL = ["dbus-send", "--session", "--type=signal", "/KGlobalSettings",
               "org.kde.KGlobalSettings.notifyChange", "int32:0", "int32:0"]
 NVIM_KEYS = "<Cmd>colorscheme noctalia<CR>"
-NEEDS_SIGNATURE = ("signal", "hyprland")   # without one (recover at login) these wait
 
 _log = logging.getLogger("aptus.theme.hooks")
 
@@ -116,9 +114,7 @@ def run_one(paths: Paths, target_id: str, reload: str, signature: str) -> HookRe
         return _tool(target_id, system.run(paths, shlex.split(hook.command)))
     if hook.kind == "bake":
         return bake(paths, target_id, hook)
-    builtin = {"kde": builtin_kde, "tmux": builtin_tmux, "nvim": builtin_nvim,
-               "hyprland": builtin_hyprland}[hook.name]
-    return builtin(paths, target_id, signature)
+    return BUILTINS[hook.name](paths, target_id, signature)
 
 
 def _tool(target_id: str, r: system.ToolResult) -> HookResult:
@@ -133,7 +129,7 @@ def _many(target_id: str, results: list[system.ToolResult], what: str) -> HookRe
     """Several tool calls (one per server): applied when one reached a server."""
     if not results:
         return HookResult(target_id, "next-start", f"no {what} running")
-    ok = [r for r in results if not r.skipped and not r.timed_out and r.code == 0]
+    ok = [r for r in results if r.ok]
     if ok:
         return HookResult(target_id, "applied", f"{len(ok)} {what}")
     return _tool(target_id, results[0])
@@ -224,6 +220,11 @@ def builtin_hyprland(paths: Paths, target_id: str, signature: str) -> HookResult
     except hypr.HyprError as e:
         return HookResult(target_id, "next-start", str(e))
     return HookResult(target_id, "applied")
+
+
+# builtin:<name> → its hook; `parse` accepts exactly these names.
+BUILTINS: dict[str, Callable[[Paths, str, str], HookResult]] = {
+    "kde": builtin_kde, "tmux": builtin_tmux, "nvim": builtin_nvim, "hyprland": builtin_hyprland}
 
 
 def bake(paths: Paths, target_id: str, hook: Hook) -> HookResult:

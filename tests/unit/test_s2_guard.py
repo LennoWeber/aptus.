@@ -34,13 +34,13 @@ def hypr(p, test_home, tmp_path):
 
 def test_wait_exit_stop_and_poll() -> None:
     child = subprocess.Popen(["sleep", "0.2"])
-    fd = guard.pidfd(child.pid)
+    fd = os.pidfd_open(child.pid)
     r, w = os.pipe()
     try:
         assert guard.wait(fd, r, 0.05, lambda: False) == "exited"
         child.wait()
         live = subprocess.Popen(["sleep", "30"])
-        fd2 = guard.pidfd(live.pid)
+        fd2 = os.pidfd_open(live.pid)
         os.write(w, b"\x0f")
         assert guard.wait(fd2, r, 0.05, lambda: False) == "stopped"
         calls = []
@@ -55,7 +55,7 @@ def test_wait_exit_stop_and_poll() -> None:
     gone = subprocess.Popen(["true"])
     gone.wait()                                    # reaped: the pid no longer exists
     with pytest.raises(ProcessLookupError):
-        guard.pidfd(gone.pid)
+        os.pidfd_open(gone.pid)
 
 
 def test_write_state(p) -> None:
@@ -107,11 +107,12 @@ def test_failing_loginctl_keeps_the_lease(p, hypr) -> None:
     assert not guard.other_session_opened(p, hypr.signature, hypr.pid, [None])
 
 
-def test_release_if_ours(p, hypr) -> None:
+def test_release_only_of_this_owner(p, hypr) -> None:
+    """The guard's release: ops.release with `expect` acts only on this session's journal."""
     take(p, hypr)
-    assert not guard.release_if_ours(p, hypr.pid + 1, hypr.signature).acted
-    assert not guard.release_if_ours(p, hypr.pid, "other").acted
-    assert guard.release_if_ours(p, hypr.pid, hypr.signature).acted
+    assert not ops.release(p, expect=(hypr.signature, hypr.pid + 1)).acted
+    assert not ops.release(p, expect=("other", hypr.pid)).acted
+    assert ops.release(p, expect=(hypr.signature, hypr.pid)).acted
 
 
 def test_main_refusals(p) -> None:
@@ -139,15 +140,15 @@ def test_give_back_unsets_first_and_retries_a_release_that_raised(p, hypr, monke
     take(p, hypr)
     aptus_env(p)
     monkeypatch.setattr(guard, "BACKOFF", 0)
-    real = guard.release_if_ours
+    real = ops.release
     calls = []
 
-    def flaky(*args):
+    def flaky(*args, **kw):
         calls.append(fakes.user_env(p.home))
         if len(calls) == 1:
             raise ops.LeaseError("the lease lock is busy")
-        return real(*args)
-    monkeypatch.setattr(guard, "release_if_ours", flaky)
+        return real(*args, **kw)
+    monkeypatch.setattr(ops, "release", flaky)
     assert guard.give_back(p, hypr.pid, hypr.signature) == guard.GuardState.RELEASED
     assert calls[0] == {"XCURSOR_SIZE": "24"}            # unset before the first attempt
     assert len(calls) == 2 and journal.load(p) is None
@@ -160,7 +161,7 @@ def test_a_failure_after_the_release_still_runs_the_hooks(p, hypr, monkeypatch) 
     take(p, hypr, reload="builtin:tmux")
     aptus_env(p)
     monkeypatch.setattr(guard, "BACKOFF", 0)
-    real_unset, real_release = guard.unset_environment, guard.release_if_ours
+    real_unset, real_release = guard.unset_environment, ops.release
     unsets, releases, reloads = [], [], []
 
     def unset(paths):
@@ -169,7 +170,7 @@ def test_a_failure_after_the_release_still_runs_the_hooks(p, hypr, monkeypatch) 
             raise OSError("systemctl hung up")
         return real_unset(paths)
     monkeypatch.setattr(guard, "unset_environment", unset)
-    monkeypatch.setattr(guard, "release_if_ours", lambda *a: releases.append(1) or real_release(*a))
+    monkeypatch.setattr(ops, "release", lambda *a, **kw: releases.append(1) or real_release(*a, **kw))
     monkeypatch.setattr(hooks, "run_reloads", lambda paths, r, sig: reloads.append(dict(r)) or [])
     assert guard.give_back(p, hypr.pid, hypr.signature) == guard.GuardState.RELEASED
     assert len(releases) == 1 and journal.load(p) is None
@@ -180,8 +181,8 @@ def test_give_back_gives_up_after_its_retries(p, hypr, monkeypatch) -> None:
     take(p, hypr)
     monkeypatch.setattr(guard, "BACKOFF", 0)
     calls = []
-    monkeypatch.setattr(guard, "release_if_ours",
-                        lambda *a: calls.append(1) or (_ for _ in ()).throw(OSError("disk full")))
+    monkeypatch.setattr(ops, "release",
+                        lambda *a, **kw: calls.append(1) or (_ for _ in ()).throw(OSError("disk full")))
     assert guard.give_back(p, hypr.pid, hypr.signature) == guard.GuardState.FAILED
     assert len(calls) == guard.RETRIES and journal.load(p) is not None
 

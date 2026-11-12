@@ -105,7 +105,7 @@ def start_guard(paths: Paths, env: Mapping[str, str]) -> bool:
     r = system.run(paths, ["systemd-run", "--user", f"--unit={guard.UNIT}", "--collect", "--quiet",
                            "--property=Type=exec", str(paths.bin / "aptus-guard"),
                            str(who.hyprland_pid), who.hyprland_signature])
-    if r.skipped or r.code != 0:
+    if not r.ok:
         log.warning("systemd-run aptus-guard failed: %s", r.stderr.strip() or "not available")
         return False
     end = time.monotonic() + guard.READY_TIMEOUT
@@ -145,11 +145,11 @@ def lease_step(paths: Paths, env: Mapping[str, str], manifest: Manifest, gen: Ge
     return None
 
 
-def import_environment(paths: Paths, env: Mapping[str, str]) -> bool:
+def import_environment(paths: Paths) -> bool:
     """Step 5: `systemctl --user import-environment IMPORT_VARS` (only while the lease is held:
     a scope-only session must not reach an open Umbriel's user manager)."""
     r = system.run(paths, ["systemctl", "--user", "import-environment", *IMPORT_VARS])
-    if r.skipped or r.code != 0:
+    if not r.ok:
         logging.getLogger("aptus.session").warning("import-environment failed: %s",
                                                    r.stderr.strip() or "not available")
         return False
@@ -160,7 +160,7 @@ def environment_step(paths: Paths, env: Mapping[str, str], report: StartReport) 
     """Step 5 with its race closed: when the guard released between the take and the import
     (Hyprland gone, another session opened), the variables just imported are unset again and
     the session goes on scope-only."""
-    if not import_environment(paths, env):
+    if not import_environment(paths):
         report.warnings.append("systemctl --user import-environment failed")
     if not ops.holds(paths, ops.signature(env)):
         guard.unset_environment(paths)
@@ -172,7 +172,7 @@ def environment_step(paths: Paths, env: Mapping[str, str], report: StartReport) 
 def stop_guard(paths: Paths) -> bool:
     """`systemctl --user stop aptus-guard.service`: the guard releases on SIGTERM."""
     r = system.run(paths, ["systemctl", "--user", "stop", f"{guard.UNIT}.service"], timeout=30)
-    return not r.skipped and r.code == 0
+    return r.ok
 
 
 def start(paths: Paths, env: Mapping[str, str]) -> StartReport:
