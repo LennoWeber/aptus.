@@ -392,3 +392,27 @@ def test_an_apply_writes_only_what_changed(p, world, monkeypatch) -> None:
     assert journal.load(p).theme_generation == 2
     assert session.stop(p) == 0
     assert snapshot() == before
+
+
+# --- the wave-2 simplify -----------------------------------------------------------------------
+
+def test_a_login_builds_the_slot_specs_once(p, world, monkeypatch) -> None:
+    """Wave-2 simplify E10: apply_generation reuses the take's slot specs (apply.Taken) instead
+    of reading every rendered file again; the targets are reported as before."""
+    h, snapshot = world
+    before = snapshot()
+    builds = []
+    real = apply.slot_specs
+    monkeypatch.setattr(apply, "slot_specs", lambda *a, **kw: builds.append(a[3:]) or real(*a, **kw))
+    reports = []
+    real_apply = apply.apply_generation
+    monkeypatch.setattr(apply, "apply_generation",
+                        lambda *a, **kw: reports.append(real_apply(*a, **kw)) or reports[-1])
+    started(p, h)
+    r = reports[0]                                                # as before this change
+    assert (sorted(r.applied), sorted(r.next_start), r.failed) == (
+        ["cursor", "dconf", "hyprland"],
+        ["btop", "ghostty", "gtk3", "hyprlock", "kde", "kitty"], {})
+    assert builds == [()]                                         # lease_step's, for the take
+    assert session.stop(p) == 0
+    assert snapshot() == before

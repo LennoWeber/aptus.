@@ -118,15 +118,15 @@ def start_guard(paths: Paths, env: Mapping[str, str]) -> bool:
 
 
 def lease_step(paths: Paths, env: Mapping[str, str], manifest: Manifest, gen: Generation,
-               report: StartReport) -> list[str] | None:
+               report: StartReport) -> apply.Taken | None:
     """Step 4: the Own targets a leased key requires (apply.apply_required), then ops.take with
     the generation's slot specs (preflight inside); sets report.mode, reasons and notice and
-    returns the slot ids taken (None when not held). Any failure leaves the session scope-only
-    with NOTICE_FAILED."""
+    returns the specs and the slot ids taken (None when not held). Any failure leaves the
+    session scope-only with NOTICE_FAILED."""
     try:
         apply.apply_required(paths, manifest, gen)
-        taken = ops.take(paths, env, apply.slot_specs(paths, manifest, gen), ops.owner(paths, env),
-                         gen.n)
+        specs = apply.slot_specs(paths, manifest, gen)
+        taken = ops.take(paths, env, specs, ops.owner(paths, env), gen.n)
     except (ops.LeaseError, InvariantError, JournalError, OSError, ValueError) as e:
         report.reasons.append("the lease failed")
         report.warnings.append(f"take: {e}")
@@ -134,7 +134,7 @@ def lease_step(paths: Paths, env: Mapping[str, str], manifest: Manifest, gen: Ge
         return None
     if taken.held:
         report.mode = Mode.LEASE
-        return taken.slots
+        return apply.Taken(specs, taken.slots)
     if taken.preflight is not None and not taken.preflight.ok:
         report.reasons += taken.preflight.reasons
         report.notice = taken.preflight.notice
