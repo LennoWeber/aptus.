@@ -335,6 +335,54 @@ def test_running_noctalia_takes_nothing(p, test_home, hypr, tmp_path) -> None:
         proc.wait()
 
 
+def test_sessions_are_shown_in_one_call(p, test_home) -> None:
+    """Wave-2 simplify E9: one `loginctl show-session` for every listed session; a session that
+    is gone by then (loginctl fails for it) fails closed."""
+    fakes.one_session(test_home, "2", {"Id": "3", "Class": "manager", "Type": "unspecified",
+                                       "State": "active"},
+                      {"Id": "5", "Class": "user", "Type": "wayland", "State": "online",
+                       "Desktop": "Umbriel", "Service": "greetd"})
+    listed = preflight.sessions(p)
+    assert [(s.id, s.cls, s.type, s.state) for s in listed] == [
+        ("2", "user", "wayland", "active"), ("3", "manager", "unspecified", "active"),
+        ("5", "user", "wayland", "online")]
+    assert (listed[2].desktop, listed[2].service) == ("Umbriel", "greetd")
+    shows = [c for c in fakes.calls(test_home, "loginctl") if c[1] == "show-session"]
+    assert len(shows) == 1 and shows[0][2:5] == ["2", "3", "5"]
+    fakes.tool(test_home, "loginctl", f"""\
+        if args[0] == "list-sessions":
+            out.append("2 {os.getuid()} user seat0 1 user tty1 no -\\n9 {os.getuid()} user - 1 user - no -\\n")
+        else:
+            out.append("Id=2\\nClass=user\\nType=wayland\\nState=active\\n")
+            code = 1
+        """)
+    assert preflight.sessions(p) is None
+
+
+def test_the_shell_preflight_is_one_walk_of_proc(p, test_home, tmp_path, monkeypatch) -> None:
+    """Wave-2 simplify E8: Noctalia by name and a Quickshell running its config (its command
+    line names noctalia), from one walk; another Quickshell does not count."""
+    import shutil
+    import subprocess
+    from aptus.lease import system
+    procs = []
+    for name, argv0 in (("noctalia", "noctalia"), ("qs", "qs-for-noctalia"), ("quickshell", "quickshell")):
+        exe = tmp_path / "fakebin" / name
+        exe.parent.mkdir(exist_ok=True)
+        shutil.copy(shutil.which("sleep"), exe)
+        procs.append(subprocess.Popen([argv0, "60"], executable=str(exe), env={"HOME": str(test_home)}))
+    walks = []
+    real = system.processes
+    monkeypatch.setattr(system, "processes", lambda *a: walks.append(a[1]) or real(*a))
+    try:
+        assert preflight.noctalia(p) == sorted([procs[0].pid, procs[1].pid])
+        assert len(walks) == 1
+    finally:
+        for proc in procs:
+            proc.kill()
+            proc.wait()
+
+
 # --- recover ---------------------------------------------------------------------------------
 
 def test_recover_after_the_owner_died(p, test_home, hypr) -> None:

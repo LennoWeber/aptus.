@@ -84,10 +84,19 @@ def loginctl(home: Path, sessions: list[dict[str, str]]) -> None:
         if args[0] == "list-sessions":
             for r in rows:
                 out.append(f"{{r['Id']}} {os.getuid()} user seat0 1 {{r['Class']}} tty1 no -\\n")
-        elif args[0] == "show-session":
-            r = next(x for x in rows if x["Id"] == args[1])
-            for k, v in r.items():
-                out.append(f"{{k}}={{v}}\\n")
+        elif args[0] == "show-session":           # several ids: blank lines between the blocks
+            ids = []
+            for a, prev in zip(args[1:], args):
+                if not a.startswith("-") and prev != "-p":
+                    ids.append(a)
+            blocks = []
+            for sid in ids:
+                r = next((x for x in rows if x["Id"] == sid), None)
+                if r is None:
+                    code = 1                         # loginctl: No session '…' known
+                    continue
+                blocks.append("".join(f"{{k}}={{v}}\\n" for k, v in r.items()))
+            out.append("\\n".join(blocks))
         """)
 
 
