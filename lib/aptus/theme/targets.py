@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Any
 
 from ..lease.journal import SlotKind
-from ..paths import Paths
+from ..paths import Paths, below, plain_name
 from .noctalia import Enabled
 
 
@@ -181,7 +181,7 @@ def _check_scope(t: Target) -> None:
     sc = t.scope
     if sc is None:
         raise ManifestError(f"{t.id}: a scope target needs scope = {{ into, … }}")
-    if not sc.into or sc.into in (".", "..") or "/" in sc.into or sc.into.startswith("."):
+    if not plain_name(sc.into):
         raise ManifestError(f"{t.id}: scope into {sc.into!r} is not one plain name")
     if bool(sc.mirror) == bool(sc.source):
         raise ManifestError(f"{t.id}: scope has either mirror or source")
@@ -262,17 +262,12 @@ def expand(paths: Paths, value: str, *, system: bool = False) -> Path:
     out = os.path.normpath(out)
     if system and value.startswith("/"):
         return Path(out)
-    if not _below(out, paths.home):
+    if not below(out, paths.home, real=False):
         raise ManifestError(f"path {value!r} leaves HOME")
     for never in (paths.umbriel_config, paths.noctalia_settings.parent, Path("/etc")):
-        if _below(out, never):
+        if below(out, never, real=False):
             raise ManifestError(f"path {value!r} lies inside {never}")
     return Path(out)
-
-
-def _below(path: str, root: Path) -> bool:
-    r = os.path.normpath(str(root))
-    return path == r or path.startswith(r.rstrip("/") + "/")
 
 
 def active(paths: Paths, target: Target) -> bool:
