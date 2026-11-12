@@ -3,7 +3,6 @@ pragma Singleton
 // Owner: S3 (battery), S5 (profiles).
 import QtQuick
 import Quickshell
-import Quickshell.Io
 import Quickshell.Services.UPower
 import qs.core
 import "js/notifications.js" as N
@@ -74,14 +73,11 @@ Singleton {
         if (charging || percentage < 100) SurfaceManager.post("event", S.chargingEvent());
     }
 
-    FileView {
+    WatchedFile {
         path: {
             const dir = String(Quickshell.env("APTUS_SYSFS") || "").replace(/\/+$/, "");
             return root.testDouble && dir !== "" ? dir + "/aptus-test-battery.json" : "";
         }
-        watchChanges: true
-        printErrors: false
-        onFileChanged: reload()
         onLoaded: {
             let d = null;
             try { d = JSON.parse(text()); } catch (e) { return; }     // a write in progress: the next change reads it whole

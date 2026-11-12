@@ -6,3 +6,4 @@ singleton Paths 1.0 Paths.qml
 singleton Log 1.0 Log.qml
 singleton SurfaceManager 1.0 SurfaceManager.qml
 MonitorState 1.0 MonitorState.qml
+WatchedFile 1.0 WatchedFile.qml

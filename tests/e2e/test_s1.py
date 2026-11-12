@@ -34,22 +34,61 @@ def test_state_json(nested: Nested) -> None:
     assert "hypr" in st["services"] and "tokens" in st["services"]
 
 
-def test_outside_write_after_a_missing_file(nested: Nested) -> None:
-    # The test HOME starts without settings.json: Config writes the empty file and watches it, so
-    # an outside write (atomic or in place) is seen without `shell reloadConfig` (07 §8).
-    path = nested.paths.settings
-    nested.wait_for(path.exists, 5)
-    assert json.loads(path.read_text()) == {"v": 2}
+def accent(nested: Nested) -> str:
+    return nested.state()["services"]["tokens"]["accent"]
 
-    def accent() -> str:
-        return nested.state()["services"]["tokens"]["accent"]
+
+def write_resolution(nested: Nested, accent_name: str) -> None:
+    """theme/resolved.json as `aptus-theme apply` leaves it (atomic), for the shell's mode."""
+    from aptus.theme import resolve
+    from aptus.theme.inputs import Inputs
+    t = nested.state()["services"]["tokens"]
+    res = resolve.resolve(resolve.load_tokens(nested.paths),
+                          Inputs(mode=t["mode"], accent=accent_name, contrast="normal", glass=t["glass"]))
+    target = nested.paths.theme_resolved
+    target.parent.mkdir(parents=True, exist_ok=True)
+    tmp = target.with_name(target.name + ".e2e-tmp")
+    tmp.write_text(json.dumps(res, indent=2) + "\n")
+    tmp.replace(target)
+
+
+def test_a_resolution_made_after_the_start(nested: Nested) -> None:
+    # Wave-2 simplify A6: Tokens (WatchedFile) follows theme/resolved.json also when theme/ was
+    # missing when the shell started: a resolution made later shows (an outside render, 07 §7).
+    # A FileView alone watches only a file whose folder existed when the watch was set.
+    theme = nested.paths.theme_resolved.parent
+    aside, made = theme.with_name("theme.e2e-aside"), theme.with_name("theme.e2e-made")
+    before = accent(nested)
+    other = "rose" if before == "sky" else "sky"
+    theme.rename(aside)
+    try:
+        restart_shell(nested)
+        time.sleep(2)                                      # a render the shell starts itself ends
+        write_resolution(nested, other)
+        nested.wait_for(lambda: accent(nested) == other, 5)
+    finally:
+        if theme.exists():
+            theme.rename(made)
+        aside.rename(theme)
+        restart_shell(nested)                              # back to the session's own theme state
+    assert accent(nested) == before
+
+
+def test_outside_write_after_a_missing_file(nested: Nested) -> None:
+    # The test HOME starts without ~/.config/aptus/, and Config writes no settings.json:
+    # WatchedFile sees the folder and the file made later, and an outside write (atomic or in
+    # place) after that, without `shell reloadConfig` (07 §8).
+    path = nested.paths.settings
+    time.sleep(0.5)
+    assert not path.parent.exists()
+    path.parent.mkdir(parents=True)
 
     tmp = path.with_name(path.name + ".e2e-tmp")
     tmp.write_text(json.dumps({"v": 2, "appearance.accent": "sky"}) + "\n")
     tmp.replace(path)
-    nested.wait_for(lambda: accent() == "sky", 5)
+    nested.wait_for(lambda: accent(nested) == "sky", 5)
     path.write_text(json.dumps({"v": 2}) + "\n")
-    nested.wait_for(lambda: accent() == "jade", 5)
+    nested.wait_for(lambda: accent(nested) == "jade", 5)
 
 
 def test_surface_open_back(nested: Nested) -> None:
@@ -123,8 +162,8 @@ def test_wallpaper_next_keeps_monitor_images(nested: Nested) -> None:
     assert st["all"] in (own, str(walls / "second.png"))
 
 
-def test_shell_restart(nested: Nested) -> None:
-    # `shell restart` writes the flag, quits, and the supervisor starts the shell at once (07 §10).
+def restart_shell(nested: Nested) -> None:
+    """`shell restart` in the nested session: the flag, a quit, the supervisor's new shell."""
     from nested import test_processes
 
     def shells() -> set[int]:
@@ -148,4 +187,9 @@ def test_shell_restart(nested: Nested) -> None:
         except Exception:
             return False
     nested.wait_for(answers, 10)
+
+
+def test_shell_restart(nested: Nested) -> None:
+    # `shell restart` writes the flag, quits, and the supervisor starts the shell at once (07 §10).
+    restart_shell(nested)
     assert not nested.paths.restart_flag.exists()   # the supervisor took it

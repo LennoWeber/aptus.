@@ -17,12 +17,13 @@ TestCase {
         invalid.clear();
     }
 
-    // A missing settings.json is written once, empty, and loaded again so it gets its watch
-    // (the e2e test_s1 test_outside_write_after_a_missing_file covers the watch itself).
-    function test_missing_file_is_written_empty() {
-        tryVerify(() => !Config._unwatched, 2000);
-        verify(Config._written !== null);
-        compare(JSON.parse(Config._written).v, 2);
+    // A missing settings.json is not written at the start: WatchedFile follows it anyway (the e2e
+    // test_s1 test_outside_write_after_a_missing_file covers the watch itself). Named to run first
+    // (before a test's set() writes the file).
+    function test_a_missing_file_is_not_written() {
+        verify(Config.loaded);
+        wait(50);
+        compare(Config._written, null);
     }
 
     function test_defaults_loaded() {

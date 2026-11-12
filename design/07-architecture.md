@@ -56,7 +56,7 @@ aptus/
 │  └─ doctor/ (isolation.py, deps.py, config.py)
 ├─ shell/                       qs -p shell
 │  ├─ shell.qml                 root: ShellRoot, Variants over Quickshell.screens → MonitorShell
-│  ├─ core/                     Tokens, Motion, Config, Paths, Log, Format, SurfaceManager, MonitorState,
+│  ├─ core/                     Tokens, Motion, Config, Paths, Log, Format, SurfaceManager, MonitorState, WatchedFile,
 │  │                            js/ (pure logic: rules, config, colour, resolve, format, bulge, sun)
 │  ├─ components/               Bulge (frame/cove path), BulgeSpec, NotchMode, Drawer, DrawerSlot, Activity, ListRow,
 │  │                            List, Button, IconButton, Tile, Slider, Switch, Segmented, Checkbox, Field,
@@ -310,6 +310,11 @@ Quickshell `GlobalShortcut { appid: "aptus"; name: … }`; Hyprland binds `hl.ds
 - `aptus-theme apply` swaps `~/.local/state/aptus/theme/current` and rewrites the stable file
   `theme/resolved.json` (a FileView does not see a symlink swap, [probes.md](probes.md)); `Tokens`
   watches it for palette values changed outside the shell and ignores it while `Theme.busy`.
+- The shell follows the files it reads (settings.json, resolved.json, the lease files) with
+  `core/WatchedFile`: a FileView watches a file only if its folder existed when the watch was set,
+  so WatchedFile watches the nearest existing folder above a missing one and sets the watch again
+  once the folder is there; a file made, replaced or removed after the start is seen. An optional
+  debounce gathers a burst of changes into one reload.
 
 ## 8. Configuration
 
@@ -328,7 +333,7 @@ Quickshell `GlobalShortcut { appid: "aptus"; name: … }`; Hyprland binds `hl.ds
 
 | File | Owner (writer) | Format | Written |
 |---|---|---|---|
-| `~/.config/aptus/settings.json` | Config | JSON | debounced 300 ms, atomic; written empty (`{"v": 2}`) at start when missing, because a file watch needs the file |
+| `~/.config/aptus/settings.json` | Config | JSON | debounced 300 ms, atomic |
 | `~/.config/aptus/calendars.json` | settings window | JSON, 0600 | on save, atomic |
 | `~/.local/state/aptus/lease/…` | aptus-lease | see [02](02-isolation.md) §5 | under flock |
 | `~/.local/state/aptus/theme/gen-<n>/`, `current` →, `resolved.json`, `own.json` | aptus-theme | rendered files; the resolved palette; the Own files aptus created | atomic dir + symlink swap under `theme/lock`; last 3 generations kept |

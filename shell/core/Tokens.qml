@@ -39,11 +39,9 @@ Singleton {
             return "{" + Object.keys(v).sort().map(k => JSON.stringify(k) + ":" + _canon(v[k])).join(",") + "}";
         return JSON.stringify(v);
     }
-    FileView {
+    // Also a resolved.json (or theme/ folder) made after the start (WatchedFile).
+    WatchedFile {
         path: Paths.state + "/theme/resolved.json"
-        watchChanges: true
-        printErrors: false
-        onFileChanged: reload()
         onLoaded: root._external(text())
         onLoadFailed: root._resolvedSeen = true
     }
