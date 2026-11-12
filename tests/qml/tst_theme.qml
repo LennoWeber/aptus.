@@ -1,6 +1,7 @@
 // The Theme service's run bookkeeping and its answer to an outside render (wave-2 review 3, 4).
 // Theme.qml is a Quickshell Singleton: each test loads its text as an Item (as mkmock.py does for
-// the core singletons) against the mock Process, StdioCollector, Tokens and Config.
+// the core singletons) against the real Run (tst_run covers its Process handling) over the mock
+// Process, and the real Tokens and Config.
 import QtQuick
 import QtTest
 import qs.core
@@ -22,41 +23,32 @@ TestCase {
     }
     function init() {
         theme = load();
-        proc = theme.resources.find(o => o.command !== undefined && o.stdout !== undefined);
-        verify(proc, "the Process");
+        proc = theme.resources.find(o => o.start !== undefined && o._proc !== undefined);
+        verify(proc, "the Run");
     }
     function cleanup() {
         theme.destroy();
         theme = null;
     }
 
-    function test_a_run_ends_with_stdout_and_exit_in_either_order() {
+    function test_a_run_reports_and_a_queued_one_follows() {
         theme._run();
         verify(theme.applying && proc.running);
-        proc.stdout.text = '{"generation": 4, "failed": {}, "mode": "lease"}';
-        proc.exited(0);
-        proc.running = false;                       // after the exit: still waiting for stdout
-        verify(theme.applying);
-        proc.stdout.streamFinished();
-        verify(!theme.applying);
+        theme._run();                                   // during the run: once more after it
+        verify(theme._queued);
+        proc._proc.stdout.text = '{"generation": 4, "failed": {"kde": "dbus"}, "mode": "lease"}';
+        proc._proc.exited(0);
+        proc._proc.stdout.streamFinished();
         compare(theme.generation, 4);
-        theme._run();
-        proc.stdout.text = '{"generation": 5, "failed": {"kde": "dbus"}, "mode": "lease"}';
-        proc.stdout.streamFinished();
-        verify(theme.applying);
-        proc.exited(0);
-        proc.running = false;
-        verify(!theme.applying);
-        compare(theme.generation, 5);
         compare(theme.failed, { kde: "dbus" });
+        verify(theme.applying && !theme._queued, "the queued run started");
     }
 
     function test_a_program_that_cannot_start_ends_the_run() {
-        // Quickshell 0.3.2 with a missing binary: `running` turns off, no exit, no end of stdout
-        proc.stdout.text = '{"generation": 9}';      // a previous run's output must not count
+        // Run reports code -1 (tst_run): Theme says why
         theme._run();
         verify(theme.applying);
-        proc.running = false;
+        proc._proc.running = false;
         verify(!theme.applying);
         verify(!theme.busy);
         compare(theme.failed, { render: "aptus-theme could not be started" });
@@ -71,7 +63,6 @@ TestCase {
         outside.accentName = outside.accentName === "jade" ? "sky" : "jade";
         Tokens._external(JSON.stringify(outside));
         compare(Tokens.mode, outside.mode);
-        verify(!Tokens.applyingExternal);
         verify(!theme.busy, "an apply now would paint the apps with Config's values again");
         Tokens.resolveNow();                            // the shell's own resolution: an apply
         verify(theme.busy);

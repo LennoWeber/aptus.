@@ -49,43 +49,27 @@ Item {
     // passes the Bar's own values).
     property bool quiet: false
     property bool narrow: false
-    // The toast's inline reply field is open and needs the keyboard (notch.md §6): MonitorShell
-    // grants it like a pinned card's.
-    readonly property bool wantsKeyboard: _currentContent !== null && _currentContent.replying === true
 
     // Found by the probe (phase 5):
     // This monitor's name.
     readonly property string _name: monitor ? monitor.name : ""
     // What the notch shows now (notch.js view): rest, hidden, toast, osd, event, card, result, mode.
-    // Only SurfaceManager's state goes in (a hover card is its `card:` notch too): _sync writes
-    // the Notch's own fields while this binding notifies, so it must not read them. The one
-    // exception is _replyEntry (not written by _sync): while a toast's reply field is open, an
-    // OSD does not cover that toast (notch.md §6; the OSD entry still expires on time).
-    readonly property var view: {
-        if (!monitor) return { kind: "rest", key: "", entry: null, activity: "", mode: "" };
-        const v = NJ.viewOf({ notch: monitor.notch, passiveTop: monitor.passiveTop });
-        if (v.kind !== "osd" || _replyEntry === 0) return v;
-        const e = monitor.passive.find(x => x.id === _replyEntry);
-        return e ? NJ.viewOf({ notch: monitor.notch, passiveTop: { kind: "toast", entry: e } }) : v;
-    }
-    // Found in phase 7: the passive entry whose toast has its reply field open (0 none).
-    property int _replyEntry: 0
+    // Only SurfaceManager's state goes in (a hover card is its `card:` notch too; a toast with its
+    // reply field open stays above an OSD there): _sync writes the Notch's own fields while this
+    // binding notifies, so it must not read them.
+    readonly property var view: monitor ? NJ.viewOf({ notch: monitor.notch, passiveTop: monitor.passiveTop })
+                                        : { kind: "rest", key: "", entry: null, activity: "", mode: "" }
     // The layers on screen: the current one and those still fading out (notch.js layer records).
     property var _layers: []
     property int _layerSerial: 0
     // The activity whose card is open by hover ("" none): a `card:` notch without `pinned`.
-    // Derived, never stored: SurfaceManager applies notch and passive top one after the other,
-    // so `view` passes through "rest" while a card opens.
-    readonly property string _hoverCard: monitor && monitor.notch.indexOf("card:") === 0 && !monitor.notchArgs.pinned
-                                         ? monitor.notch.slice(5) : ""
+    readonly property string _hoverCard: monitor && NJ.isCard(monitor.notch) && !NJ.pinnedCard(monitor) ? monitor.notch.slice(5) : ""
     // The pointer is over the bulge (the source for the toast countdown pause, the pinned-card
     // timeout and the hover collapse; a content item's own `hovered` only drives its looks).
     property bool _bulgeHovered: false
-    // Toast countdowns by passive entry id (notch.js countdown records).
+    // Toast countdowns by passive entry id (notch.js countdown records). A replace or a stack join
+    // changes the entry in place (a new `rev`) and restarts its countdown (notch.md §6).
     property var _countdowns: ({})
-    // Found in review: the payload each countdown was started for (passive entry id → payload):
-    // a replace or a stack join updates the entry in place and restarts its countdown (notch.md §6).
-    property var _countdownPayloads: ({})
     // The event entry shown now and since when (ms): it leaves surfaces.event.ms after it first
     // showed. (The OSD collapses osd.collapseAfter after its entry's `born`, which every post with
     // its key resets, so it needs no field here.)
@@ -101,11 +85,12 @@ Item {
         return out;
     }
     // The compact slots after arbitration (notch.js slot assignment): none while an interactive
-    // mode, Overview or Capture is open; under `hide` only recording (notch.md §2, §9).
+    // mode, Overview or Capture is open; under `hide` only an activity above fullscreen
+    // (recording, notch.md §2, §9).
     readonly property var _slots: {
         if (view.kind === "mode" || (monitor && (monitor.overview || monitor.capture !== null)))
             return { left: "", right: "", waiting: [] };
-        const cands = _live.filter(a => hide < 0.5 || a.activity === "recording")
+        const cands = _live.filter(a => hide < 0.5 || a.aboveFullscreen)
                            .map(a => ({ id: a.activity, slot: a.slot, priority: a.priority, width: _widths[a.activity] || 0 }));
         return NJ.assignSlots(cands, rest.implicitWidth, Tokens.gapBarItem, Tokens.surfaces.notch.centreGroupMaxWidth);
     }
@@ -115,10 +100,9 @@ Item {
     property var _widths: ({})
     // When the pointer last left a pinned card (0: not pinned, or under the pointer).
     property real _pinnedSince: 0
-    // The content of the current (not leaving) layer, or null.
-    property var _currentContent: null
     // The current (not leaving) layer and its content item, or null.
     property NotchLayer _currentLayer: null
+    readonly property var _currentContent: _currentLayer ? _currentLayer.content : null
 
     // The bar band's height now (slides with the intro and `hide`).
     readonly property real _barNow: Tokens.barHeight * introProgress * (1 - hide)
@@ -128,15 +112,15 @@ Item {
     property real _bulgeW: _targetW
     property real _bulgeH: _targetH
     property real _cove: _targetH > 0 ? Tokens.cove : 0
-    Behavior on _bulgeW { SpringAnimation { spring: Motion.springs.notch.spring; damping: Motion.springs.notch.damping; mass: Motion.springs.notch.mass; epsilon: Motion.springs.notch.epsilon } }
-    Behavior on _bulgeH { SpringAnimation { spring: Motion.springs.notch.spring; damping: Motion.springs.notch.damping; mass: Motion.springs.notch.mass; epsilon: Motion.springs.notch.epsilon } }
+    Behavior on _bulgeW { NotchSpring {} }
+    Behavior on _bulgeH { NotchSpring {} }
     Behavior on _cove { NumberAnimation { duration: Motion.catalogueMs("toast.coveGrow", false) } }
 
     onViewChanged: _sync()
     on_BulgeHoveredChanged: _sync()
     // Found in review: a pinned card is what shows (not covered by an OSD, toast or event): only
-    // then the outside catcher and the whole-monitor mask are up (rules.js keyboard agrees).
-    readonly property bool _pinnedShown: view.kind === "card" && monitor !== null && !!monitor.notchArgs.pinned
+    // then the outside catcher and the whole-monitor mask are up (rules.js pinnedShown).
+    readonly property bool _pinnedShown: monitor !== null && monitor.pinnedShown
     // The pointer is over the bulge or a compact slot: a hover card stays; it collapses
     // activityHover.leave after the pointer left both.
     readonly property bool _pointerIn: _bulgeHovered || leftSlot.hovered || rightSlot.hovered
@@ -144,9 +128,7 @@ Item {
     Component.onCompleted: _sync()
     Connections {
         target: root.monitor
-        // Later, not here: the passive list is written in the middle of a SurfaceManager apply
-        // (before notch and passiveTop), and a dismissal from inside it would be overwritten.
-        function onPassiveChanged(): void { Qt.callLater(root._expire); }
+        function onPassiveChanged(): void { root._expire(); }
     }
 
     // The view changed: update the layers (notch.js nextLayers) and the timers of what shows.
@@ -164,10 +146,9 @@ Item {
         }
         if (view.kind === "event" && view.entry && view.entry.id !== _eventId) { _eventId = view.entry.id; _eventShownAt = Date.now(); }
         else if (view.kind !== "event") { _eventId = 0; _eventShownAt = 0; }
-        const pinned = monitor.notch.indexOf("card:") === 0 && !!monitor.notchArgs.pinned;
-        _pinnedSince = pinned && !_bulgeHovered ? (_pinnedSince || Date.now()) : 0;
-        // Later, not here: both may dismiss an entry, which changes the passive list `view` is
-        // still notifying about (a binding loop leaves `view` stale).
+        _pinnedSince = NJ.pinnedCard(monitor) && !_bulgeHovered ? (_pinnedSince || Date.now()) : 0;
+        // Later, not here: _sync runs inside `view`'s change notification, and both may dismiss an
+        // entry, which changes `view` again (a binding loop would leave it stale).
         Qt.callLater(root._countdownTick);
         Qt.callLater(root._expire);
     }
@@ -188,14 +169,19 @@ Item {
     function _closeHoverCard(): void {
         if (_hoverCard !== "") SurfaceManager.close("card:" + _hoverCard, _name);
     }
-    // A passive entry is done (timeout, dismissal): SurfaceManager.dismiss and the toast's owner.
+    // A passive entry is done (timeout, dismissal); its owner and the countdowns learn it from
+    // SurfaceManager.passiveGone.
     function _dismissEntry(entry: var): void {
-        if (!entry) return;
-        SurfaceManager.dismiss(entry.id, _name);
-        if (entry.kind === "toast" || entry.kind === undefined) Notifications.toastGone(entry.id);
-        const c = Object.assign({}, _countdowns);
-        delete c[entry.id];
-        _countdowns = c;
+        if (entry) SurfaceManager.dismiss(entry.id, _name);
+    }
+    Connections {
+        target: SurfaceManager
+        function onPassiveGone(monitor: string, id: int, kind: string, key: string): void {
+            if (monitor !== root._name || root._countdowns[id] === undefined) return;
+            const c = Object.assign({}, root._countdowns);
+            delete c[id];
+            root._countdowns = c;
+        }
     }
     // A toast's inputs (notch.md §6).
     function _toastActivated(entry: var, action: string): void {
@@ -254,25 +240,20 @@ Item {
         if (!monitor) return;
         const now = Date.now();
         const shown = (view.kind === "toast" || view.kind === "result") && view.entry ? view.entry : null;
-        // countdowns of entries that left (closed through Notifications, not _dismissEntry) go
-        const c = {}, cp = {};
-        for (const id in _countdowns) {
-            if (!monitor.passive.some(e => e.id === Number(id))) continue;
+        const c = {};
+        for (const id in _countdowns)
             c[id] = !shown || Number(id) !== shown.id ? NJ.countdownPause(_countdowns[id], now) : _countdowns[id];
-            cp[id] = _countdownPayloads[id];
-        }
         let left = Infinity;
         if (shown) {
-            if (c[shown.id] && cp[shown.id] !== shown.payload) delete c[shown.id];     // updated in place
-            cp[shown.id] = shown.payload;
-            let cd = c[shown.id] || NJ.countdownStart(shown.payload ? Number(shown.payload.timeout) || 0 : 0, now);
-            const held = _bulgeHovered || wantsKeyboard;
+            const rev = shown.rev || 0;
+            if (c[shown.id] && c[shown.id].rev !== rev) delete c[shown.id];       // changed in place
+            let cd = c[shown.id] || NJ.countdownStart(shown.payload ? Number(shown.payload.timeout) || 0 : 0, now, rev);
+            const held = _bulgeHovered || !!shown.replying;
             cd = held ? NJ.countdownPause(cd, now) : NJ.countdownResume(cd, now, Tokens.surfaces.toast.resumeMinMs);
             c[shown.id] = cd;
             left = held ? Infinity : NJ.countdownLeft(cd, now);
         }
         _countdowns = c;
-        _countdownPayloads = cp;
         if (shown && left <= 0) { _dismissEntry(shown); return; }
         if (left !== Infinity) { toastTimer.interval = Math.max(1, left); toastTimer.restart(); }
         else toastTimer.stop();
@@ -291,12 +272,12 @@ Item {
         if (d.next > 0) { expireTimer.interval = Math.max(1, d.next - now); expireTimer.restart(); }
         else expireTimer.stop();
         for (const id of d.due) SurfaceManager.dismiss(id, _name);
-        if (d.card && monitor.notch.indexOf("card:") === 0) SurfaceManager.close(monitor.notch, _name);
+        if (d.card && NJ.isCard(monitor.notch)) SurfaceManager.close(monitor.notch, _name);
     }
     // A press outside a pinned card (the Notch's own catcher, 07 §5): close the card and replay
     // focus to the window under the pointer (Hypr.windowAt, focusWindow).
     function _outsideClicked(x: real, y: real): void {
-        if (monitor.notch.indexOf("card:") === 0) SurfaceManager.close(monitor.notch, _name);
+        if (NJ.isCard(monitor.notch)) SurfaceManager.close(monitor.notch, _name);
         if (y < _barNow) return;                     // the bar takes the press itself
         const w = Hypr.windowAt(_name, x, y);
         if (w) Hypr.focusWindow(w.address);
@@ -365,14 +346,13 @@ Item {
     // The input area (mask).
     Item {
         id: maskArea
-        readonly property bool _all: root._pinnedShown
         // the centre group takes input unless it left with the bar (under `hide` only a slot that
         // stays, i.e. recording, keeps it)
         readonly property bool _centre: root.hide <= 0.5 || root._slots.left !== "" || root._slots.right !== ""
-        x: _all ? 0 : Math.min(_centre ? centre.x : root.width, (root.width - root._bulgeW) / 2)
-        width: _all ? root.width : Math.max(_centre ? centre.x + centre.width : 0, (root.width + root._bulgeW) / 2) - x
+        x: root._pinnedShown ? 0 : Math.min(_centre ? centre.x : root.width, (root.width - root._bulgeW) / 2)
+        width: root._pinnedShown ? root.width : Math.max(_centre ? centre.x + centre.width : 0, (root.width + root._bulgeW) / 2) - x
         y: 0
-        height: _all ? root.height : Math.max(root._barNow + root._bulgeH, _centre && root.hide > 0.5 ? centre.y + centre.height : 0)
+        height: root._pinnedShown ? root.height : Math.max(root._barNow + root._bulgeH, _centre && root.hide > 0.5 ? centre.y + centre.height : 0)
     }
 
     // The centre group: compact slots and the rest clock. Each part slides out and fades with the
@@ -386,19 +366,10 @@ Item {
         height: Tokens.barHeight
         spacing: Tokens.gapBarItem
         opacity: root.introProgress
-        CompactSlot {
+        Slot {
             id: leftSlot
-            readonly property real _leave: activity && activity.activity === "recording" ? 0 : root.hide
-            opacity: 1 - _leave
-            transform: Translate { y: -Tokens.barHeight * leftSlot._leave }
             side: "left"
-            monitorName: root._name
-            activity: root._slots.left !== "" ? root._activities[root._slots.left] || null : null
-            onOpenWidthChanged: if (activity) root._noteWidth(activity.activity, openWidth)
-            onHoverRested: if (activity) root._openCard(activity.activity, false)
-            onClicked: if (activity) root._openCard(activity.activity, true)
-            onMiddleClicked: if (activity) activity.middleClick()
-            onRightClicked: (x, y) => { const p = mapToItem(null, x, y); if (activity) root._activityMenu(activity.activity, p.x, p.y); }
+            assigned: root._slots.left
         }
         RestGroup {
             id: rest
@@ -410,20 +381,28 @@ Item {
             unreadAllowlisted: Notifications.unreadAllowlisted
             clockTaken: root._currentContent !== null && root._currentContent.takesClock === true
         }
-        CompactSlot {
+        Slot {
             id: rightSlot
-            readonly property real _leave: activity && activity.activity === "recording" ? 0 : root.hide
-            opacity: 1 - _leave
-            transform: Translate { y: -Tokens.barHeight * rightSlot._leave }
             side: "right"
-            monitorName: root._name
-            activity: root._slots.right !== "" ? root._activities[root._slots.right] || null : null
-            onOpenWidthChanged: if (activity) root._noteWidth(activity.activity, openWidth)
-            onHoverRested: if (activity) root._openCard(activity.activity, false)
-            onClicked: if (activity) root._openCard(activity.activity, true)
-            onMiddleClicked: if (activity) activity.middleClick()
-            onRightClicked: (x, y) => { const p = mapToItem(null, x, y); if (activity) root._activityMenu(activity.activity, p.x, p.y); }
+            assigned: root._slots.right
         }
+    }
+    // A compact slot of the centre group: the activity _slots put on its side; it slides out and
+    // fades with the bar under `hide` unless its activity stays above fullscreen.
+    component Slot: CompactSlot {
+        id: slot
+        // The activity id _slots put here ("" none).
+        property string assigned: ""
+        readonly property real _leave: activity && activity.aboveFullscreen ? 0 : root.hide
+        opacity: 1 - _leave
+        transform: Translate { y: -Tokens.barHeight * slot._leave }
+        monitorName: root._name
+        activity: assigned !== "" ? root._activities[assigned] || null : null
+        onOpenWidthChanged: if (activity) root._noteWidth(activity.activity, openWidth)
+        onHoverRested: if (activity) root._openCard(activity.activity, false)
+        onClicked: if (activity) root._openCard(activity.activity, true)
+        onMiddleClicked: if (activity) activity.middleClick()
+        onRightClicked: (x, y) => { const p = mapToItem(null, x, y); if (activity) root._activityMenu(activity.activity, p.x, p.y); }
     }
     // A compact slot reports its activity's width (into _widths, later: _slots reads _widths, and
     // a slot's width follows _slots). Found in review: both slots can report in one turn, and
@@ -480,15 +459,14 @@ Item {
                          : kind === "result" && _e && _e.payload ? (root.cardComponents[_e.payload.card] || null) : null
                 args: kind === "mode" && root.monitor ? root.monitor.notchArgs : ({})
                 activities: root._live
-                pinned: kind === "card" && root.monitor !== null && !!root.monitor.notchArgs.pinned
+                pinned: kind === "card" && root.monitor !== null && NJ.pinnedCard(root.monitor)
                 onGoneChanged: if (gone) {
                     if (kind === "mode") root._modeLeft(mode);
-                    if (root._replyEntry === entryId) root._replyEntry = 0;
+                    if (layer._e && layer._e.replying) SurfaceManager.setReplying(entryId, false, root._name);
                     root._layerGone(uid);
                 }
                 onShownChanged: root._pickCurrent()
                 onContentChanged: {
-                    root._pickCurrent();
                     if (kind === "mode" && content) {
                         if ("clockRect" in content) content.clockRect = Qt.binding(() => root.clockRect);
                         root._modeEntered(mode, content);
@@ -505,21 +483,20 @@ Item {
                         const p = layer.content.mapToItem(null, x, y);
                         if (layer._e) root._toastMenu(layer._e, p.x, p.y);
                     }
-                    function onPicked(activity: string): void { root._openCard(activity, !!root.monitor.notchArgs.pinned); }
+                    function onPicked(activity: string): void { root._openCard(activity, NJ.pinnedCard(root.monitor)); }
                     function onCloseRequested(): void {
                         if (layer.kind === "mode") SurfaceManager.close(layer.mode, root._name);
                         else if (layer._e) root._dismissEntry(layer._e);
                     }
                     function onReplyingChanged(): void {
-                        if (layer.content.replying) root._replyEntry = layer.entryId;
-                        else if (root._replyEntry === layer.entryId) root._replyEntry = 0;
+                        if (layer._e) SurfaceManager.setReplying(layer.entryId, layer.content.replying, root._name);
                         root._countdownTick();
                     }
                 }
             }
         }
     }
-    // Find the current layer's item after the layers changed (_currentLayer, _currentContent).
+    // Find the current layer after the layers changed (_currentLayer).
     function _pickCurrent(): void {
         let cur = null;
         for (let i = 0; i < layerRep.count; i++) {
@@ -527,6 +504,5 @@ Item {
             if (l && l.shown) cur = l;
         }
         _currentLayer = cur;
-        _currentContent = cur ? cur.content : null;
     }
 }

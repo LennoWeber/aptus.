@@ -335,9 +335,12 @@ def test_inline_reply_takes_the_keyboard_and_sends(nested: Nested) -> None:
         settle(0.6)
         click_reply(nested)
         settle(0.4)
+        # the reply is SurfaceManager state: the entry is replying, the monitor has the keyboard
+        assert toast_for(nested, nid)["replying"] and active(nested)["keyboard"]
         nested.key("Escape")
         settle(0.3)
         assert toast_for(nested, nid) is not None
+        assert not toast_for(nested, nid)["replying"] and not active(nested)["keyboard"]
         close_notification(nested, nid)
         nested.wait_for(lambda: toast_for(nested, nid) is None, 3)
         # typed text and Enter: NotificationReplied, and the toast goes

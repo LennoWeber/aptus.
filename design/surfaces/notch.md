@@ -58,6 +58,8 @@ Two slots flank the clock. Each shows at most one activity; others wait by prior
 | right | progress (download, copy, export) | 14 px ring + "42 %" | 50 |
 
 There is no perpetual animation in compact form. Media is a still cover, not an equaliser.
+Under a fullscreen window only an activity marked `aboveFullscreen` keeps its compact look
+(recording); the others leave with the bar.
 
 The clock slides aside to make room (shared element, M-05). The whole centre group never exceeds
 480 px; when it would, the lower-priority slot gives way.
@@ -117,7 +119,8 @@ with no player at all shows the event "Nothing to play".
 2. Two or more arrivals within 2 s become one **stack** toast: overlapping app icons, "3 notifications",
    the newest title. Click opens Today.
 3. A notification that replaces another (`replaces_id`) updates the visible toast in place (content
-   crossfade, M-06 not replayed) and restarts its countdown.
+   crossfade, M-06 not replayed) and restarts its countdown (every change in place bumps the
+   passive entry's `rev`, 07 §5; a stack join does too).
 4. A notification with a progress hint (`value` 0–100) becomes a *progress* activity instead of a
    toast, and a toast only when it completes or fails.
 5. The interruption policy ([05-interaction.md](../05-interaction.md) §8) decides whether a toast
@@ -130,7 +133,7 @@ with no player at all shows the event "Nothing to play".
 | Click a button | that action; dismiss unless the notification is `resident` |
 | Click ✕, middle click | dismiss (it stays in Today as read) |
 | Right click | menu: Mute *App* for 1 hour, Turn on Do not disturb, Notification settings |
-| Reply (inline-reply action) | a field opens in the button row and takes the keyboard; Enter sends, Esc returns; countdown stopped; while it is open an OSD does not cover the toast (the level still changes) |
+| Reply (inline-reply action) | a field opens in the button row and takes the keyboard; Enter sends, Esc returns; countdown stopped; while it is open an OSD does not cover the toast (the level still changes). The open field is a `replying` flag on the toast's passive entry (07 §5), so arbitration and the keyboard follow it |
 
 ## 7. Events
 

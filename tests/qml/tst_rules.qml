@@ -131,6 +131,37 @@ TestCase {
         r = o(fresh(), "today")
         compare(kinds(p(r, "event", {})), "refused:event")
     }
+    // Wave-2 simplify A3: every passive entry that leaves is reported, however it leaves.
+    function gone(r) {
+        return r.effects.filter(function (e) { return e.kind === "passiveGone" })
+                        .map(function (e) { return e.surface + "#" + e.id + "@" + e.monitor + (e.key ? ":" + e.key : "") }).join(" ")
+    }
+    function test_passive_gone_effects() {
+        var r = p(fresh(), "toast", {}, 1, 1000, "n:7")
+        var toast = r.id
+        r = p(r, "event", { text: "Copied" }, 0, 1000)
+        var ev = r.id
+        compare(gone(r), "")
+        r = R.tick(r.monitors, r.global, 1000 + 4001)                   // the event ages out unseen
+        compare(gone(r), "event#" + ev + "@A")
+        r = p(r, "toast", { again: true }, 1, 6000, "n:7")              // a replace in place leaves nothing
+        compare(r.id, toast)
+        compare(gone(r), "")
+        r = R.dismiss(r.monitors, r.global, "", toast, 6100)
+        compare(gone(r), "toast#" + toast + "@A:n:7")
+        compare(gone(R.dismiss(r.monitors, r.global, "", toast, 6200)), "", "nothing left to dismiss")
+        // a waited toast that went stale
+        r = o(fresh(), "spotlight", {}, "", 1000)
+        r = p(r, "toast", {}, 1, 2000)
+        var stale = r.id
+        r = c(r, "spotlight", "", 2000 + 30001)
+        compare(gone(r), "toast#" + stale + "@A")
+        // the entries of a removed monitor
+        r = p(fresh(), "osd", { kind: "volume" }, 0, 1000, "volume", "B")
+        var osd = r.id
+        r = R.removeMonitor(r.monitors, r.global, "B", 1100)
+        compare(gone(r), "osd#" + osd + "@B:volume")
+    }
     function test_monitor_removed_instant() {
         var r = o(fresh(), "polkit", { id: 3 }, "B")
         r = o(r, "deck", {}, "B")              // queued behind polkit
@@ -254,6 +285,58 @@ TestCase {
         compare(r.monitors.A.passiveTop.kind, "card")
         verify(r.monitors.A.keyboard)
     }
+    // Wave-2 simplify A2: a toast's reply field (notch.md §6) is rules.js state: the toast stays
+    // above an OSD and the monitor takes the keyboard while it shows.
+    function test_replying_toast() {
+        var r = p(fresh(), "toast", {}, 1, 1000)
+        var toast = r.id
+        verify(!r.monitors.A.passive[0].replying)
+        verify(!r.monitors.A.keyboard)
+        r = R.setReplying(r.monitors, r.global, "", toast, true, 1100)        // found on any monitor
+        verify(r.monitors.A.passive[0].replying)
+        compare(r.monitors.A.passiveTop.kind, "toast")
+        verify(r.monitors.A.keyboard); verify(!r.monitors.A.interactive)
+        compare(r.monitors.A.top, "", "Esc stays with the reply field")
+        // an OSD does not cover it, but stays queued and replaces by key as before
+        r = p(r, "osd", { value: 1 }, 0, 1200, "volume")
+        var osd = r.id
+        compare(r.monitors.A.passiveTop.kind, "toast"); compare(r.monitors.A.passiveTop.entry.id, toast)
+        verify(r.monitors.A.keyboard)
+        r = p(r, "osd", { value: 2 }, 0, 1300, "volume")
+        compare(r.id, osd)
+        verify(r.monitors.A.passive.filter(e => e.id === toast)[0].replying, "a post keeps the flag")
+        r = R.update(r.monitors, r.global, "A", toast, { text: "x" }, 1400)
+        verify(r.monitors.A.passiveTop.entry.replying, "so does an update")
+        // a higher-priority toast: while the OSD is up the replying toast stays (as the Notch's own
+        // override did); without it the critical toast wins (the reply layer leaves, the Notch
+        // clears the flag)
+        var crit = p(r, "toast", {}, 2, 1500), critId = crit.id
+        compare(crit.monitors.A.passiveTop.entry.id, toast)
+        crit = R.dismiss(crit.monitors, crit.global, "A", osd, 1550)
+        compare(crit.monitors.A.passiveTop.entry.id, critId)
+        verify(!crit.monitors.A.keyboard)
+        // closed: the OSD shows again
+        r = R.setReplying(r.monitors, r.global, "A", toast, false, 1600)
+        compare(r.monitors.A.passiveTop.kind, "osd")
+        verify(!r.monitors.A.keyboard)
+        // only a toast carries the flag; unknown ids change nothing
+        r = R.setReplying(r.monitors, r.global, "A", osd, true, 1700)
+        verify(!r.monitors.A.passive.filter(e => e.id === osd)[0].replying)
+        compare(R.setReplying(r.monitors, r.global, "", 999, true, 1700).monitors.A.passive.length, 2)
+        // under a fullscreen window the reply follows its toast: hidden, no keyboard
+        r = R.setReplying(r.monitors, r.global, "A", toast, true, 1800)
+        r = R.setFullscreen(r.monitors, r.global, "A", true, 1900)
+        compare(r.monitors.A.passiveTop.kind, "osd")
+        verify(!r.monitors.A.keyboard)
+    }
+    function test_pinned_shown() {
+        var r = o(fresh(), "card:focus", { pinned: true })
+        verify(R.pinnedShown(r.monitors.A))
+        verify(!R.pinnedShown(o(fresh(), "card:focus", { pinned: false }).monitors.A), "a hover card")
+        r = p(r, "event", { text: "e" }, 0, 1000)
+        verify(!R.pinnedShown(r.monitors.A), "covered")
+        verify(!r.monitors.A.keyboard)
+    }
     function test_osd_suppressed_under_mode() {
         compare(kinds(p(o(fresh(), "spotlight"), "osd", {})), "refused:osd")
         // the Deck coexists with passive states (05 §2): OSD and toasts show while it is open
@@ -307,9 +390,20 @@ TestCase {
     function test_update_payload() {
         var r = p(fresh(), "toast", { count: 1 }, 1, 1000)
         var id = r.id
+        compare(r.monitors.A.passive[0].rev, 0)
         r = R.update(r.monitors, r.global, "A", id, { count: 3 }, 1500)
         compare(r.monitors.A.passive[0].payload.count, 3)
         compare(r.monitors.A.passive[0].born, 1000)
+        compare(r.monitors.A.passive[0].rev, 1, "a change in place bumps the stamp (A9)")
+        r = p(r, "toast", { count: 4 }, 1, 1600, "k")
+        compare(r.monitors.A.passive[1].rev, 0)
+        r = p(r, "toast", { count: 5 }, 1, 1700, "k")
+        compare(r.monitors.A.passive[1].rev, 1, "so does a post with its key")
+        r = R.setReplying(r.monitors, r.global, "A", id, true, 1800)
+        compare(r.monitors.A.passive[0].rev, 1, "a reply field is no change of content")
+        r = R.update(r.monitors, r.global, "A", id, { count: 6 }, 1900)
+        compare(r.monitors.A.passive[0].rev, 2)
+        r = R.dismiss(r.monitors, r.global, "A", r.monitors.A.passive[1].id, 2000)
         r = R.update(r.monitors, r.global, "", 999, {}, 1500)    // unknown id: no change
         compare(r.monitors.A.passive.length, 1)
     }
@@ -401,6 +495,7 @@ TestCase {
         bad({ A: mon("A", { menu: {} }) }, glob({ locked: true }), "menu while locked")
         bad({ A: mon("A", { passive: [{ id: 1, kind: "toast" }, { id: 1, kind: "osd" }] }) }, glob({ passiveSerial: 2 }), "id twice")
         bad({ A: mon("A", {}) }, glob({ settingsFocused: true }), "focused but closed")
+        bad({ A: mon("A", { passive: [{ id: 1, kind: "osd", replying: true }] }) }, glob({ passiveSerial: 1 }), "a replying OSD")
     }
 
     // The last monitor holding polkit goes away: the queue behind it is dropped (found by the

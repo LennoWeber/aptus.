@@ -13,9 +13,6 @@ Item {
 
     // The Hyprland monitor name of this bar.
     property string monitorName: ""
-    // Found in phase 7: a menu is open on this monitor (no tooltip over it; under the menu's
-    // catcher the hover state is not updated).
-    readonly property bool _menuOpen: { const m = SurfaceManager.monitorState(monitorName); return !!m && m.menu !== null; }
     // This monitor's strip (hypr.js strip record: pills and scratch).
     property var strip: ({ pills: [], scratch: null })
     // bar.workspaces.icons.
@@ -62,8 +59,8 @@ Item {
     // The trailing edge's target (set when trailTimer fires).
     property real _trailTo: 0
     property bool _trailIsLeft: false
-    // Found in review: the wheel's carried delta (bar.js wheelSteps: small deltas add up).
-    property real _wheelCarry: 0
+    // Found in review: the wheel's carried delta (small deltas add up).
+    readonly property WheelStepper _wheelStepper: WheelStepper {}
 
     // A pill's actions (bar.md §3): go there; move the focused window there (stay); its menu at a
     // point in strip coordinates; the wheel steps to the previous / next used workspace.
@@ -156,9 +153,8 @@ Item {
         anchors.fill: parent
         onClicked: SurfaceManager.open("overview", {}, root.monitorName)
         onWheel: w => {
-            const r = B.wheelSteps(root._wheelCarry, w.angleDelta.y);
-            root._wheelCarry = r.carry;
-            if (r.steps !== 0) root._wheel(r.steps > 0 ? -1 : 1);       // one per event: Hyprland's active workspace lags
+            const steps = root._wheelStepper.feed(w.angleDelta.y);
+            if (steps !== 0) root._wheel(steps > 0 ? -1 : 1);       // one per event: Hyprland's active workspace lags
         }
     }
     Row {
@@ -199,7 +195,6 @@ Item {
                         required property int wsId
                         required property int index
                         workspace: root._record(wsId)
-                        menuOpen: root._menuOpen
                         showIcons: root.showIcons && (root.collapse === 0 || (root.collapse === 1 && !!workspace.active))
                         // M-01: pill i starts i × workspaceStaggerMs into the intro
                         readonly property real _total: Math.max(1, Motion.ms("intro", false))
@@ -224,7 +219,6 @@ Item {
             visible: !!root.strip.scratch
             anchors.verticalCenter: parent.verticalCenter
             scratch: true
-            menuOpen: root._menuOpen
             workspace: root.strip.scratch || ({})
             onClicked: Hypr.toggleScratch()
         }

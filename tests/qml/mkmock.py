@@ -1,7 +1,7 @@
 """Build the import dir for qmltestrunner (tests/run): qmltestrunner cannot load the Quickshell
 plugin, so the tests import test doubles of Quickshell (incl. Quickshell.Io: a FileView that reads
 through XHR and writes to memory, a Process that runs nothing) and of Log and Paths from here, plus
-the real qs.components, core/js, MonitorState, and Config, Tokens, Motion and SurfaceManager made
+the real qs.components, core/js, MonitorState, WatchedFile, Run, and Config, Tokens, Motion and SurfaceManager made
 independent of the Quickshell plugin.
 
     python3 tests/qml/mkmock.py <out-dir>
@@ -37,6 +37,8 @@ def build(out: Path) -> None:
     paths = core / "Paths.qml"
     paths.write_text(paths.read_text(encoding="utf-8").replace("@REPO@", str(REPO)), encoding="utf-8")
     (core / "MonitorState.qml").symlink_to(REPO / "shell/core/MonitorState.qml")
+    (core / "WatchedFile.qml").symlink_to(REPO / "shell/core/WatchedFile.qml")
+    (core / "Run.qml").symlink_to(REPO / "shell/core/Run.qml")
     (core / "js").symlink_to(REPO / "shell/core/js")
     (out / "qs" / "components").symlink_to(REPO / "shell/components")
 

@@ -16,8 +16,6 @@ Item {
     property bool scratch: false
     // Draw the app icons (bar.workspaces.icons and the strip's collapse level).
     property bool showIcons: true
-    // Found in phase 7: a menu is open on this monitor (the strip knows; no tooltip over it).
-    property bool menuOpen: false
     // M-01: this pill's share of the intro (0 → 1, staggered by the strip).
     property real appear: 1
 
@@ -31,19 +29,13 @@ Item {
     // A wheel step: -1 previous, +1 next.
     signal wheelStep(int direction)
 
-    // M-36: the nudge's scale and when it last ran (ms; at most once per nudge.minInterval).
-    property real _nudge: 1
-    property real _lastNudge: 0
-    // Found in review: the wheel's carried delta (bar.js wheelSteps: small deltas add up).
-    property real _wheelCarry: 0
+    // M-36: the nudge (at most once per nudge.minInterval; the row and the urgent dot scale with it).
+    readonly property Nudge _nudge: Nudge {}
+    // Found in review: the wheel's carried delta (small deltas add up).
+    readonly property WheelStepper _wheel: WheelStepper {}
 
     // One nudge (M-36), unless one ran within nudge.minInterval.
-    function nudge(): void {
-        const now = Date.now();
-        if (Motion.reduced || (_lastNudge > 0 && now - _lastNudge < Motion.catalogueValue("nudge.minInterval"))) return;
-        _lastNudge = now;
-        nudgeAnim.restart();
-    }
+    function nudge(): void { _nudge.fire(); }
 
     // Found by the probe (phase 5):
     // The bar's tokens, the pill's app classes (none for the scratch pill), the icons shown and
@@ -52,6 +44,9 @@ Item {
     readonly property var _apps: scratch ? [] : (workspace.apps || [])
     readonly property int _iconCount: showIcons ? Math.min(_apps.length, _bar.pillMaxIcons) : 0
     readonly property int _more: showIcons ? Math.max(0, _apps.length - _bar.pillMaxIcons) : 0
+    // The classes of the icons shown, as one string: a rebuild with the same apps changes nothing,
+    // so the Repeater keeps its AppIcons (a fresh array as the model would recreate them all).
+    readonly property string _iconKey: _apps.slice(0, _iconCount).join("\n")
 
     // The pill's width with its icons, and with the number only (the strip's collapse, bar.js).
     readonly property real fullWidth: 2 * _bar.pillPadH + numberLabel.implicitWidth + (scratch ? 0
@@ -89,7 +84,7 @@ Item {
         id: row
         anchors.centerIn: parent
         spacing: root._bar.pillIconGap
-        scale: root._nudge
+        scale: root._nudge.scale
         Glyph {
             visible: root.scratch
             anchors.verticalCenter: parent.verticalCenter
@@ -107,7 +102,7 @@ Item {
             text: root.workspace.label || ""
         }
         Repeater {
-            model: root._apps.slice(0, root._iconCount)
+            model: root._iconKey === "" ? [] : root._iconKey.split("\n")
             delegate: AppIcon {
                 required property string modelData
                 anchors.verticalCenter: parent ? parent.verticalCenter : undefined
@@ -133,7 +128,7 @@ Item {
         color: Tokens.warn
         anchors.right: parent.right
         anchors.top: parent.top
-        scale: root._nudge
+        scale: root._nudge.scale
     }
     MouseArea {
         id: mouse
@@ -146,20 +141,14 @@ Item {
             else root.clicked();
         }
         onWheel: w => {
-            const r = B.wheelSteps(root._wheelCarry, w.angleDelta.y);
-            root._wheelCarry = r.carry;
-            if (r.steps !== 0) root.wheelStep(r.steps > 0 ? -1 : 1);      // one per event: Hyprland's active workspace lags
+            const steps = root._wheel.feed(w.angleDelta.y);
+            if (steps !== 0) root.wheelStep(steps > 0 ? -1 : 1);      // one per event: Hyprland's active workspace lags
         }
     }
     Tooltip {
         target: root
         text: root.scratch ? "Scratch · " + (root.workspace.windows || 0) + " windows"
             : B.workspaceTooltip(root.workspace, root._apps.map(a => Apps.nameFor(a)))
-        active: root.hovered && !root.menuOpen
-    }
-    SequentialAnimation {
-        id: nudgeAnim
-        StandardAnimation { target: root; property: "_nudge"; to: Motion.catalogueValue("nudge.scale"); duration: Motion.catalogueValue("nudge.duration") / 2 }
-        StandardAnimation { target: root; property: "_nudge"; to: 1; duration: Motion.catalogueValue("nudge.duration") / 2 }
+        active: root.hovered
     }
 }

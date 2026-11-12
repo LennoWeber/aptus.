@@ -15,6 +15,7 @@ Item {
     Component { id: hostComp; MenuHost {} }
     Component { id: modeComp; NotchMode {} }
     Component { id: slotComp; DrawerSlot { drawer: Component { Drawer { bulge.width: 120; function back(): bool { return true; } } } } }
+    Component { id: nudgeComp; Nudge {} }
 
     Label { id: label; text: "Hello"; type: "title" }
     Glyph { id: glyph; name: "wifi"; on: true }
@@ -304,6 +305,33 @@ Item {
             tryCompare(host, "_shown", null, 1000);
             host.destroy();
         }
+        // Wave-2 simplify A4: no tooltip while a menu is open in its window (MenuHost marks it),
+        // and a hidden tooltip's label keeps its text (a live text redraws nothing).
+        function test_tooltip_under_a_menu_and_its_text() {
+            SurfaceManager.syncMonitors(["A"]);
+            const st = SurfaceManager.monitors["A"];
+            const host = hostComp.createObject(top, { monitor: st, width: 800, height: 600 });
+            mouseMove(top, 780, 20);
+            tryVerify(() => !ComponentShared.tooltipWarm(), 2000);
+            const t = top.tipOf("Try again");
+            SurfaceManager.openMenu("A", { anchorX: 400, anchorY: 300, owner: "t", model: [{ label: "X" }] });
+            compare(ComponentShared.menuWindows.length, 1);
+            mouseMove(button, 10, 10);
+            wait(50);
+            verify(t._menuHere);
+            compare(t._want, false, "no tooltip under a menu");
+            SurfaceManager.closeMenu("A");
+            compare(ComponentShared.menuWindows.length, 0);
+            tryCompare(t, "_shown", true, 1500);
+            compare(t._text, "Try again");
+            mouseMove(top, 780, 20);
+            tryCompare(t, "_shown", false, 500);
+            button.tooltip = "Changed while hidden";
+            compare(t._text, "Try again", "the hidden label keeps its text");
+            button.tooltip = "Try again";
+            host.destroy();
+            compare(ComponentShared.menuWindows.length, 0);
+        }
         function test_tooltip_regrace() {
             mouseMove(top, 780, 20);
             tryVerify(() => !ComponentShared.tooltipWarm(), 2000);
@@ -352,6 +380,23 @@ Item {
             m.active = false;
             tryCompare(m, "opacity", 0, 1000);
             m.destroy();
+        }
+        function test_nudge() {
+            // 04 §M-36: one pulse to nudge.scale and back, at most once per minInterval
+            const n = nudgeComp.createObject(top);
+            compare(n.scale, 1);
+            n.fire();
+            const at = n._last;
+            verify(at > 0, "the first fire runs");
+            tryVerify(() => n.scale > 1, 1000, "it grows");
+            tryCompare(n, "scale", 1, 1000, "and settles back");
+            n.fire();
+            compare(n._last, at, "a second fire within minInterval does not run");
+            n.minInterval = 0;
+            wait(5);
+            n.fire();
+            verify(n._last > at, "with minInterval 0 every fire runs");
+            n.destroy();
         }
         function test_drawer_slot() {
             // 04 §8: the drawer loads on open, stays through its exit fade, then unloads

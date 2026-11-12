@@ -52,8 +52,20 @@ Item {
         }
     }
 
-    on_MenuChanged: _sync()
-    Component.onCompleted: _sync()
+    // Its window while a menu is open, marked in ComponentShared: tooltips there stay hidden.
+    property var _marked: null
+    function _mark(): void {
+        const w = _menu ? root.Window.window : null;
+        if (w === _marked) return;
+        if (_marked) ComponentShared.markMenu(_marked, false);
+        _marked = w;
+        if (w) ComponentShared.markMenu(w, true);
+    }
+
+    on_MenuChanged: { _sync(); _mark(); }
+    Window.onWindowChanged: _mark()
+    Component.onCompleted: { _sync(); _mark(); }
+    Component.onDestruction: if (_marked) ComponentShared.markMenu(_marked, false)
 
     Timer {
         id: exitTimer

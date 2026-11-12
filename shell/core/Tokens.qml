@@ -17,10 +17,8 @@ Singleton {
     // noticed, phase-5 probe). Only changes count, not the first load, and none while the shell's
     // own render is pending (set by the Theme service): the file then holds an older request.
     // Equal resolutions are a no-op, so the shell's own renders do not crossfade twice (07 §7).
+    // Such an outside resolution emits no `resolved`: the apps carry that render already.
     property bool ownRenderBusy: false
-    // True while such an outside resolution is being applied: the changes it causes are not the
-    // shell's own, so the Theme service asks for no apply of them (the apps carry that render).
-    property bool applyingExternal: false
     property bool _resolvedSeen: false
     function _external(text: string): void {
         const first = !_resolvedSeen;
@@ -29,8 +27,7 @@ Singleton {
         let r = null;
         try { r = JSON.parse(text); } catch (e) { Log.warn("tokens", "resolved.json: " + e); return; }
         if (_r && _canon(_r) === _canon(r)) return;
-        applyingExternal = true;
-        try { apply(r); } finally { applyingExternal = false; }
+        apply(r);
     }
     // JSON with sorted keys: Python and resolve.js may order keys differently.
     function _canon(v: var): string {
@@ -39,11 +36,9 @@ Singleton {
             return "{" + Object.keys(v).sort().map(k => JSON.stringify(k) + ":" + _canon(v[k])).join(",") + "}";
         return JSON.stringify(v);
     }
-    FileView {
+    // Also a resolved.json (or theme/ folder) made after the start (WatchedFile).
+    WatchedFile {
         path: Paths.state + "/theme/resolved.json"
-        watchChanges: true
-        printErrors: false
-        onFileChanged: reload()
         onLoaded: root._external(text())
         onLoadFailed: root._resolvedSeen = true
     }
@@ -205,9 +200,14 @@ Singleton {
 
     // Resolve the palette (08 §3, core/js/resolve.js) from tokens, settings and the wallpaper,
     // and apply it (the colour properties crossfade over `_themeMs`, M-30).
+    // The shell's own resolution changed mode, accent, glass or contrast (the apps' paint: 08 §6;
+    // the Theme service asks aptus-theme for an apply).
+    signal resolved()
+    // Resolve from Config and the inputs; emits `resolved` when one of those four changed.
     function resolveNow(): void {
         if (!raw.palettes || !Config.loaded) return;
         const m = Config.get("appearance.mode");
+        const before = _paint();
         apply(Resolve.resolve(raw, {
             mode: m === "auto" ? _autoMode : m,
             accent: Config.get("appearance.accent"),
@@ -216,7 +216,9 @@ Singleton {
             wallpaperHue: wallpaperHue, wallpaperChroma: wallpaperChroma, wallpaperLightness: wallpaperLightness,
             currentAccent: accentName
         }));
+        if (_paint() !== before) resolved();
     }
+    function _paint(): string { return [mode, accentName, glass, highContrast].join(); }
     // Apply a resolution object (resolve.js result, or current/shell.json written outside).
     function apply(resolved: var): void {
         if (!resolved || !resolved.roles) return;

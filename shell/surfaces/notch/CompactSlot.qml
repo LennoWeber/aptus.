@@ -29,14 +29,7 @@ Item {
 
     // The slot's animated width (M-05).
     property real _width: openWidth
-    Behavior on _width {
-        SpringAnimation {
-            spring: Motion.springs.notch.spring
-            damping: Motion.springs.notch.damping
-            mass: Motion.springs.notch.mass
-            epsilon: Motion.springs.notch.epsilon
-        }
-    }
+    Behavior on _width { NotchSpring {} }
 
     implicitWidth: _width
     implicitHeight: Tokens.barHeight
@@ -48,18 +41,18 @@ Item {
         x: root.side === "left" ? root.width - width : 0
         sourceComponent: root.activity ? root.activity.compact : null
         opacity: root.openWidth > 0 ? Math.min(1, root._width / root.openWidth) : 0
+        scale: pulse.scale
         onLoaded: {
             if ("activity" in item) item.activity = Qt.binding(() => root.activity);
             if ("monitorName" in item) item.monitorName = Qt.binding(() => root.monitorName);
         }
     }
-    // one pulse when the activity asks for it (pulseSerial)
+    // one pulse when the activity asks for it (pulseSerial; every ask runs)
     readonly property int _pulse: activity ? activity.pulseSerial : 0
-    on_PulseChanged: if (_pulse > 0 && !Motion.reduced) pulseAnim.restart()
-    SequentialAnimation {
-        id: pulseAnim
-        StandardAnimation { target: loader; property: "scale"; to: Motion.catalogueValue("nudge.scale"); duration: Motion.catalogueValue("nudge.duration") / 2 }
-        StandardAnimation { target: loader; property: "scale"; to: 1; duration: Motion.catalogueValue("nudge.duration") / 2 }
+    on_PulseChanged: if (_pulse > 0) pulse.fire()
+    Nudge {
+        id: pulse
+        minInterval: 0
     }
     MouseArea {
         id: mouse

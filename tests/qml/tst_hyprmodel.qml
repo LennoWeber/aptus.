@@ -25,6 +25,12 @@ TestCase {
         compare(H.fixedIds(["eDP-1", "DP-3"], "eDP-1"), [6, 7, 8, 9, 10])
         compare(H.fixedIds(["DP-2", "eDP-1", "DP-3"], "DP-3"), [])      // a third monitor has none
         compare(H.fixedIds(["DP-2"], "DP-2"), [1, 2, 3, 4, 5])
+        compare(H.primary(["eDP-1"]), "eDP-1")
+        compare(H.primary(["eDP-1", "DP-3"]), "DP-3")
+        compare(H.primary(["DP-2", "eDP-1", "DP-3"]), "DP-2")
+        compare(H.primary([]), "eDP-1")
+        compare(H.address("a1b2"), "0xa1b2")
+        compare(H.address("0xa1b2"), "0xa1b2")
     }
     function test_records_apps_mru_and_names() {
         const r = records()

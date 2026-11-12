@@ -41,9 +41,11 @@ Singleton {
     // Record id → the live Quickshell Notification (actions, reply, dismiss); dropped when the
     // sender closes it or the record leaves the history.
     property var _live: ({})
-    // Record id → the passive entry id of its toast (replaces_id updates it in place).
+    // Record id → the passive entry id of its toast (replaces_id updates it in place); an entry
+    // leaves it when SurfaceManager reports it gone (passiveGone).
     property var _toasts: ({})
-    // The stack toast being built (notifications.js stack record) or null.
+    // The stack toast being built (notifications.js stack record) or null; null again once its
+    // entry is gone.
     property var _stack: null
     // The stack for `shell state` (the e2e tests): null or { count, apps } (app names, no bodies).
     readonly property var stackInfo: _stack ? ({ count: _stack.count, apps: _stack.apps }) : null
@@ -59,7 +61,7 @@ Singleton {
     // Source path → the confirmed copy of a notification image { dst, stamp } (stamp: the source's
     // "size mtime" when copied); a replace with an unchanged source reuses it.
     property var _copies: ({})
-    // The image copies running (Processes of copyComponent; one per source at a time).
+    // The image copies running (Runs of copyComponent; one per source at a time).
     property var _copyJobs: []
 
     // Found by the probe (phase 5):
@@ -68,9 +70,8 @@ Singleton {
     readonly property int _days: Config.get("notifications.historyDays") || 7
 
     onHoldingChanged: {
-        // Later, not here: `holding` changes while SurfaceManager applies a rules.js result (the
-        // monitor's fullscreen), and a post from inside that would be overwritten by the rest of
-        // the same apply (its passive list).
+        // Later, not here: one hold can end as another begins in the same turn (focus ends, DND
+        // stays on); only a hold still ended after the turn releases.
         if (holding === "" && held > 0) Qt.callLater(() => { if (root.holding === "") root._releaseHeld(); });
     }
 
@@ -138,24 +139,27 @@ Singleton {
     // items go, and the held count ends (no summary of cleared notifications later).
     function clearAll(): void {
         for (const id in _toasts) _closeToast(Number(id));
-        if (_stack && _alive(_stack.passiveId)) {
-            const p = _stack.passiveId;
-            SurfaceManager.dismiss(p, _monitorOf(p));
-            toastGone(p);
-        }
+        if (_stack) SurfaceManager.dismiss(_stack.passiveId);
         for (const it of Progress.items.slice()) if (it.source === "notification") Progress.remove(it.id);
         for (const id in _live) _live[id].dismiss();
         _live = {};
         _heldIds = [];
         _setHistory([]);
     }
-    // The Notch tells that a toast's passive entry left the notch (timed out or dismissed).
-    function toastGone(passiveId: int): void {
+    // A toast's passive entry left the notch (timed out, dismissed, aged out in the queue, its
+    // monitor removed): SurfaceManager.passiveGone.
+    function _toastGone(passiveId: int): void {
         const t = Object.assign({}, _toasts);
         let hit = false;
         for (const k in t) if (t[k] === passiveId) { delete t[k]; hit = true; }
         if (hit) _toasts = t;
         if (_stack && _stack.passiveId === passiveId) { _stack = null; _stackIds = []; }
+    }
+    Connections {
+        target: SurfaceManager
+        function onPassiveGone(monitor: string, id: int, kind: string, key: string): void {
+            if (kind === "toast") root._toastGone(id);
+        }
     }
 
     // A notification arrived from the server (a Quickshell Notification), or was replaced in place.
@@ -167,7 +171,7 @@ Singleton {
         const r = N.makeRecord({
             id: n.id, appName: n.appName, appIcon: n.appIcon, desktopEntry: n.desktopEntry, summary: n.summary,
             body: n.body, image: n.image, urgency: n.urgency, resident: n.resident, hasInlineReply: n.hasInlineReply,
-            hints: n.hints, live: true, actions: (n.actions || []).map(a => ({ id: a.identifier, text: a.text }))
+            hints: n.hints, actions: (n.actions || []).map(a => ({ id: a.identifier, text: a.text }))
         }, Date.now());
         _receive(r, n);
     }
@@ -211,19 +215,18 @@ Singleton {
         const shown = live ? N.liveImage(live.image) : "";
         if (shown !== "") payload.image = shown;                 // the live image (image-data too)
         const mon = SurfaceManager.activeMonitor;
-        if (_stack && _stack.count >= 2 && _stackIds.indexOf(record.id) >= 0 && _alive(_stack.passiveId)) {
-            SurfaceManager.update(_stack.passiveId, N.stackPayload(_stack, record, timeout), _monitorOf(_stack.passiveId));
+        if (_stack && _stack.count >= 2 && _stackIds.indexOf(record.id) >= 0) {
+            SurfaceManager.update(_stack.passiveId, N.stackPayload(_stack, record, timeout));
             return;
         }
         const existing = _toasts[record.id];
-        if (existing && _alive(existing)) {
-            SurfaceManager.update(existing, payload, _monitorOf(existing));
+        if (existing) {
+            SurfaceManager.update(existing, payload);
             return;
         }
         if (priority < N.CRITICAL_PRIORITY) {
             const win = (Config.get("notifications.stackWindow") || 0) * 1000;
-            const stack = _stack && _alive(_stack.passiveId) ? _stack : null;
-            const s = N.stackStep(stack, record, 0, mon, Date.now(), win);
+            const s = N.stackStep(_stack, record, 0, mon, Date.now(), win);
             if (s.joins) {
                 _stack = s.stack;
                 const tt = Object.assign({}, _toasts), ids = _stackIds.concat([record.id]);
@@ -235,7 +238,7 @@ Singleton {
             }
             const id = SurfaceManager.post("toast", payload, priority, mon, "n:" + record.id);
             s.stack.passiveId = id;
-            _stack = s.stack;
+            _stack = id > 0 ? s.stack : null;          // a refused post (locked) starts no stack
             _stackIds = [record.id];
             _setToast(record.id, id);
             return;
@@ -324,14 +327,19 @@ Singleton {
     }
     // The history changed: recount unread, write the state file (debounced).
     function _changed(): void {
+        _recount();
+        saveTimer.restart();
+    }
+    // Count the unread records and whether one of them is from an allowlisted app (the rest dot).
+    function _recount(): void {
         const u = N.unreadInfo(history, Config.get("notifications.allowlist") || []);
         unread = u.unread;
         unreadAllowlisted = u.allowlisted;
-        saveTimer.restart();
     }
 
-    // The toast of a record is now the passive entry `passiveId` (posted or updated in place).
+    // The toast of a record is now the passive entry `passiveId` (0: the post was refused).
     function _setToast(recordId: int, passiveId: int): void {
+        if (passiveId <= 0) return;
         const t = Object.assign({}, _toasts);
         t[recordId] = passiveId;
         _toasts = t;
@@ -339,29 +347,16 @@ Singleton {
     // Close a record's toast (sender close, activation, dismissal); the record stays in history.
     function _closeToast(recordId: int): void {
         const p = _toasts[recordId];
-        if (p === undefined) return;
-        SurfaceManager.dismiss(p, _monitorOf(p));
-        toastGone(p);
+        if (p !== undefined) SurfaceManager.dismiss(p);
     }
     // Forget a record's live Notification (the sender closed it, or it was dismissed): the record
-    // stays in the history without actions.
+    // stays in the history, its actions no longer work.
     function _drop(id: int): void {
         if (_live[id] === undefined) return;
         const live = Object.assign({}, _live);
         delete live[id];
         _live = live;
-        history = history.map(r => r.id === id && r.live ? Object.assign({}, r, { live: false }) : r);
     }
-    // The monitor holding a passive entry ("" none).
-    function _monitorOf(passiveId: int): string {
-        for (const name in SurfaceManager.monitors) {
-            const m = SurfaceManager.monitors[name];
-            if (m && m.passive.some(e => e.id === passiveId)) return name;
-        }
-        return "";
-    }
-    // The passive entry still exists (rules.expire can drop a toast entry without telling us).
-    function _alive(passiveId: int): bool { return passiveId > 0 && _monitorOf(passiveId) !== ""; }
 
     NotificationServer {
         id: server
@@ -410,7 +405,7 @@ Singleton {
     // path: no device, FIFO or huge file). Prints "ok", the stamp and the copy's path.
     Component {
         id: copyComponent
-        Process {
+        Run {
             id: job
             property string source
             property string known
@@ -422,8 +417,9 @@ Singleton {
                 + '[ -n "$s" ] && [ "${s%% *}" -le "$6" ] && timeout 5 cp -f -- "$2" "$5" && printf "ok\\n%s\\n%s\\n" "$s" "$5" && exit 0; '
                 + 'rm -f -- "$5"; exit 1',
                 "sh", Paths.notifCache, source, known, stamp, dst, String(N.IMAGE_MAX_BYTES)]
-            running: true
-            stdout: StdioCollector { onStreamFinished: root._copied(job, text) }
+            // a run that could not start is a failed copy ("")
+            onFinished: (stdout, stderr, code) => root._copied(job, stdout)
+            Component.onCompleted: start()
         }
     }
     Timer { id: saveTimer; interval: 2000; onTriggered: stateView.setText(N.serialise(root.history) + "\n") }
@@ -441,25 +437,22 @@ Singleton {
             const live = {};
             for (const n of tracked) live[n.id] = n;
             root._live = live;
-            const u = N.unreadInfo(root.history, Config.get("notifications.allowlist") || []);
-            root.unread = u.unread;
-            root.unreadAllowlisted = u.allowlisted;
+            root._recount();
             // image copies older than the history's days belong to no record any more
             Quickshell.execDetached(["sh", "-c", '[ -d "$1" ] && find "$1" -maxdepth 1 -type f -mtime "+$2" -delete',
                                      "sh", Paths.notifCache, String(root._days)]);
         }
     }
     // P-20: who owns org.freedesktop.Notifications on this session bus.
-    Process {
+    Run {
         id: whoOwns
         command: ["gdbus", "call", "--session", "--dest", "org.freedesktop.Notifications", "--object-path",
             "/org/freedesktop/Notifications", "--method", "org.freedesktop.Notifications.GetServerInformation"]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                root.serverActive = /quickshell/i.test(text);
-                if (!root.serverActive) Log.warn("service.notifications", "another server owns org.freedesktop.Notifications: " + text.trim());
-            }
+        onFinished: (stdout, stderr, code) => {
+            if (code < 0) return;                       // no gdbus: nothing known
+            root.serverActive = /quickshell/i.test(stdout);
+            if (!root.serverActive) Log.warn("service.notifications", "another server owns org.freedesktop.Notifications: " + stdout.trim());
         }
     }
-    Timer { interval: 1500; running: true; onTriggered: whoOwns.running = true }
+    Timer { interval: 1500; running: true; onTriggered: whoOwns.start() }
 }

@@ -11,9 +11,8 @@ Item {
     // { text, glyph } (SurfaceManager.post("event", …)).
     property var payload: ({})
 
-    // 260–360 × 36, from the text's width.
+    // The bulge size: 260–360 × 36, from the text's width.
     readonly property var _size: NJ.bulgeSize("event", payload, { width: row.implicitWidth + 2 * Tokens.padToast }, Tokens.surfaces)
-    // 260–360 × 36, from the text's width.
     readonly property real bulgeWidth: _size.width
     readonly property real bulgeHeight: _size.height
 

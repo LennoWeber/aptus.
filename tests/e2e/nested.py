@@ -162,12 +162,18 @@ class Nested:
     def state(self) -> dict:
         return json.loads(self.msg("shell", "state"))
 
-    def click(self, x: int, y: int) -> None:
-        """A left click through vpointer.py (zwlr_virtual_pointer_v1 on the nested socket)."""
+    def vpointer(self, *args: object) -> None:
+        """vpointer.py (zwlr_virtual_pointer_v1) on the nested socket: a command and its numbers."""
+        if not self.wayland_display:
+            raise RuntimeError("no nested display: refusing to point into the real session")
         runtime = os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}")
         subprocess.run(["python3", "-I", str(Path(__file__).with_name("vpointer.py")),
-                        os.path.join(runtime, self.wayland_display), "click", str(x), str(y)],
+                        os.path.join(runtime, self.wayland_display), *map(str, args)],
                        check=True, timeout=10)
+
+    def click(self, x: int, y: int) -> None:
+        """A left click through vpointer.py."""
+        self.vpointer("click", x, y)
 
     def key(self, keysym: str) -> None:
         """Press and release one key through wtype on the nested socket; it reaches the focused

@@ -4,7 +4,6 @@ pragma ComponentBehavior: Bound
 // Owner: S1 (mode, accent, glass via Config), S2 (aptus-theme apply, the auto schedule).
 import QtQuick
 import Quickshell
-import Quickshell.Io
 import qs.core
 
 Singleton {
@@ -17,8 +16,6 @@ Singleton {
     property var failed: ({})
     // The theme generation the last apply produced (0: none yet).
     property int generation: 0
-    // The resolve inputs of the last request, as JSON (lib/aptus/theme/inputs.py Inputs).
-    property string _pendingInputs: ""
     // A request arrived while a run was going: run once more after it.
     property bool _queued: false
     // A render of the shell's own is waiting or running (Tokens ignores resolved.json meanwhile).
@@ -81,11 +78,10 @@ Singleton {
             return;
         }
         _queued = false;
-        _done = {};
-        _pendingInputs = JSON.stringify(_inputs());
         applying = true;
-        proc.command = [Paths.bin + "/aptus-theme", "apply", "--inputs", _pendingInputs];
-        proc.running = true;
+        // the resolve inputs as JSON (lib/aptus/theme/inputs.py Inputs)
+        proc.command = [Paths.bin + "/aptus-theme", "apply", "--inputs", JSON.stringify(_inputs())];
+        proc.start();
     }
 
     function _set(key: string, value: var): string {
@@ -100,48 +96,21 @@ Singleton {
         interval: 250 + Tokens._themeMs
         onTriggered: root._run()
     }
-    Process {
+    Run {
         id: proc
-        stdout: StdioCollector {
-            id: out
-            onStreamFinished: root._join("out", 0)
-        }
-        stderr: StdioCollector { id: err }
-    }
-    Connections {
-        target: proc
-        function onExited(exitCode: int): void { root._join("exit", exitCode); }
-        // A program that cannot start (missing, not executable) only turns `running` off: no exit
-        // and no end of stdout (Quickshell 0.3.2, probed). A run that started has exited first.
-        function onRunningChanged(): void {
-            if (!proc.running && root.applying && !("exit" in root._done)) root._finish("", "aptus-theme could not be started", -1);
-        }
-    }
-    // stdout's end and the exit arrive in either order: the run is done when both are in.
-    property var _done: ({})
-    function _join(what: string, code: int): void {
-        _done[what] = code;
-        if (!("out" in _done) || !("exit" in _done)) return;
-        _finish(out.text, err.text, _done.exit);
+        onFinished: (stdout, stderr, code) => root._finish(stdout, code < 0 ? "aptus-theme could not be started" : stderr, code)
     }
     function _finish(stdout: string, stderr: string, exitCode: int): void {
-        _done = {};
         applying = false;
         _applied(stdout, stderr, exitCode);
         if (_queued) _run();
     }
-    // What changes the apps' paint: the resolution (not one an outside render brought: the apps
-    // carry it already, and an apply now would send Config's values back), and the settings that
-    // shape Own files and bakes.
-    function _resolutionChanged(): void {
-        if (!Tokens.applyingExternal) requestApply();
-    }
+    // What changes the apps' paint: the shell's own resolution (Tokens.resolved; not one an
+    // outside render brought: the apps carry it already, and an apply now would send Config's
+    // values back), and the settings that shape Own files and bakes.
     Connections {
         target: Tokens
-        function onModeChanged(): void { root._resolutionChanged(); }
-        function onAccentNameChanged(): void { root._resolutionChanged(); }
-        function onGlassChanged(): void { root._resolutionChanged(); }
-        function onHighContrastChanged(): void { root._resolutionChanged(); }
+        function onResolved(): void { root.requestApply(); }
     }
     Connections {
         target: Config

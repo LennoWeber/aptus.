@@ -18,7 +18,9 @@ QtObject {
 
     // Passive content waiting for or shown by the notch:
     // [{ id: int, kind: "toast" | "osd" | "event", key: string, payload: var, priority: int, born: ms,
-    //   waited: bool }] (rules.js: waited = queued behind a blocking surface).
+    //   waited: bool, replying: bool, rev: int }] (rules.js: waited = queued behind a blocking
+    //   surface; replying = a toast's reply field is open, setReplying; rev = bumped by every
+    //   change in place, update or a post with its key).
     // `key` replaces an entry of the same key (one OSD per kind, a notification's replaces_id).
     // Payload conventions: toast: a notification toast (services/js/notifications.js) or
     // { card: "capture" | "colour" | "stillOpen", …card fields, flyFrom: {x,y,width,height} (M-23) };
@@ -56,8 +58,11 @@ QtObject {
     // Derived: an interactive surface is open (away catcher, toasts queue). Cards and keysPeek are
     // not interactive (07 §5). Derived properties bind to Rules.interactive/keyboard/top(root).
     readonly property bool interactive: Rules.interactive(root)
-    // Derived: the shell layer takes the keyboard (interactive, or a card opened by click).
+    // Derived: the shell layer takes the keyboard (interactive, a card opened by click, or a
+    // toast with its reply field open).
     readonly property bool keyboard: Rules.keyboard(root)
+    // Derived: a card opened by click is what the notch shows (not covered by passive content).
+    readonly property bool pinnedShown: Rules.pinnedShown(root)
     // Derived: the open surface that Esc/back acts on first ("" when none).
     readonly property string top: Rules.top(root)
 }

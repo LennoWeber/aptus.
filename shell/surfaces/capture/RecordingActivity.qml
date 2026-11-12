@@ -5,4 +5,5 @@ import qs.components
 
 Activity {
     id: root
+    aboveFullscreen: true
 }

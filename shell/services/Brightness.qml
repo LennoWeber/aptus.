@@ -7,6 +7,7 @@ import Quickshell
 import Quickshell.Io
 import qs.core
 import "js/levels.js" as L
+import "js/hypr.js" as H
 
 Singleton {
     id: root
@@ -23,11 +24,7 @@ Singleton {
 
     // The sysfs root ($APTUS_SYSFS, else /sys; under APTUS_TEST only $APTUS_SYSFS inside HOME,
     // else none).
-    readonly property string sysfs: {
-        const env = String(Quickshell.env("APTUS_SYSFS") || "").replace(/\/+$/, "");
-        if (!Paths.test) return env !== "" ? env : "/sys";
-        return Paths.home !== "" && env.indexOf(Paths.home + "/") === 0 ? env : "";
-    }
+    readonly property string sysfs: Paths.sysfsOverride !== "" ? Paths.sysfsOverride : Paths.test ? "" : "/sys"
     // The backlight and keyboard-LED device names under class/backlight and class/leds.
     property string device: ""
     property string kbdDevice: ""
@@ -72,10 +69,11 @@ Singleton {
         _write(device, raw);
     }
 
-    // Read the backlight and LED files under `sysfs` (sysfs has no inotify: after every own write).
+    // Read the backlight and LED levels under `sysfs` (sysfs has no inotify: after every own
+    // write). E14: the maxima are constant; their views load once, when the scan names the device.
     function _read(): void {
-        if (device !== "") { backlightNow.reload(); backlightMax.reload(); }
-        if (kbdDevice !== "") { kbdNow.reload(); kbdMaxView.reload(); }
+        if (device !== "") backlightNow.reload();
+        if (kbdDevice !== "") kbdNow.reload();
     }
     // brightnessctl -d <device> set <value> (from PATH; the e2e tests put a fake first). One run
     // at a time; a newer value for the same device replaces the queued one.
@@ -105,16 +103,14 @@ Singleton {
     // applies to the XDG directories), and only its test devices (fakehw.py names them
     // aptus_test…: a real brightnessctl that slipped onto PATH finds no such device).
     function _refused(dev: string): bool {
-        if (!Paths.test) return false;
-        const inHome = Paths.home !== "" && sysfs.indexOf(Paths.home + "/") === 0;
-        if (inHome && dev.indexOf("aptus_test") === 0) return false;
+        if (!Paths.test || (sysfs !== "" && dev.indexOf("aptus_test") === 0)) return false;
         Log.error("service.brightness", "write to " + dev + " under " + (sysfs || "no sysfs") + " refused in a test");
         return true;
     }
-    // Post the OSD ("brightness" on the monitor showing eDP-1, "kbd" on the active one), unless
+    // Post the OSD ("brightness" on the internal monitor eDP-1, "kbd" on the active one), unless
     // the Deck is open there and has a slider for it (levels.js deckReplaces).
     function _osd(kind: string): void {
-        const mon = kind === "brightness" && SurfaceManager.monitorState("eDP-1") ? "eDP-1" : SurfaceManager.activeMonitor;
+        const mon = kind === "brightness" && SurfaceManager.monitorState(H.INTERNAL) ? H.INTERNAL : SurfaceManager.activeMonitor;
         const m = SurfaceManager.monitorState(mon);
         if (m && m.deck && L.deckReplaces(kind)) return;
         SurfaceManager.post("osd", kind === "kbd" ? L.kbdOsd(kbdLevel, kbdMax) : L.brightnessOsd(brightness), 0, mon, kind);

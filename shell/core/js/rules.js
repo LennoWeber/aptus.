@@ -9,13 +9,16 @@
 //   pending: [req], previousWindow, currentWindow, settingsOpen, settingsArgs, settingsFocused,
 //   passiveSerial, limits: { toastStale, eventMaxAge, pinnedCardTimeout }, overFullscreen }
 // A request: { op: "open"|"close"|"toggle", surface, args, monitor }
-// A passive entry: { id, kind: "osd"|"toast"|"event", payload, priority, key, born, waited } —
-//   waited: it queued behind a blocking surface (toastStale counts once it unblocks).
+// A passive entry: { id, kind: "osd"|"toast"|"event", payload, priority, key, born, waited,
+//   replying, rev } — waited: it queued behind a blocking surface (toastStale counts once it
+//   unblocks); replying: a toast's inline reply field is open (setReplying); rev: bumped by every
+//   change of its content in place (update, a post with its key), 0 when new.
 //   A "critical" toast has priority ≥ 2 (freedesktop urgency); Notifications, Timers and Battery
 //   post critical toasts with priority 2.
 // Every operation returns { monitors: {name: state}, global, effects: [effect] } without
 // mutating its input. Effects: { kind: "opened"|"closed"|"refused"|"queued"|"settingsFocus",
-// surface, monitor }.
+// surface, monitor }, and { kind: "passiveGone", surface: the entry's kind, monitor, id, key } for
+// every passive entry that left (dismissed, aged out, its monitor removed).
 
 // Surface ids.
 var NOTCH_MODES = ["spotlight", "switcher", "today", "session", "polkit", "gallery", "jot",
@@ -70,6 +73,7 @@ function checkState(monitors, global) {
             invariant(!ids[e.id], names[i] + ": passive id " + e.id + " twice")
             ids[e.id] = true
             invariant(e.id <= global.passiveSerial, names[i] + ": passive id beyond passiveSerial")
+            invariant(!e.replying || e.kind === "toast", names[i] + ": a replying " + e.kind)
             if (e.key) {
                 // a key coalesces entries of one kind (post() replaces in place): unique per kind
                 invariant(!keys[e.kind + ":" + e.key], names[i] + ": passive " + e.kind + " key " + e.key + " twice")
@@ -101,6 +105,9 @@ function isCard(s) {
 }
 function isInteractiveMode(n) { return n !== "rest" && NOTCH_MODES.indexOf(n) >= 0 && PASSIVE_MODES.indexOf(n) < 0 }
 function pinnedCard(m) { return isCard(m.notch) && !!(m.notchArgs && m.notchArgs.pinned) }
+// A pinned card is what shows (not covered by an OSD, toast or event): the Notch's outside
+// catcher and whole-monitor mask are up only then.
+function pinnedShown(m) { return pinnedCard(m) && !!m.passiveTop && m.passiveTop.kind === "card" }
 // Toasts queue, OSD and events are dropped (notch.md §9): an interactive notch mode, Overview, Capture.
 function blocksPassive(m) { return isInteractiveMode(m.notch) || m.overview || m.capture !== null }
 function copyMonitor(m) {
@@ -125,6 +132,7 @@ function begin(monitors, global) {
     return c
 }
 function effect(c, kind, surface, monitor) { c.effects.push({ kind: kind, surface: surface, monitor: monitor || "" }) }
+function goneEffect(c, m, e) { c.effects.push({ kind: "passiveGone", surface: e.kind, monitor: m.name, id: e.id, key: e.key }) }
 function finish(c, now) {
     now = nowOr(now)
     var g = c.global, opts = { overFullscreen: g.overFullscreen, limits: g.limits, expired: true }
@@ -133,7 +141,10 @@ function finish(c, now) {
         var m = c.monitors[n]
         if (blocksPassive(m))
             for (var i = 0; i < m.passive.length; i++) if (m.passive[i].kind === "toast") m.passive[i].waited = true
-        m.passive = expire(m, now, g.limits).passive
+        var kept = expire(m, now, g.limits).passive, keptIds = {}
+        for (var j = 0; j < kept.length; j++) keptIds[kept[j].id] = true
+        for (var k = 0; k < m.passive.length; k++) if (!keptIds[m.passive[k].id]) goneEffect(c, m, m.passive[k])
+        m.passive = kept
         m.interactive = interactive(m)
         m.passiveTop = arbitrate(m, now, opts)
         m.keyboard = keyboard(m)
@@ -292,9 +303,13 @@ function newGlobal(limits) {
 function interactive(m) {
     return isInteractiveMode(m.notch) || m.deck || m.overview || m.capture !== null || m.menu !== null
 }
-// Whether the shell layer takes the keyboard: interactive, or a card opened by click.
-// A pinned card only while it shows: under an OSD, toast or event the keyboard stays with the app.
-function keyboard(m) { return interactive(m) || (pinnedCard(m) && !!m.passiveTop && m.passiveTop.kind === "card") }
+// Whether the shell layer takes the keyboard: interactive, a card opened by click, or a toast
+// with its reply field open (notch.md §6). A pinned card only while it shows: under an OSD, toast
+// or event the keyboard stays with the app.
+function keyboard(m) {
+    return interactive(m) || pinnedShown(m)
+        || (!!m.passiveTop && m.passiveTop.kind === "toast" && !!m.passiveTop.entry.replying)
+}
 // The surface Esc acts on first: "menu", a notch mode, "deck", "overview", "capture" or "".
 function top(m) {
     if (m.menu) return "menu"
@@ -347,14 +362,15 @@ function post(monitors, global, kind, payload, priority, monitor, key, now) {
         if (key) for (var i = 0; i < m.passive.length; i++) {
             var e = m.passive[i]
             if (e.kind === kind && e.key === key) {
-                e.payload = payload; e.priority = priority || 0; e.born = now; id = e.id
+                e.payload = payload; e.priority = priority || 0; e.born = now; e.rev = (e.rev || 0) + 1; id = e.id
                 break
             }
         }
         if (!id) {
             g.passiveSerial = g.passiveSerial + 1
             id = g.passiveSerial
-            m.passive.push({ id: id, kind: kind, key: key || "", payload: payload, priority: priority || 0, born: now, waited: false })
+            m.passive.push({ id: id, kind: kind, key: key || "", payload: payload, priority: priority || 0, born: now,
+                             waited: false, replying: false, rev: 0 })
         }
     }
     var r = finish(c, now)
@@ -364,18 +380,26 @@ function post(monitors, global, kind, payload, priority, monitor, key, now) {
 // Change an entry's payload in place (stack toast, OSD value).
 function update(monitors, global, monitor, id, payload, now) {
     var c = begin(monitors, global), f = findEntry(c, monitor, id)
-    if (f) f.m.passive[f.i].payload = payload
+    if (f) { var e = f.m.passive[f.i]; e.payload = payload; e.rev = (e.rev || 0) + 1 }
+    return finish(c, now)
+}
+// A toast's inline reply field opened or closed (notch.md §6): while it is open the toast stays
+// above an OSD and the shell layer takes the keyboard. Other kinds are left alone.
+function setReplying(monitors, global, monitor, id, on, now) {
+    var c = begin(monitors, global), f = findEntry(c, monitor, id)
+    if (f && f.m.passive[f.i].kind === "toast") f.m.passive[f.i].replying = !!on
     return finish(c, now)
 }
 function dismiss(monitors, global, monitor, id, now) {
     var c = begin(monitors, global), f = findEntry(c, monitor, id)
-    if (f) f.m.passive.splice(f.i, 1)
+    if (f) goneEffect(c, f.m, f.m.passive.splice(f.i, 1)[0])
     return finish(c, now)
 }
 // notch.md §9 → { kind: "osd" | "toast" | "event" | "card" | "rest" | "hidden", entry }.
 // opts: { overFullscreen: "critical" | "none" | "all" (notch.overFullscreen), limits }.
 // Order: OSD (newest; also while the Deck is open, 05 §2) > toast (highest priority, then
-// FIFO) > event > card > rest. Under an interactive mode: OSD suppressed, events dropped, toasts
+// FIFO) > event > card > rest; a toast whose reply field is open is not covered by an OSD (the
+// OSD entry still expires on time). Under an interactive mode: OSD suppressed, events dropped, toasts
 // queued (rest is reported). Under a fullscreen window: "hidden" except OSD and what
 // overFullscreen allows (critical: priority ≥ 2). The recording dot is the Notch's own drawing.
 function arbitrate(m, now, opts) {
@@ -387,15 +411,16 @@ function arbitrate(m, now, opts) {
         if (!hiding) return true
         return e.kind === "osd" || (opts.overFullscreen === "critical" && e.kind === "toast" && e.priority >= 2)
     }
-    var osd = null, toast = null, ev = null
+    var osd = null, toast = null, ev = null, replying = null
     for (var i = 0; i < list.length; i++) {
         var e = list[i]
         if (!allowed(e)) continue
         if (e.kind === "osd" && (!osd || e.born >= osd.born)) osd = e      // the newest OSD
         else if (e.kind === "toast" && (!toast || e.priority > toast.priority)) toast = e   // FIFO within a priority
         else if (e.kind === "event" && !ev) ev = e
+        if (e.replying && !replying) replying = e
     }
-    if (osd) return { kind: "osd", entry: osd }
+    if (osd) return replying ? { kind: "toast", entry: replying } : { kind: "osd", entry: osd }
     if (toast) return { kind: "toast", entry: toast }
     if (ev) return { kind: "event", entry: ev }
     if (hiding) return { kind: "hidden", entry: null }
@@ -452,6 +477,7 @@ function removeMonitor(monitors, global, name, now) {
     for (var i = 0; i < opened.length; i++)
         if (opened[i] && (opened[i] !== "menu" || m.menu) && (opened[i] !== "capture" || m.capture))
             effect(c, "closed", opened[i], name)
+    for (var j = 0; j < m.passive.length; j++) goneEffect(c, m, m.passive[j])
     delete c.monitors[name]
     if (g.activeMonitor === name) { var rest = Object.keys(c.monitors); g.activeMonitor = rest.length ? rest[0] : "" }
     if (hadPolkit) {

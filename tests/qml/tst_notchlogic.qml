@@ -31,6 +31,10 @@ TestCase {
         compare(T.viewOf(state("rest", { kind: "hidden", entry: null })).kind, "hidden")
         compare(T.viewOf(state("keysPeek")).mode, "keysPeek")      // the passive peek
         compare(T.viewOf(state("keysPeek", { kind: "osd", entry: { id: 2, payload: {} } })).kind, "osd")
+        // rules.js's card tests, re-exported for the Notch
+        verify(T.isCard("card:media") && !T.isCard("rest") && !T.isCard("card:nothing"))
+        verify(T.pinnedCard({ notch: "card:media", notchArgs: { pinned: true } }))
+        verify(!T.pinnedCard({ notch: "card:media", notchArgs: {} }) && !T.pinnedCard({ notch: "rest", notchArgs: { pinned: true } }))
     }
     function test_layers_crossfade_and_in_place() {
         const osd = T.viewOf(state("rest", { kind: "osd", entry: { id: 1, payload: {} } }))
@@ -84,8 +88,8 @@ TestCase {
         compare(T.bulgeSize("event", null, { width: 500 }, tokens), { width: 360, height: 36 })
         compare(T.bulgeSize("card", null, { height: 132, pager: false }, tokens), { width: 420, height: 132 })
         compare(T.bulgeSize("card", null, { height: 132, pager: true }, tokens), { width: 420, height: 150 })
-        compare(T.bulgeSize("mode", null, { width: 600, height: 400 }, tokens), { width: 600, height: 400 })
-        compare(T.bulgeSize("rest", null, null, tokens), { width: 0, height: 0 })
+        // a mode and a result card bring their own size; rest and hidden have none
+        for (const k of ["mode", "result", "rest", "hidden"]) verify(refuses(() => T.bulgeSize(k, null, null, tokens)), k)
     }
     function test_due_entries() {
         const timing = { osdMs: 1500, eventMs: 1600, pinnedMs: 5000 }
@@ -114,6 +118,10 @@ TestCase {
         verify(!none.running)
         compare(T.countdownLeft(none, 1e9), Infinity)                    // a critical toast stays
         verify(T.countdownResume(none, 10, 2000) === none)
+        // the entry stamp it counts for goes through pause and resume (wave-2 simplify A9)
+        c = T.countdownStart(5000, 0, 3)
+        compare(T.countdownResume(T.countdownPause(c, 10), 20, 0).rev, 3)
+        compare(T.countdownStart(5000, 0).rev, 0)
     }
     function test_pager() {
         const ids = ["media", "timer", "focus"]

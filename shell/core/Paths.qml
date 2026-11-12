@@ -18,6 +18,12 @@ Singleton {
     readonly property bool test: Quickshell.env("APTUS_TEST") === "1"
     readonly property bool dev: Quickshell.env("APTUS_DEV") === "1"
     readonly property string home: String(Quickshell.env("HOME") || "").replace(/\/+$/, "")
+    // $APTUS_SYSFS, a sysfs tree to use instead of /sys ("" unset; under APTUS_TEST only a tree
+    // inside HOME, else ""): the fake backlight, keyboard light and battery of the tests.
+    readonly property string sysfsOverride: {
+        const s = String(Quickshell.env("APTUS_SYSFS") || "").replace(/\/+$/, "");
+        return !test || (home !== "" && s.indexOf(home + "/") === 0) ? s : "";
+    }
     readonly property string configHome: _xdg("XDG_CONFIG_HOME", ".config")      // $XDG_CONFIG_HOME
     readonly property string stateHome: _xdg("XDG_STATE_HOME", ".local/state")       // $XDG_STATE_HOME
     readonly property string cacheHome: _xdg("XDG_CACHE_HOME", ".cache")       // $XDG_CACHE_HOME

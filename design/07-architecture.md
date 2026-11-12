@@ -56,14 +56,14 @@ aptus/
 │  └─ doctor/ (isolation.py, deps.py, config.py)
 ├─ shell/                       qs -p shell
 │  ├─ shell.qml                 root: ShellRoot, Variants over Quickshell.screens → MonitorShell
-│  ├─ core/                     Tokens, Motion, Config, Paths, Log, Format, SurfaceManager, MonitorState,
+│  ├─ core/                     Tokens, Motion, Config, Paths, Log, Format, SurfaceManager, MonitorState, WatchedFile, Run,
 │  │                            js/ (pure logic: rules, config, colour, resolve, format, bulge, sun)
 │  ├─ components/               Bulge (frame/cove path), BulgeSpec, NotchMode, Drawer, DrawerSlot, Activity, ListRow,
 │  │                            List, Button, IconButton, Tile, Slider, Switch, Segmented, Checkbox, Field,
 │  │                            Keycap, Ring, Level, Menu, MenuHost, Tooltip, Badge, EmptyState, Glyph,
 │  │                            Label, Wash, FocusRing, AppIcon, Thumb, Scrim, RollingDigits, Ellipsis,
 │  │                            ErrorLine, PagerDots, Swatch, StandardAnimation, StandardColorAnimation,
-│  │                            SnappySpring
+│  │                            SnappySpring, NotchSpring, Nudge
 │  ├─ services/                 one singleton per data source (§6)
 │  ├─ surfaces/<name>/          one folder (QML module qs.surfaces.<name>) per surface, owned by one
 │  │                            stage: frame, wallpaper, bar, notch (rest, compact, toast, osd, event,
@@ -153,7 +153,7 @@ closes anything.
 MonitorState {
   notch:     "rest" | "spotlight" | "switcher" | "today" | "session" | "polkit"
              | "gallery" | "jot" | "keys" | "keysPeek" | "focusPicker" | "card:<activity>"
-  passive:   queue of { id, kind: toast|osd|event, payload, priority, key, born, shown, waited }
+  passive:   queue of { id, kind: toast|osd|event, payload, priority, key, born, waited, replying, rev }
   deck:      { open: bool, pages: [ "main", "wifi", … ] }
   overview:  bool
   menu:      null | { anchorX, anchorY, model, owner, onTriggered(row) }   (MenuHost closes the
@@ -169,6 +169,16 @@ API (also exposed over IPC): `open(surface, args)`, `close(surface)`, `toggle(su
 `back()` (the Esc ladder, [05-interaction.md](05-interaction.md) §3), `post(kind, payload,
 priority)` for passive content, `state()`.
 
+Every operation is a pure function of `rules.js` over the last result, which the manager keeps as
+the state; the `MonitorState` objects follow it field by field. The API is reentrant: a surface or
+service may call it from a change handler while a result is still being copied (a dismissal when
+the passive list changes, a post when a hold ends). That operation starts from the last result
+and applies in full; the apply it interrupted stops writing, and its effects are still signalled.
+A passive entry that leaves the queue for any reason (dismissed, aged out, replaced by its key,
+its monitor removed) is signalled once as `passiveGone(monitor, id, kind, key)`; code that keeps
+a handle on an entry (the notification toasts, the notch's countdowns) forgets it there instead of
+looking for it in the queue.
+
 Transition rules (enforced here, not in surfaces):
 
 | Request | When | Result |
@@ -183,6 +193,7 @@ Transition rules (enforced here, not in surfaces):
 | open anything except polkit | polkit open | queued until polkit closes |
 | post a toast | an interactive notch mode, Overview or Capture is open | queued; shown on close if younger than 30 s, else Today only |
 | post an OSD | anything | OSD wins over toasts (toast pauses its timer and resumes) |
+| post an OSD | a toast's reply field is open (`setReplying`) | the toast stays; the OSD entry is queued and expires on time |
 | monitor removed | surfaces open on it | closed without animation |
 | monitor removed | the polkit prompt is on it | the prompt moves to the active monitor without animation and the queue stays; with no monitor left the request is cancelled and the queue is dropped |
 | monitor added | Capture is open | the selection is cancelled (as `Esc`): the new monitor has no frozen frame |
@@ -191,7 +202,8 @@ Transition rules (enforced here, not in surfaces):
 Cards and the Keys peek are notch states but not *interactive* surfaces: they do not queue toasts
 or catch outside clicks, and a pinned card yields to OSD, toasts and events (arbitration of
 [notch.md](surfaces/notch.md) §9). A card opened by click takes the keyboard (for `Tab`, `←/→` and
-its buttons); one opened by hover does not.
+its buttons); one opened by hover does not. A toast whose inline reply field is open
+(`setReplying(id, on)`, a flag on its passive entry) takes the keyboard while it shows.
 
 Keyboard: when an interactive surface opens, `aptus-shell` on that monitor switches to
 `keyboardFocus: Exclusive`; on close back to `None`, and Hyprland returns focus to the window that
@@ -201,6 +213,9 @@ catcher's focus replay.
 ## 6. Services
 
 Singletons in `shell/services/`. Each exposes properties (bindable) and methods; none touches the UI.
+A service runs a program to its end through `core/Run`: one `finished(stdout, stderr, code)` per
+run, after both the exit and the end of stdout (Quickshell reports them in either order), and
+code −1 when the program cannot start (Quickshell then only turns `running` off).
 
 | Service | Responsibility | Source | Updates |
 |---|---|---|---|
@@ -238,7 +253,9 @@ Singletons in `shell/services/`. Each exposes properties (bindable) and methods;
 `Hypr` serialises `Hyprland.refresh*()`: Quickshell 0.3.2 empties every list when two refreshes run
 in the same JS turn, and `refreshMonitors()` clears `focusedMonitor` until the next
 `refreshWorkspaces()`. So refreshes are queued, one per 15 ms tick, and a monitor refresh is always
-followed by a workspace refresh (found in S1).
+followed by a workspace refresh (found in S1). A focus change (`activewindowv2`) refreshes only the
+toplevels (their focus history); the rebuilt `windows` and `workspaces` lists are assigned only
+when they differ, so a refresh that changed nothing re-runs nothing downstream.
 
 Lazily created singletons start with their bindings already evaluated, so a service never relies on
 `on<Prop>Changed` for its first value (it also acts in `Component.onCompleted`), and no singleton
@@ -298,6 +315,11 @@ Quickshell `GlobalShortcut { appid: "aptus"; name: … }`; Hyprland binds `hl.ds
 - `aptus-theme apply` swaps `~/.local/state/aptus/theme/current` and rewrites the stable file
   `theme/resolved.json` (a FileView does not see a symlink swap, [probes.md](probes.md)); `Tokens`
   watches it for palette values changed outside the shell and ignores it while `Theme.busy`.
+- The shell follows the files it reads (settings.json, resolved.json, the lease files) with
+  `core/WatchedFile`: a FileView watches a file only if its folder existed when the watch was set,
+  so WatchedFile watches the nearest existing folder above a missing one and sets the watch again
+  once the folder is there; a file made, replaced or removed after the start is seen. An optional
+  debounce gathers a burst of changes into one reload.
 
 ## 8. Configuration
 
@@ -316,7 +338,7 @@ Quickshell `GlobalShortcut { appid: "aptus"; name: … }`; Hyprland binds `hl.ds
 
 | File | Owner (writer) | Format | Written |
 |---|---|---|---|
-| `~/.config/aptus/settings.json` | Config | JSON | debounced 300 ms, atomic; written empty (`{"v": 2}`) at start when missing, because a file watch needs the file |
+| `~/.config/aptus/settings.json` | Config | JSON | debounced 300 ms, atomic |
 | `~/.config/aptus/calendars.json` | settings window | JSON, 0600 | on save, atomic |
 | `~/.local/state/aptus/lease/…` | aptus-lease | see [02](02-isolation.md) §5 | under flock |
 | `~/.local/state/aptus/theme/gen-<n>/`, `current` →, `resolved.json`, `own.json` | aptus-theme | rendered files; the resolved palette; the Own files aptus created | atomic dir + symlink swap under `theme/lock`; last 3 generations kept |

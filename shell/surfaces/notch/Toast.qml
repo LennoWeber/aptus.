@@ -19,9 +19,9 @@ Item {
 
     // The bulge size: 420 × 72 / 104 / 132 (notch.md §6); while the reply field is open it takes
     // the button row's place and the toast grows by the difference.
-    readonly property real bulgeWidth: Tokens.surfaces.toast.width
-    readonly property real bulgeHeight: NJ.toastHeight(payload, Tokens.surfaces.toast.heights)
-        + (replying ? Math.max(0, replyField.height - actions.height) : 0)
+    readonly property var _size: NJ.bulgeSize("toast", payload, null, Tokens.surfaces)
+    readonly property real bulgeWidth: _size.width
+    readonly property real bulgeHeight: _size.height + (replying ? Math.max(0, replyField.height - actions.height) : 0)
     readonly property bool hovered: hover.hovered
     // The inline reply field is open (takes the keyboard; the countdown stops).
     property bool replying: false
@@ -36,6 +36,8 @@ Item {
 
     // M-06 entrance progress of the icon, title and body (0 → 1).
     property real _icon: 1
+    // The icon's entrance scale at progress 0 (toast.iconScaleFrom; 1 with reduced motion).
+    readonly property real _iconFrom: Motion.reduced ? 1 : Motion.catalogueValue("toast.iconScaleFrom")
     property real _title: 1
     property real _body: 1
 
@@ -45,7 +47,7 @@ Item {
         replyField.forceFocus();
     }
     // Close the reply field (Esc in the field returns to the toast; the field has the keyboard
-    // through Notch.wantsKeyboard, not the shell's Esc ladder).
+    // through its entry's `replying` flag, SurfaceManager.setReplying, not the shell's Esc ladder).
     function closeReply(): bool {
         if (!replying) return false;
         replying = false;
@@ -93,7 +95,7 @@ Item {
         y: Tokens.padToast
         width: root._t.iconSize
         height: width
-        scale: (Motion.reduced ? 1 : Motion.catalogueValue("toast.iconScaleFrom")) + (1 - (Motion.reduced ? 1 : Motion.catalogueValue("toast.iconScaleFrom"))) * root._icon
+        scale: root._iconFrom + (1 - root._iconFrom) * root._icon
         opacity: root._icon * root._swap
         AppIcon {
             anchors.fill: parent

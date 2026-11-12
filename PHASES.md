@@ -2340,3 +2340,53 @@ before recover; the guard's waits: inotify, the 1 s poll only while due, the tic
 queue exists), 07 §3 (the guard row of the start table), 07 §2 (paint.lua in the tree), 08 (the
 Hyprland row: the hook's `require("aptus.paint")`), 09 §4 (`look.lua` and `paint.lua`),
 design/probes.md (the R15 probe).
+
+### Wave-2 simplify: shell (S3 + core)
+
+Agent Q, branch `worktree-agent-a11c86adb5310cc8a` from v2 19575f5; the findings of
+`.claude/briefs/wave2-simplify.md` for QML and the e2e helpers. Mechanism changes first (each with
+a test), then the local simplifications, then the efficiency items. Behaviour stays the same;
+where a change shows, the table says so.
+
+| Item | Verdict | Change |
+|---|---|---|
+| A1 | done | SurfaceManager keeps the last rules.js result (`_state`) and snapshots from it; `_applySerial`: an apply a nested call overtook stops writing and still signals its effects. The Notch's passive subscriber lost its `callLater`. Kept: the Notch `_sync` deferral (it runs inside `view`'s notification, a binding loop) and the Notifications hold release (a hold can end as another begins). 07 §5. Test: a dismissal from inside a post's apply (fails before). |
+| A2 | done | `replying` flag on the toast's passive entry (`setReplying`); `arbitrate` keeps a replying toast above an OSD, `keyboard()` includes it, `MonitorState.pinnedShown` comes from rules.js. The Notch drops `_replyEntry`, `wantsKeyboard`, its view override; MonitorShell uses `monitor.keyboard`. Seen difference: the reply now records `previousWindow` like every keyboard grab. 07 §5, notch.md §6; e2e checks the flag. |
+| A3 | done (Power skipped) | rules.js `passiveGone` effect (dismiss, expire, keyed replace, monitor removed), `SurfaceManager.passiveGone` signal; Notifications and the Notch subscribe; `_alive`, `_monitorOf`, `toastGone` gone. Power not subscribed: it keeps the crit toast's id after a dismissal on purpose (clearing it would post the toast again at the next percentage, against 05 §8). `_toasts` stays (a dismiss by key would also close the stack toast). |
+| A4, 5, R1 | done | MenuHost marks its window (`ComponentShared.markMenu`); Tooltip hides there and shows a `_text` frozen while hidden. The five `_menuOpen` copies, `WorkspacePill.menuOpen`, `StatusItem._tip/_liveTip` and their comments gone. Also covers Button/IconButton tooltips under a menu. 03. |
+| A5 | done | `Tokens.resolved()` when the shell's own resolution changed the paint; `applyingExternal` gone; Theme listens to the one signal. |
+| A6, E11 | done | `core/WatchedFile`: watches the nearest existing folder above a missing file and re-arms the view when it appears (probed FileView limits; a folder renamed away stays unseen); optional debounce. Config (no empty settings.json at start, 07 §8 row back), Tokens, Lease (journal debounced 150 ms, no cross-reloads), Power's test battery. New e2e `test_a_resolution_made_after_the_start` (fails with the old FileView). 07 §2/§7/§9. |
+| A7, R11 | done | Audio `_b`, Power `_src` (UPower in a LazyLoader, never loaded under test); `Paths.sysfsOverride`; Brightness `_refused` tests `sysfs !== ""`. |
+| A8 | done | `Activity.aboveFullscreen`, set by the recording activity; the Notch reads it. notch.md §4. |
+| A9 | done | `rev` on passive entries (update and keyed replace bump it); countdowns restart on a changed rev; `_countdownPayloads` gone. 07, notch.md. |
+| A10 | done | `core/Run` (one `finished(stdout, stderr, code)`, -1 cannot start) for Theme, Hypr devices, Network VPN, the server check, the image copies. Seen difference: a copy job that cannot start is a failed copy (it hung before). 07 §2/§6. |
+| 1, R6 | done | notch.js `isCard`/`pinnedCard` (thin functions over rules.js, so qmllint sees them) at the six Notch sites, called as functions (a sibling binding can be stale inside `view`'s notification); `viewOf` drops `n && n !== "rest"`. `_sync` keeps "pinned card" (not `_pinnedShown`: a covered card's timeout must run on). |
+| 3, R2 | done | `components/Nudge` (`scale`, `fire()`, `minInterval`) in StatusItem, WorkspacePill and CompactSlot (`minInterval: 0`). Test `test_nudge`. |
+| 4 | done | `bar/WheelStepper` (`feed(delta): int`) in StatusItem, WorkspacePill, WorkspaceStrip, ActiveWindow. |
+| 7 | done | inline `component Slot: CompactSlot` in the Notch, used twice. |
+| 8, R5 | done | `components/NotchSpring` for both bulge Behaviors and the slot width. |
+| 9 | done | record field `live` gone (notifications.js, `_arrive`, `_drop`, tests); liveness stays `id in _live`. |
+| 10 | done | `bulgeSize` knows toast, osd, event and card; Toast and Osd use it; mode/result/rest/hidden refused (test). Doubled size comments in ActivityCard and EventLine gone. |
+| 14, R10 | done | `_currentContent` bound to `_currentLayer`; maskArea reads `_pinnedShown`; Theme's inputs a local; Notifications `_recount()` (also at load); Toast/ActiveWindow `_iconFrom`. |
+| 15, R13 | done | hypr.js `bumpFocus` dead guard gone; `H.address()` for `parseTitleEvent`, `_onUrgent`, `_onActiveWindow`; the bar.js title comment above `titleWidth`. |
+| R12 | done | `H.primary(names)` in `fixedIds` and `Bar._primary`; Brightness uses `H.INTERNAL`. |
+| E5, E13 | done | WorkspacePill `_iconKey`, ActiveWindow `_glyphKey`: string keys, so the Repeaters keep their delegates when nothing changed. |
+| E6 | done | Hypr assigns `windows`/`workspaces` only on a JSON difference. 07 §6. |
+| E7 | done | `activewindowv2` refreshes the toplevels only. 07 §6. |
+| E14 | done | Brightness reloads only the level files; the maxima load once when the scan names the device. |
+| `surfaces.notch.cardWidth` | done | removed from tokens.json (nothing read it; `surfaces.card.width` is the one). |
+| `unique()` twice | skipped | three lines; sharing it would make hypr.js (which imports nothing) import a core library. |
+| `Hypr.windowForApp` cache | done | `Apps.idFor(class)` from the `_byClass` cache; mock and test double updated. |
+| s3bus pointer/wheel, `setting()` | done | `Nested.vpointer()` (refuses without a nested display) for click, pointer, wheel; `setting()` and `write_resolution` use `aptus.atomic.write_json`. |
+
+Checks:
+- After the mechanism changes: e2e 64/64.
+- Final: `tests/run` 348 unit, 296 QML, qmllint 0 warnings on 152 files; e2e 64/64 (247 s).
+- Idle budget (full run): cpu 0.08 %, main thread 1.35 wakeups/s, rss 250 MB (budget 0.3 %, 2/s,
+  260 MB; the v2 run before this work: 0.07 %, 1.33/s, 254 MB). The budget file alone: 0.07 %,
+  1.45/s, 220 MB. Under the animation load: shell cpu 22.8 % of one core (budget 50 %).
+- Screenshots (`APTUS_SHOTS` in the worktree, not committed) against `tests/e2e/shots/`: no
+  visual change. Eight shots differ only in the clock's time and date (taken a day later;
+  elsewhere at most 5 levels of antialiasing). `fullscreen-critical.png` came out 931×494 instead
+  of 931×1002 (the nested output's size follows the host window); in the shared area only the test
+  terminal's prompt differs, the toast matches.

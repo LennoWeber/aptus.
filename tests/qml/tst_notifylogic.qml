@@ -153,8 +153,7 @@ TestCase {
         compare(back[1].body, a.body)
         verify(back[1].read)
         compare(back[1].held, "dnd")
-        compare(back[1].actions, [])                                        // not live: no actions
-        verify(!back[1].live)
+        compare(back[1].actions, [])                                        // no sender: no actions
         compare(back[1].progress, -1)
         compare(N.parse("not json", 0, 100, 7), [])
         compare(N.parse('{"version":1,"history":[{"id":"x","time":1},null,{"id":5}]}', 0, 100, 7), [])
@@ -223,7 +222,7 @@ TestCase {
     function record(extra) {
         const r = { id: 4, appName: "Mail", appIcon: "", desktopEntry: "", summary: "s", body: "", image: "", urgency: 1,
                     actions: [], hasDefault: false, resident: false, reply: false, progress: -1, time: 0, read: false,
-                    live: false, held: "" }
+                    held: "" }
         for (const k in extra) r[k] = extra[k]
         return r
     }

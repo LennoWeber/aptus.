@@ -48,11 +48,7 @@ Item {
     readonly property var _hm: Hypr.monitors.find(m => m.name === _name) || null
     readonly property var _activeWs: _hm ? Hypr.workspaces.find(w => w.id === _hm.activeWorkspace) || null : null
     // The primary monitor (10-settings: the external one when connected, else eDP-1).
-    readonly property bool _primary: {
-        const names = Hypr.monitors.map(m => m.name);
-        const ext = names.find(n => n !== H.INTERNAL);
-        return _name === (ext !== undefined ? ext : H.INTERNAL);
-    }
+    readonly property bool _primary: _name === H.primary(Hypr.monitors.map(m => m.name))
 
     // Zones: workspaces and window title left, tray and status right.
     Row {

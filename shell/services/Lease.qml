@@ -6,7 +6,6 @@ pragma ComponentBehavior: Bound
 // Owner: S2.
 import QtQuick
 import Quickshell
-import Quickshell.Io
 import qs.core
 import "lease.js" as LeaseJs
 
@@ -64,31 +63,23 @@ Singleton {
         }
     }
 
-    // A missing file reads as "". The journal is removed on release, which a watch on it may
-    // miss, so a change of guard.state or session.json re-reads the journal too.
-    FileView {
-        id: journalView
+    // A missing file reads as "". WatchedFile also sees a file made, replaced or removed (the
+    // journal moves to history/ on release) after the start. A theme apply writes the journal
+    // some 50 times within a second: one read per burst.
+    WatchedFile {
         path: Paths.leaseJournal
-        watchChanges: true
-        printErrors: false
-        onFileChanged: reload()
+        debounce: 150
         onLoaded: { root._journalText = text(); root.refresh(); }
         onLoadFailed: { root._journalText = ""; root.refresh(); }
     }
-    FileView {
+    WatchedFile {
         path: Paths.guardState
-        watchChanges: true
-        printErrors: false
-        onFileChanged: reload()
-        onLoaded: { root._guardText = text(); journalView.reload(); }
-        onLoadFailed: { root._guardText = ""; journalView.reload(); }
+        onLoaded: { root._guardText = text(); root.refresh(); }
+        onLoadFailed: { root._guardText = ""; root.refresh(); }
     }
-    FileView {
+    WatchedFile {
         path: Paths.sessionStatus
-        watchChanges: true
-        printErrors: false
-        onFileChanged: reload()
-        onLoaded: { root._sessionText = text(); journalView.reload(); }
-        onLoadFailed: { root._sessionText = ""; journalView.reload(); }
+        onLoaded: { root._sessionText = text(); root.refresh(); }
+        onLoadFailed: { root._sessionText = ""; root.refresh(); }
     }
 }

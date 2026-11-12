@@ -5,6 +5,7 @@ import QtTest
 import qs.core
 
 TestCase {
+    id: testCase
     name: "surfacemanager"
 
     function init() {
@@ -83,6 +84,44 @@ TestCase {
         SurfaceManager.fullscreenMonitors = [];
         verify(!SurfaceManager.monitors["D"].fullscreen);
         SurfaceManager.syncMonitors(["A", "B"]);
+    }
+    // Wave-2 simplify A1: an operation run from inside an apply (a field's change handler) starts
+    // from the last result and applies in full; the outer apply stops writing instead of putting
+    // its older fields back.
+    property var nestedRun: null
+    Connections {
+        id: nest
+        target: null
+        function onPassiveChanged(): void {
+            const f = testCase.nestedRun;
+            testCase.nestedRun = null;
+            if (f) f();
+        }
+    }
+    function test_an_operation_inside_an_apply_wins() {
+        const m = SurfaceManager.monitors["A"];
+        const osd = SurfaceManager.post("osd", { kind: "volume", value: 0.4 }, 0, "A", "volume");
+        compare(m.passiveTop.kind, "osd");
+        nest.target = m;
+        nestedRun = () => SurfaceManager.dismiss(osd, "A");      // runs when the toast's post writes `passive`
+        const toast = SurfaceManager.post("toast", { text: "t" }, 1, "A", "");
+        nest.target = null;
+        verify(toast > osd, "post() still answers with its id");
+        verify(!m.passive.some(e => e.id === osd), "the nested dismissal stays");
+        compare(m.passiveTop.kind, "toast", "not the outer apply's OSD top");
+        compare(m.passiveTop.entry.id, toast);
+        compare(SurfaceManager._state.monitors["A"].passiveTop.kind, "toast");
+        compare(SurfaceManager._state.monitors["A"].passive.length, m.passive.length);
+        SurfaceManager.dismiss(toast, "A");
+        compare(m.passive.length, 0);
+    }
+    SignalSpy { id: goneSpy; target: SurfaceManager; signalName: "passiveGone" }
+    function test_passive_gone_is_signalled() {
+        const id = SurfaceManager.post("toast", { text: "t" }, 1, "B", "n:1");
+        goneSpy.clear();
+        SurfaceManager.dismiss(id);                                    // found on any monitor
+        compare(goneSpy.count, 1);
+        compare(Array.from(goneSpy.signalArguments[0]), ["B", id, "toast", "n:1"]);
     }
     function test_back_runs_the_registered_step_first() {
         let steps = 0;

@@ -27,7 +27,7 @@ TestCase {
         function refreshToplevels(): void {}
     }
     readonly property var hyprland: fakeHyprland
-    readonly property var apps: ({ entryFor: cls => null, nameFor: cls => String(cls) })
+    readonly property var apps: ({ idFor: cls => "", nameFor: cls => String(cls) })
     property var hypr: null
     property var proc: null
 
@@ -70,9 +70,9 @@ TestCase {
     function layoutOsds(): var {
         return SurfaceManager.monitors["A"].passive.filter(e => e.kind === "osd" && e.payload.kind === "layout");
     }
+    // hyprctl's answer (devicesProc is a Run).
     function answer(text: string): void {
-        proc.stdout.text = text;
-        proc.stdout.streamFinished();
+        proc.finished(text, "", 0);
     }
 
     function test_devices_give_each_keyboards_layout() {
