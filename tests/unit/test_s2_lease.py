@@ -595,6 +595,21 @@ def test_holds_only_while_held(p, test_home, hypr) -> None:
     assert ops.held_by(p, hypr.signature, hypr.pid)          # but still this session's to finish
 
 
+def test_owned_by_a_loaded_journal() -> None:
+    """ops.owned_by, the pure test behind holds and held_by (and the guard's and stop's check of
+    the journal they loaded once)."""
+    owner = Owner("b", 7, "sig", "2", "t")
+    assert not ops.owned_by(None, "sig")
+    assert not ops.owned_by(Journal(state=State.HELD), "sig")                 # no owner
+    for state, any_state, held in ((State.TAKING, True, False), (State.HELD, True, True),
+                                   (State.RELEASING, True, False)):
+        j = Journal(state=state, owner=owner)
+        assert ops.owned_by(j, "sig") is any_state and ops.owned_by(j, "sig", held=True) is held
+        assert ops.owned_by(j, "sig", 7) and not ops.owned_by(j, "sig", 8)
+        assert not ops.owned_by(j, "other") and not ops.owned_by(j, "other", held=True)
+    assert not ops.owned_by(Journal(state=State.RELEASED, owner=owner, released_at="t"), "sig")
+
+
 def test_lease_cli_update_only_for_the_holder(p, test_home, hypr, monkeypatch, capsys) -> None:
     from aptus.lease import cli
     monkeypatch.setenv("HYPRLAND_INSTANCE_SIGNATURE", "someone-else")

@@ -111,7 +111,7 @@ def other_session_opened(paths: Paths, signature: str, pid: int, last: list[Any]
         j = journal.load(paths)
     except journal.JournalError:
         return False
-    if j is None or j.owner is None or not ops.held_by(paths, signature, pid):
+    if not ops.owned_by(j, signature, pid):
         return False
     listed = preflight.sessions(paths)
     if listed is None:

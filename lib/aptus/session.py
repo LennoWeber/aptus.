@@ -248,7 +248,7 @@ def stop(paths: Paths) -> int:
     except JournalError as e:
         logging.getLogger("aptus.session").error("stop: %s", e)
         return 1
-    if not sig or j is None or j.owner is None or not ops.held_by(paths, sig):
+    if not sig or not ops.owned_by(j, sig):
         return 0
     rel = ops.release(paths, expect=(sig, j.owner.hyprland_pid))
     return 1 if guard.after_release(paths, rel, sig) == guard.GuardState.FAILED else 0
