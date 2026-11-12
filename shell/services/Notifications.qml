@@ -41,9 +41,11 @@ Singleton {
     // Record id → the live Quickshell Notification (actions, reply, dismiss); dropped when the
     // sender closes it or the record leaves the history.
     property var _live: ({})
-    // Record id → the passive entry id of its toast (replaces_id updates it in place).
+    // Record id → the passive entry id of its toast (replaces_id updates it in place); an entry
+    // leaves it when SurfaceManager reports it gone (passiveGone).
     property var _toasts: ({})
-    // The stack toast being built (notifications.js stack record) or null.
+    // The stack toast being built (notifications.js stack record) or null; null again once its
+    // entry is gone.
     property var _stack: null
     // The stack for `shell state` (the e2e tests): null or { count, apps } (app names, no bodies).
     readonly property var stackInfo: _stack ? ({ count: _stack.count, apps: _stack.apps }) : null
@@ -137,24 +139,27 @@ Singleton {
     // items go, and the held count ends (no summary of cleared notifications later).
     function clearAll(): void {
         for (const id in _toasts) _closeToast(Number(id));
-        if (_stack && _alive(_stack.passiveId)) {
-            const p = _stack.passiveId;
-            SurfaceManager.dismiss(p, _monitorOf(p));
-            toastGone(p);
-        }
+        if (_stack) SurfaceManager.dismiss(_stack.passiveId);
         for (const it of Progress.items.slice()) if (it.source === "notification") Progress.remove(it.id);
         for (const id in _live) _live[id].dismiss();
         _live = {};
         _heldIds = [];
         _setHistory([]);
     }
-    // The Notch tells that a toast's passive entry left the notch (timed out or dismissed).
-    function toastGone(passiveId: int): void {
+    // A toast's passive entry left the notch (timed out, dismissed, aged out in the queue, its
+    // monitor removed): SurfaceManager.passiveGone.
+    function _toastGone(passiveId: int): void {
         const t = Object.assign({}, _toasts);
         let hit = false;
         for (const k in t) if (t[k] === passiveId) { delete t[k]; hit = true; }
         if (hit) _toasts = t;
         if (_stack && _stack.passiveId === passiveId) { _stack = null; _stackIds = []; }
+    }
+    Connections {
+        target: SurfaceManager
+        function onPassiveGone(monitor: string, id: int, kind: string, key: string): void {
+            if (kind === "toast") root._toastGone(id);
+        }
     }
 
     // A notification arrived from the server (a Quickshell Notification), or was replaced in place.
@@ -210,19 +215,18 @@ Singleton {
         const shown = live ? N.liveImage(live.image) : "";
         if (shown !== "") payload.image = shown;                 // the live image (image-data too)
         const mon = SurfaceManager.activeMonitor;
-        if (_stack && _stack.count >= 2 && _stackIds.indexOf(record.id) >= 0 && _alive(_stack.passiveId)) {
-            SurfaceManager.update(_stack.passiveId, N.stackPayload(_stack, record, timeout), _monitorOf(_stack.passiveId));
+        if (_stack && _stack.count >= 2 && _stackIds.indexOf(record.id) >= 0) {
+            SurfaceManager.update(_stack.passiveId, N.stackPayload(_stack, record, timeout));
             return;
         }
         const existing = _toasts[record.id];
-        if (existing && _alive(existing)) {
-            SurfaceManager.update(existing, payload, _monitorOf(existing));
+        if (existing) {
+            SurfaceManager.update(existing, payload);
             return;
         }
         if (priority < N.CRITICAL_PRIORITY) {
             const win = (Config.get("notifications.stackWindow") || 0) * 1000;
-            const stack = _stack && _alive(_stack.passiveId) ? _stack : null;
-            const s = N.stackStep(stack, record, 0, mon, Date.now(), win);
+            const s = N.stackStep(_stack, record, 0, mon, Date.now(), win);
             if (s.joins) {
                 _stack = s.stack;
                 const tt = Object.assign({}, _toasts), ids = _stackIds.concat([record.id]);
@@ -234,7 +238,7 @@ Singleton {
             }
             const id = SurfaceManager.post("toast", payload, priority, mon, "n:" + record.id);
             s.stack.passiveId = id;
-            _stack = s.stack;
+            _stack = id > 0 ? s.stack : null;          // a refused post (locked) starts no stack
             _stackIds = [record.id];
             _setToast(record.id, id);
             return;
@@ -329,8 +333,9 @@ Singleton {
         saveTimer.restart();
     }
 
-    // The toast of a record is now the passive entry `passiveId` (posted or updated in place).
+    // The toast of a record is now the passive entry `passiveId` (0: the post was refused).
     function _setToast(recordId: int, passiveId: int): void {
+        if (passiveId <= 0) return;
         const t = Object.assign({}, _toasts);
         t[recordId] = passiveId;
         _toasts = t;
@@ -338,9 +343,7 @@ Singleton {
     // Close a record's toast (sender close, activation, dismissal); the record stays in history.
     function _closeToast(recordId: int): void {
         const p = _toasts[recordId];
-        if (p === undefined) return;
-        SurfaceManager.dismiss(p, _monitorOf(p));
-        toastGone(p);
+        if (p !== undefined) SurfaceManager.dismiss(p);
     }
     // Forget a record's live Notification (the sender closed it, or it was dismissed): the record
     // stays in the history without actions.
@@ -351,16 +354,6 @@ Singleton {
         _live = live;
         history = history.map(r => r.id === id && r.live ? Object.assign({}, r, { live: false }) : r);
     }
-    // The monitor holding a passive entry ("" none).
-    function _monitorOf(passiveId: int): string {
-        for (const name in SurfaceManager.monitors) {
-            const m = SurfaceManager.monitors[name];
-            if (m && m.passive.some(e => e.id === passiveId)) return name;
-        }
-        return "";
-    }
-    // The passive entry still exists (rules.expire can drop a toast entry without telling us).
-    function _alive(passiveId: int): bool { return passiveId > 0 && _monitorOf(passiveId) !== ""; }
 
     NotificationServer {
         id: server

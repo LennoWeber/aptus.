@@ -174,6 +174,10 @@ the state; the `MonitorState` objects follow it field by field. The API is reent
 service may call it from a change handler while a result is still being copied (a dismissal when
 the passive list changes, a post when a hold ends). That operation starts from the last result
 and applies in full; the apply it interrupted stops writing, and its effects are still signalled.
+A passive entry that leaves the queue for any reason (dismissed, aged out, replaced by its key,
+its monitor removed) is signalled once as `passiveGone(monitor, id, kind, key)`; code that keeps
+a handle on an entry (the notification toasts, the notch's countdowns) forgets it there instead of
+looking for it in the queue.
 
 Transition rules (enforced here, not in surfaces):
 

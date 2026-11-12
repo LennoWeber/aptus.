@@ -222,6 +222,21 @@ TestCase {
         compare(heldSummary(), "2 notifications while you were focused");
     }
 
+    // Wave-2 simplify A3: a toast entry that leaves without Notifications (the Notch's timeout,
+    // rules.js expiry) is forgotten through SurfaceManager.passiveGone.
+    function test_a_toast_gone_elsewhere_is_forgotten() {
+        notifications._arrive(live(50, {}));
+        const t = toasts()[0];
+        compare(notifications._toasts[50], t.id);
+        compare(notifications._stack.passiveId, t.id);
+        SurfaceManager.dismiss(t.id, "A");
+        compare(notifications._toasts[50], undefined);
+        compare(notifications._stack, null);
+        notifications._arrive(live(50, { summary: "again" }));      // replaces_id: a new toast
+        compare(toasts().length, 1);
+        verify(toasts()[0].id !== t.id);
+        compare(notifications._toasts[50], toasts()[0].id);
+    }
     function test_progress_cancel_invokes_the_senders_own_action() {
         let invoked = "";
         const n = live(40, { hints: { value: 25 },

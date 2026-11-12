@@ -115,6 +115,14 @@ TestCase {
         SurfaceManager.dismiss(toast, "A");
         compare(m.passive.length, 0);
     }
+    SignalSpy { id: goneSpy; target: SurfaceManager; signalName: "passiveGone" }
+    function test_passive_gone_is_signalled() {
+        const id = SurfaceManager.post("toast", { text: "t" }, 1, "B", "n:1");
+        goneSpy.clear();
+        SurfaceManager.dismiss(id);                                    // found on any monitor
+        compare(goneSpy.count, 1);
+        compare(Array.from(goneSpy.signalArguments[0]), ["B", id, "toast", "n:1"]);
+    }
     function test_back_runs_the_registered_step_first() {
         let steps = 0;
         SurfaceManager.registerBack("A", "deck", () => { steps++; return steps === 1; });

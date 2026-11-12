@@ -46,6 +46,9 @@ Singleton {
 
     signal surfaceOpened(string monitor, string surface)
     signal surfaceClosed(string monitor, string surface)
+    // A passive entry left its monitor: dismissed, aged out (rules.js expiry), or the monitor was
+    // removed. `kind` is the entry's ("toast" | "osd" | "event").
+    signal passiveGone(string monitor, int id, string kind, string key)
     // Asks the settings window to focus itself (open but not focused, settings.md §2).
     signal settingsFocusRequested()
 
@@ -89,11 +92,12 @@ Singleton {
         return _run("post", kind, payload === undefined ? {} : payload, Number(priority) || 0,
                     _monitorFor(monitor), key ? String(key) : "").id;
     }
-    // Change a passive entry's payload in place (stack toast growing, OSD value change).
+    // Change a passive entry's payload in place (stack toast growing, OSD value change). Ids are
+    // unique across monitors: `monitor` omitted or "" finds the entry wherever it is.
     function update(id: int, payload: var, monitor: var): void {
         _run("update", monitor ? String(monitor) : "", id, payload);
     }
-    // Remove a passive entry (toast timed out or dismissed, OSD faded).
+    // Remove a passive entry (toast timed out or dismissed, OSD faded); `passiveGone` follows.
     function dismiss(id: int, monitor: var): void {
         _run("dismiss", monitor ? String(monitor) : "", id);
     }
@@ -208,6 +212,7 @@ Singleton {
         for (const e of result.effects) {
             if (e.kind === "opened") surfaceOpened(e.monitor, e.surface);
             else if (e.kind === "closed") surfaceClosed(e.monitor, e.surface);
+            else if (e.kind === "passiveGone") passiveGone(e.monitor, e.id, e.surface, e.key);
             else if (e.kind === "settingsFocus") settingsFocusRequested();
             else Log.info("surface", e.kind + " " + e.surface + (e.monitor ? " on " + e.monitor : ""));
         }

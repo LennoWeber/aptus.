@@ -131,6 +131,37 @@ TestCase {
         r = o(fresh(), "today")
         compare(kinds(p(r, "event", {})), "refused:event")
     }
+    // Wave-2 simplify A3: every passive entry that leaves is reported, however it leaves.
+    function gone(r) {
+        return r.effects.filter(function (e) { return e.kind === "passiveGone" })
+                        .map(function (e) { return e.surface + "#" + e.id + "@" + e.monitor + (e.key ? ":" + e.key : "") }).join(" ")
+    }
+    function test_passive_gone_effects() {
+        var r = p(fresh(), "toast", {}, 1, 1000, "n:7")
+        var toast = r.id
+        r = p(r, "event", { text: "Copied" }, 0, 1000)
+        var ev = r.id
+        compare(gone(r), "")
+        r = R.tick(r.monitors, r.global, 1000 + 4001)                   // the event ages out unseen
+        compare(gone(r), "event#" + ev + "@A")
+        r = p(r, "toast", { again: true }, 1, 6000, "n:7")              // a replace in place leaves nothing
+        compare(r.id, toast)
+        compare(gone(r), "")
+        r = R.dismiss(r.monitors, r.global, "", toast, 6100)
+        compare(gone(r), "toast#" + toast + "@A:n:7")
+        compare(gone(R.dismiss(r.monitors, r.global, "", toast, 6200)), "", "nothing left to dismiss")
+        // a waited toast that went stale
+        r = o(fresh(), "spotlight", {}, "", 1000)
+        r = p(r, "toast", {}, 1, 2000)
+        var stale = r.id
+        r = c(r, "spotlight", "", 2000 + 30001)
+        compare(gone(r), "toast#" + stale + "@A")
+        // the entries of a removed monitor
+        r = p(fresh(), "osd", { kind: "volume" }, 0, 1000, "volume", "B")
+        var osd = r.id
+        r = R.removeMonitor(r.monitors, r.global, "B", 1100)
+        compare(gone(r), "osd#" + osd + "@B:volume")
+    }
     function test_monitor_removed_instant() {
         var r = o(fresh(), "polkit", { id: 3 }, "B")
         r = o(r, "deck", {}, "B")              // queued behind polkit

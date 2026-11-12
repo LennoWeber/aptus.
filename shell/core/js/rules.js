@@ -15,7 +15,8 @@
 //   post critical toasts with priority 2.
 // Every operation returns { monitors: {name: state}, global, effects: [effect] } without
 // mutating its input. Effects: { kind: "opened"|"closed"|"refused"|"queued"|"settingsFocus",
-// surface, monitor }.
+// surface, monitor }, and { kind: "passiveGone", surface: the entry's kind, monitor, id, key } for
+// every passive entry that left (dismissed, aged out, its monitor removed).
 
 // Surface ids.
 var NOTCH_MODES = ["spotlight", "switcher", "today", "session", "polkit", "gallery", "jot",
@@ -125,6 +126,7 @@ function begin(monitors, global) {
     return c
 }
 function effect(c, kind, surface, monitor) { c.effects.push({ kind: kind, surface: surface, monitor: monitor || "" }) }
+function goneEffect(c, m, e) { c.effects.push({ kind: "passiveGone", surface: e.kind, monitor: m.name, id: e.id, key: e.key }) }
 function finish(c, now) {
     now = nowOr(now)
     var g = c.global, opts = { overFullscreen: g.overFullscreen, limits: g.limits, expired: true }
@@ -133,7 +135,10 @@ function finish(c, now) {
         var m = c.monitors[n]
         if (blocksPassive(m))
             for (var i = 0; i < m.passive.length; i++) if (m.passive[i].kind === "toast") m.passive[i].waited = true
-        m.passive = expire(m, now, g.limits).passive
+        var kept = expire(m, now, g.limits).passive, keptIds = {}
+        for (var j = 0; j < kept.length; j++) keptIds[kept[j].id] = true
+        for (var k = 0; k < m.passive.length; k++) if (!keptIds[m.passive[k].id]) goneEffect(c, m, m.passive[k])
+        m.passive = kept
         m.interactive = interactive(m)
         m.passiveTop = arbitrate(m, now, opts)
         m.keyboard = keyboard(m)
@@ -369,7 +374,7 @@ function update(monitors, global, monitor, id, payload, now) {
 }
 function dismiss(monitors, global, monitor, id, now) {
     var c = begin(monitors, global), f = findEntry(c, monitor, id)
-    if (f) f.m.passive.splice(f.i, 1)
+    if (f) goneEffect(c, f.m, f.m.passive.splice(f.i, 1)[0])
     return finish(c, now)
 }
 // notch.md §9 → { kind: "osd" | "toast" | "event" | "card" | "rest" | "hidden", entry }.
@@ -452,6 +457,7 @@ function removeMonitor(monitors, global, name, now) {
     for (var i = 0; i < opened.length; i++)
         if (opened[i] && (opened[i] !== "menu" || m.menu) && (opened[i] !== "capture" || m.capture))
             effect(c, "closed", opened[i], name)
+    for (var j = 0; j < m.passive.length; j++) goneEffect(c, m, m.passive[j])
     delete c.monitors[name]
     if (g.activeMonitor === name) { var rest = Object.keys(c.monitors); g.activeMonitor = rest.length ? rest[0] : "" }
     if (hadPolkit) {

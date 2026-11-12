@@ -184,14 +184,21 @@ Item {
     function _closeHoverCard(): void {
         if (_hoverCard !== "") SurfaceManager.close("card:" + _hoverCard, _name);
     }
-    // A passive entry is done (timeout, dismissal): SurfaceManager.dismiss and the toast's owner.
+    // A passive entry is done (timeout, dismissal); its owner and the countdowns learn it from
+    // SurfaceManager.passiveGone.
     function _dismissEntry(entry: var): void {
-        if (!entry) return;
-        SurfaceManager.dismiss(entry.id, _name);
-        if (entry.kind === "toast" || entry.kind === undefined) Notifications.toastGone(entry.id);
-        const c = Object.assign({}, _countdowns);
-        delete c[entry.id];
-        _countdowns = c;
+        if (entry) SurfaceManager.dismiss(entry.id, _name);
+    }
+    Connections {
+        target: SurfaceManager
+        function onPassiveGone(monitor: string, id: int, kind: string, key: string): void {
+            if (monitor !== root._name || root._countdowns[id] === undefined) return;
+            const c = Object.assign({}, root._countdowns), cp = Object.assign({}, root._countdownPayloads);
+            delete c[id];
+            delete cp[id];
+            root._countdowns = c;
+            root._countdownPayloads = cp;
+        }
     }
     // A toast's inputs (notch.md §6).
     function _toastActivated(entry: var, action: string): void {
@@ -250,10 +257,8 @@ Item {
         if (!monitor) return;
         const now = Date.now();
         const shown = (view.kind === "toast" || view.kind === "result") && view.entry ? view.entry : null;
-        // countdowns of entries that left (closed through Notifications, not _dismissEntry) go
         const c = {}, cp = {};
         for (const id in _countdowns) {
-            if (!monitor.passive.some(e => e.id === Number(id))) continue;
             c[id] = !shown || Number(id) !== shown.id ? NJ.countdownPause(_countdowns[id], now) : _countdowns[id];
             cp[id] = _countdownPayloads[id];
         }
