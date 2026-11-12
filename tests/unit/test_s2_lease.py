@@ -335,6 +335,54 @@ def test_running_noctalia_takes_nothing(p, test_home, hypr, tmp_path) -> None:
         proc.wait()
 
 
+def test_sessions_are_shown_in_one_call(p, test_home) -> None:
+    """Wave-2 simplify E9: one `loginctl show-session` for every listed session; a session that
+    is gone by then (loginctl fails for it) fails closed."""
+    fakes.one_session(test_home, "2", {"Id": "3", "Class": "manager", "Type": "unspecified",
+                                       "State": "active"},
+                      {"Id": "5", "Class": "user", "Type": "wayland", "State": "online",
+                       "Desktop": "Umbriel", "Service": "greetd"})
+    listed = preflight.sessions(p)
+    assert [(s.id, s.cls, s.type, s.state) for s in listed] == [
+        ("2", "user", "wayland", "active"), ("3", "manager", "unspecified", "active"),
+        ("5", "user", "wayland", "online")]
+    assert (listed[2].desktop, listed[2].service) == ("Umbriel", "greetd")
+    shows = [c for c in fakes.calls(test_home, "loginctl") if c[1] == "show-session"]
+    assert len(shows) == 1 and shows[0][2:5] == ["2", "3", "5"]
+    fakes.tool(test_home, "loginctl", f"""\
+        if args[0] == "list-sessions":
+            out.append("2 {os.getuid()} user seat0 1 user tty1 no -\\n9 {os.getuid()} user - 1 user - no -\\n")
+        else:
+            out.append("Id=2\\nClass=user\\nType=wayland\\nState=active\\n")
+            code = 1
+        """)
+    assert preflight.sessions(p) is None
+
+
+def test_the_shell_preflight_is_one_walk_of_proc(p, test_home, tmp_path, monkeypatch) -> None:
+    """Wave-2 simplify E8: Noctalia by name and a Quickshell running its config (its command
+    line names noctalia), from one walk; another Quickshell does not count."""
+    import shutil
+    import subprocess
+    from aptus.lease import system
+    procs = []
+    for name, argv0 in (("noctalia", "noctalia"), ("qs", "qs-for-noctalia"), ("quickshell", "quickshell")):
+        exe = tmp_path / "fakebin" / name
+        exe.parent.mkdir(exist_ok=True)
+        shutil.copy(shutil.which("sleep"), exe)
+        procs.append(subprocess.Popen([argv0, "60"], executable=str(exe), env={"HOME": str(test_home)}))
+    walks = []
+    real = system.processes
+    monkeypatch.setattr(system, "processes", lambda *a: walks.append(a[1]) or real(*a))
+    try:
+        assert preflight.noctalia(p) == sorted([procs[0].pid, procs[1].pid])
+        assert len(walks) == 1
+    finally:
+        for proc in procs:
+            proc.kill()
+            proc.wait()
+
+
 # --- recover ---------------------------------------------------------------------------------
 
 def test_recover_after_the_owner_died(p, test_home, hypr) -> None:
@@ -443,6 +491,16 @@ def test_history_keeps_ten(p) -> None:
     assert len(list(p.lease_history.glob("*.json"))) == journal.HISTORY_KEEP
 
 
+def test_history_is_newest_first_without_unreadable_entries(p) -> None:
+    """journal.history behind last_released and the doctor's lease periods."""
+    assert list(journal.history(p)) == [] and journal.last_released(p) is None
+    for gen in (1, 2):
+        journal.archive(p, Journal(state=State.RELEASED, released_at=f"t{gen}", theme_generation=gen))
+    (p.lease_history / "99999999T999999-999999999.json").write_text("{")    # newest, unreadable
+    assert [j.theme_generation for j in journal.history(p)] == [2, 1]
+    assert journal.last_released(p).theme_generation == 2
+
+
 def test_lease_and_theme_lock_share_one_flock_helper(p) -> None:
     """Wave-2 review 9: ops.lock and render.lock are locks.exclusive, re-entrant per thread:
     while one thread holds the lease lock another one waits (it used to re-enter it)."""
@@ -505,6 +563,38 @@ def test_dconf_restore_resets_an_unset_key(p, test_home, hypr) -> None:
     assert ["dconf", "reset", KEY + "accent-color"] in fakes.calls(test_home, "dconf")
     assert not [c for c in fakes.calls(test_home, "dconf") if c[1] in ("write", "reset")
                 and c[2] == KEY + "gtk-theme"]
+
+
+def test_take_reads_the_dconf_befores_with_one_dump(p, test_home, hypr) -> None:
+    """Wave-2 simplify E2: the befores of every dconf slot come from one `dconf dump`; when the
+    dump fails they are read key by key, with the same befores."""
+    setup_world(p, test_home)
+    assert take(p, hypr).held
+    calls = fakes.calls(test_home, "dconf")
+    first_write = next(i for i, c in enumerate(calls) if c[1] == "write")
+    assert [c[1] for c in calls[:first_write]] == ["dump"]
+    by_dump = {s.id: s.before for s in journal.load(p).slots if s.kind == SlotKind.DCONF}
+    assert by_dump["dconf.color-scheme"] == {"set": True, "value": "'prefer-light'"}
+    assert by_dump["dconf.accent-color"] == {"set": False, "value": None}
+    ops.release(p)
+    real = test_home / ".aptus-test/bin/dconf"
+    text = real.read_text().replace('elif cmd == "dump":', 'elif cmd == "dump" and False:')
+    real.write_text(text)                                         # dump now fails (code 1)
+    (test_home / ".aptus-test/calls.jsonl").unlink()
+    assert take(p, hypr).held
+    assert {s.id: s.before for s in journal.load(p).slots if s.kind == SlotKind.DCONF} == by_dump
+    assert sum(c[1] == "read" for c in fakes.calls(test_home, "dconf")) > len(by_dump)
+
+
+def test_dconf_read_dir_takes_only_the_fixed_keys_of_the_directory(p, test_home) -> None:
+    fakes.tool(test_home, "dconf", """\
+        out.append("[/]\\ncolor-scheme='prefer-dark'\\ncursor-size=24\\nenable-animations=true\\n"
+                   "font-name='Noto Sans  10'\\n\\n[sub]\\nicon-theme='x'\\n")
+        """)
+    assert dconf.read_dir(p) == {"color-scheme": "'prefer-dark'", "cursor-size": "24",
+                                 "font-name": "'Noto Sans  10'"}
+    fakes.tool(test_home, "dconf", "code = 1\n")
+    assert dconf.read_dir(p) is None
 
 
 def _random_ini(rng: random.Random) -> str:
@@ -583,6 +673,21 @@ def test_holds_only_while_held(p, test_home, hypr) -> None:
     journal.save(p, j)
     assert not ops.holds(p, hypr.signature)                  # half released: not lease mode
     assert ops.held_by(p, hypr.signature, hypr.pid)          # but still this session's to finish
+
+
+def test_owned_by_a_loaded_journal() -> None:
+    """ops.owned_by, the pure test behind holds and held_by (and the guard's and stop's check of
+    the journal they loaded once)."""
+    owner = Owner("b", 7, "sig", "2", "t")
+    assert not ops.owned_by(None, "sig")
+    assert not ops.owned_by(Journal(state=State.HELD), "sig")                 # no owner
+    for state, any_state, held in ((State.TAKING, True, False), (State.HELD, True, True),
+                                   (State.RELEASING, True, False)):
+        j = Journal(state=state, owner=owner)
+        assert ops.owned_by(j, "sig") is any_state and ops.owned_by(j, "sig", held=True) is held
+        assert ops.owned_by(j, "sig", 7) and not ops.owned_by(j, "sig", 8)
+        assert not ops.owned_by(j, "other") and not ops.owned_by(j, "other", held=True)
+    assert not ops.owned_by(Journal(state=State.RELEASED, owner=owner, released_at="t"), "sig")
 
 
 def test_lease_cli_update_only_for_the_holder(p, test_home, hypr, monkeypatch, capsys) -> None:

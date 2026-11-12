@@ -172,10 +172,9 @@ def check_environment(paths: Paths) -> Check:
     """3: none of ENV_VARS (nor XCURSOR_THEME with aptus's cursor theme) in `systemctl --user
     show-environment` unless a live owner holds the lease."""
     name = "isolation.environment"
-    r = system.run(paths, ["systemctl", "--user", "show-environment"])
-    if r.skipped or r.code != 0:
+    env, _ = guard.user_environment(paths)
+    if env is None:
         return Check(name, True, "systemctl --user show-environment did not run", warn=True)
-    env = dict(line.split("=", 1) for line in r.stdout.splitlines() if "=" in line)
     found = [n for n in ENV_VARS if n in env]
     found += [n for n, v in aptus_env_values(paths).items() if env.get(n) == v and n not in found]
     if not found:
@@ -190,7 +189,7 @@ def check_units(paths: Paths) -> Check:
     name = "isolation.units"
     r = system.run(paths, ["systemctl", "--user", "list-units", "aptus-*", "--state=active",
                            "--plain", "--no-legend", "--no-pager"])
-    if r.skipped or r.code != 0:
+    if not r.ok:
         return Check(name, True, "systemctl --user list-units did not run", warn=True)
     units = [ln.split()[0] for ln in r.stdout.splitlines() if ln.split()]
     units = [u for u in units if u != "aptus-recover.service"]
@@ -209,8 +208,7 @@ def check_umbriel(paths: Paths) -> Check:
         if bad:
             return Check(name, False, f"QT_QPA_PLATFORMTHEME in Umbriel's environment (pid {', '.join(bad)})")
         return Check(name, True, "Umbriel's environment is clean")
-    for f in sorted(p for p in paths.umbriel_config.rglob("*") if p.is_file()) \
-            if paths.umbriel_config.is_dir() else []:
+    for f in _files(paths.umbriel_config):
         try:
             if b"QT_QPA_PLATFORMTHEME" in f.read_bytes():
                 return Check(name, False, f"QT_QPA_PLATFORMTHEME in {f}")
@@ -246,8 +244,7 @@ def check_traps(paths: Paths, baseline: Baseline | None) -> Check:
     warn (aptus never adds any, but Lenno may)."""
     name = "isolation.traps"
     adw = _adw([paths.user_themes, paths.system_themes])
-    fonts = sorted(p.name for p in paths.fonts.rglob("*") if p.is_file()) \
-        if paths.fonts.is_dir() else []
+    fonts = _font_names(paths)
     ours = {p.name for p in (paths.shell / "assets/fonts").glob("*") if p.is_file()} \
         if (paths.shell / "assets/fonts").is_dir() else set()
     bad = adw + [f for f in fonts if f in ours]
@@ -285,15 +282,8 @@ def check_untouched(paths: Paths, baseline: Baseline | None) -> Check:
 
 def lease_periods(paths: Paths) -> list[tuple[float, float]]:
     """(taken_at, released_at) epoch pairs from history/ and a held journal (released: now)."""
-    out = []
-    files = sorted(paths.lease_history.glob("*.json")) if paths.lease_history.is_dir() else []
-    for f in files:
-        try:
-            j = journal.from_dict(json.loads(f.read_text(encoding="utf-8")))
-        except (OSError, ValueError, JournalError):
-            continue
-        if j.owner is not None:
-            out.append((_epoch(j.owner.taken_at), _epoch(j.released_at) or time.time()))
+    out = [(_epoch(j.owner.taken_at), _epoch(j.released_at) or time.time())
+           for j in journal.history(paths) if j.owner is not None]
     try:
         cur = journal.load(paths)
     except JournalError:
@@ -320,17 +310,24 @@ def fingerprint(path: Path) -> dict[str, Any]:
 def watched_files(paths: Paths) -> list[Path]:
     """The files check 8 covers: every regular file below ~/.config/umbriel, Noctalia's
     settings.toml, greetd's config.toml."""
-    found = sorted(p for p in paths.umbriel_config.rglob("*") if p.is_file()) \
-        if paths.umbriel_config.is_dir() else []
-    return found + [paths.noctalia_settings, paths.greetd_config]
+    return _files(paths.umbriel_config) + [paths.noctalia_settings, paths.greetd_config]
+
+
+def _files(d: Path) -> list[Path]:
+    """Every regular file below `d`, sorted ([] when `d` is not a directory)."""
+    return sorted(p for p in d.rglob("*") if p.is_file()) if d.is_dir() else []
+
+
+def _font_names(paths: Paths) -> list[str]:
+    """The names of the files below ~/.local/share/fonts, sorted (check 7 and the baseline)."""
+    return sorted(p.name for p in _files(paths.fonts))
 
 
 def record_baseline(paths: Paths) -> Baseline:
     """Fingerprint the watched files and list ~/.local/share/fonts (install.sh, read-only)."""
-    fonts = sorted(p.name for p in paths.fonts.rglob("*") if p.is_file()) \
-        if paths.fonts.is_dir() else []
     return Baseline(recorded_at=journal.now(),
-                    files={str(p): fingerprint(p) for p in watched_files(paths)}, fonts=fonts)
+                    files={str(p): fingerprint(p) for p in watched_files(paths)},
+                    fonts=_font_names(paths))
 
 
 def load_baseline(paths: Paths) -> Baseline | None:

@@ -29,6 +29,11 @@ class ToolResult:
     skipped: bool = False      # no such tool (or no fake under test): nothing ran
     timed_out: bool = False
 
+    @property
+    def ok(self) -> bool:
+        """The tool ran and exited 0 (a timeout or a failed start has code -1)."""
+        return not self.skipped and self.code == 0
+
 
 @dataclass(frozen=True)
 class Proc:
@@ -138,13 +143,17 @@ def session_processes(paths: Paths, names: Sequence[str], signature: str) -> lis
             if p.env.get("HYPRLAND_INSTANCE_SIGNATURE") == signature]
 
 
-def signal_session(paths: Paths, names: Sequence[str], signal_name: str, signature: str) -> list[int]:
-    """Send `signal_name` (e.g. "SIGUSR1") to every `session_processes` match; returns the pids
-    signalled. Refuses the real session's signature under test (hypr.check_allowed)."""
+def signal_session(paths: Paths, names: Sequence[str], signal_name: str, signature: str,
+                   procs: Sequence[Proc] | None = None) -> list[int]:
+    """Send `signal_name` (e.g. "SIGUSR1") to every `session_processes` match (of `procs`, an
+    earlier session_processes with this signature, when given); returns the pids signalled.
+    Refuses the real session's signature under test (hypr.check_allowed)."""
     hypr.check_allowed(signature)
     sig = signal.Signals[signal_name]
+    if procs is None:
+        procs = session_processes(paths, names, signature)
     sent = []
-    for proc in session_processes(paths, names, signature):
+    for proc in (p for p in procs if p.comm in names):
         try:
             os.kill(proc.pid, sig)
             sent.append(proc.pid)

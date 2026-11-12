@@ -16,7 +16,6 @@ from collections.abc import Sequence
 from typing import Any
 
 from .. import log
-from .. import paths as paths_mod
 from ..paths import Paths
 from ..theme import apply, render, targets
 from . import guard, ops
@@ -127,14 +126,10 @@ def cmd_status(paths: Paths, as_json: bool) -> int:
 
 def main(argv: Sequence[str]) -> int:
     args = parser().parse_args(list(argv))
-    paths = paths_mod.get()
-    try:                                  # before the logs: under test they go to $HOME
-        paths_mod.require_safe_home(paths)
-    except paths_mod.UnsafeHome as e:
-        print(f"aptus-lease: {e}", file=sys.stderr)
+    started = log.setup_tool("lease", "theme")
+    if started is None:
         return 3
-    logger = log.setup("lease")
-    log.setup("theme", "aptus-lease")
+    paths, logger = started
     try:
         if args.command == "take":
             return cmd_take(paths)

@@ -16,6 +16,7 @@ from pathlib import Path
 from .. import atomic, hypr
 from ..paths import Paths, require_safe_home
 from . import invariants, journal, kinds, liveness, locks, preflight, system
+from .kinds import dconf
 from .journal import Journal, JournalError, Owner, SlotKind, SlotRecord, SlotStatus, State
 from .preflight import Preflight
 from .slots import SlotSpec
@@ -119,12 +120,15 @@ def _record(spec: SlotSpec) -> SlotRecord:
                       write=spec.kind != SlotKind.DCONF or spec.value is not None)
 
 
-def _prepare(paths: Paths, spec: SlotSpec, report: TakeReport) -> SlotRecord | None:
-    """Step 4 for one slot: `before` (and its slots/ copy), the planned `after`; None = skipped."""
+def _prepare(paths: Paths, spec: SlotSpec, report: TakeReport,
+             dconf_values: dict[str, str] | None) -> SlotRecord | None:
+    """Step 4 for one slot: `before` (and its slots/ copy), the planned `after`; None = skipped.
+    A dconf slot reads `dconf_values` (one dconf dump for all keys) when the dump worked."""
     rec = _record(spec)
     mod = kinds.module(spec.kind)
     try:
-        snap = mod.read(paths, rec)
+        snap = dconf.read(paths, rec, dconf_values) if spec.kind == SlotKind.DCONF \
+            else mod.read(paths, rec)
     except Exception as e:                                  # unreadable, dconf missing, …
         _log.warning("slot %s skipped: %s", spec.id, e)
         report.skipped.append(spec.id)
@@ -144,7 +148,7 @@ def _prepare(paths: Paths, spec: SlotSpec, report: TakeReport) -> SlotRecord | N
 
 
 def _set_state(paths: Paths, j: Journal, new: State) -> None:
-    invariants.transition(j.state, new)
+    """The new state, saved (journal.save checks the transition against the file)."""
     j.state = new
     journal.save(paths, j)
 
@@ -173,14 +177,16 @@ def take(paths: Paths, env: Mapping[str, str], specs: Sequence[SlotSpec], who: O
         report.preflight = preflight.check(paths, env)
         if not report.preflight.ok:
             return report
+        dconf_values = dconf.read_dir(paths) if any(s.kind == SlotKind.DCONF for s in specs) \
+            else None
         try:
-            records = [(r, spec) for spec in specs if (r := _prepare(paths, spec, report))]
+            records = [(r, spec) for spec in specs
+                       if (r := _prepare(paths, spec, report, dconf_values))]
         except Exception as e:                              # writing slots/<id>.before failed
             report.error = f"recording before failed: {e}"
             return report
         j = Journal(state=State.TAKING, owner=who, theme_generation=generation,
                     slots=[r for r, _ in records])
-        invariants.transition(None, State.TAKING)
         journal.save(paths, j)                              # nothing was modified before this
         try:
             for rec, spec in records:
@@ -377,27 +383,35 @@ def status(paths: Paths) -> Status:
     return s
 
 
-def held_by(paths: Paths, signature: str, pid: int | None = None) -> bool:
-    """Whether a journal that is not `released` belongs to the session with `signature` (and
-    `pid` when given): apply's lease mode, the guard's ownership check."""
-    try:
-        j = journal.load(paths)
-    except JournalError:
+def owned_by(j: Journal | None, signature: str, pid: int | None = None, *,
+             held: bool = False) -> bool:
+    """Whether journal `j` belongs to the session with `signature` (and `pid` when given): with
+    `held` only in state `held`, else in any state but `released` (taking, held, half
+    released)."""
+    if j is None or j.owner is None or j.owner.hyprland_signature != signature:
         return False
-    return (j is not None and j.state != State.RELEASED and j.owner is not None
-            and j.owner.hyprland_signature == signature
-            and (pid is None or j.owner.hyprland_pid == pid))
+    if pid is not None and j.owner.hyprland_pid != pid:
+        return False
+    return j.state == State.HELD if held else j.state != State.RELEASED
+
+
+def _journal_or_none(paths: Paths) -> Journal | None:
+    try:
+        return journal.load(paths)
+    except JournalError:
+        return None
+
+
+def held_by(paths: Paths, signature: str, pid: int | None = None) -> bool:
+    """owned_by of the journal on disk (False when it does not parse): the guard's ownership
+    check before it unsets the environment."""
+    return owned_by(_journal_or_none(paths), signature, pid)
 
 
 def holds(paths: Paths, signature: str) -> bool:
     """The session with `signature` holds the lease in state `held` (not taking, not half
     released): apply's lease mode, the environment import, `aptus-lease update`."""
-    try:
-        j = journal.load(paths)
-    except JournalError:
-        return False
-    return (j is not None and j.state == State.HELD and j.owner is not None
-            and j.owner.hyprland_signature == signature)
+    return owned_by(_journal_or_none(paths), signature, held=True)
 
 
 def save_conflict(paths: Paths, stamp: str, rec: SlotRecord) -> Path:

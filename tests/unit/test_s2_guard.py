@@ -4,15 +4,21 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
+import signal
+import socket
 import subprocess
+import sys
+import threading
 import time
 from pathlib import Path
 
 import pytest
 
 import s2_fakes as fakes
+from aptus import atomic
 from aptus import paths as paths_mod
-from aptus.lease import guard, journal, ops
+from aptus.lease import guard, inotify, journal, ops
 from aptus.lease.journal import SlotKind
 from aptus.lease.slots import SlotSpec
 from aptus.theme import hooks
@@ -34,17 +40,18 @@ def hypr(p, test_home, tmp_path):
 
 def test_wait_exit_stop_and_poll() -> None:
     child = subprocess.Popen(["sleep", "0.2"])
-    fd = guard.pidfd(child.pid)
+    fd = os.pidfd_open(child.pid)
     r, w = os.pipe()
     try:
-        assert guard.wait(fd, r, 0.05, lambda: False) == "exited"
+        assert guard.wait(fd, r, lambda: 0.05, lambda: False) == "exited"
         child.wait()
         live = subprocess.Popen(["sleep", "30"])
-        fd2 = guard.pidfd(live.pid)
+        fd2 = os.pidfd_open(live.pid)
         os.write(w, b"\x0f")
-        assert guard.wait(fd2, r, 0.05, lambda: False) == "stopped"
+        assert guard.wait(fd2, r, lambda: 0.05, lambda: False) == "stopped"
         calls = []
-        assert guard.wait(fd2, r, 0.01, lambda: calls.append(1) or len(calls) > 2) == "other-session"
+        assert guard.wait(fd2, r, lambda: 0.01,
+                          lambda: calls.append(1) or len(calls) > 2) == "other-session"
         live.kill()
         live.wait()
         os.close(fd2)
@@ -55,7 +62,125 @@ def test_wait_exit_stop_and_poll() -> None:
     gone = subprocess.Popen(["true"])
     gone.wait()                                    # reaped: the pid no longer exists
     with pytest.raises(ProcessLookupError):
-        guard.pidfd(gone.pid)
+        os.pidfd_open(gone.pid)
+
+
+# --- wave-2 simplify E3: inotify instead of the 1 s poll ------------------------------------------
+
+def test_inotify_sees_its_files_only(tmp_path) -> None:
+    users, rt = tmp_path / "users", tmp_path / "rt"
+    users.mkdir()
+    rt.mkdir()
+    w = inotify.Files([users / "1000", rt / "bake-queue.json"])
+    try:
+        assert w.watching and w.fd >= 0 and not w.changed()
+        (rt / "guard.state").write_text("ok\n")                 # another file of a watched dir
+        (users / ".#1000new").write_text("SESSIONS=2 3\n")      # logind's temporary file
+        assert not w.changed()
+        os.rename(users / ".#1000new", users / "1000")          # ... renamed over the record
+        assert w.changed() and not w.changed()                  # drained
+        atomic.write_json(rt / "bake-queue.json", {"x": "bake:a:b"})
+        assert w.changed()
+        os.utime(users / "1000", (1, 1))
+        assert w.changed()
+        (users / "1000").unlink()
+        assert w.changed()
+        shutil.rmtree(rt)                                       # a watched directory goes
+        assert w.changed() and not w.watching
+    finally:
+        w.close()
+    missing = inotify.Files([tmp_path / "nowhere/1000"])
+    assert not missing.watching                                 # the guard polls then
+    missing.close()
+
+
+def test_wait_wakes_only_for_a_change_or_when_due(tmp_path) -> None:
+    """No timeout (None): neither time nor other files of the watched directory run on_poll;
+    the record's change does, at once. With a timeout it runs when due, as the 1 s poll did."""
+    users = tmp_path / "users"
+    users.mkdir()
+    w = inotify.Files([users / "1000"])
+    live = subprocess.Popen(["sleep", "30"])
+    fd = os.pidfd_open(live.pid)
+    r, wr = os.pipe()
+    calls: list[float] = []
+    (users / ".#1000new").write_text("2 3")
+
+    def logind_rewrites() -> None:
+        os.rename(users / ".#1000new", users / "1000")
+    timers = [threading.Timer(0.3, (users / "noise").write_text, ("x",)),
+              threading.Timer(0.8, logind_rewrites),
+              threading.Timer(1.6, os.write, (wr, b"\x0f"))]
+    try:
+        t0 = time.monotonic()
+        for t in timers:
+            t.start()
+        assert guard.wait(fd, r, lambda: None, lambda: calls.append(time.monotonic()) or False,
+                          w) == "stopped"
+        assert len(calls) == 1 and 0.75 < calls[0] - t0 < 1.3   # the record's change, nothing else
+        calls.clear()
+        t0 = time.monotonic()
+        assert guard.wait(fd, r, lambda: 0.2, lambda: calls.append(time.monotonic()) or
+                          len(calls) == 3, w) == "other-session"
+        assert 0.55 < calls[-1] - t0 < 1.5
+    finally:
+        for t in timers:
+            t.cancel()
+        live.kill()
+        live.wait()
+        for f in (fd, r, wr):
+            os.close(f)
+        w.close()
+
+
+def test_next_check(p) -> None:
+    last: list = [None]
+    assert guard.next_check(p, False, last, 0) == guard.POLL      # inotify does not watch: poll
+    assert guard.next_check(p, True, last, 0) is None             # no record, no queue: events only
+    p.logind_user.parent.mkdir(parents=True)
+    p.logind_user.write_text("2")
+    assert guard.next_check(p, True, last, 0) == guard.POLL       # a change not used up yet
+    last[0] = guard.logind_key(p)
+    assert guard.next_check(p, True, last, 0) is None
+    hooks.update_queue(p, add={"spicetify": "bake:spotify:spicetify apply"})
+    assert guard.next_check(p, True, last, time.monotonic() + 30) == pytest.approx(30, abs=1)
+    assert guard.next_check(p, True, last, 0) == 0.0              # the tick is due
+    last[0] = ("retry", last[0])                                  # loginctl failed: ask again
+    assert guard.next_check(p, True, last, 0) == guard.POLL
+
+
+def slow_guard(poll: float = 3600.0, tick: float | None = None) -> list[str]:
+    """argv of the real guard with POLL (and TICK) changed: with POLL an hour only an inotify
+    event can make it look at logind's record or the bake queue early."""
+    lib = str(Path(__file__).resolve().parents[2] / "lib")
+    code = (f"import sys; sys.path.insert(0, {lib!r}); from aptus.lease import guard; "
+            f"guard.POLL = {poll!r}; guard.TICK = {tick or guard.TICK!r}; "
+            "sys.exit(guard.main(sys.argv[1:]))")
+    return [sys.executable, "-I", "-c", code]
+
+
+def test_a_queued_bake_wakes_the_guard(p, hypr) -> None:
+    """E3: the guard sleeps until the bake queue appears, then retries on its tick (here 0.3 s)
+    while the queue exists; the bake ran, the queue is gone."""
+    fakes.logind_dir(p.home)
+    fakes.tool(p.home, "spicetify", "pass\n")
+    g = subprocess.Popen([*slow_guard(tick=0.3), str(hypr.pid), hypr.signature])
+    try:
+        fakes.wait_for(lambda: p.guard_state.exists(), what="guard.state")
+        assert p.guard_state.read_text() == "ok\n\n"
+        time.sleep(1)                                           # ticks pass: no queue, nothing runs
+        assert fakes.calls(p.home, "spicetify") == []
+        hooks.update_queue(p, add={"spicetify": "bake:spotify:spicetify apply"})
+        fakes.wait_for(lambda: not p.bake_queue.exists(), what="the queued bake")
+        assert fakes.calls(p.home, "spicetify") == [["spicetify", "apply"]]
+        g.send_signal(signal.SIGTERM)
+        assert g.wait(20) == 0
+    finally:
+        if g.poll() is None:
+            g.kill()
+            g.wait()
+    assert "Hyprland" in (p.home / "aptus-guard.log").read_text()  # its log, without
+    assert "each second" not in (p.home / "aptus-guard.log").read_text()   # the poll fallback
 
 
 def test_write_state(p) -> None:
@@ -107,11 +232,12 @@ def test_failing_loginctl_keeps_the_lease(p, hypr) -> None:
     assert not guard.other_session_opened(p, hypr.signature, hypr.pid, [None])
 
 
-def test_release_if_ours(p, hypr) -> None:
+def test_release_only_of_this_owner(p, hypr) -> None:
+    """The guard's release: ops.release with `expect` acts only on this session's journal."""
     take(p, hypr)
-    assert not guard.release_if_ours(p, hypr.pid + 1, hypr.signature).acted
-    assert not guard.release_if_ours(p, hypr.pid, "other").acted
-    assert guard.release_if_ours(p, hypr.pid, hypr.signature).acted
+    assert not ops.release(p, expect=(hypr.signature, hypr.pid + 1)).acted
+    assert not ops.release(p, expect=("other", hypr.pid)).acted
+    assert ops.release(p, expect=(hypr.signature, hypr.pid)).acted
 
 
 def test_main_refusals(p) -> None:
@@ -139,15 +265,15 @@ def test_give_back_unsets_first_and_retries_a_release_that_raised(p, hypr, monke
     take(p, hypr)
     aptus_env(p)
     monkeypatch.setattr(guard, "BACKOFF", 0)
-    real = guard.release_if_ours
+    real = ops.release
     calls = []
 
-    def flaky(*args):
+    def flaky(*args, **kw):
         calls.append(fakes.user_env(p.home))
         if len(calls) == 1:
             raise ops.LeaseError("the lease lock is busy")
-        return real(*args)
-    monkeypatch.setattr(guard, "release_if_ours", flaky)
+        return real(*args, **kw)
+    monkeypatch.setattr(ops, "release", flaky)
     assert guard.give_back(p, hypr.pid, hypr.signature) == guard.GuardState.RELEASED
     assert calls[0] == {"XCURSOR_SIZE": "24"}            # unset before the first attempt
     assert len(calls) == 2 and journal.load(p) is None
@@ -160,7 +286,7 @@ def test_a_failure_after_the_release_still_runs_the_hooks(p, hypr, monkeypatch) 
     take(p, hypr, reload="builtin:tmux")
     aptus_env(p)
     monkeypatch.setattr(guard, "BACKOFF", 0)
-    real_unset, real_release = guard.unset_environment, guard.release_if_ours
+    real_unset, real_release = guard.unset_environment, ops.release
     unsets, releases, reloads = [], [], []
 
     def unset(paths):
@@ -169,7 +295,7 @@ def test_a_failure_after_the_release_still_runs_the_hooks(p, hypr, monkeypatch) 
             raise OSError("systemctl hung up")
         return real_unset(paths)
     monkeypatch.setattr(guard, "unset_environment", unset)
-    monkeypatch.setattr(guard, "release_if_ours", lambda *a: releases.append(1) or real_release(*a))
+    monkeypatch.setattr(ops, "release", lambda *a, **kw: releases.append(1) or real_release(*a, **kw))
     monkeypatch.setattr(hooks, "run_reloads", lambda paths, r, sig: reloads.append(dict(r)) or [])
     assert guard.give_back(p, hypr.pid, hypr.signature) == guard.GuardState.RELEASED
     assert len(releases) == 1 and journal.load(p) is None
@@ -180,8 +306,8 @@ def test_give_back_gives_up_after_its_retries(p, hypr, monkeypatch) -> None:
     take(p, hypr)
     monkeypatch.setattr(guard, "BACKOFF", 0)
     calls = []
-    monkeypatch.setattr(guard, "release_if_ours",
-                        lambda *a: calls.append(1) or (_ for _ in ()).throw(OSError("disk full")))
+    monkeypatch.setattr(ops, "release",
+                        lambda *a, **kw: calls.append(1) or (_ for _ in ()).throw(OSError("disk full")))
     assert guard.give_back(p, hypr.pid, hypr.signature) == guard.GuardState.FAILED
     assert len(calls) == guard.RETRIES and journal.load(p) is not None
 
@@ -211,17 +337,71 @@ def test_a_failing_loginctl_is_asked_again(p, hypr) -> None:
     assert guard.other_session_opened(p, hypr.signature, hypr.pid, last)       # no new change needed
 
 
-def test_ready_needs_ok_and_an_active_unit(p) -> None:
-    fakes.systemctl(p.home)
-    assert not guard.ready(p)                                  # no guard.state
-    guard.write_state(p, guard.GuardState.OK)
-    assert not guard.ready(p)                                  # the unit does not run
-    unit = subprocess.Popen(["sleep", "30"])
-    try:
-        (p.home / ".aptus-test/systemd-run.json").write_text(json.dumps({"units": {"aptus-guard": unit.pid}}))
-        assert guard.ready(p)
-        guard.write_state(p, guard.GuardState.RELEASED)
-        assert not guard.ready(p)
-    finally:
-        unit.kill()
-        unit.wait(5)
+def notify_socket(path: Path) -> socket.socket:
+    """A fake $NOTIFY_SOCKET (systemd's is a datagram socket)."""
+    s = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
+    s.bind(str(path))
+    s.settimeout(0.3)
+    return s
+
+
+def test_notify_ready_sends_ready_and_drops_the_variable(p, monkeypatch) -> None:
+    """Wave-2 simplify A11/E4: READY=1 to $NOTIFY_SOCKET; the variable goes, so nothing the guard
+    runs later (a hook) inherits it."""
+    with notify_socket(p.home / "notify") as s:
+        monkeypatch.setenv("NOTIFY_SOCKET", str(p.home / "notify"))
+        guard.notify_ready(p)
+        assert s.recv(64) == b"READY=1"
+        assert "NOTIFY_SOCKET" not in os.environ
+        guard.notify_ready(p)                                  # nothing to notify any more
+        with pytest.raises(TimeoutError):
+            s.recv(64)
+
+
+def test_notify_ready_refuses_a_socket_outside_the_test_home(p, tmp_path, monkeypatch) -> None:
+    with notify_socket(tmp_path / "outside") as s:
+        monkeypatch.setenv("NOTIFY_SOCKET", str(tmp_path / "outside"))
+        guard.notify_ready(p)
+        with pytest.raises(TimeoutError):
+            s.recv(64)
+    monkeypatch.chdir(p.home)               # a relative or abstract name is never "inside HOME"
+    abstract = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
+    abstract.bind(f"\0aptus-unit-test-{os.getpid()}")
+    abstract.settimeout(0.3)
+    with abstract, notify_socket(p.home / "relative") as rel:
+        for addr, s in ((f"@aptus-unit-test-{os.getpid()}", abstract), ("relative", rel)):
+            monkeypatch.setenv("NOTIFY_SOCKET", addr)
+            guard.notify_ready(p)
+            assert "NOTIFY_SOCKET" not in os.environ
+            with pytest.raises(TimeoutError):
+                s.recv(64)
+
+
+def test_the_guard_says_ready_only_once_it_watches(p, hypr) -> None:
+    """The real guard: READY=1 arrives with guard.state `ok` already written; for a Hyprland
+    that is gone it sends nothing and exits (systemd-run then fails: no lease)."""
+    launcher = Path(__file__).resolve().parents[2] / "bin/aptus-guard"
+    env = dict(os.environ, NOTIFY_SOCKET=str(p.home / "notify"))
+    with notify_socket(p.home / "notify") as s:
+        s.settimeout(20)
+        g = subprocess.Popen([sys.executable, "-I", str(launcher), str(hypr.pid), hypr.signature],
+                             env=env)
+        try:
+            assert s.recv(64) == b"READY=1"
+            assert p.guard_state.read_text() == "ok\n\n"
+            g.send_signal(signal.SIGTERM)
+            assert g.wait(20) == 0
+        finally:
+            if g.poll() is None:
+                g.kill()
+                g.wait()
+        assert p.guard_state.read_text() == "released\n\n"
+        gone = subprocess.Popen(["true"])
+        gone.wait()
+        g = subprocess.run([sys.executable, "-I", str(launcher), str(gone.pid), hypr.signature],
+                           env=env, timeout=20)
+        assert g.returncode == 0
+        s.settimeout(0.3)
+        with pytest.raises(TimeoutError):
+            s.recv(64)
+        assert p.guard_state.read_text() == "released\n\n"

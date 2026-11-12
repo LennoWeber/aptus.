@@ -79,7 +79,7 @@ aptus/
 │  ├─ targets.toml              the target manifest (08 §4)
 │  └─ templates/<target>/…      one template per app target
 ├─ hypr/                        symlinked to ~/.config/hypr/aptus
-│  └─ init.lua env.lua look.lua motion.lua rules.lua binds.lua
+│  └─ init.lua env.lua look.lua paint.lua motion.lua rules.lua binds.lua
 ├─ systemd/aptus-recover.service
 ├─ install.sh
 └─ tests/  unit/  golden/  e2e/  perf/
@@ -103,7 +103,7 @@ ever needed, is imported only with a namespace (`import QtQuick.Controls as QQC`
 | 0 | `aptus-session start` checks `XDG_CURRENT_DESKTOP=Hyprland` and `HYPRLAND_INSTANCE_SIGNATURE`; else exits 0 | 5 | — |
 | 5 | recover (`aptus.lease.ops.recover`, in-process) | 50 | log, continue |
 | 55 | render (skipped when the input hash is unchanged: the resolve context, inputs, manifest, templates) | 300 (cold) / 10 | keep the last good generation |
-| 60–360 | `systemd-run` the guard (then `is-active`) | 60 | no lease: scope-only, the notch says the guard failed |
+| 5–360 | `systemd-run` the guard (`Type=notify`: returns at its READY=1, `TimeoutStartSec` 5 s), started in a thread before recover and waited for here | 60 | no lease: scope-only, the notch says the guard failed |
 | ≤ 420 | the Own targets a leased key requires (`aptus-icons-*`, built only for a new generation: 08 §6), then take (preflight: other sessions, Noctalia running) | 150 | a missing Own target: its key is recorded, not written; take fails: scope-only mode |
 | ≤ 510 | `systemctl --user import-environment …` (lease only) | 30 | log |
 | ≤ 540 | scope mirrors, Own files and reload hooks of the generation; later stages: the guard's bound units | 60 | log, per target |

@@ -76,7 +76,7 @@ def system_reduced_motion(paths: Paths) -> bool:
     Motion reads it); False when it cannot be read."""
     from ..lease import system
     r = system.run(paths, ["gsettings", "get", "org.gnome.desktop.interface", "enable-animations"])
-    return not r.skipped and r.code == 0 and r.stdout.strip() == "false"
+    return r.ok and r.stdout.strip() == "false"
 
 
 def from_settings(paths: Paths, now: datetime | None = None) -> Inputs:

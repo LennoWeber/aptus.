@@ -226,9 +226,22 @@ def get() -> Paths:
     return cached
 
 
+def below(path: Path | str, root: Path | str, *, real: bool) -> bool:
+    """Whether `path` is `root` or lies below it: with `real` both resolved (every symlink
+    followed, os.path.realpath), else both only normalised as text (os.path.normpath)."""
+    norm = os.path.realpath if real else os.path.normpath
+    p, r = norm(path), norm(root)
+    return p == r or p.startswith(r.rstrip(os.sep) + os.sep)
+
+
 def inside(path: Path, root: Path) -> bool:
     """Whether `path` (resolved, symlinks followed) is `root` or below it."""
-    return Path(path).resolve().is_relative_to(Path(root).resolve())
+    return below(path, root, real=True)
+
+
+def plain_name(name: str) -> bool:
+    """`name` is one plain path component: not empty, no "/", not "." or "..", no leading dot."""
+    return bool(name) and name not in (".", "..") and "/" not in name and not name.startswith(".")
 
 
 def require_safe_home(paths: Paths) -> None:

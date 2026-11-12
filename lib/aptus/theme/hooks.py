@@ -12,7 +12,7 @@ import os
 import shlex
 import signal as signals
 import stat
-from collections.abc import Mapping
+from collections.abc import Callable, Iterable, Mapping
 from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import TimeoutError as FutureTimeout
 from dataclasses import dataclass
@@ -41,11 +41,9 @@ class HookResult:
 
 
 TIMEOUT = 3.0
-BUILTINS = ("kde", "tmux", "nvim", "hyprland")
 KDE_SIGNAL = ["dbus-send", "--session", "--type=signal", "/KGlobalSettings",
               "org.kde.KGlobalSettings.notifyChange", "int32:0", "int32:0"]
 NVIM_KEYS = "<Cmd>colorscheme noctalia<CR>"
-NEEDS_SIGNATURE = ("signal", "hyprland")   # without one (recover at login) these wait
 
 _log = logging.getLogger("aptus.theme.hooks")
 
@@ -79,10 +77,12 @@ def run_reloads(paths: Paths, reloads: Mapping[str, str], signature: str) -> lis
     todo = {tid: r for tid, r in reloads.items() if r != "none"}
     if not todo:
         return []
+    procs = _signal_targets(paths, todo.values(), signature)
     results: list[HookResult] = []
     pool = ThreadPoolExecutor(max_workers=min(8, len(todo)), thread_name_prefix="aptus-hook")
     try:
-        futures = {tid: pool.submit(run_one, paths, tid, r, signature) for tid, r in todo.items()}
+        futures = {tid: pool.submit(run_one, paths, tid, r, signature, procs)
+                   for tid, r in todo.items()}
         for tid, fut in futures.items():
             try:
                 results.append(fut.result(timeout=TIMEOUT + 1))
@@ -101,24 +101,43 @@ def run_reloads(paths: Paths, reloads: Mapping[str, str], signature: str) -> lis
     return results
 
 
-def run_one(paths: Paths, target_id: str, reload: str, signature: str) -> HookResult:
-    """One hook. An unreachable app or a missing tool is "next-start", never an error."""
+def _signal_targets(paths: Paths, reloads: Iterable[str], signature: str) -> list[system.Proc] | None:
+    """This session's processes for every signal hook among `reloads`, from one walk of /proc;
+    None when there is no signal hook or no signature, or the walk failed (each hook walks then)."""
+    comms = set()
+    for reload in reloads:
+        try:
+            hook = parse(reload)
+        except ValueError:
+            continue                   # run_one reports it
+        if hook.kind == "signal":
+            comms.add(hook.comm)
+    if not comms or not signature:
+        return None
+    try:
+        return system.session_processes(paths, sorted(comms), signature)
+    except OSError:
+        return None
+
+
+def run_one(paths: Paths, target_id: str, reload: str, signature: str,
+            procs: list[system.Proc] | None = None) -> HookResult:
+    """One hook. An unreachable app or a missing tool is "next-start", never an error. `procs`:
+    the session's processes for the signal hooks, when run_reloads looked them up already."""
     hook = parse(reload)
     if hook.kind == "none":
         return HookResult(target_id, "next-start")
     if not signature and (hook.kind == "signal" or hook.name == "hyprland"):
         return HookResult(target_id, "next-start", "no Hyprland session")
     if hook.kind == "signal":
-        pids = system.signal_session(paths, [hook.comm], hook.signal, signature)
+        pids = system.signal_session(paths, [hook.comm], hook.signal, signature, procs)
         return HookResult(target_id, "applied" if pids else "next-start",
                           f"{hook.signal} to {len(pids)} {hook.comm}")
     if hook.kind == "exec":
         return _tool(target_id, system.run(paths, shlex.split(hook.command)))
     if hook.kind == "bake":
         return bake(paths, target_id, hook)
-    builtin = {"kde": builtin_kde, "tmux": builtin_tmux, "nvim": builtin_nvim,
-               "hyprland": builtin_hyprland}[hook.name]
-    return builtin(paths, target_id, signature)
+    return BUILTINS[hook.name](paths, target_id, signature)
 
 
 def _tool(target_id: str, r: system.ToolResult) -> HookResult:
@@ -133,7 +152,7 @@ def _many(target_id: str, results: list[system.ToolResult], what: str) -> HookRe
     """Several tool calls (one per server): applied when one reached a server."""
     if not results:
         return HookResult(target_id, "next-start", f"no {what} running")
-    ok = [r for r in results if not r.skipped and not r.timed_out and r.code == 0]
+    ok = [r for r in results if r.ok]
     if ok:
         return HookResult(target_id, "applied", f"{len(ok)} {what}")
     return _tool(target_id, results[0])
@@ -203,13 +222,10 @@ def builtin_nvim(paths: Paths, target_id: str, signature: str) -> HookResult:
 
 
 def hyprland_lua(paths: Paths) -> str:
-    """The Lua that re-reads generated.lua and sets what look.lua took from it."""
-    path = json.dumps(str(paths.generated_lua))
-    return (f"local g = dofile({path}); local side = g.frame_edge + g.window_gap; "
-            "hl.config({ general = { col = { active_border = g.accent, inactive_border = g.line }, "
-            "gaps_out = { top = g.window_gap, right = side, bottom = side, left = side } }, "
-            "decoration = { shadow = { color = g.shadow } }, "
-            "misc = { background_color = g.ground } })")
+    """The Lua that re-reads generated.lua and applies it as look.lua does, through hypr/paint.lua
+    (the one mapping of generated.lua onto Hyprland's options). `hyprctl eval` runs in the
+    config's Lua state, so `require` finds the module (probed in a nested Hyprland, R15)."""
+    return f'require("aptus.paint")(dofile({json.dumps(str(paths.generated_lua))}))'
 
 
 def builtin_hyprland(paths: Paths, target_id: str, signature: str) -> HookResult:
@@ -224,6 +240,11 @@ def builtin_hyprland(paths: Paths, target_id: str, signature: str) -> HookResult
     except hypr.HyprError as e:
         return HookResult(target_id, "next-start", str(e))
     return HookResult(target_id, "applied")
+
+
+# builtin:<name> → its hook; `parse` accepts exactly these names.
+BUILTINS: dict[str, Callable[[Paths, str, str], HookResult]] = {
+    "kde": builtin_kde, "tmux": builtin_tmux, "nvim": builtin_nvim, "hyprland": builtin_hyprland}
 
 
 def bake(paths: Paths, target_id: str, hook: Hook) -> HookResult:

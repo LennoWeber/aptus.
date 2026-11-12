@@ -110,18 +110,16 @@ hl.env("HYPRCURSOR_SIZE", "24")
 The scope directories persist between sessions, so they exist before `aptus-session` renders; on
 the very first start they are created by `install.sh`.
 
-## 4. `look.lua`
+## 4. `look.lua` and `paint.lua`
 
 ```lua
-local gen  = require("aptus.gen")
-local side = gen.frame_edge + gen.window_gap        -- 6 + 8 = 14
+-- look.lua; the generated values (borders, gaps, shadow, background) in paint.lua
+local gen = require("aptus.gen")
 
 hl.config({
   general = {
     gaps_in  = 4,                                    -- 4 + 4 = 8 between windows
-    gaps_out = { top = gen.window_gap, right = side, bottom = side, left = side },
     border_size = 2,
-    col = { active_border = gen.accent, inactive_border = gen.line },
     resize_on_border = true,
     extend_border_grab_area = 12,
     layout = "dwindle",
@@ -129,7 +127,7 @@ hl.config({
   decoration = {
     rounding = 10,                                   -- window.radius
     rounding_power = 2,
-    shadow = { enabled = true, range = 18, render_power = 3, offset = { 0, 4 }, color = gen.shadow },
+    shadow = { enabled = true, range = 18, render_power = 3, offset = { 0, 4 } },
     blur   = { enabled = true, size = 6, passes = 2, popups = false, special = false },
     dim_special = 0.25,
   },
@@ -137,7 +135,6 @@ hl.config({
     disable_hyprland_logo   = true,
     force_default_wallpaper = 0,
     disable_splash_rendering = true,
-    background_color = gen.ground,
     allow_session_lock_restore = true,
     key_press_enables_dpms   = true,
     mouse_move_enables_dpms  = true,
@@ -149,6 +146,23 @@ hl.config({
   },
   dwindle = { preserve_split = true },
 })
+require("aptus.paint")(gen)
+```
+
+```lua
+-- paint.lua: the one mapping of generated.lua onto Hyprland's options. look.lua applies it at
+-- start; the theme's builtin:hyprland hook again after each render (08 §7).
+return function(gen)
+  local side = gen.frame_edge + gen.window_gap      -- 6 + 8 = 14
+  hl.config({
+    general = {
+      gaps_out = { top = gen.window_gap, right = side, bottom = side, left = side },
+      col = { active_border = gen.accent, inactive_border = gen.line },
+    },
+    decoration = { shadow = { color = gen.shadow } },
+    misc = { background_color = gen.ground },
+  })
+end
 ```
 
 The top gap is only `window.gap`, because the `aptus-reserve` layer already reserves the bar's 32 px

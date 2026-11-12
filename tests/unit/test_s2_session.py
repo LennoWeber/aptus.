@@ -7,11 +7,15 @@ All in the temporary HOME: systemd-run, systemctl, loginctl and dconf are fakes,
 process named Hyprland with a socket that answers "ok"."""
 from __future__ import annotations
 
+import dataclasses
 import json
 import os
+import shutil
 import signal
 import subprocess
 import sys
+import threading
+import time
 from pathlib import Path
 
 import pytest
@@ -55,6 +59,7 @@ def world(p, test_home, tmp_path, monkeypatch):
     (cfg / "btop/themes").mkdir(parents=True)                     # a slot aptus creates
     fakes.dconf(test_home, {KEY + "color-scheme": "'prefer-light'", KEY + "gtk-theme": "'adw-gtk3'"})
     fakes.one_session(test_home)
+    fakes.logind_dir(test_home)
     fakes.systemd_run(test_home)
     fakes.systemctl(test_home)
     h = fakes.hyprland(test_home, tmp_path)
@@ -217,6 +222,54 @@ def test_umbriel_logs_in_mid_session(p, world) -> None:
     assert guard_state(p) == "released"
 
 
+def slow_guard(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The session starts the real guard with POLL an hour: only an inotify event can make it
+    look at logind's record (the systemd-run fake runs this instead of bin/aptus-guard)."""
+    code = (f"import sys; sys.path.insert(0, {str(REPO / 'lib')!r}); "
+            "from aptus.lease import guard; guard.POLL = 3600.0; sys.exit(guard.main(sys.argv[1:]))")
+    real_run = session.system.run
+
+    def run(paths, argv, **kw):
+        if argv[0] == "systemd-run":
+            *flags, _launcher, pid, sig = argv
+            argv = [*flags, sys.executable, "-I", "-c", code, pid, sig]
+        return real_run(paths, argv, **kw)
+    monkeypatch.setattr(session.system, "run", run)
+
+
+def test_umbriel_mid_session_wakes_the_guard_through_inotify(p, world, monkeypatch) -> None:
+    """Wave-2 simplify E3: logind's rewrite of the user record (a rename) wakes the guard, not a
+    timer (its POLL is an hour here); it releases and keeps watching."""
+    h, snapshot = world
+    before = snapshot()
+    slow_guard(monkeypatch)
+    started(p, h)
+    assert_painted(p)
+    fakes.one_session(p.home, "2", {"Id": "3", "Class": "user", "Type": "wayland", "State": "online"})
+    fakes.logind_record(p.home, "SESSIONS=2 3\n")
+    fakes.wait_for(lambda: guard_state(p) == "scope-only", what="the guard to release")
+    assert snapshot() == before
+    assert fakes.alive(guard_pid(p))
+    assert session.stop(p) == 0
+    assert guard_state(p) == "released"
+    assert "each second" not in (p.home / "aptus-guard.log").read_text()
+
+
+def test_without_inotify_the_guard_polls_logind(p, world) -> None:
+    """The fallback: logind's directory cannot be watched when the guard starts (missing here),
+    so the guard looks at the record each second, as before E3."""
+    h, snapshot = world
+    before = snapshot()
+    shutil.rmtree(p.logind_user.parent)
+    started(p, h)
+    fakes.one_session(p.home, "2", {"Id": "3", "Class": "user", "Type": "wayland", "State": "online"})
+    fakes.logind_record(p.home, "SESSIONS=2 3\n")             # the directory is back, unwatched
+    fakes.wait_for(lambda: guard_state(p) == "scope-only", what="the guard to release")
+    assert snapshot() == before
+    assert session.stop(p) == 0
+    assert "checking it each second" in (p.home / "aptus-guard.log").read_text()
+
+
 def test_no_guard_no_lease(p, world) -> None:
     h, snapshot = world
     before = snapshot()
@@ -252,20 +305,75 @@ def test_lease_cli_refuses_the_real_home(tmp_path) -> None:
 # --- the phase-7 review fixes ------------------------------------------------------------------
 
 def test_a_guard_that_never_reports_ok_means_no_lease(p, world, monkeypatch) -> None:
-    """systemd-run succeeds and the unit is active, but the guard never watches (it died in its
-    imports, say): no lease."""
+    """The guard's process runs but never watches (it hangs in its imports, say): no READY=1, so
+    systemd-run fails after TimeoutStartSec and systemd stops it; no lease."""
     h, snapshot = world
     before = snapshot()
-    fakes.tool(p.home, "systemd-run", """\
-        import subprocess
-        proc = subprocess.Popen(["sleep", "30"], start_new_session=True)
-        state.setdefault("units", {})["aptus-guard"] = proc.pid
-        """)
+    real_run = session.system.run
+
+    def run(paths, argv, **kw):
+        if argv[0] == "systemd-run":                       # the unit runs `sleep 30` instead
+            argv = [a for a in argv if a.startswith("--") or a == "systemd-run"] + ["sleep", "30"]
+        return real_run(paths, argv, **kw)
+    monkeypatch.setattr(session.system, "run", run)
     monkeypatch.setattr(session.guard, "READY_TIMEOUT", 0.5)
     report = session.start(p, h.env)
     assert report.mode is session.Mode.SCOPE_ONLY and not report.guard
     assert report.reasons == ["the guard did not start"]
     assert snapshot() == before
+    assert not fakes.alive(fakes.unit_pid(p.home))         # stopped after the start timeout
+
+
+def test_the_guard_watches_when_systemd_run_returns(p, world) -> None:
+    """Wave-2 simplify A11/E4: Type=notify, so no wait after systemd-run: guard.state is `ok`
+    when it returns. A guard that exits before READY=1 (its Hyprland is gone) fails the start at
+    once, not after READY_TIMEOUT."""
+    h, _ = world
+    assert session.start_guard(p, h.env)
+    assert p.guard_state.read_text() == "ok\n\n"
+    (call,) = fakes.calls(p.home, "systemd-run")
+    assert "--property=Type=notify" in call and "--property=TimeoutStartSec=5000ms" in call
+    assert session.stop(p) == 0
+    gone = subprocess.Popen(["true"])
+    gone.wait()
+    real_owner = session.ops.owner
+    t = time.monotonic()
+    with pytest.MonkeyPatch.context() as m:
+        m.setattr(session.ops, "owner", lambda *a: dataclasses.replace(real_owner(*a),
+                                                                       hyprland_pid=gone.pid))
+        assert not session.start_guard(p, h.env)
+    assert time.monotonic() - t < session.guard.READY_TIMEOUT
+    assert p.guard_state.read_text() == "released\n\n"
+
+
+def test_the_guard_starts_alongside_recover_and_render(p, world, monkeypatch) -> None:
+    """E4: start_guard runs in a thread from the top of start() (recover waits here until it
+    began: a guard started after recover would time this out); take comes only after it."""
+    h, _ = world
+    began, done = threading.Event(), []
+    real_guard, real_recover, real_lease = session.start_guard, session.recover_step, session.lease_step
+
+    def start_guard(*a):
+        began.set()
+        try:
+            return real_guard(*a)
+        finally:
+            done.append("guard")
+
+    def recover_step(*a):
+        assert began.wait(10), "the guard was not started before recover"
+        return real_recover(*a)
+
+    def lease_step(*a):
+        done.append("lease")
+        return real_lease(*a)
+    monkeypatch.setattr(session, "start_guard", start_guard)
+    monkeypatch.setattr(session, "recover_step", recover_step)
+    monkeypatch.setattr(session, "lease_step", lease_step)
+    report = session.start(p, h.env)
+    assert report.mode is session.Mode.LEASE and report.guard
+    assert done == ["guard", "lease"]
+    assert session.stop(p) == 0
 
 
 def test_an_import_after_the_guard_released_is_taken_back(p, world) -> None:
@@ -390,5 +498,29 @@ def test_an_apply_writes_only_what_changed(p, world, monkeypatch) -> None:
     assert "cursor.cursor-theme" not in writes and "dconf.color-scheme" not in writes
     assert "cursor" in report.applied and "cursor" not in reloads[0]
     assert journal.load(p).theme_generation == 2
+    assert session.stop(p) == 0
+    assert snapshot() == before
+
+
+# --- the wave-2 simplify -----------------------------------------------------------------------
+
+def test_a_login_builds_the_slot_specs_once(p, world, monkeypatch) -> None:
+    """Wave-2 simplify E10: apply_generation reuses the take's slot specs (apply.Taken) instead
+    of reading every rendered file again; the targets are reported as before."""
+    h, snapshot = world
+    before = snapshot()
+    builds = []
+    real = apply.slot_specs
+    monkeypatch.setattr(apply, "slot_specs", lambda *a, **kw: builds.append(a[3:]) or real(*a, **kw))
+    reports = []
+    real_apply = apply.apply_generation
+    monkeypatch.setattr(apply, "apply_generation",
+                        lambda *a, **kw: reports.append(real_apply(*a, **kw)) or reports[-1])
+    started(p, h)
+    r = reports[0]                                                # as before this change
+    assert (sorted(r.applied), sorted(r.next_start), r.failed) == (
+        ["cursor", "dconf", "hyprland"],
+        ["btop", "ghostty", "gtk3", "hyprlock", "kde", "kitty"], {})
+    assert builds == [()]                                         # lease_step's, for the take
     assert session.stop(p) == 0
     assert snapshot() == before

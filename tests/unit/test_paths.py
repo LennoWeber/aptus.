@@ -90,6 +90,24 @@ def test_inside(test_home: Path, tmp_path: Path) -> None:
     assert not paths.inside(test_home / "link" / "f", test_home)     # symlinks are followed
 
 
+def test_below_real_or_as_text(test_home: Path, tmp_path: Path) -> None:
+    """paths.below: `real` follows links in both paths, otherwise the text is only normalised."""
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (test_home / "link").symlink_to(outside)
+    assert paths.below(test_home / "link" / "f", test_home, real=False)
+    assert not paths.below(test_home / "link" / "f", test_home, real=True)
+    assert paths.below(test_home / "link" / "f", outside, real=True)
+    assert not paths.below(test_home / ".." / "x", test_home, real=False)
+    assert not paths.below(str(test_home) + "-sibling", test_home, real=False)
+    assert paths.below("/x/y", "/", real=False) and paths.below("/a/", "/a", real=False)
+
+
+def test_plain_name() -> None:
+    assert all(paths.plain_name(n) for n in ("kitty", "starship.toml", "a..b"))
+    assert not any(paths.plain_name(n) for n in ("", ".", "..", ".hidden", "a/b", "/a"))
+
+
 def test_get_not_cached_in_tests(test_home: Path, tmp_path: Path,
                                  monkeypatch: pytest.MonkeyPatch) -> None:
     assert paths.get().home == test_home

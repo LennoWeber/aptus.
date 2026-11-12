@@ -11,7 +11,7 @@ from pathlib import Path
 
 from .. import atomic
 from ..lease import invariants, system
-from ..paths import Paths
+from ..paths import Paths, below
 from . import render, targets
 from .render import Generation
 from .targets import Target
@@ -28,12 +28,7 @@ class OwnError(RuntimeError):
 
 def _aptus_dir(paths: Paths, dest: Path) -> bool:
     """A dest inside aptus's state or cache dir is aptus's by definition (generated.lua)."""
-    return any(_inside(dest, root) for root in (paths.state, paths.cache))
-
-
-def _inside(path: Path, root: Path) -> bool:
-    p, r = os.path.normpath(path), os.path.normpath(root)
-    return p == r or p.startswith(r + os.sep)
+    return any(below(dest, root, real=False) for root in (paths.state, paths.cache))
 
 
 def _holds(dest: Path, data: bytes) -> bool:

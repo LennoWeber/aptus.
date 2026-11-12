@@ -223,7 +223,7 @@ is not there. Own files that already hold the rendered bytes are not rewritten, 
 | Zen | none | next start (userChrome loads once) |
 | Pywalfox | `pywalfox update` if installed | live web content |
 | Vesktop | none (watches CSS) | live |
-| Hyprland | `hyprctl eval` of a Lua chunk that `dofile`s `generated.lua` and sets `general.col.active_border`, `inactive_border`, `gaps_out`, `decoration.shadow.color`, `misc.background_color` (`builtin:hyprland`; verified nested) | live |
+| Hyprland | `hyprctl eval 'require("aptus.paint")(dofile("<generated.lua>"))'`: `hypr/paint.lua`, the mapping `look.lua` applies at start (09 §4), sets `general.col.active_border`, `inactive_border`, `gaps_out`, `decoration.shadow.color`, `misc.background_color` (`builtin:hyprland`; verified nested; `eval` runs in the config's Lua state, so `require` finds the module) | live |
 | hyprlock, Thunderbird, Claude Code, Gemini, VS Code, Steam, Brave, hyprtoolkit | none | next start |
 | Spotify, LibreOffice (bake, opt-in) | `spicetify apply` / registry merge, only when the app is not running; otherwise queued until it exits (checked every 30 s, given up at session end) | next start |
 

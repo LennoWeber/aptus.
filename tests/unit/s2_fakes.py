@@ -65,6 +65,11 @@ def dconf(home: Path, initial: dict[str, str] | None = None) -> None:
             state[key] = args[2]
         elif cmd == "reset":
             state.pop(key, None)
+        elif cmd == "dump":                    # the keys directly in `key` (a dir), as dconf does
+            names = {k[len(key):]: v for k, v in state.items()
+                     if k.startswith(key) and "/" not in k[len(key):]}
+            if names:
+                out.append("[/]\\n" + "".join(f"{n}={v}\\n" for n, v in sorted(names.items())))
         else:
             code = 1
         """)
@@ -84,15 +89,40 @@ def loginctl(home: Path, sessions: list[dict[str, str]]) -> None:
         if args[0] == "list-sessions":
             for r in rows:
                 out.append(f"{{r['Id']}} {os.getuid()} user seat0 1 {{r['Class']}} tty1 no -\\n")
-        elif args[0] == "show-session":
-            r = next(x for x in rows if x["Id"] == args[1])
-            for k, v in r.items():
-                out.append(f"{{k}}={{v}}\\n")
+        elif args[0] == "show-session":           # several ids: blank lines between the blocks
+            ids = []
+            for a, prev in zip(args[1:], args):
+                if not a.startswith("-") and prev != "-p":
+                    ids.append(a)
+            blocks = []
+            for sid in ids:
+                r = next((x for x in rows if x["Id"] == sid), None)
+                if r is None:
+                    code = 1                         # loginctl: No session '…' known
+                    continue
+                blocks.append("".join(f"{{k}}={{v}}\\n" for k, v in r.items()))
+            out.append("\\n".join(blocks))
         """)
 
 
 def one_session(home: Path, own: str = "2", *others: dict[str, str]) -> None:
     loginctl(home, [{"Id": own, "Class": "user", "Type": "wayland", "State": "active"}, *others])
+
+
+def logind_dir(home: Path) -> Path:
+    """<test sysroot>/run/systemd/users, logind's record directory (always there on a real
+    system; the guard watches it with inotify)."""
+    d = home / ".aptus-test/root/run/systemd/users"
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
+def logind_record(home: Path, text: str) -> None:
+    """Rewrite this user's logind record as logind does: a temporary file renamed over it."""
+    d = logind_dir(home)
+    tmp = d / f".#{os.getuid()}new"
+    tmp.write_text(text)
+    os.rename(tmp, d / str(os.getuid()))
 
 
 @dataclass
@@ -171,18 +201,55 @@ def alive(pid: int) -> bool:
 
 def systemd_run(home: Path) -> None:
     """A systemd-run that starts the unit's command detached (in a new session, its output in
-    $HOME/.aptus-test/<unit>.log) with the caller's environment, and records the pid."""
+    $HOME/.aptus-test/<unit>.log) with the caller's environment, and records the pid. With
+    --property=Type=notify it behaves as the real one (probed, PHASES.md wave-2 simplify): the
+    command gets NOTIFY_SOCKET (a datagram socket in $HOME/.aptus-test) and systemd-run returns 0
+    once READY=1 arrived; 1 when the command exited first, or after TimeoutStartSec (then the
+    command is stopped: SIGTERM, SIGKILL after 5 s)."""
     tool(home, "systemd-run", """\
-        import subprocess
+        import signal, socket, subprocess, time
         unit = next(a.split("=", 1)[1] for a in args if a.startswith("--unit="))
+        props = dict(a.split("=", 1)[1].split("=", 1) for a in args if a.startswith("--property="))
         cmd = [a for a in args if not a.startswith("--")]
         units = state.setdefault("units", {})
         if unit in units and os.path.exists(f"/proc/{units[unit]}"):
             code = 1
         else:
+            env = dict(os.environ)
+            notify = None
+            if props.get("Type") == "notify":
+                sock = os.path.join(base, unit + ".notify")
+                if os.path.exists(sock):
+                    os.unlink(sock)
+                notify = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
+                notify.bind(sock)
+                notify.settimeout(0.02)
+                env["NOTIFY_SOCKET"] = sock
             log = open(os.path.join(base, unit + ".log"), "ab")
-            proc = subprocess.Popen(cmd, stdout=log, stderr=log, start_new_session=True)
+            proc = subprocess.Popen(cmd, stdout=log, stderr=log, start_new_session=True, env=env)
             units[unit] = proc.pid
+            json.dump(state, open(sf, "w"))
+            if notify is not None:
+                t = props.get("TimeoutStartSec", "90s")
+                end = time.monotonic() + (float(t[:-2]) / 1000 if t.endswith("ms")
+                                          else float(t.rstrip("s")))
+                ready = False
+                while not ready and proc.poll() is None and time.monotonic() < end:
+                    try:
+                        ready = b"READY=1" in notify.recv(4096).split(b"\\n")
+                    except socket.timeout:
+                        pass
+                notify.close()
+                os.unlink(sock)
+                if not ready:
+                    code = 1
+                    if proc.poll() is None:              # the start timed out: systemd stops it
+                        proc.send_signal(signal.SIGTERM)
+                        try:
+                            proc.wait(5)
+                        except subprocess.TimeoutExpired:
+                            proc.kill()
+                            proc.wait()
         """)
 
 

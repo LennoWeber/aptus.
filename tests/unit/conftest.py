@@ -75,7 +75,7 @@ def test_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
         if name.startswith("XDG_"):
             monkeypatch.delenv(name)
     for name in ("HYPRLAND_INSTANCE_SIGNATURE", "WAYLAND_DISPLAY", "DISPLAY", "APTUS_DEV",
-                 "APTUS_LOG", "INVOCATION_ID", "QS_CONFIG_PATH"):
+                 "APTUS_LOG", "INVOCATION_ID", "QS_CONFIG_PATH", "NOTIFY_SOCKET"):
         monkeypatch.delenv(name, raising=False)
     monkeypatch.setenv("HOME", str(home))
     monkeypatch.setenv("APTUS_TEST", "1")

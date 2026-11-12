@@ -33,6 +33,15 @@ class Report:
     stays_noctalia: list[str] = field(default_factory=list)   # lease targets in scope-only mode, bake off, never
 
 
+@dataclass(frozen=True)
+class Taken:
+    """The session's take of a generation (02 §5.3): the slot specs it was given and the ids of
+    the slots it wrote. apply_generation writes none of them again and does not build the specs
+    a second time."""
+    specs: Sequence[SlotSpec]
+    slots: Sequence[str]
+
+
 _log = logging.getLogger("aptus.theme.apply")
 
 
@@ -64,10 +73,7 @@ def _dconf_specs(paths: Paths, manifest: Manifest, gen: Generation, t: Target) -
 def _rendered(gen: Generation, t: Target) -> bool:
     """Every output of the target exists in the generation (a target that failed in a generation
     with no earlier output has none)."""
-    outs = [render.output(gen, f) for f in t.files]
-    if t.dconf:
-        outs.append(gen.path / t.id / render.DCONF_JSON)
-    return all(o.is_file() for o in outs)
+    return all((gen.path / out).is_file() for out in render.outputs(t))
 
 
 def _file_specs(paths: Paths, gen: Generation, t: Target) -> list[SlotSpec]:
@@ -116,16 +122,19 @@ def _classify(report: Report, gen: Generation, lease: bool, paths: Paths,
 
 
 def _update_lease(paths: Paths, manifest: Manifest, gen: Generation, leased: list[Target],
-                  report: Report, taken: Sequence[str] | None) -> dict[str, str]:
+                  report: Report, taken: Taken | None) -> dict[str, str]:
     """ops.update for the leased targets; returns target id → reload of those written. With
-    `taken` (the slots the take just wrote with this generation) nothing is updated: those slots
-    count as written, so their hooks run (02 §5.3 step 8)."""
-    specs = slot_specs(paths, manifest, gen, [t.id for t in leased])
+    `taken` (the take of this generation just now) nothing is updated: the slots it wrote count
+    as written, so their hooks run (02 §5.3 step 8), and its specs are those of the targets."""
     by_target: dict[str, list[str]] = {t.id: [] for t in leased}
+    if taken is not None:
+        specs = [s for s in taken.specs if s.target in by_target]
+    else:
+        specs = slot_specs(paths, manifest, gen, list(by_target))
     for s in specs:
         by_target[s.target].append(s.id)
     if taken is not None:
-        up = ops.UpdateReport(generation=gen.n, written=[s.id for s in specs if s.id in taken])
+        up = ops.UpdateReport(generation=gen.n, written=[s.id for s in specs if s.id in taken.slots])
     else:
         try:
             up = ops.update(paths, specs, gen.n)
@@ -167,12 +176,12 @@ def _record_hooks(report: Report, manifest: Manifest, changed: dict[str, str],
 
 
 def apply_generation(paths: Paths, manifest: Manifest, gen: Generation, signature: str,
-                     taken: Sequence[str] | None = None) -> Report:
+                     taken: Taken | None = None) -> Report:
     """08 §6 steps 1–5 for a rendered generation: the lease targets through ops.update when this
-    session holds the lease (ops.held_by), else they stay Noctalia's; under the theme lock the
+    session holds the lease (ops.holds), else they stay Noctalia's; under the theme lock the
     scope targets and the Own targets; then the reload hooks of what changed; the report.
-    aptus-session uses it at start, right after the take of this generation (`taken`: the slot
-    ids it wrote, which are not written again), apply after each render."""
+    aptus-session uses it at start, right after the take of this generation (`taken`: its specs
+    and the slots it wrote, which are not written again), apply after each render."""
     lease = bool(signature) and ops.holds(paths, signature)
     report = Report(generation=gen.n, mode="lease" if lease else "scope-only")
     changed: dict[str, str] = {}

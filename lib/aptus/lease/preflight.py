@@ -33,6 +33,8 @@ class Preflight:
 GRAPHICAL = ("wayland", "x11", "mir")
 OPEN = ("active", "online")
 NOCTALIA_NAMES = ("noctalia", "noctalia-shell")   # comm; plus `qs`/`quickshell` running its config
+QUICKSHELL_NAMES = ("qs", "quickshell")
+PROPS = ("Id", "Class", "Type", "State", "Desktop", "Service")   # asked of `loginctl show-session`
 NOTICE_OTHER_SESSION = "Another session is open — some apps keep Noctalia's colours."
 NOTICE_NOCTALIA = "Noctalia is running — some apps keep Noctalia's colours."
 NOTICE_FAILED = "Some apps could not be themed — they keep Noctalia's colours."
@@ -42,34 +44,42 @@ REASON_UNKNOWN = "cannot list login sessions"
 
 
 def sessions(paths: Paths) -> list[LoginSession] | None:
-    """This user's logind sessions (`loginctl list-sessions` + `show-session`), None when loginctl
-    is missing or fails (the caller fails closed: no lease)."""
+    """This user's logind sessions (`loginctl list-sessions`, then one `show-session` for all of
+    them), None when loginctl is missing or fails, or a listed session is not shown (the caller
+    fails closed: no lease)."""
     r = system.run(paths, ["loginctl", "list-sessions", "--no-legend", "--no-pager"])
-    if r.skipped or r.code != 0:
+    if not r.ok:
         return None
-    uid, out = str(os.getuid()), []
-    for line in r.stdout.splitlines():
-        cols = line.split()
-        if len(cols) < 2 or cols[1] != uid:
-            continue
-        props = show_session(paths, cols[0])
-        if props is None:
-            return None
-        out.append(LoginSession(id=props.get("Id", cols[0]), cls=props.get("Class", ""),
-                                type=props.get("Type", ""), state=props.get("State", ""),
-                                desktop=props.get("Desktop", ""), service=props.get("Service", "")))
+    uid = str(os.getuid())
+    ids = [cols[0] for cols in map(str.split, r.stdout.splitlines())
+           if len(cols) >= 2 and cols[1] == uid]
+    shown = show_sessions(paths, ids) if ids else {}
+    if shown is None or set(shown) != set(ids):
+        return None
+    out = []
+    for sid in ids:
+        props = shown[sid]
+        out.append(LoginSession(id=sid, cls=props.get("Class", ""), type=props.get("Type", ""),
+                                state=props.get("State", ""), desktop=props.get("Desktop", ""),
+                                service=props.get("Service", "")))
     return out
 
 
-def show_session(paths: Paths, session_id: str) -> dict[str, str] | None:
-    """`loginctl show-session ID -p …` as a dict; None when it fails."""
-    argv = ["loginctl", "show-session", session_id, "--no-pager"]
-    for prop in ("Id", "Class", "Type", "State", "Desktop", "Service"):
+def show_sessions(paths: Paths, ids: Sequence[str]) -> dict[str, dict[str, str]] | None:
+    """`loginctl show-session ID… -p …` (one block of `Name=value` lines per session, blank lines
+    between them) as session id → properties; None when it fails (also when one id is gone)."""
+    argv = ["loginctl", "show-session", *ids, "--no-pager"]
+    for prop in PROPS:
         argv += ["-p", prop]
     r = system.run(paths, argv)
-    if r.skipped or r.code != 0:
+    if not r.ok:
         return None
-    return dict(line.split("=", 1) for line in r.stdout.splitlines() if "=" in line)
+    out = {}
+    for block in r.stdout.split("\n\n"):
+        props = dict(line.split("=", 1) for line in block.splitlines() if "=" in line)
+        if "Id" in props:
+            out[props["Id"]] = props
+    return out
 
 
 def others(all_sessions: Sequence[LoginSession], own_id: str) -> list[LoginSession]:
@@ -80,9 +90,13 @@ def others(all_sessions: Sequence[LoginSession], own_id: str) -> list[LoginSessi
 
 
 def noctalia(paths: Paths) -> list[int]:
-    """Pids of running Noctalia shells of this user (under test: of this HOME only)."""
-    pids = [proc.pid for proc in system.processes(paths, NOCTALIA_NAMES)]
-    for proc in system.processes(paths, ("qs", "quickshell")):
+    """Pids of running Noctalia shells of this user (under test: of this HOME only): one walk of
+    /proc for both names and the Quickshells whose command line names noctalia."""
+    pids = []
+    for proc in system.processes(paths, NOCTALIA_NAMES + QUICKSHELL_NAMES):
+        if proc.comm in NOCTALIA_NAMES:
+            pids.append(proc.pid)
+            continue
         try:
             with open(f"/proc/{proc.pid}/cmdline", "rb") as f:
                 if b"noctalia" in f.read().lower():

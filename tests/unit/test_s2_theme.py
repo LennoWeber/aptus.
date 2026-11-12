@@ -607,7 +607,9 @@ def test_hook_hyprland_eval(p, fake_hypr) -> None:
     seen = fake_hypr([b"ok"], sig="nested")
     (r,) = hooks.run_reloads(paths_mod.get(), {"hyprland": "builtin:hyprland"}, "nested")
     assert r.state == "applied"
-    assert seen[0].startswith(b"eval local g = dofile(") and b"active_border = g.accent" in seen[0]
+    assert seen[0] == f'eval require("aptus.paint")(dofile("{p.generated_lua}"))'.encode()
+    assert "active_border = gen.accent" in (p.hypr_repo / "paint.lua").read_text()   # R15
+    assert 'require("aptus.paint")(gen)' in (p.hypr_repo / "look.lua").read_text()
     (r,) = hooks.run_reloads(p, {"hyprland": "builtin:hyprland"},
                              os.environ["APTUS_REAL_HYPRLAND_SIGNATURE"])
     assert r.state == "failed" and "RefusedInstance" in r.detail
@@ -631,6 +633,35 @@ def test_hook_signal_reaches_only_this_session(p, tmp_path) -> None:
             mine.kill()
     finally:
         h.kill()
+
+
+def test_signal_hooks_share_one_walk_of_proc(p, tmp_path, monkeypatch) -> None:
+    """Wave-2 simplify E8: run_reloads looks up the session's processes once for all signal
+    hooks; each hook still signals only its own app."""
+    import shutil
+    import subprocess
+
+    from aptus.lease import system
+    apps = {}
+    for name in ("kitty", "ghostty"):
+        exe = tmp_path / "fakebin" / name
+        exe.parent.mkdir(exist_ok=True)
+        shutil.copy(shutil.which("sleep"), exe)
+        apps[name] = subprocess.Popen([str(exe), "600"], env={
+            "HOME": str(p.home), "HYPRLAND_INSTANCE_SIGNATURE": "nested-sig"})
+    walks = []
+    real = system.processes
+    monkeypatch.setattr(system, "processes", lambda *a: walks.append(a[1]) or real(*a))
+    try:
+        results = hooks.run_reloads(p, {"kitty": "signal:kitty:SIGTERM",
+                                        "ghostty": "signal:ghostty:SIGINT"}, "nested-sig")
+        assert sorted((r.target, r.state) for r in results) == [("ghostty", "applied"),
+                                                                ("kitty", "applied")]
+        assert apps["kitty"].wait(5) == -15 and apps["ghostty"].wait(5) == -2
+        assert walks == [["ghostty", "kitty"]]
+    finally:
+        for proc in apps.values():
+            proc.kill()
 
 
 def test_bake_queued_while_app_runs(p, tmp_path) -> None:

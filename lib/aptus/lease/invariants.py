@@ -12,7 +12,7 @@ import re
 from collections.abc import Iterable
 from pathlib import Path
 
-from ..paths import Paths, UnsafeHome, require_safe_home
+from ..paths import Paths, UnsafeHome, below, plain_name, require_safe_home
 from .journal import Journal, SlotKind, SlotRecord, SlotStatus, State
 from .slots import SlotSpec
 
@@ -58,13 +58,27 @@ def transition(old: State | None, new: State) -> None:
         fail(f"journal {old.value if old else 'none'} → {new.value}")
 
 
-def _real(p: Path | str) -> str:
-    return os.path.realpath(p)
+class Roots:
+    """The fixed places `writable` compares a target with (HOME, never_paths, aptus's dirs, the
+    Own files), each resolved (realpath) once, when first needed. check_journal and check_specs
+    share one for all their slots, so a journal save does not resolve every root again for each
+    slot; a single `writable` call makes its own."""
 
+    def __init__(self, paths: Paths) -> None:
+        self._paths = paths
+        self._real: dict[Path, str] = {}
+        self._never: list[Path] | None = None
 
-def _under(where: str, root: Path | str) -> bool:
-    r = _real(root)
-    return where == r or where.startswith(r.rstrip(os.sep) + os.sep)
+    def real(self, root: Path) -> str:
+        r = self._real.get(root)
+        if r is None:
+            r = self._real[root] = os.path.realpath(root)
+        return r
+
+    def never(self) -> list[Path]:
+        if self._never is None:
+            self._never = never_paths(self._paths)
+        return self._never
 
 
 def never_paths(paths: Paths) -> list[Path]:
@@ -86,18 +100,20 @@ def never_paths(paths: Paths) -> list[Path]:
     return never
 
 
-def _own_allowed(paths: Paths, where: str) -> bool:
+def _own_allowed(paths: Paths, where: str, roots: Roots) -> bool:
     """Own files (08 §8): aptus's state and cache, the two qt6ct files, aptus-icons-{dark,light}
     (and their .new/.old siblings while one is rebuilt)."""
-    if _under(where, paths.state) or _under(where, paths.cache):
+    if below(where, roots.real(paths.state), real=False) or \
+            below(where, roots.real(paths.cache), real=False):
         return True
-    if where in (_real(paths.qt6ct_conf), _real(paths.qt6ct_colors)):
+    if where in (roots.real(paths.qt6ct_conf), roots.real(paths.qt6ct_colors)):
         return True
-    return any(_under(where, paths.icons / f"aptus-icons-{m}{suffix}")
+    return any(below(where, roots.real(paths.icons / f"aptus-icons-{m}{suffix}"), real=False)
                for m in ("dark", "light") for suffix in ("", ".new", ".old"))
 
 
-def writable(paths: Paths, target: Path, *, kind: str, no_link: bool = False) -> None:
+def writable(paths: Paths, target: Path, *, kind: str, no_link: bool = False,
+             roots: Roots | None = None) -> None:
     """`target`, with every symlink followed, may be written by a writer of `kind`.
     state: below aptus's state, cache or runtime dir (the runtime dir is outside HOME normally);
     every other kind: below HOME (under test: the temporary HOME, so a fixture linked into the
@@ -106,7 +122,8 @@ def writable(paths: Paths, target: Path, *, kind: str, no_link: bool = False) ->
       scope: below paths.scope,
       own:   below aptus's state or cache, the qt6ct files, or aptus-icons-{dark,light}.
     `no_link`: `target` itself must not be a symlink (an atomic rename would replace the link;
-    the kinds write the realpath recorded at take). Also re-checks the safe HOME under test."""
+    the kinds write the realpath recorded at take). Also re-checks the safe HOME under test.
+    `roots`: the resolved roots of the caller's check (Roots), else resolved here."""
     if kind not in WRITE_KINDS:
         fail(f"unknown write kind {kind!r}")
     try:
@@ -117,33 +134,38 @@ def writable(paths: Paths, target: Path, *, kind: str, no_link: bool = False) ->
         fail(f"{target} is not an absolute path")
     if no_link and os.path.islink(target):
         fail(f"{target} became a symlink after the take")
-    where = _real(target)
+    rt = roots if roots is not None else Roots(paths)
+
+    def under(root: Path) -> bool:
+        return below(where, rt.real(root), real=False)
+
+    where = os.path.realpath(target)
     if kind == "state":
-        if not any(_under(where, r) for r in (paths.state, paths.cache, paths.runtime)):
+        if not any(under(r) for r in (paths.state, paths.cache, paths.runtime)):
             fail(f"state write {target} outside aptus's state, cache and runtime dirs")
         return
-    if not _under(where, paths.home):
+    if not under(paths.home):
         fail(f"{target} ({where}) is outside HOME")
-    for p in never_paths(paths):
-        if _under(where, p):
+    for p in rt.never():
+        if under(p):
             fail(f"{target} ({where}) is inside {p}")
-    if kind == "scope" and not _under(where, paths.scope):
+    if kind == "scope" and not under(paths.scope):
         fail(f"scope write {target} outside {paths.scope}")
-    if kind == "own" and not _own_allowed(paths, where):
+    if kind == "own" and not _own_allowed(paths, where, rt):
         fail(f"Own write {target} outside aptus's Own files")
-    if kind == "lease" and any(_under(where, r) for r in (paths.state, paths.cache, paths.config)):
+    if kind == "lease" and any(under(r) for r in (paths.state, paths.cache, paths.config)):
         fail(f"leased slot {target} inside aptus's own dirs")
 
 
 def scope_entry(paths: Paths, into: str) -> Path:
     """scope/<into> with scope/ resolved but not the last component (swap replaces that link)."""
     check_scope_name(into)
-    return Path(_real(paths.scope)) / into
+    return Path(os.path.realpath(paths.scope)) / into
 
 
 def check_scope_name(into: str) -> None:
     """A scope name is one plain path component below scope/ ("kitty", "starship.toml")."""
-    if not into or into in (".", "..") or "/" in into or into.startswith("."):
+    if not plain_name(into):
         fail(f"scope name {into!r} is not one plain path component")
 
 
@@ -152,7 +174,7 @@ def _check_id(slot_id: str, target: str) -> None:
         fail(f"slot id {slot_id!r} is not '<{target}>.<name>'")
 
 
-def check_spec(paths: Paths, spec: SlotSpec) -> None:
+def check_spec(paths: Paths, spec: SlotSpec, roots: Roots | None = None) -> None:
     """A slot spec is consistent with its kind (02 §5.5) and names a writable slot."""
     _check_id(spec.id, spec.target)
     if spec.kind == SlotKind.DCONF:
@@ -170,17 +192,18 @@ def check_spec(paths: Paths, spec: SlotSpec) -> None:
         fail(f"ini-sections slot {spec.id} without section globs")
     if spec.kind == SlotKind.FILE and spec.sections:
         fail(f"file slot {spec.id} with section globs")
-    writable(paths, spec.path, kind="lease")
+    writable(paths, spec.path, kind="lease", roots=roots)
 
 
 def check_specs(paths: Paths, specs: Iterable[SlotSpec]) -> None:
     """Every spec passes check_spec; ids and resolved slot files are unique."""
     ids, files = [], []
+    roots = Roots(paths)
     for spec in specs:
-        check_spec(paths, spec)
+        check_spec(paths, spec, roots)
         ids.append(spec.id)
         if spec.path is not None:
-            files.append(_real(spec.path))
+            files.append(os.path.realpath(spec.path))
     if len(ids) != len(set(ids)):
         fail("duplicate slot ids in one take or update")
     if len(files) != len(set(files)):
@@ -230,6 +253,7 @@ def check_journal(paths: Paths, j: Journal) -> None:
     files = [s.write_path for s in j.slots if s.kind != SlotKind.DCONF]
     if len(files) != len(set(files)):
         fail("two journal slots write the same file")
+    roots = Roots(paths)
     for s in j.slots:
         _check_id(s.id, s.target)
         if s.status not in STATUSES[j.state]:
@@ -248,7 +272,7 @@ def check_journal(paths: Paths, j: Journal) -> None:
         if not os.path.isabs(s.path) or not os.path.isabs(s.write_path):
             fail(f"slot {s.id} has a relative path")
         if j.state in (State.TAKING, State.HELD):
-            writable(paths, Path(s.write_path), kind="lease")
+            writable(paths, Path(s.write_path), kind="lease", roots=roots)
 
 
 def check_save(old: Journal | None, new: Journal) -> None:

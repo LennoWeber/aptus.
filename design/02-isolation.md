@@ -314,8 +314,10 @@ Hyprland (started by the greeter via start-hyprland)
  └─ hl.on("hyprland.start") → aptus-session start          (bin/aptus-session)
      1. recover                        (in-process: aptus.lease.ops.recover)
      2. render                         → ~/.local/state/aptus/theme/gen-<n>/, current, resolved.json
-     3. systemd-run --user --unit=aptus-guard  aptus-guard <hyprland-pid> <signature>
-        then wait ≤ 5 s for guard.state `ok` (written once the guard watches);
+     3. systemd-run --user --unit=aptus-guard --property=Type=notify  aptus-guard <hyprland-pid> <signature>
+        (started first, in a thread alongside 1–2, and waited for before 4): returns once the
+        guard watches (READY=1, sent right after guard.state `ok`); fails when the guard exits
+        first or sends nothing within 5 s (TimeoutStartSec: systemd stops it);
         no guard watching → no lease: scope-only
      4. take                           → preflight, journal + slots (under the lease flock)
      5. systemctl --user import-environment …   (lease only; unset again when the guard
@@ -327,11 +329,14 @@ Hyprland (started by the greeter via start-hyprland)
                     systemd-inhibit --what=handle-lid-switch --mode=block …   (only with power.lidAction = lock)
      7. exec aptus-supervise qs -p <repo>/shell    (restarts the shell on crash, see 07)
 
-aptus-guard (transient user service, outside Hyprland's process tree)
-  - pidfd_open(hyprland_pid); poll until it becomes readable (Hyprland exited)
+aptus-guard (transient user service, Type=notify, outside Hyprland's process tree)
+  - pidfd_open(hyprland_pid), guard.state `ok`, READY=1; poll until the pidfd becomes readable
+    (Hyprland exited)
   - or SIGTERM from the user manager (logout, shutdown, `aptus-session stop`)
-  - meanwhile: logind's user record each second (another session opened → release, scope-only,
-    keep watching, §5.6) and the bake queue every 30 s
+  - meanwhile: logind's user record, watched with inotify (logind renames a new one into place;
+    another session opened → release, scope-only, keep watching, §5.6), looked at each second
+    only while a change still waits for a check with the lease held or when inotify cannot watch
+    its directory; and the bake queue every 30 s while it exists. Nothing else wakes the guard
   → release (if this session holds the lease); reload hooks; unset env; guard.state; exit 0
 
 aptus-recover.service (the only installed user unit; WantedBy=default.target; Type=oneshot)

@@ -14,6 +14,7 @@ import os
 import time
 from dataclasses import dataclass, field
 from enum import Enum
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
@@ -180,14 +181,18 @@ def archive(paths: Paths, j: Journal) -> Path:
     return dest
 
 
-def last_released(paths: Paths) -> Journal | None:
-    """The newest journal in history/ (the doctor compares slots against its `before`)."""
+def history(paths: Paths) -> Iterator[Journal]:
+    """The journals in history/, newest first; one that cannot be read or parsed is left out."""
     for f in sorted(paths.lease_history.glob("*.json"), reverse=True):
         try:
-            return from_dict(json.loads(f.read_text(encoding="utf-8")))
+            yield from_dict(json.loads(f.read_text(encoding="utf-8")))
         except (OSError, ValueError, JournalError):
             continue
-    return None
+
+
+def last_released(paths: Paths) -> Journal | None:
+    """The newest journal in history/ (the doctor compares slots against its `before`)."""
+    return next(history(paths), None)
 
 
 def slot(j: Journal, slot_id: str) -> SlotRecord | None:
