@@ -2259,3 +2259,84 @@ sets no watch on a file missing at start). The e2e helper `setting` therefore ca
   62/62 twice once on mains. One later full run measured 5.57 idle wakeups/s once (1.20–1.48 alone,
   1.33 on the rerun). Open: the e2e waits (mostly 2–3 s) are tight under a slow CPU; worth a
   common timeout factor in `nested.py` if it happens again.
+
+### Wave-2 simplify: Python (S2)
+
+Agent P, branch `worktree-agent-ad2eb40d4a0d9b29e` from `19575f5`; the findings of
+`.claude/briefs/wave2-simplify.md` for the Python side. Each was checked against the code first;
+isolation code keeps every invariant and safety gate.
+
+| Item | Verdict | Change |
+|---|---|---|
+| 2 `held_by`/`holds` near-copies | real | `ops.owned_by(j, signature, pid=None, *, held=False)` on a loaded journal; `holds`/`held_by` load and call it; the guard's `other_session_opened` and `session.stop` use it on the journal they already loaded (`4987b89`) |
+| 6 four "root or below" helpers, the scope-name rule twice | real | `paths.below(path, root, *, real)` (`paths.inside` = `real=True`) and `paths.plain_name`; install, own, targets and invariants use them with their old semantics and exception types (`e733c44`, `df02e6e`) |
+| 11 `transition` right before `journal.save` | real | dropped in `_set_state` and `take`; `check_save` runs the same check against the file (`4987b89`) |
+| 12 the doctor's rglob ×4, Umbriel files and font names twice | real | `_files(d)`, `_font_names(paths)` (`38c25d2`) |
+| 13 = R4 the entry prologue ×4 | real | `log.setup_tool(name, *also, refusing="")`: `require_safe_home` before any log, the same messages (the guard keeps "refusing: "), exit 3 (`f7c8059`) |
+| 15 (Python) dead code | real | `NEEDS_SIGNATURE` gone, `BUILTINS` is the dict `run_one` dispatches through; `import_environment` without its unused `env`; `targets.py`'s unused `Sequence`; `guard.pidfd`/`release_if_ours` inlined; the `apply_generation` docstring names `ops.holds` (`8dba15c`) |
+| R3 tool success spelt out 15× | real | `ToolResult.ok` (`8dba15c`) |
+| R7 `show-environment` parsed twice | real | `guard.user_environment(paths)`; each caller keeps its failure message (`38c25d2`) |
+| R8 `aptus_values` parses tokens.json by hand | real | `resolve.load_tokens(paths)["cursor"]`, same errors (`38c25d2`) |
+| R14 `lease_periods` copies the history loop | real | `journal.history(paths)` (newest first); `last_released` is its first (`38c25d2`) |
+| `render._keep_previous` vs `apply._rendered` | real | `render.outputs(target)` for both (`38c25d2`) |
+| R15 `hooks.hyprland_lua` repeats `look.lua`'s mapping | real | `hypr/paint.lua` maps generated.lua onto Hyprland's options; `look.lua` calls `require("aptus.paint")(gen)`, the hook evaluates `require("aptus.paint")(dofile(<generated.lua>))` (`0387d09`) |
+| E1 fixed roots realpath'd per slot; journal re-read per save | real (first half) | `invariants.Roots` once per `check_journal`/`check_specs` (`df02e6e`). Skipped: keeping the last saved journal in `ops`; all journal loads of a login take 3 ms, and `check_save` keeps comparing with the file on disk |
+| E2 ~25 `dconf` processes per take | real | the 9 befores from one `dconf dump` (same g_variant text, checked on this machine; unset keys absent; a failing dump falls back to `dconf read` per key); writes, read-backs and release unchanged (`1ec3d9e`) |
+| E3 the guard wakes every second | real | inotify (`lease/inotify.py`, ctypes) on logind's record and the bake queue, by name in their directories; the 1 s poll only while a change waits for a check with the lease held or when inotify cannot watch; the 30 s tick only while the queue exists (`6feb3bd`) |
+| A11 = E4 serial guard start, 50 ms sleep loop, `is-active` | real | `Type=notify`: the guard sends READY=1 right after guard.state `ok`; `systemd-run --property=TimeoutStartSec=5000ms` returns at READY=1 or fails; started in a thread before recover, waited for before take; `guard.ready` gone (`b1b8ac6`, `5a65f99`) |
+| E8 /proc walked twice, again per signal hook | real | one walk in `preflight.noctalia`, one for all signal hooks in `run_reloads` (`5ef7fac`) |
+| E9 `show-session` per session | real | one `loginctl show-session ID… -p …`; a missing block or a failing call still fails closed (`5ef7fac`) |
+| E10 `slot_specs` built again after the take | real | `lease_step` returns `apply.Taken(specs, slots)`; `apply_generation` filters those specs by target (`7c9b407`) |
+| E12 `render.current` twice, templates read twice | skipped | measured: `render.current` 0.13 ms, the template reads of `input_hash` 0.3 ms (36 files, 415 kB), out of a ~350 ms login; handing a Generation through `from_settings` and template bytes through `input_hash` would couple them for 0.4 ms |
+
+**Checks.**
+- Every commit ran the unit suite. The new isolation mechanisms (A11/E4, E3) have tests that
+  fail against the old mechanism by construction: `test_the_guard_watches_when_systemd_run_returns`
+  (Type=notify, `ok` on disk at return, an early exit fails at once),
+  `test_the_guard_starts_alongside_recover_and_render` (recover waits for the guard's start),
+  `test_a_guard_that_never_reports_ok_means_no_lease` (no READY=1: stopped after
+  TimeoutStartSec, no lease), the notify tests with a fake socket (also refused outside the test
+  HOME, relative and abstract names included: `5a65f99` fixed that gate after a re-read), the
+  inotify watcher, `wait` woken only by the record's change, `next_check`, and the real guard with
+  POLL an hour, woken by the bake queue and (through aptus-session) by Umbriel logging in;
+  `test_without_inotify_the_guard_polls_logind` keeps the old path.
+- The real `systemd-run --user` with harmless transient units: READY=1 after 0.5 s returns 0
+  after 0.54 s; an exit before READY=1 returns 1; no READY=1 within TimeoutStartSec=1000ms returns
+  1 after 1.09 s and the process is stopped. The systemd-run fake does the same.
+- inotify can watch the real `/run/systemd/users` (read only).
+- R15 in a nested Hyprland 0.57.1: `hyprctl eval` resolves `require("aptus.paint")`; the options
+  after start are identical with the old and the new `look.lua`; the hook restores them after a
+  foreign `hl.config`; `configerrors` empty (design/probes.md).
+- E2 and E9 against the real tools: `dconf dump` prints the 9 keys as `dconf read` does;
+  `loginctl show-session` (systemd 259) prints blank-line-separated blocks and fails for an
+  unknown id.
+- e2e `test_s2.py` gained `test_umbriel_logs_in_mid_session` (the guard, by inotify, releases;
+  the shell shows scope-only with the notice) and `assert_paint` (the whole paint.lua mapping at
+  start and after the accent change); its world now has logind's directory, so every nested
+  guard runs with inotify.
+
+**Tests.** `tests/run`: 369 unit, 282 QML, qmllint 0 warnings on 147 files. `pytest tests/e2e`:
+64/64 in the nested Hyprland (4 min; 2 new: `test_umbriel_logs_in_mid_session` and the paint
+checks in `test_logout`); `test_s2.py` 6/6 again on the final tree (`5a65f99` landed during the
+full run).
+
+**Login path** (`aptus-session start` in a temporary HOME with the unit-test fakes and a shell
+`dconf` of about the real one's cost; 6 logins: the first renders, 2–6 reuse the generation;
+medians of 2–6; the laptop was shared with another agent's tests, so the numbers are noisy):
+
+| State | Login 1 | Logins 2–6 |
+|---|---|---|
+| `19575f5` (before), three runs interleaved with the final ones | 921 / 890 / 893 ms | 431 / 457 / 424 ms |
+| final (`5a65f99`), the same three runs | 818 / 789 / 781 ms | 318 / 297 / 337 ms |
+
+Per step (the third pair, medians of logins 2–6, before → after): take 208 → 155 ms,
+`check_journal` 48 → 25 ms (E1), the guard 155 → 121 ms and now in a thread beside recover and
+render (A11/E4), `apply_generation` 16 → 13 ms (E10); still 16 journal saves per login. Along the
+way (single runs): E1 alone 462 → 422 ms, after E2 372 ms; A11/E4 alone, interleaved against its
+parent: 373/403 → 321/354 ms (login 1: 865/825 → 760/779 ms).
+
+**Spec changes.** 02 §7 (the guard's start: Type=notify, READY=1, TimeoutStartSec, in a thread
+before recover; the guard's waits: inotify, the 1 s poll only while due, the tick only while the
+queue exists), 07 §3 (the guard row of the start table), 07 §2 (paint.lua in the tree), 08 (the
+Hyprland row: the hook's `require("aptus.paint")`), 09 §4 (`look.lua` and `paint.lua`),
+design/probes.md (the R15 probe).
