@@ -7,6 +7,7 @@ import subprocess
 import time
 from pathlib import Path
 
+from aptus import atomic
 from nested import Nested
 
 
@@ -45,11 +46,8 @@ def write_resolution(nested: Nested, accent_name: str) -> None:
     t = nested.state()["services"]["tokens"]
     res = resolve.resolve(resolve.load_tokens(nested.paths),
                           Inputs(mode=t["mode"], accent=accent_name, contrast="normal", glass=t["glass"]))
-    target = nested.paths.theme_resolved
-    target.parent.mkdir(parents=True, exist_ok=True)
-    tmp = target.with_name(target.name + ".e2e-tmp")
-    tmp.write_text(json.dumps(res, indent=2) + "\n")
-    tmp.replace(target)
+    nested.paths.theme_resolved.parent.mkdir(parents=True, exist_ok=True)
+    atomic.write_json(nested.paths.theme_resolved, res)
 
 
 def test_a_resolution_made_after_the_start(nested: Nested) -> None:

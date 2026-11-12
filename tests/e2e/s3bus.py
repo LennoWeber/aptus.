@@ -14,6 +14,7 @@ import subprocess
 import time
 from pathlib import Path
 
+from aptus import atomic
 from nested import Nested, test_processes
 
 HERE = Path(__file__).resolve().parent
@@ -155,18 +156,12 @@ def layout(nested: Nested) -> tuple[int, int]:
 
 def pointer(nested: Nested, cmd: str, x: int, y: int) -> None:
     """vpointer.py move/click at layout pixels, with the layout's real extent."""
-    w, h = layout(nested)
-    runtime = os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}")
-    subprocess.run(["python3", "-I", str(HERE / "vpointer.py"), os.path.join(runtime, nested.wayland_display),
-                    cmd, str(x), str(y), str(w), str(h)], check=True, timeout=10)
+    nested.vpointer(cmd, x, y, *layout(nested))
 
 
 def wheel(nested: Nested, x: int, y: int, notches: int) -> None:
     """vpointer.py wheel at layout pixels: notches < 0 scroll up, > 0 down."""
-    w, h = layout(nested)
-    runtime = os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}")
-    subprocess.run(["python3", "-I", str(HERE / "vpointer.py"), os.path.join(runtime, nested.wayland_display),
-                    "wheel", str(x), str(y), str(w), str(h), str(notches)], check=True, timeout=10)
+    nested.vpointer("wheel", x, y, *layout(nested), notches)
 
 
 def setting(nested: Nested, key: str, value: object = None) -> None:
@@ -180,9 +175,7 @@ def setting(nested: Nested, key: str, value: object = None) -> None:
         data.pop(key, None)
     else:
         data[key] = value
-    tmp = path.with_name(path.name + ".e2e-tmp")
-    tmp.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n")
-    os.replace(tmp, path)
+    atomic.write_json(path, data)
     assert nested.msg("shell", "reloadConfig") == "ok"
 
 
