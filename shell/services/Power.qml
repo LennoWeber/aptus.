@@ -19,25 +19,23 @@ Singleton {
     // percentage, charging, onBattery }), never the laptop's UPower (a real low battery would toast
     // in a test). No file: no battery, on AC.
     readonly property bool testDouble: Paths.test
-    property var _fake: ({})
-    // UPower's display device (read only; none under test).
-    readonly property var _dev: testDouble ? null : UPower.displayDevice
-    readonly property bool hasBattery: testDouble ? _fake.present === true : !!_dev && _dev.isLaptopBattery && _dev.isPresent
-    // 0..100 (UPower gives 0..1)
-    readonly property real percentage: testDouble ? Number(_fake.percentage) || 0 : _dev ? _dev.percentage * 100 : 0
-    readonly property bool charging: testDouble ? _fake.charging === true
-        : !!_dev && (_dev.state === UPowerDeviceState.Charging || _dev.state === UPowerDeviceState.PendingCharge)
+    // The battery source, chosen once: UPower (read only), or under APTUS_TEST the file double.
+    readonly property var _src: testDouble ? fileBattery : upower.item
+    readonly property bool hasBattery: !!_src && _src.hasBattery
+    // 0..100
+    readonly property real percentage: _src ? _src.percentage : 0
+    readonly property bool charging: !!_src && _src.charging
     // s
-    readonly property int timeToEmpty: _dev ? Math.round(_dev.timeToEmpty) : 0
+    readonly property int timeToEmpty: _src ? _src.timeToEmpty : 0
     // s
-    readonly property int timeToFull: _dev ? Math.round(_dev.timeToFull) : 0
+    readonly property int timeToFull: _src ? _src.timeToFull : 0
     // "power-saver" | "balanced" | "performance" (the battery tooltip; setProfile is S5's)
     readonly property string profile: PowerProfiles.profile === PowerProfile.PowerSaver ? "power-saver"
         : PowerProfiles.profile === PowerProfile.Performance ? "performance" : "balanced"
     // The service works (S3: battery; also on a desktop without a battery).
     readonly property bool available: true
     // On AC (charging, or full on the charger).
-    readonly property bool pluggedIn: testDouble ? _fake.onBattery !== true : !UPower.onBattery
+    readonly property bool pluggedIn: _src ? _src.pluggedIn : true
     onPercentageChanged: _checkBattery()
     onPluggedInChanged: _pluggedChanged()
 
@@ -73,15 +71,38 @@ Singleton {
         if (charging || percentage < 100) SurfaceManager.post("event", S.chargingEvent());
     }
 
-    WatchedFile {
-        path: {
-            const dir = String(Quickshell.env("APTUS_SYSFS") || "").replace(/\/+$/, "");
-            return root.testDouble && dir !== "" ? dir + "/aptus-test-battery.json" : "";
+    // UPower's display device, never loaded under the test.
+    LazyLoader {
+        id: upower
+        active: !root.testDouble
+        component: QtObject {
+            readonly property var dev: UPower.displayDevice
+            readonly property bool hasBattery: !!dev && dev.isLaptopBattery && dev.isPresent
+            // UPower gives 0..1
+            readonly property real percentage: dev ? dev.percentage * 100 : 0
+            readonly property bool charging: !!dev && (dev.state === UPowerDeviceState.Charging || dev.state === UPowerDeviceState.PendingCharge)
+            readonly property int timeToEmpty: dev ? Math.round(dev.timeToEmpty) : 0
+            readonly property int timeToFull: dev ? Math.round(dev.timeToFull) : 0
+            readonly property bool pluggedIn: !UPower.onBattery
         }
+    }
+    // The double: the test's file, read whenever it changes.
+    QtObject {
+        id: fileBattery
+        property var data: ({})
+        readonly property bool hasBattery: data.present === true
+        readonly property real percentage: Number(data.percentage) || 0
+        readonly property bool charging: data.charging === true
+        readonly property int timeToEmpty: 0
+        readonly property int timeToFull: 0
+        readonly property bool pluggedIn: data.onBattery !== true
+    }
+    WatchedFile {
+        path: root.testDouble && Paths.sysfsOverride !== "" ? Paths.sysfsOverride + "/aptus-test-battery.json" : ""
         onLoaded: {
             let d = null;
             try { d = JSON.parse(text()); } catch (e) { return; }     // a write in progress: the next change reads it whole
-            root._fake = d && typeof d === "object" ? d : {};
+            fileBattery.data = d && typeof d === "object" ? d : {};
         }
     }
 }

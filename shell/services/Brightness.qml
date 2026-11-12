@@ -23,11 +23,7 @@ Singleton {
 
     // The sysfs root ($APTUS_SYSFS, else /sys; under APTUS_TEST only $APTUS_SYSFS inside HOME,
     // else none).
-    readonly property string sysfs: {
-        const env = String(Quickshell.env("APTUS_SYSFS") || "").replace(/\/+$/, "");
-        if (!Paths.test) return env !== "" ? env : "/sys";
-        return Paths.home !== "" && env.indexOf(Paths.home + "/") === 0 ? env : "";
-    }
+    readonly property string sysfs: Paths.sysfsOverride !== "" ? Paths.sysfsOverride : Paths.test ? "" : "/sys"
     // The backlight and keyboard-LED device names under class/backlight and class/leds.
     property string device: ""
     property string kbdDevice: ""
@@ -105,9 +101,7 @@ Singleton {
     // applies to the XDG directories), and only its test devices (fakehw.py names them
     // aptus_test…: a real brightnessctl that slipped onto PATH finds no such device).
     function _refused(dev: string): bool {
-        if (!Paths.test) return false;
-        const inHome = Paths.home !== "" && sysfs.indexOf(Paths.home + "/") === 0;
-        if (inHome && dev.indexOf("aptus_test") === 0) return false;
+        if (!Paths.test || (sysfs !== "" && dev.indexOf("aptus_test") === 0)) return false;
         Log.error("service.brightness", "write to " + dev + " under " + (sysfs || "no sysfs") + " refused in a test");
         return true;
     }

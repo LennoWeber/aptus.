@@ -12,19 +12,20 @@ Singleton {
     id: root
 
     // default sink volume 0..1.5
-    readonly property real volume: testDouble ? fake.volume : _b ? _b.volume : 0
-    readonly property bool muted: testDouble ? fake.muted : _b ? _b.muted : false
-    readonly property bool micMuted: testDouble ? fake.micMuted : _b ? _b.micMuted : false
+    readonly property real volume: _b ? _b.volume : 0
+    readonly property bool muted: _b ? _b.muted : false
+    readonly property bool micMuted: _b ? _b.micMuted : false
     // description of the default sink
-    readonly property string sinkName: testDouble ? fake.sinkName : _b ? _b.sinkName : ""
+    readonly property string sinkName: _b ? _b.sinkName : ""
     // Pipewire bound (or the double)
-    readonly property bool ready: testDouble || (_b ? _b.ready : false)
+    readonly property bool ready: _b ? _b.ready : false
     // The service works (S3): the default sink and source are followed.
     readonly property bool available: ready
     // description of the default source (the mic OSD)
-    readonly property string sourceName: testDouble ? fake.sourceName : _b ? _b.sourceName : ""
-    // The PipeWire backend object (null under the double).
-    readonly property var _b: backend.item
+    readonly property string sourceName: _b ? _b.sourceName : ""
+    // The backend, chosen once: PipeWire, or under APTUS_TEST the in-memory double (both have
+    // the fields above and the three setters).
+    readonly property var _b: testDouble ? fake : backend.item
     // Under APTUS_TEST: an in-memory double instead of PipeWire (the real graph is never touched).
     readonly property bool testDouble: Paths.test
     // The sink and source names of the last volume / mic OSD (the next OSD after a change names
@@ -53,19 +54,15 @@ Singleton {
     function toggleMicMute(): void { if (!ready) return; setMicMuted(!micMuted); _osd("mic"); }
     function setVolume(v: real): void {
         if (_refused("setVolume")) return;
-        const c = Math.max(0, Math.min(_maxPercent / 100, v));
-        if (testDouble) fake.volume = c;
-        else if (_b) _b.setVolume(c);
+        if (_b) _b.setVolume(Math.max(0, Math.min(_maxPercent / 100, v)));
     }
     function setMuted(m: bool): void {
         if (_refused("setMuted")) return;
-        if (testDouble) fake.muted = m;
-        else if (_b) _b.setMuted(m);
+        if (_b) _b.setMuted(m);
     }
     function setMicMuted(m: bool): void {
         if (_refused("setMicMuted")) return;
-        if (testDouble) fake.micMuted = m;
-        else if (_b) _b.setMicMuted(m);
+        if (_b) _b.setMicMuted(m);
     }
     function setDefaultSink(id: int): void { if (_refused("setDefaultSink")) return; Log.info("service.audio", "setDefaultSink: not available yet"); }
     function setDefaultSource(id: int): void { if (_refused("setDefaultSource")) return; Log.info("service.audio", "setDefaultSource: not available yet"); }
@@ -92,24 +89,31 @@ Singleton {
 
     // Invariant (phase 6): a test shell never writes the real PipeWire graph. Under APTUS_TEST
     // every write goes to the double, and the PipeWire backend must not exist: a write while it
-    // does (or without the double) is refused and logged.
+    // does is refused and logged.
     function _refused(what: string): bool {
-        if (!Paths.test || (testDouble && !_b)) return false;
-        Log.error("service.audio", what + " refused in a test (" + (_b ? "PipeWire backend loaded" : "no double") + ")");
+        if (!Paths.test || !backend.item) return false;
+        Log.error("service.audio", what + " refused in a test (PipeWire backend loaded)");
         return true;
     }
     // The backend appearing under APTUS_TEST is a broken invariant on its own (the LazyLoader is
     // never active under the double), logged once when it happens.
-    on_BChanged: if (Paths.test && _b) Log.error("service.audio", "PipeWire backend loaded in a test");
+    Connections {
+        target: backend
+        function onItemChanged(): void { if (Paths.test && backend.item) Log.error("service.audio", "PipeWire backend loaded in a test"); }
+    }
 
     // The in-memory double (tests): the real graph is never touched.
     QtObject {
         id: fake
+        readonly property bool ready: true
         property real volume: 0.5
         property bool muted: false
         property bool micMuted: false
         property string sinkName: "Test speakers"
         property string sourceName: "Test microphone"
+        function setVolume(v: real): void { volume = v; }
+        function setMuted(m: bool): void { muted = m; }
+        function setMicMuted(m: bool): void { micMuted = m; }
     }
     // The PipeWire backend, never loaded under the test.
     LazyLoader {
