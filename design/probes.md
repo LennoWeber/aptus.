@@ -236,6 +236,15 @@ Nested Hyprland 0.57.1, temporary HOME, the aptus block loaded:
 
 **Path:** as designed (08 §7).
 
+Wave-2 simplify R15 (2026-11-12, nested, the same Hyprland): the mapping moved into
+`hypr/paint.lua`, which `look.lua` calls at start and the hook evaluates. `hyprctl eval
+'require("aptus.paint")(require("aptus.gen"))'` answers `ok` and `package.loaded["aptus.paint"]`
+is set inside `eval`: it runs in the config's Lua state, so the hook uses `require` (no path).
+`getoption` of the border colours, `gaps_out`, the shadow colour and range, `background_color` and
+`border_size` after start is identical with the old and the new `look.lua`; the hook restores all
+of them after a foreign `hl.config`. `tests/e2e/test_s2.py` checks them at start and after the
+accent change (`assert_paint`).
+
 ## P-17 · Material Symbols FILL/wght animated through `font.variableAxes` — **pass** (2026-11-09, nested)
 
 A probe shell (`qs -p`, inside the nested session) with 30 glyphs of the bundled

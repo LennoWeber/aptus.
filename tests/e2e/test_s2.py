@@ -173,6 +173,23 @@ def generated_border(p: paths_mod.Paths) -> str:
     return "ff" + hexpart if len(hexpart) == 6 else hexpart[6:] + hexpart[:6]
 
 
+def assert_paint(w: World) -> None:
+    """Every value hypr/paint.lua maps from generated.lua is what Hyprland has (R15: look.lua at
+    start and the builtin:hyprland hook share that mapping)."""
+    text = w.paths.generated_lua.read_text()
+
+    def gen(key: str) -> str:
+        return re.search(rf'^\s*{key} = "?([^",]+)"?,', text, re.M).group(1)
+
+    def opt(name: str) -> dict:
+        return w.nested.hyprctl("getoption", name, as_json=True) or {}
+    gap, edge = int(gen("window_gap")), int(gen("frame_edge"))
+    assert w.border() == generated_border(w.paths)
+    assert opt("general:gaps_out")["css"] == f"{gap} {gap + edge} {gap + edge} {gap + edge}"
+    assert opt("misc:background_color")["int"] == int("ff" + gen("ground")[4:10], 16)
+    assert opt("decoration:shadow:range")["int"] == 18           # look.lua's own values stay
+
+
 @pytest.fixture
 def world(tmp_path: Path) -> Iterator[World]:
     if not os.environ.get("APTUS_REAL_HYPRLAND_SIGNATURE"):
@@ -224,7 +241,7 @@ def test_logout(world: World) -> None:
     status = w.start()
     assert_leased(w, status, before)
     w.nested.start_shell(timeout=30)
-    assert w.border() == generated_border(w.paths)
+    assert_paint(w)                                         # look.lua → paint.lua
     lease = w.nested.state()["services"]["lease"]
     assert lease["mode"] == "lease" and lease["state"] == "held" and lease["notice"] == ""
     w.shot("s2-lease")
@@ -235,7 +252,7 @@ def test_logout(world: World) -> None:
     assert w.nested.msg("theme", "accent", other) == "ok"
     w.nested.wait_for(lambda: journal.load(w.paths).theme_generation >= 2, timeout=30)
     w.nested.wait_for(lambda: w.border() != old_border, timeout=10)
-    assert w.border() == generated_border(w.paths)          # the eval reached Hyprland
+    assert_paint(w)                                         # the eval reached Hyprland
     assert hypr.config_errors(sig=w.nested.signature) == []
     w.shot("s2-accent")
 

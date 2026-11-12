@@ -607,7 +607,9 @@ def test_hook_hyprland_eval(p, fake_hypr) -> None:
     seen = fake_hypr([b"ok"], sig="nested")
     (r,) = hooks.run_reloads(paths_mod.get(), {"hyprland": "builtin:hyprland"}, "nested")
     assert r.state == "applied"
-    assert seen[0].startswith(b"eval local g = dofile(") and b"active_border = g.accent" in seen[0]
+    assert seen[0] == f'eval require("aptus.paint")(dofile("{p.generated_lua}"))'.encode()
+    assert "active_border = gen.accent" in (p.hypr_repo / "paint.lua").read_text()   # R15
+    assert 'require("aptus.paint")(gen)' in (p.hypr_repo / "look.lua").read_text()
     (r,) = hooks.run_reloads(p, {"hyprland": "builtin:hyprland"},
                              os.environ["APTUS_REAL_HYPRLAND_SIGNATURE"])
     assert r.state == "failed" and "RefusedInstance" in r.detail

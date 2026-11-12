@@ -222,13 +222,10 @@ def builtin_nvim(paths: Paths, target_id: str, signature: str) -> HookResult:
 
 
 def hyprland_lua(paths: Paths) -> str:
-    """The Lua that re-reads generated.lua and sets what look.lua took from it."""
-    path = json.dumps(str(paths.generated_lua))
-    return (f"local g = dofile({path}); local side = g.frame_edge + g.window_gap; "
-            "hl.config({ general = { col = { active_border = g.accent, inactive_border = g.line }, "
-            "gaps_out = { top = g.window_gap, right = side, bottom = side, left = side } }, "
-            "decoration = { shadow = { color = g.shadow } }, "
-            "misc = { background_color = g.ground } })")
+    """The Lua that re-reads generated.lua and applies it as look.lua does, through hypr/paint.lua
+    (the one mapping of generated.lua onto Hyprland's options). `hyprctl eval` runs in the
+    config's Lua state, so `require` finds the module (probed in a nested Hyprland, R15)."""
+    return f'require("aptus.paint")(dofile({json.dumps(str(paths.generated_lua))}))'
 
 
 def builtin_hyprland(paths: Paths, target_id: str, signature: str) -> HookResult:

@@ -79,7 +79,7 @@ aptus/
 │  ├─ targets.toml              the target manifest (08 §4)
 │  └─ templates/<target>/…      one template per app target
 ├─ hypr/                        symlinked to ~/.config/hypr/aptus
-│  └─ init.lua env.lua look.lua motion.lua rules.lua binds.lua
+│  └─ init.lua env.lua look.lua paint.lua motion.lua rules.lua binds.lua
 ├─ systemd/aptus-recover.service
 ├─ install.sh
 └─ tests/  unit/  golden/  e2e/  perf/
