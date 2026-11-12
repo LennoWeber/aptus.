@@ -34,9 +34,8 @@ Scope {
     readonly property string name: modelData ? modelData.name : ""
     // This monitor's state in the SurfaceManager.
     readonly property MonitorState monitor: SurfaceManager.monitors[name] || null
-    // Whether this monitor's shell layer takes the keyboard (MonitorState.keyboard, or the notch
-    // while a toast's reply field is open, notch.md §6).
-    readonly property bool keyboard: (monitor ? monitor.keyboard : false) || notch.wantsKeyboard
+    // Whether this monitor's shell layer takes the keyboard (MonitorState.keyboard).
+    readonly property bool keyboard: monitor ? monitor.keyboard : false
 
     // Deck and Overview step back inside themselves before they close (the Esc ladder, 05 §3).
     Component.onCompleted: {

@@ -49,27 +49,16 @@ Item {
     // passes the Bar's own values).
     property bool quiet: false
     property bool narrow: false
-    // The toast's inline reply field is open and needs the keyboard (notch.md §6): MonitorShell
-    // grants it like a pinned card's.
-    readonly property bool wantsKeyboard: _currentContent !== null && _currentContent.replying === true
 
     // Found by the probe (phase 5):
     // This monitor's name.
     readonly property string _name: monitor ? monitor.name : ""
     // What the notch shows now (notch.js view): rest, hidden, toast, osd, event, card, result, mode.
-    // Only SurfaceManager's state goes in (a hover card is its `card:` notch too): _sync writes
-    // the Notch's own fields while this binding notifies, so it must not read them. The one
-    // exception is _replyEntry (not written by _sync): while a toast's reply field is open, an
-    // OSD does not cover that toast (notch.md §6; the OSD entry still expires on time).
-    readonly property var view: {
-        if (!monitor) return { kind: "rest", key: "", entry: null, activity: "", mode: "" };
-        const v = NJ.viewOf({ notch: monitor.notch, passiveTop: monitor.passiveTop });
-        if (v.kind !== "osd" || _replyEntry === 0) return v;
-        const e = monitor.passive.find(x => x.id === _replyEntry);
-        return e ? NJ.viewOf({ notch: monitor.notch, passiveTop: { kind: "toast", entry: e } }) : v;
-    }
-    // Found in phase 7: the passive entry whose toast has its reply field open (0 none).
-    property int _replyEntry: 0
+    // Only SurfaceManager's state goes in (a hover card is its `card:` notch too; a toast with its
+    // reply field open stays above an OSD there): _sync writes the Notch's own fields while this
+    // binding notifies, so it must not read them.
+    readonly property var view: monitor ? NJ.viewOf({ notch: monitor.notch, passiveTop: monitor.passiveTop })
+                                        : { kind: "rest", key: "", entry: null, activity: "", mode: "" }
     // The layers on screen: the current one and those still fading out (notch.js layer records).
     property var _layers: []
     property int _layerSerial: 0
@@ -133,8 +122,8 @@ Item {
     onViewChanged: _sync()
     on_BulgeHoveredChanged: _sync()
     // Found in review: a pinned card is what shows (not covered by an OSD, toast or event): only
-    // then the outside catcher and the whole-monitor mask are up (rules.js keyboard agrees).
-    readonly property bool _pinnedShown: view.kind === "card" && monitor !== null && !!monitor.notchArgs.pinned
+    // then the outside catcher and the whole-monitor mask are up (rules.js pinnedShown).
+    readonly property bool _pinnedShown: monitor !== null && monitor.pinnedShown
     // The pointer is over the bulge or a compact slot: a hover card stays; it collapses
     // activityHover.leave after the pointer left both.
     readonly property bool _pointerIn: _bulgeHovered || leftSlot.hovered || rightSlot.hovered
@@ -267,7 +256,7 @@ Item {
             if (c[shown.id] && cp[shown.id] !== shown.payload) delete c[shown.id];     // updated in place
             cp[shown.id] = shown.payload;
             let cd = c[shown.id] || NJ.countdownStart(shown.payload ? Number(shown.payload.timeout) || 0 : 0, now);
-            const held = _bulgeHovered || wantsKeyboard;
+            const held = _bulgeHovered || !!shown.replying;
             cd = held ? NJ.countdownPause(cd, now) : NJ.countdownResume(cd, now, Tokens.surfaces.toast.resumeMinMs);
             c[shown.id] = cd;
             left = held ? Infinity : NJ.countdownLeft(cd, now);
@@ -484,7 +473,7 @@ Item {
                 pinned: kind === "card" && root.monitor !== null && !!root.monitor.notchArgs.pinned
                 onGoneChanged: if (gone) {
                     if (kind === "mode") root._modeLeft(mode);
-                    if (root._replyEntry === entryId) root._replyEntry = 0;
+                    if (layer._e && layer._e.replying) SurfaceManager.setReplying(entryId, false, root._name);
                     root._layerGone(uid);
                 }
                 onShownChanged: root._pickCurrent()
@@ -512,8 +501,7 @@ Item {
                         else if (layer._e) root._dismissEntry(layer._e);
                     }
                     function onReplyingChanged(): void {
-                        if (layer.content.replying) root._replyEntry = layer.entryId;
-                        else if (root._replyEntry === layer.entryId) root._replyEntry = 0;
+                        if (layer._e) SurfaceManager.setReplying(layer.entryId, layer.content.replying, root._name);
                         root._countdownTick();
                     }
                 }

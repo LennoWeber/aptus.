@@ -130,7 +130,7 @@ with no player at all shows the event "Nothing to play".
 | Click a button | that action; dismiss unless the notification is `resident` |
 | Click ✕, middle click | dismiss (it stays in Today as read) |
 | Right click | menu: Mute *App* for 1 hour, Turn on Do not disturb, Notification settings |
-| Reply (inline-reply action) | a field opens in the button row and takes the keyboard; Enter sends, Esc returns; countdown stopped; while it is open an OSD does not cover the toast (the level still changes) |
+| Reply (inline-reply action) | a field opens in the button row and takes the keyboard; Enter sends, Esc returns; countdown stopped; while it is open an OSD does not cover the toast (the level still changes). The open field is a `replying` flag on the toast's passive entry (07 §5), so arbitration and the keyboard follow it |
 
 ## 7. Events
 

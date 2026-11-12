@@ -97,6 +97,11 @@ Singleton {
     function update(id: int, payload: var, monitor: var): void {
         _run("update", monitor ? String(monitor) : "", id, payload);
     }
+    // A toast's inline reply field opened or closed (notch.md §6): while open, the toast stays
+    // above an OSD and the monitor takes the keyboard (rules.js setReplying).
+    function setReplying(id: int, on: bool, monitor: var): void {
+        _run("setReplying", monitor ? String(monitor) : "", id, on);
+    }
     // Remove a passive entry (toast timed out or dismissed, OSD faded); `passiveGone` follows.
     function dismiss(id: int, monitor: var): void {
         _run("dismiss", monitor ? String(monitor) : "", id);
@@ -107,7 +112,8 @@ Singleton {
         // passive payloads stay out: they may hold notification bodies (07 §11)
         for (const n in s.monitors) {
             const m = s.monitors[n];
-            m.passive = m.passive.map(e => ({ id: e.id, kind: e.kind, key: e.key, priority: e.priority, born: e.born }));
+            m.passive = m.passive.map(e => ({ id: e.id, kind: e.kind, key: e.key, priority: e.priority, born: e.born,
+                                              replying: !!e.replying }));
             m.passiveTop = { kind: m.passiveTop.kind, entry: m.passiveTop.entry && m.passiveTop.entry.id !== undefined ? m.passiveTop.entry.id : m.passiveTop.entry };
             m.menu = m.menu ? { owner: m.menu.owner || "" } : null;
         }

@@ -9,8 +9,9 @@
 //   pending: [req], previousWindow, currentWindow, settingsOpen, settingsArgs, settingsFocused,
 //   passiveSerial, limits: { toastStale, eventMaxAge, pinnedCardTimeout }, overFullscreen }
 // A request: { op: "open"|"close"|"toggle", surface, args, monitor }
-// A passive entry: { id, kind: "osd"|"toast"|"event", payload, priority, key, born, waited } —
-//   waited: it queued behind a blocking surface (toastStale counts once it unblocks).
+// A passive entry: { id, kind: "osd"|"toast"|"event", payload, priority, key, born, waited,
+//   replying } — waited: it queued behind a blocking surface (toastStale counts once it
+//   unblocks); replying: a toast's inline reply field is open (setReplying).
 //   A "critical" toast has priority ≥ 2 (freedesktop urgency); Notifications, Timers and Battery
 //   post critical toasts with priority 2.
 // Every operation returns { monitors: {name: state}, global, effects: [effect] } without
@@ -71,6 +72,7 @@ function checkState(monitors, global) {
             invariant(!ids[e.id], names[i] + ": passive id " + e.id + " twice")
             ids[e.id] = true
             invariant(e.id <= global.passiveSerial, names[i] + ": passive id beyond passiveSerial")
+            invariant(!e.replying || e.kind === "toast", names[i] + ": a replying " + e.kind)
             if (e.key) {
                 // a key coalesces entries of one kind (post() replaces in place): unique per kind
                 invariant(!keys[e.kind + ":" + e.key], names[i] + ": passive " + e.kind + " key " + e.key + " twice")
@@ -102,6 +104,9 @@ function isCard(s) {
 }
 function isInteractiveMode(n) { return n !== "rest" && NOTCH_MODES.indexOf(n) >= 0 && PASSIVE_MODES.indexOf(n) < 0 }
 function pinnedCard(m) { return isCard(m.notch) && !!(m.notchArgs && m.notchArgs.pinned) }
+// A pinned card is what shows (not covered by an OSD, toast or event): the Notch's outside
+// catcher and whole-monitor mask are up only then.
+function pinnedShown(m) { return pinnedCard(m) && !!m.passiveTop && m.passiveTop.kind === "card" }
 // Toasts queue, OSD and events are dropped (notch.md §9): an interactive notch mode, Overview, Capture.
 function blocksPassive(m) { return isInteractiveMode(m.notch) || m.overview || m.capture !== null }
 function copyMonitor(m) {
@@ -297,9 +302,13 @@ function newGlobal(limits) {
 function interactive(m) {
     return isInteractiveMode(m.notch) || m.deck || m.overview || m.capture !== null || m.menu !== null
 }
-// Whether the shell layer takes the keyboard: interactive, or a card opened by click.
-// A pinned card only while it shows: under an OSD, toast or event the keyboard stays with the app.
-function keyboard(m) { return interactive(m) || (pinnedCard(m) && !!m.passiveTop && m.passiveTop.kind === "card") }
+// Whether the shell layer takes the keyboard: interactive, a card opened by click, or a toast
+// with its reply field open (notch.md §6). A pinned card only while it shows: under an OSD, toast
+// or event the keyboard stays with the app.
+function keyboard(m) {
+    return interactive(m) || pinnedShown(m)
+        || (!!m.passiveTop && m.passiveTop.kind === "toast" && !!m.passiveTop.entry.replying)
+}
 // The surface Esc acts on first: "menu", a notch mode, "deck", "overview", "capture" or "".
 function top(m) {
     if (m.menu) return "menu"
@@ -359,7 +368,8 @@ function post(monitors, global, kind, payload, priority, monitor, key, now) {
         if (!id) {
             g.passiveSerial = g.passiveSerial + 1
             id = g.passiveSerial
-            m.passive.push({ id: id, kind: kind, key: key || "", payload: payload, priority: priority || 0, born: now, waited: false })
+            m.passive.push({ id: id, kind: kind, key: key || "", payload: payload, priority: priority || 0, born: now,
+                             waited: false, replying: false })
         }
     }
     var r = finish(c, now)
@@ -372,6 +382,13 @@ function update(monitors, global, monitor, id, payload, now) {
     if (f) f.m.passive[f.i].payload = payload
     return finish(c, now)
 }
+// A toast's inline reply field opened or closed (notch.md §6): while it is open the toast stays
+// above an OSD and the shell layer takes the keyboard. Other kinds are left alone.
+function setReplying(monitors, global, monitor, id, on, now) {
+    var c = begin(monitors, global), f = findEntry(c, monitor, id)
+    if (f && f.m.passive[f.i].kind === "toast") f.m.passive[f.i].replying = !!on
+    return finish(c, now)
+}
 function dismiss(monitors, global, monitor, id, now) {
     var c = begin(monitors, global), f = findEntry(c, monitor, id)
     if (f) goneEffect(c, f.m, f.m.passive.splice(f.i, 1)[0])
@@ -380,7 +397,8 @@ function dismiss(monitors, global, monitor, id, now) {
 // notch.md §9 → { kind: "osd" | "toast" | "event" | "card" | "rest" | "hidden", entry }.
 // opts: { overFullscreen: "critical" | "none" | "all" (notch.overFullscreen), limits }.
 // Order: OSD (newest; also while the Deck is open, 05 §2) > toast (highest priority, then
-// FIFO) > event > card > rest. Under an interactive mode: OSD suppressed, events dropped, toasts
+// FIFO) > event > card > rest; a toast whose reply field is open is not covered by an OSD (the
+// OSD entry still expires on time). Under an interactive mode: OSD suppressed, events dropped, toasts
 // queued (rest is reported). Under a fullscreen window: "hidden" except OSD and what
 // overFullscreen allows (critical: priority ≥ 2). The recording dot is the Notch's own drawing.
 function arbitrate(m, now, opts) {
@@ -392,15 +410,16 @@ function arbitrate(m, now, opts) {
         if (!hiding) return true
         return e.kind === "osd" || (opts.overFullscreen === "critical" && e.kind === "toast" && e.priority >= 2)
     }
-    var osd = null, toast = null, ev = null
+    var osd = null, toast = null, ev = null, replying = null
     for (var i = 0; i < list.length; i++) {
         var e = list[i]
         if (!allowed(e)) continue
         if (e.kind === "osd" && (!osd || e.born >= osd.born)) osd = e      // the newest OSD
         else if (e.kind === "toast" && (!toast || e.priority > toast.priority)) toast = e   // FIFO within a priority
         else if (e.kind === "event" && !ev) ev = e
+        if (e.replying && !replying) replying = e
     }
-    if (osd) return { kind: "osd", entry: osd }
+    if (osd) return replying ? { kind: "toast", entry: replying } : { kind: "osd", entry: osd }
     if (toast) return { kind: "toast", entry: toast }
     if (ev) return { kind: "event", entry: ev }
     if (hiding) return { kind: "hidden", entry: null }

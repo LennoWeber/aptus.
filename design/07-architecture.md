@@ -153,7 +153,7 @@ closes anything.
 MonitorState {
   notch:     "rest" | "spotlight" | "switcher" | "today" | "session" | "polkit"
              | "gallery" | "jot" | "keys" | "keysPeek" | "focusPicker" | "card:<activity>"
-  passive:   queue of { id, kind: toast|osd|event, payload, priority, key, born, shown, waited }
+  passive:   queue of { id, kind: toast|osd|event, payload, priority, key, born, waited, replying }
   deck:      { open: bool, pages: [ "main", "wifi", … ] }
   overview:  bool
   menu:      null | { anchorX, anchorY, model, owner, onTriggered(row) }   (MenuHost closes the
@@ -193,6 +193,7 @@ Transition rules (enforced here, not in surfaces):
 | open anything except polkit | polkit open | queued until polkit closes |
 | post a toast | an interactive notch mode, Overview or Capture is open | queued; shown on close if younger than 30 s, else Today only |
 | post an OSD | anything | OSD wins over toasts (toast pauses its timer and resumes) |
+| post an OSD | a toast's reply field is open (`setReplying`) | the toast stays; the OSD entry is queued and expires on time |
 | monitor removed | surfaces open on it | closed without animation |
 | monitor removed | the polkit prompt is on it | the prompt moves to the active monitor without animation and the queue stays; with no monitor left the request is cancelled and the queue is dropped |
 | monitor added | Capture is open | the selection is cancelled (as `Esc`): the new monitor has no frozen frame |
@@ -201,7 +202,8 @@ Transition rules (enforced here, not in surfaces):
 Cards and the Keys peek are notch states but not *interactive* surfaces: they do not queue toasts
 or catch outside clicks, and a pinned card yields to OSD, toasts and events (arbitration of
 [notch.md](surfaces/notch.md) §9). A card opened by click takes the keyboard (for `Tab`, `←/→` and
-its buttons); one opened by hover does not.
+its buttons); one opened by hover does not. A toast whose inline reply field is open
+(`setReplying(id, on)`, a flag on its passive entry) takes the keyboard while it shows.
 
 Keyboard: when an interactive surface opens, `aptus-shell` on that monitor switches to
 `keyboardFocus: Exclusive`; on close back to `None`, and Hyprland returns focus to the window that

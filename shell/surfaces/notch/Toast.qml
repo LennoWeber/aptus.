@@ -45,7 +45,7 @@ Item {
         replyField.forceFocus();
     }
     // Close the reply field (Esc in the field returns to the toast; the field has the keyboard
-    // through Notch.wantsKeyboard, not the shell's Esc ladder).
+    // through its entry's `replying` flag, SurfaceManager.setReplying, not the shell's Esc ladder).
     function closeReply(): bool {
         if (!replying) return false;
         replying = false;
