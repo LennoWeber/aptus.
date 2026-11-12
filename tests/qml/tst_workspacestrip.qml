@@ -62,18 +62,18 @@ TestCase {
         verify(s);
         const before = pillsOf(s);
         verify(before[1] && before[2], "two pills");
-        compare(before[2]._lastNudge, 0);
+        compare(before[2]._nudge._last, 0);
         // a rebuild with fresh records (as Hypr.stripFor hands them), workspace 2 now urgent
         s.strip = strip([rec(1, { active: true }), rec(2, { urgent: true })]);
         const after = pillsOf(s);
         verify(after[1] === before[1] && after[2] === before[2], "the same pills after a rebuild");
-        verify(after[2]._lastNudge > 0, "the urgent edge nudges the pill");
-        compare(after[1]._lastNudge, 0);
+        verify(after[2]._nudge._last > 0, "the urgent edge nudges the pill");
+        compare(after[1]._nudge._last, 0);
         // another rebuild while still urgent: no second nudge
-        const at = after[2]._lastNudge;
+        const at = after[2]._nudge._last;
         s.strip = strip([rec(1, { active: true, windows: 2 }), rec(2, { urgent: true })]);
         compare(pillsOf(s)[2], before[2]);
-        compare(before[2]._lastNudge, at);
+        compare(before[2]._nudge._last, at);
         // a new workspace adds a pill, the others stay; one that leaves takes only its own
         s.strip = strip([rec(2, { urgent: true }), rec(3, {})]);
         const third = pillsOf(s);

@@ -15,6 +15,7 @@ Item {
     Component { id: hostComp; MenuHost {} }
     Component { id: modeComp; NotchMode {} }
     Component { id: slotComp; DrawerSlot { drawer: Component { Drawer { bulge.width: 120; function back(): bool { return true; } } } } }
+    Component { id: nudgeComp; Nudge {} }
 
     Label { id: label; text: "Hello"; type: "title" }
     Glyph { id: glyph; name: "wifi"; on: true }
@@ -379,6 +380,23 @@ Item {
             m.active = false;
             tryCompare(m, "opacity", 0, 1000);
             m.destroy();
+        }
+        function test_nudge() {
+            // 04 §M-36: one pulse to nudge.scale and back, at most once per minInterval
+            const n = nudgeComp.createObject(top);
+            compare(n.scale, 1);
+            n.fire();
+            const at = n._last;
+            verify(at > 0, "the first fire runs");
+            tryVerify(() => n.scale > 1, 1000, "it grows");
+            tryCompare(n, "scale", 1, 1000, "and settles back");
+            n.fire();
+            compare(n._last, at, "a second fire within minInterval does not run");
+            n.minInterval = 0;
+            wait(5);
+            n.fire();
+            verify(n._last > at, "with minInterval 0 every fire runs");
+            n.destroy();
         }
         function test_drawer_slot() {
             // 04 §8: the drawer loads on open, stays through its exit fade, then unloads

@@ -61,8 +61,8 @@ Item {
     // The trailing edge's target (set when trailTimer fires).
     property real _trailTo: 0
     property bool _trailIsLeft: false
-    // Found in review: the wheel's carried delta (bar.js wheelSteps: small deltas add up).
-    property real _wheelCarry: 0
+    // Found in review: the wheel's carried delta (small deltas add up).
+    readonly property WheelStepper _wheelStepper: WheelStepper {}
 
     // A pill's actions (bar.md §3): go there; move the focused window there (stay); its menu at a
     // point in strip coordinates; the wheel steps to the previous / next used workspace.
@@ -155,9 +155,8 @@ Item {
         anchors.fill: parent
         onClicked: SurfaceManager.open("overview", {}, root.monitorName)
         onWheel: w => {
-            const r = B.wheelSteps(root._wheelCarry, w.angleDelta.y);
-            root._wheelCarry = r.carry;
-            if (r.steps !== 0) root._wheel(r.steps > 0 ? -1 : 1);       // one per event: Hyprland's active workspace lags
+            const steps = root._wheelStepper.feed(w.angleDelta.y);
+            if (steps !== 0) root._wheel(steps > 0 ? -1 : 1);       // one per event: Hyprland's active workspace lags
         }
     }
     Row {

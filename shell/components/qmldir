@@ -40,4 +40,5 @@ Swatch 1.0 Swatch.qml
 StandardAnimation 1.0 StandardAnimation.qml
 StandardColorAnimation 1.0 StandardColorAnimation.qml
 SnappySpring 1.0 SnappySpring.qml
+Nudge 1.0 Nudge.qml
 singleton ComponentShared 1.0 ComponentShared.qml

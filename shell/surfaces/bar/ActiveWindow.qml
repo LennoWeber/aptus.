@@ -35,8 +35,8 @@ Item {
     property string _oldIcon: ""
     property string _oldAppName: ""
     property real _iconSwap: 1
-    // Found in review: the wheel's carried delta (bar.js wheelSteps: small deltas add up).
-    property real _wheelCarry: 0
+    // Found in review: the wheel's carried delta (small deltas add up).
+    readonly property WheelStepper _wheel: WheelStepper {}
 
     // Found by the probe (phase 5):
     // The title and icon the label should show (the shown ones follow through the title throttle
@@ -196,9 +196,8 @@ Item {
             else root._menu();
         }
         onWheel: w => {
-            const r = B.wheelSteps(root._wheelCarry, w.angleDelta.y);
-            root._wheelCarry = r.carry;
-            if (r.steps !== 0) Hypr.cycleFocus(r.steps > 0 ? -1 : 1);      // one per event: the focus lags
+            const steps = root._wheel.feed(w.angleDelta.y);
+            if (steps !== 0) Hypr.cycleFocus(steps > 0 ? -1 : 1);      // one per event: the focus lags
         }
     }
     Tooltip {

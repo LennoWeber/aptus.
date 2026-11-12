@@ -4,7 +4,6 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import qs.core
 import qs.components
-import "js/bar.js" as B
 
 Item {
     id: root
@@ -24,19 +23,13 @@ Item {
     // M-04 progress: width 0 → 1, then the glyph 0 → 1.
     property real _open: 0
     property real _glyph: 0
-    // M-36: the nudge's scale and when it last ran (ms; the battery item at critical, 04 §M-36).
-    property real _nudge: 1
-    property real _lastNudge: 0
-    // Found in review: the wheel's carried delta (bar.js wheelSteps: small deltas add up).
-    property real _wheelCarry: 0
+    // M-36: the nudge (the battery item at critical, 04 §M-36; at most once per nudge.minInterval).
+    readonly property Nudge _nudge: Nudge {}
+    // Found in review: the wheel's carried delta (small deltas add up).
+    readonly property WheelStepper _wheel: WheelStepper {}
 
     // One nudge (M-36), unless one ran within nudge.minInterval.
-    function nudge(): void {
-        const now = Date.now();
-        if (Motion.reduced || (_lastNudge > 0 && now - _lastNudge < Motion.catalogueValue("nudge.minInterval"))) return;
-        _lastNudge = now;
-        nudgeAnim.restart();
-    }
+    function nudge(): void { _nudge.fire(); }
 
     // Found by the probe (phase 5):
     // The item's width with its label (the cluster's collapse measures it before hiding labels).
@@ -72,7 +65,7 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         spacing: Tokens.s1
         opacity: root._glyph
-        scale: root._nudge
+        scale: root._nudge.scale
 
         Item {
             width: Tokens.surfaces.bar.statusIconSize
@@ -124,19 +117,13 @@ Item {
             else root.clicked();
         }
         onWheel: w => {
-            const r = B.wheelSteps(root._wheelCarry, w.angleDelta.y);
-            root._wheelCarry = r.carry;
-            for (let i = 0; i < Math.abs(r.steps); i++) root.wheelStep(r.steps > 0 ? 1 : -1);
+            const steps = root._wheel.feed(w.angleDelta.y);
+            for (let i = 0; i < Math.abs(steps); i++) root.wheelStep(steps > 0 ? 1 : -1);
         }
     }
     Tooltip {
         target: root
         text: root.item.tooltip || ""
         active: root.hovered
-    }
-    SequentialAnimation {
-        id: nudgeAnim
-        StandardAnimation { target: root; property: "_nudge"; to: Motion.catalogueValue("nudge.scale"); duration: Motion.catalogueValue("nudge.duration") / 2 }
-        StandardAnimation { target: root; property: "_nudge"; to: 1; duration: Motion.catalogueValue("nudge.duration") / 2 }
     }
 }

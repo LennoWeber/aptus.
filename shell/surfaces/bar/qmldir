@@ -7,3 +7,4 @@ Tray 1.0 Tray.qml
 TrayItem 1.0 TrayItem.qml
 StatusCluster 1.0 StatusCluster.qml
 StatusItem 1.0 StatusItem.qml
+WheelStepper 1.0 WheelStepper.qml
