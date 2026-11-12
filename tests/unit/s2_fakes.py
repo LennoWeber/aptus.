@@ -65,6 +65,11 @@ def dconf(home: Path, initial: dict[str, str] | None = None) -> None:
             state[key] = args[2]
         elif cmd == "reset":
             state.pop(key, None)
+        elif cmd == "dump":                    # the keys directly in `key` (a dir), as dconf does
+            names = {k[len(key):]: v for k, v in state.items()
+                     if k.startswith(key) and "/" not in k[len(key):]}
+            if names:
+                out.append("[/]\\n" + "".join(f"{n}={v}\\n" for n, v in sorted(names.items())))
         else:
             code = 1
         """)

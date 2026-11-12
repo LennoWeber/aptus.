@@ -565,6 +565,38 @@ def test_dconf_restore_resets_an_unset_key(p, test_home, hypr) -> None:
                 and c[2] == KEY + "gtk-theme"]
 
 
+def test_take_reads_the_dconf_befores_with_one_dump(p, test_home, hypr) -> None:
+    """Wave-2 simplify E2: the befores of every dconf slot come from one `dconf dump`; when the
+    dump fails they are read key by key, with the same befores."""
+    setup_world(p, test_home)
+    assert take(p, hypr).held
+    calls = fakes.calls(test_home, "dconf")
+    first_write = next(i for i, c in enumerate(calls) if c[1] == "write")
+    assert [c[1] for c in calls[:first_write]] == ["dump"]
+    by_dump = {s.id: s.before for s in journal.load(p).slots if s.kind == SlotKind.DCONF}
+    assert by_dump["dconf.color-scheme"] == {"set": True, "value": "'prefer-light'"}
+    assert by_dump["dconf.accent-color"] == {"set": False, "value": None}
+    ops.release(p)
+    real = test_home / ".aptus-test/bin/dconf"
+    text = real.read_text().replace('elif cmd == "dump":', 'elif cmd == "dump" and False:')
+    real.write_text(text)                                         # dump now fails (code 1)
+    (test_home / ".aptus-test/calls.jsonl").unlink()
+    assert take(p, hypr).held
+    assert {s.id: s.before for s in journal.load(p).slots if s.kind == SlotKind.DCONF} == by_dump
+    assert sum(c[1] == "read" for c in fakes.calls(test_home, "dconf")) > len(by_dump)
+
+
+def test_dconf_read_dir_takes_only_the_fixed_keys_of_the_directory(p, test_home) -> None:
+    fakes.tool(test_home, "dconf", """\
+        out.append("[/]\\ncolor-scheme='prefer-dark'\\ncursor-size=24\\nenable-animations=true\\n"
+                   "font-name='Noto Sans  10'\\n\\n[sub]\\nicon-theme='x'\\n")
+        """)
+    assert dconf.read_dir(p) == {"color-scheme": "'prefer-dark'", "cursor-size": "24",
+                                 "font-name": "'Noto Sans  10'"}
+    fakes.tool(test_home, "dconf", "code = 1\n")
+    assert dconf.read_dir(p) is None
+
+
 def _random_ini(rng: random.Random) -> str:
     names = ["General", "KDE", "Icons", "Colors:View", "Colors:Window", "ColorEffects:Disabled",
              "WM", "Colors:Header][Inactive", "Other"]

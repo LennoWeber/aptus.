@@ -16,6 +16,7 @@ from pathlib import Path
 from .. import atomic, hypr
 from ..paths import Paths, require_safe_home
 from . import invariants, journal, kinds, liveness, locks, preflight, system
+from .kinds import dconf
 from .journal import Journal, JournalError, Owner, SlotKind, SlotRecord, SlotStatus, State
 from .preflight import Preflight
 from .slots import SlotSpec
@@ -119,12 +120,15 @@ def _record(spec: SlotSpec) -> SlotRecord:
                       write=spec.kind != SlotKind.DCONF or spec.value is not None)
 
 
-def _prepare(paths: Paths, spec: SlotSpec, report: TakeReport) -> SlotRecord | None:
-    """Step 4 for one slot: `before` (and its slots/ copy), the planned `after`; None = skipped."""
+def _prepare(paths: Paths, spec: SlotSpec, report: TakeReport,
+             dconf_values: dict[str, str] | None) -> SlotRecord | None:
+    """Step 4 for one slot: `before` (and its slots/ copy), the planned `after`; None = skipped.
+    A dconf slot reads `dconf_values` (one dconf dump for all keys) when the dump worked."""
     rec = _record(spec)
     mod = kinds.module(spec.kind)
     try:
-        snap = mod.read(paths, rec)
+        snap = dconf.read(paths, rec, dconf_values) if spec.kind == SlotKind.DCONF \
+            else mod.read(paths, rec)
     except Exception as e:                                  # unreadable, dconf missing, …
         _log.warning("slot %s skipped: %s", spec.id, e)
         report.skipped.append(spec.id)
@@ -173,8 +177,11 @@ def take(paths: Paths, env: Mapping[str, str], specs: Sequence[SlotSpec], who: O
         report.preflight = preflight.check(paths, env)
         if not report.preflight.ok:
             return report
+        dconf_values = dconf.read_dir(paths) if any(s.kind == SlotKind.DCONF for s in specs) \
+            else None
         try:
-            records = [(r, spec) for spec in specs if (r := _prepare(paths, spec, report))]
+            records = [(r, spec) for spec in specs
+                       if (r := _prepare(paths, spec, report, dconf_values))]
         except Exception as e:                              # writing slots/<id>.before failed
             report.error = f"recording before failed: {e}"
             return report

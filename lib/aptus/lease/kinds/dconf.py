@@ -1,7 +1,10 @@
-"""Kind `dconf` (02 §5.5): `dconf read KEY` (empty = not set), `dconf write KEY VALUE`, restore with
-`dconf write KEY BEFORE` or `dconf reset KEY`. Only the fixed key set of 02 §5.5 is ever touched;
+"""Kind `dconf` (02 §5.5): `dconf read KEY` (empty = not set; at take one `dconf dump` of the
+directory for every key), `dconf write KEY VALUE`, restore with `dconf write KEY BEFORE` or
+`dconf reset KEY`. Only the fixed key set of 02 §5.5 is ever touched;
 `gtk-theme` is recorded and never written. dconf runs through lease.system (a fake under test)."""
 from __future__ import annotations
+
+from collections.abc import Mapping
 
 from ...paths import Paths
 from .. import system
@@ -38,6 +41,25 @@ def read_key(paths: Paths, key: str) -> str | None:
     return r.stdout.strip() or None
 
 
+def read_dir(paths: Paths) -> dict[str, str] | None:
+    """One `dconf dump KEY_DIR`: key name → GVariant text for the keys of KEYS that are set (the
+    same text `dconf read` prints: both print the value with g_variant_print); None when dconf
+    failed, and the caller reads key by key."""
+    r = system.run(paths, ["dconf", "dump", KEY_DIR])
+    if not r.ok:
+        return None
+    values: dict[str, str] = {}
+    group = None
+    for line in r.stdout.splitlines():
+        if line.startswith("[") and line.endswith("]"):
+            group = line[1:-1]                  # "/" is KEY_DIR itself, others are below it
+        elif group == "/" and "=" in line:
+            name, value = line.split("=", 1)
+            if name in KEYS and value.strip():
+                values[name] = value.strip()
+    return values
+
+
 def _change(paths: Paths, argv: list[str]) -> None:
     r = system.run(paths, argv)
     if not r.ok:
@@ -54,9 +76,13 @@ def reset_key(paths: Paths, key: str) -> None:
     _change(paths, ["dconf", "reset", key])
 
 
-def read(paths: Paths, rec: SlotRecord) -> Snapshot:
-    """{set, value}."""
-    value = read_key(paths, rec.key)
+def read(paths: Paths, rec: SlotRecord, values: Mapping[str, str] | None = None) -> Snapshot:
+    """{set, value}: from `values` (read_dir's result) when given, else `dconf read KEY`."""
+    if values is None:
+        value = read_key(paths, rec.key)
+    else:
+        check_key(rec.key, writing=False)
+        value = values.get(rec.key[len(KEY_DIR):])
     return Snapshot({"set": value is not None, "value": value})
 
 
