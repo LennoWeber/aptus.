@@ -7,11 +7,14 @@ All in the temporary HOME: systemd-run, systemctl, loginctl and dconf are fakes,
 process named Hyprland with a socket that answers "ok"."""
 from __future__ import annotations
 
+import dataclasses
 import json
 import os
 import signal
 import subprocess
 import sys
+import threading
+import time
 from pathlib import Path
 
 import pytest
@@ -252,20 +255,75 @@ def test_lease_cli_refuses_the_real_home(tmp_path) -> None:
 # --- the phase-7 review fixes ------------------------------------------------------------------
 
 def test_a_guard_that_never_reports_ok_means_no_lease(p, world, monkeypatch) -> None:
-    """systemd-run succeeds and the unit is active, but the guard never watches (it died in its
-    imports, say): no lease."""
+    """The guard's process runs but never watches (it hangs in its imports, say): no READY=1, so
+    systemd-run fails after TimeoutStartSec and systemd stops it; no lease."""
     h, snapshot = world
     before = snapshot()
-    fakes.tool(p.home, "systemd-run", """\
-        import subprocess
-        proc = subprocess.Popen(["sleep", "30"], start_new_session=True)
-        state.setdefault("units", {})["aptus-guard"] = proc.pid
-        """)
+    real_run = session.system.run
+
+    def run(paths, argv, **kw):
+        if argv[0] == "systemd-run":                       # the unit runs `sleep 30` instead
+            argv = [a for a in argv if a.startswith("--") or a == "systemd-run"] + ["sleep", "30"]
+        return real_run(paths, argv, **kw)
+    monkeypatch.setattr(session.system, "run", run)
     monkeypatch.setattr(session.guard, "READY_TIMEOUT", 0.5)
     report = session.start(p, h.env)
     assert report.mode is session.Mode.SCOPE_ONLY and not report.guard
     assert report.reasons == ["the guard did not start"]
     assert snapshot() == before
+    assert not fakes.alive(fakes.unit_pid(p.home))         # stopped after the start timeout
+
+
+def test_the_guard_watches_when_systemd_run_returns(p, world) -> None:
+    """Wave-2 simplify A11/E4: Type=notify, so no wait after systemd-run: guard.state is `ok`
+    when it returns. A guard that exits before READY=1 (its Hyprland is gone) fails the start at
+    once, not after READY_TIMEOUT."""
+    h, _ = world
+    assert session.start_guard(p, h.env)
+    assert p.guard_state.read_text() == "ok\n\n"
+    (call,) = fakes.calls(p.home, "systemd-run")
+    assert "--property=Type=notify" in call and "--property=TimeoutStartSec=5000ms" in call
+    assert session.stop(p) == 0
+    gone = subprocess.Popen(["true"])
+    gone.wait()
+    real_owner = session.ops.owner
+    t = time.monotonic()
+    with pytest.MonkeyPatch.context() as m:
+        m.setattr(session.ops, "owner", lambda *a: dataclasses.replace(real_owner(*a),
+                                                                       hyprland_pid=gone.pid))
+        assert not session.start_guard(p, h.env)
+    assert time.monotonic() - t < session.guard.READY_TIMEOUT
+    assert p.guard_state.read_text() == "released\n\n"
+
+
+def test_the_guard_starts_alongside_recover_and_render(p, world, monkeypatch) -> None:
+    """E4: start_guard runs in a thread from the top of start() (recover waits here until it
+    began: a guard started after recover would time this out); take comes only after it."""
+    h, _ = world
+    began, done = threading.Event(), []
+    real_guard, real_recover, real_lease = session.start_guard, session.recover_step, session.lease_step
+
+    def start_guard(*a):
+        began.set()
+        try:
+            return real_guard(*a)
+        finally:
+            done.append("guard")
+
+    def recover_step(*a):
+        assert began.wait(10), "the guard was not started before recover"
+        return real_recover(*a)
+
+    def lease_step(*a):
+        done.append("lease")
+        return real_lease(*a)
+    monkeypatch.setattr(session, "start_guard", start_guard)
+    monkeypatch.setattr(session, "recover_step", recover_step)
+    monkeypatch.setattr(session, "lease_step", lease_step)
+    report = session.start(p, h.env)
+    assert report.mode is session.Mode.LEASE and report.guard
+    assert done == ["guard", "lease"]
+    assert session.stop(p) == 0
 
 
 def test_an_import_after_the_guard_released_is_taken_back(p, world) -> None:

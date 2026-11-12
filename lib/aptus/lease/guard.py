@@ -1,6 +1,6 @@
-"""aptus-guard <hyprland-pid> <signature> (02 §7): a transient user service outside Hyprland's
-process tree, started by aptus-session *before* the lease is taken (no lease without a guard).
-Waits on Hyprland's pidfd (readable when Hyprland exits) or SIGTERM from the user manager
+"""aptus-guard <hyprland-pid> <signature> (02 §7): a transient user service (Type=notify) outside
+Hyprland's process tree, started by aptus-session *before* the lease is taken (no lease without a
+guard: READY=1 goes out once it watches, and systemd-run returns only then). Waits on Hyprland's pidfd (readable when Hyprland exits) or SIGTERM from the user manager
 (logout, shutdown, `aptus-session stop`), then unsets the variables the session imported,
 releases the lease if this session owns it (retried when it raises), runs the release hooks and
 exits 0; units bound to it (BindsTo) stop with it. While waiting it also
@@ -16,6 +16,7 @@ import logging
 import os
 import select
 import signal
+import socket
 import sys
 import time
 from collections.abc import Callable, Sequence
@@ -23,7 +24,7 @@ from enum import Enum
 from typing import Any
 
 from .. import atomic, hypr, log
-from ..paths import Paths
+from ..paths import Paths, inside
 from ..theme import hooks, resolve
 from . import invariants, journal, ops, preflight, system
 from .ops import ReleaseReport
@@ -56,7 +57,7 @@ def write_state(paths: Paths, state: GuardState, detail: str = "") -> None:
     atomic.write_text(paths.guard_state, f"{state.value}\n{detail}\n", 0o644)
 
 
-READY_TIMEOUT = 5.0            # seconds aptus-session waits for a new guard's "ok"
+READY_TIMEOUT = 5.0            # seconds systemd waits for a new guard's READY=1 (TimeoutStartSec)
 
 
 def active(paths: Paths) -> bool:
@@ -65,14 +66,23 @@ def active(paths: Paths) -> bool:
     return r.ok
 
 
-def ready(paths: Paths) -> bool:
-    """The guard watches: guard.state says `ok` (written once its pidfd is open and its signal
-    handling is set up) and the unit is active."""
+def notify_ready(paths: Paths) -> None:
+    """sd_notify READY=1 to $NOTIFY_SOCKET (the unit is Type=notify: its start job, and with it
+    aptus-session's systemd-run, completes only now). The variable is removed so no child
+    inherits it; under test only a socket inside HOME (the systemd-run fake's) is used, never the
+    real user manager's. Not sent (systemd stops the unit after TimeoutStartSec): no lease."""
+    addr = os.environ.pop("NOTIFY_SOCKET", "")
+    if not addr:
+        return
+    if paths.test and not inside(addr, paths.home):
+        _log.warning("refusing NOTIFY_SOCKET %s outside the test HOME", addr)
+        return
     try:
-        word = paths.guard_state.read_text(encoding="utf-8").split("\n", 1)[0]
-    except OSError:
-        return False
-    return word == GuardState.OK.value and active(paths)
+        with socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM | socket.SOCK_CLOEXEC) as s:
+            s.connect("\0" + addr[1:] if addr.startswith("@") else addr)
+            s.sendall(b"READY=1")
+    except OSError as e:
+        _log.warning("cannot notify systemd (%s): %s", addr, e)
 
 
 def wait(fd: int, stop_fd: int, poll: float, on_poll: Callable[[], bool]) -> str:
@@ -226,7 +236,8 @@ def run(paths: Paths, pid: int, signature: str) -> int:
     except ProcessLookupError:
         fd = None
     if fd is not None:
-        write_state(paths, GuardState.OK)          # aptus-session takes the lease only after this
+        write_state(paths, GuardState.OK)
+        notify_ready(paths)                        # aptus-session takes the lease only after this
     last: list[Any] = [None]
     next_tick = [time.monotonic() + TICK]
 

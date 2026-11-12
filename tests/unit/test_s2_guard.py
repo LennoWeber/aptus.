@@ -4,7 +4,10 @@ from __future__ import annotations
 
 import json
 import os
+import signal
+import socket
 import subprocess
+import sys
 import time
 from pathlib import Path
 
@@ -212,17 +215,63 @@ def test_a_failing_loginctl_is_asked_again(p, hypr) -> None:
     assert guard.other_session_opened(p, hypr.signature, hypr.pid, last)       # no new change needed
 
 
-def test_ready_needs_ok_and_an_active_unit(p) -> None:
-    fakes.systemctl(p.home)
-    assert not guard.ready(p)                                  # no guard.state
-    guard.write_state(p, guard.GuardState.OK)
-    assert not guard.ready(p)                                  # the unit does not run
-    unit = subprocess.Popen(["sleep", "30"])
-    try:
-        (p.home / ".aptus-test/systemd-run.json").write_text(json.dumps({"units": {"aptus-guard": unit.pid}}))
-        assert guard.ready(p)
-        guard.write_state(p, guard.GuardState.RELEASED)
-        assert not guard.ready(p)
-    finally:
-        unit.kill()
-        unit.wait(5)
+def notify_socket(path: Path) -> socket.socket:
+    """A fake $NOTIFY_SOCKET (systemd's is a datagram socket)."""
+    s = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
+    s.bind(str(path))
+    s.settimeout(0.3)
+    return s
+
+
+def test_notify_ready_sends_ready_and_drops_the_variable(p, monkeypatch) -> None:
+    """Wave-2 simplify A11/E4: READY=1 to $NOTIFY_SOCKET; the variable goes, so nothing the guard
+    runs later (a hook) inherits it."""
+    with notify_socket(p.home / "notify") as s:
+        monkeypatch.setenv("NOTIFY_SOCKET", str(p.home / "notify"))
+        guard.notify_ready(p)
+        assert s.recv(64) == b"READY=1"
+        assert "NOTIFY_SOCKET" not in os.environ
+        guard.notify_ready(p)                                  # nothing to notify any more
+        with pytest.raises(TimeoutError):
+            s.recv(64)
+
+
+def test_notify_ready_refuses_a_socket_outside_the_test_home(p, tmp_path, monkeypatch) -> None:
+    with notify_socket(tmp_path / "outside") as s:
+        monkeypatch.setenv("NOTIFY_SOCKET", str(tmp_path / "outside"))
+        guard.notify_ready(p)
+        with pytest.raises(TimeoutError):
+            s.recv(64)
+    monkeypatch.setenv("NOTIFY_SOCKET", "@/org/freedesktop/systemd1/notify")   # abstract
+    guard.notify_ready(p)
+    assert "NOTIFY_SOCKET" not in os.environ
+
+
+def test_the_guard_says_ready_only_once_it_watches(p, hypr) -> None:
+    """The real guard: READY=1 arrives with guard.state `ok` already written; for a Hyprland
+    that is gone it sends nothing and exits (systemd-run then fails: no lease)."""
+    launcher = Path(__file__).resolve().parents[2] / "bin/aptus-guard"
+    env = dict(os.environ, NOTIFY_SOCKET=str(p.home / "notify"))
+    with notify_socket(p.home / "notify") as s:
+        s.settimeout(20)
+        g = subprocess.Popen([sys.executable, "-I", str(launcher), str(hypr.pid), hypr.signature],
+                             env=env)
+        try:
+            assert s.recv(64) == b"READY=1"
+            assert p.guard_state.read_text() == "ok\n\n"
+            g.send_signal(signal.SIGTERM)
+            assert g.wait(20) == 0
+        finally:
+            if g.poll() is None:
+                g.kill()
+                g.wait()
+        assert p.guard_state.read_text() == "released\n\n"
+        gone = subprocess.Popen(["true"])
+        gone.wait()
+        g = subprocess.run([sys.executable, "-I", str(launcher), str(gone.pid), hypr.signature],
+                           env=env, timeout=20)
+        assert g.returncode == 0
+        s.settimeout(0.3)
+        with pytest.raises(TimeoutError):
+            s.recv(64)
+        assert p.guard_state.read_text() == "released\n\n"
