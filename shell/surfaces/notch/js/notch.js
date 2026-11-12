@@ -15,7 +15,8 @@
 //     key, entry: passive entry | null, activity: "", mode: "" }
 //
 // A countdown (toast timing, notch.md §6): { total: ms (0 = none), remaining: ms,
-//   running: bool, since: ms (when it last resumed) }.
+//   running: bool, since: ms (when it last resumed), rev: the passive entry's rev it counts for
+//   (a change in place restarts it) }.
 //
 // A slot assignment (notch.md §4): { left: activity id | "", right: activity id | "",
 //   waiting: [id] } from candidates [{ id, slot, priority, width }].
@@ -166,20 +167,20 @@ function dueEntries(passive, shown, eventShownAt, pinnedSince, now, timing) {
     return { due: due, card: card, next: next }
 }
 // Countdowns (notch.md §6: pause on hover and while covered, resume with ≥ resumeMin left).
-function countdownStart(total, now) {
+function countdownStart(total, now, rev) {
     invariant(total >= 0, "negative countdown " + total)
-    return { total: total, remaining: total, running: total > 0, since: now }
+    return { total: total, remaining: total, running: total > 0, since: now, rev: rev || 0 }
 }
 function countdownPause(c, now) {
     checkCountdown(c)
     if (!c.running) return c
-    return { total: c.total, remaining: c.remaining - (now - c.since), running: false, since: now }
+    return { total: c.total, remaining: c.remaining - (now - c.since), running: false, since: now, rev: c.rev }
 }
 function countdownResume(c, now, resumeMin) {
     checkCountdown(c)
     invariant(resumeMin >= 0, "negative resume minimum " + resumeMin)
     if (c.running || c.total <= 0) return c
-    return { total: c.total, remaining: Math.max(c.remaining, resumeMin), running: true, since: now }
+    return { total: c.total, remaining: Math.max(c.remaining, resumeMin), running: true, since: now, rev: c.rev }
 }
 function countdownLeft(c, now) {
     checkCountdown(c)

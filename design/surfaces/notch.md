@@ -117,7 +117,8 @@ with no player at all shows the event "Nothing to play".
 2. Two or more arrivals within 2 s become one **stack** toast: overlapping app icons, "3 notifications",
    the newest title. Click opens Today.
 3. A notification that replaces another (`replaces_id`) updates the visible toast in place (content
-   crossfade, M-06 not replayed) and restarts its countdown.
+   crossfade, M-06 not replayed) and restarts its countdown (every change in place bumps the
+   passive entry's `rev`, 07 §5; a stack join does too).
 4. A notification with a progress hint (`value` 0–100) becomes a *progress* activity instead of a
    toast, and a toast only when it completes or fails.
 5. The interruption policy ([05-interaction.md](../05-interaction.md) §8) decides whether a toast

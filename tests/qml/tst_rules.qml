@@ -390,9 +390,20 @@ TestCase {
     function test_update_payload() {
         var r = p(fresh(), "toast", { count: 1 }, 1, 1000)
         var id = r.id
+        compare(r.monitors.A.passive[0].rev, 0)
         r = R.update(r.monitors, r.global, "A", id, { count: 3 }, 1500)
         compare(r.monitors.A.passive[0].payload.count, 3)
         compare(r.monitors.A.passive[0].born, 1000)
+        compare(r.monitors.A.passive[0].rev, 1, "a change in place bumps the stamp (A9)")
+        r = p(r, "toast", { count: 4 }, 1, 1600, "k")
+        compare(r.monitors.A.passive[1].rev, 0)
+        r = p(r, "toast", { count: 5 }, 1, 1700, "k")
+        compare(r.monitors.A.passive[1].rev, 1, "so does a post with its key")
+        r = R.setReplying(r.monitors, r.global, "A", id, true, 1800)
+        compare(r.monitors.A.passive[0].rev, 1, "a reply field is no change of content")
+        r = R.update(r.monitors, r.global, "A", id, { count: 6 }, 1900)
+        compare(r.monitors.A.passive[0].rev, 2)
+        r = R.dismiss(r.monitors, r.global, "A", r.monitors.A.passive[1].id, 2000)
         r = R.update(r.monitors, r.global, "", 999, {}, 1500)    // unknown id: no change
         compare(r.monitors.A.passive.length, 1)
     }

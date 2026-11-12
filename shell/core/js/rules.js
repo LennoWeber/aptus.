@@ -10,8 +10,9 @@
 //   passiveSerial, limits: { toastStale, eventMaxAge, pinnedCardTimeout }, overFullscreen }
 // A request: { op: "open"|"close"|"toggle", surface, args, monitor }
 // A passive entry: { id, kind: "osd"|"toast"|"event", payload, priority, key, born, waited,
-//   replying } — waited: it queued behind a blocking surface (toastStale counts once it
-//   unblocks); replying: a toast's inline reply field is open (setReplying).
+//   replying, rev } — waited: it queued behind a blocking surface (toastStale counts once it
+//   unblocks); replying: a toast's inline reply field is open (setReplying); rev: bumped by every
+//   change of its content in place (update, a post with its key), 0 when new.
 //   A "critical" toast has priority ≥ 2 (freedesktop urgency); Notifications, Timers and Battery
 //   post critical toasts with priority 2.
 // Every operation returns { monitors: {name: state}, global, effects: [effect] } without
@@ -361,7 +362,7 @@ function post(monitors, global, kind, payload, priority, monitor, key, now) {
         if (key) for (var i = 0; i < m.passive.length; i++) {
             var e = m.passive[i]
             if (e.kind === kind && e.key === key) {
-                e.payload = payload; e.priority = priority || 0; e.born = now; id = e.id
+                e.payload = payload; e.priority = priority || 0; e.born = now; e.rev = (e.rev || 0) + 1; id = e.id
                 break
             }
         }
@@ -369,7 +370,7 @@ function post(monitors, global, kind, payload, priority, monitor, key, now) {
             g.passiveSerial = g.passiveSerial + 1
             id = g.passiveSerial
             m.passive.push({ id: id, kind: kind, key: key || "", payload: payload, priority: priority || 0, born: now,
-                             waited: false, replying: false })
+                             waited: false, replying: false, rev: 0 })
         }
     }
     var r = finish(c, now)
@@ -379,7 +380,7 @@ function post(monitors, global, kind, payload, priority, monitor, key, now) {
 // Change an entry's payload in place (stack toast, OSD value).
 function update(monitors, global, monitor, id, payload, now) {
     var c = begin(monitors, global), f = findEntry(c, monitor, id)
-    if (f) f.m.passive[f.i].payload = payload
+    if (f) { var e = f.m.passive[f.i]; e.payload = payload; e.rev = (e.rev || 0) + 1 }
     return finish(c, now)
 }
 // A toast's inline reply field opened or closed (notch.md §6): while it is open the toast stays

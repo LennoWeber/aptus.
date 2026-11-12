@@ -153,7 +153,7 @@ closes anything.
 MonitorState {
   notch:     "rest" | "spotlight" | "switcher" | "today" | "session" | "polkit"
              | "gallery" | "jot" | "keys" | "keysPeek" | "focusPicker" | "card:<activity>"
-  passive:   queue of { id, kind: toast|osd|event, payload, priority, key, born, waited, replying }
+  passive:   queue of { id, kind: toast|osd|event, payload, priority, key, born, waited, replying, rev }
   deck:      { open: bool, pages: [ "main", "wifi", … ] }
   overview:  bool
   menu:      null | { anchorX, anchorY, model, owner, onTriggered(row) }   (MenuHost closes the

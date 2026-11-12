@@ -68,11 +68,9 @@ Item {
     // The pointer is over the bulge (the source for the toast countdown pause, the pinned-card
     // timeout and the hover collapse; a content item's own `hovered` only drives its looks).
     property bool _bulgeHovered: false
-    // Toast countdowns by passive entry id (notch.js countdown records).
+    // Toast countdowns by passive entry id (notch.js countdown records). A replace or a stack join
+    // changes the entry in place (a new `rev`) and restarts its countdown (notch.md §6).
     property var _countdowns: ({})
-    // Found in review: the payload each countdown was started for (passive entry id → payload):
-    // a replace or a stack join updates the entry in place and restarts its countdown (notch.md §6).
-    property var _countdownPayloads: ({})
     // The event entry shown now and since when (ms): it leaves surfaces.event.ms after it first
     // showed. (The OSD collapses osd.collapseAfter after its entry's `born`, which every post with
     // its key resets, so it needs no field here.)
@@ -182,11 +180,9 @@ Item {
         target: SurfaceManager
         function onPassiveGone(monitor: string, id: int, kind: string, key: string): void {
             if (monitor !== root._name || root._countdowns[id] === undefined) return;
-            const c = Object.assign({}, root._countdowns), cp = Object.assign({}, root._countdownPayloads);
+            const c = Object.assign({}, root._countdowns);
             delete c[id];
-            delete cp[id];
             root._countdowns = c;
-            root._countdownPayloads = cp;
         }
     }
     // A toast's inputs (notch.md §6).
@@ -246,23 +242,20 @@ Item {
         if (!monitor) return;
         const now = Date.now();
         const shown = (view.kind === "toast" || view.kind === "result") && view.entry ? view.entry : null;
-        const c = {}, cp = {};
-        for (const id in _countdowns) {
+        const c = {};
+        for (const id in _countdowns)
             c[id] = !shown || Number(id) !== shown.id ? NJ.countdownPause(_countdowns[id], now) : _countdowns[id];
-            cp[id] = _countdownPayloads[id];
-        }
         let left = Infinity;
         if (shown) {
-            if (c[shown.id] && cp[shown.id] !== shown.payload) delete c[shown.id];     // updated in place
-            cp[shown.id] = shown.payload;
-            let cd = c[shown.id] || NJ.countdownStart(shown.payload ? Number(shown.payload.timeout) || 0 : 0, now);
+            const rev = shown.rev || 0;
+            if (c[shown.id] && c[shown.id].rev !== rev) delete c[shown.id];       // changed in place
+            let cd = c[shown.id] || NJ.countdownStart(shown.payload ? Number(shown.payload.timeout) || 0 : 0, now, rev);
             const held = _bulgeHovered || !!shown.replying;
             cd = held ? NJ.countdownPause(cd, now) : NJ.countdownResume(cd, now, Tokens.surfaces.toast.resumeMinMs);
             c[shown.id] = cd;
             left = held ? Infinity : NJ.countdownLeft(cd, now);
         }
         _countdowns = c;
-        _countdownPayloads = cp;
         if (shown && left <= 0) { _dismissEntry(shown); return; }
         if (left !== Infinity) { toastTimer.interval = Math.max(1, left); toastTimer.restart(); }
         else toastTimer.stop();

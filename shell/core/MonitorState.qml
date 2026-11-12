@@ -18,8 +18,9 @@ QtObject {
 
     // Passive content waiting for or shown by the notch:
     // [{ id: int, kind: "toast" | "osd" | "event", key: string, payload: var, priority: int, born: ms,
-    //   waited: bool, replying: bool }] (rules.js: waited = queued behind a blocking surface;
-    //   replying = a toast's reply field is open, setReplying).
+    //   waited: bool, replying: bool, rev: int }] (rules.js: waited = queued behind a blocking
+    //   surface; replying = a toast's reply field is open, setReplying; rev = bumped by every
+    //   change in place, update or a post with its key).
     // `key` replaces an entry of the same key (one OSD per kind, a notification's replaces_id).
     // Payload conventions: toast: a notification toast (services/js/notifications.js) or
     // { card: "capture" | "colour" | "stillOpen", …card fields, flyFrom: {x,y,width,height} (M-23) };

@@ -114,6 +114,10 @@ TestCase {
         verify(!none.running)
         compare(T.countdownLeft(none, 1e9), Infinity)                    // a critical toast stays
         verify(T.countdownResume(none, 10, 2000) === none)
+        // the entry stamp it counts for goes through pause and resume (wave-2 simplify A9)
+        c = T.countdownStart(5000, 0, 3)
+        compare(T.countdownResume(T.countdownPause(c, 10), 20, 0).rev, 3)
+        compare(T.countdownStart(5000, 0).rev, 0)
     }
     function test_pager() {
         const ids = ["media", "timer", "focus"]
